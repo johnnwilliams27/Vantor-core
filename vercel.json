@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/process-scheduled-payments",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/poll-balances",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}

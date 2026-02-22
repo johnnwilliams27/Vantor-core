@@ -1,0 +1,45 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { executePayment } from '@/lib/payments/executor';
+import type { Payment } from '@/types/database';
+
+const BATCH_SIZE = 50;
+
+export async function GET(req: NextRequest) {
+  const authHeader = req.headers.get('authorization');
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const supabase = createAdminClient();
+
+  // Find due scheduled payments
+  const { data: payments, error } = await supabase
+    .from('payments')
+    .select('*')
+    .eq('status', 'pending')
+    .not('scheduled_for', 'is', null)
+    .lte('scheduled_for', new Date().toISOString())
+    .limit(BATCH_SIZE);
+
+  if (error) {
+    console.error('[cron/payments]', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (!payments?.length) {
+    return NextResponse.json({ processed: 0 });
+  }
+
+  let succeeded = 0;
+  let failed = 0;
+
+  for (const payment of payments as Payment[]) {
+    const result = await executePayment(payment);
+    if (result.txHash) succeeded++;
+    else failed++;
+  }
+
+  console.log(`[cron/payments] processed=${payments.length} ok=${succeeded} fail=${failed}`);
+  return NextResponse.json({ processed: payments.length, succeeded, failed });
+}
