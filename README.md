@@ -1,6 +1,6 @@
-# CryptoTreasury – Stablecoin Treasury Management Platform
+# Vantor – Autonomous Stablecoin Treasury Management
 
-Full-stack web application for managing USDC, USDT, and PYUSD treasury operations on Ethereum and Solana. Integrates with ERP systems (SAP, Oracle), supports real-time and scheduled payments, token swaps, invoice management, audit trails, and role-based access control.
+Predictive liquidity management for USDC, USDT, and PYUSD treasury operations on Ethereum and Solana in conjunction with fiat currency. Integrates with ERP systems (SAP, Oracle), supports on-ramps & off-ramps, real-time and scheduled payments, token swaps, invoice management, audit trails, and role-based access control.
 
 ## Tech Stack
 
