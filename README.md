@@ -1,6 +1,6 @@
 # Vantor – Autonomous Stablecoin Treasury Management
 
-AI-driven liquidity management for USDC, USDT, and PYUSD treasury operations on Ethereum and Solana in conjunction with fiat currency. Integrates with ERP systems (SAP, Oracle), supports on-ramps & off-ramps, real-time and scheduled payments, token swaps, invoice management, audit trails, and role-based access control.
+AI-driven liquidity management for USDC, USDT, and PYUSD treasury operations on Ethereum and Solana in conjunction with fiat currency. Integrates with ERP systems (SAP, Oracle, Xero, NetSuite), supports on-ramps & off-ramps, real-time and scheduled payments, token swaps, invoice management, audit trails, and role-based access control.
 
 ## Tech Stack
 
