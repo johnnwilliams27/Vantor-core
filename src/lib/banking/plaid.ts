@@ -87,6 +87,52 @@ export async function exchangePublicToken(publicToken: string): Promise<PlaidExc
   };
 }
 
+export interface PlaidAccountBalance {
+  available: number;
+  current: number;
+  isoCurrencyCode: string;
+  balanceAsOf: string;
+}
+
+export async function getAccountBalance(
+  accessToken: string,
+  accountId: string
+): Promise<PlaidAccountBalance> {
+  if (MOCK_MODE || accessToken.startsWith('access-sandbox-mock')) {
+    return {
+      available: 250000,
+      current: 252500,
+      isoCurrencyCode: 'USD',
+      balanceAsOf: new Date().toISOString(),
+    };
+  }
+
+  const { PlaidApi, PlaidEnvironments, Configuration } = await import('plaid');
+
+  const config = new Configuration({
+    basePath: PlaidEnvironments[process.env.PLAID_ENV as keyof typeof PlaidEnvironments ?? 'sandbox'],
+    baseOptions: {
+      headers: {
+        'PLAID-CLIENT-ID': process.env.PLAID_CLIENT_ID!,
+        'PLAID-SECRET': process.env.PLAID_SECRET!,
+      },
+    },
+  });
+
+  const client = new PlaidApi(config);
+  const response = await client.accountsBalanceGet({ access_token: accessToken });
+
+  const account = response.data.accounts.find((a) => a.account_id === accountId);
+  if (!account) throw new Error(`Account ${accountId} not found`);
+
+  return {
+    available: account.balances.available ?? account.balances.current ?? 0,
+    current: account.balances.current ?? 0,
+    isoCurrencyCode: account.balances.iso_currency_code ?? 'USD',
+    balanceAsOf: new Date().toISOString(),
+  };
+}
+
 export async function getAccountDetails(
   accessToken: string,
   accountId: string

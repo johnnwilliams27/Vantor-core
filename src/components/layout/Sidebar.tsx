@@ -15,6 +15,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  BrainCircuit,
 } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import type { UserRole } from '@/types/database';
@@ -32,6 +33,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Invoices', href: '/invoices', icon: FileText, minRole: 'accountant' },
   { label: 'Payments', href: '/payments', icon: Send, minRole: 'treasury_manager' },
   { label: 'Swaps', href: '/swaps', icon: ArrowLeftRight, minRole: 'treasury_manager' },
+  { label: 'Treasury AI', href: '/treasury', icon: BrainCircuit, minRole: 'treasury_manager' },
   { label: 'Transactions', href: '/transactions', icon: History },
   { label: 'Audit Trail', href: '/audit', icon: Shield },
   { label: 'ERP Settings', href: '/settings/erp', icon: Settings, minRole: 'accountant' },

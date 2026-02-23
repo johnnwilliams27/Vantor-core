@@ -14,7 +14,12 @@ export type AuditAction =
   | 'gl_post'
   | 'settings_update'
   | 'bank_account_connect' | 'bank_account_disconnect'
-  | 'onramp_execute' | 'offramp_execute';
+  | 'onramp_execute' | 'offramp_execute'
+  | 'treasury_rule_create' | 'treasury_rule_update'
+  | 'treasury_obligation_create' | 'treasury_obligation_delete'
+  | 'treasury_recommendation_generate' | 'treasury_recommendation_approve'
+  | 'treasury_recommendation_reject' | 'treasury_recommendation_execute'
+  | 'bank_balance_refresh';
 
 export interface UserProfile {
   id: string;
@@ -200,6 +205,9 @@ export interface BankAccount {
   is_active: boolean;
   verified_at: string | null;
   created_at: string;
+  current_balance: string | null;
+  balance_currency: string;
+  balance_as_of: string | null;
 }
 
 export interface FiatTransaction {
@@ -234,4 +242,72 @@ export interface AuditLog {
   created_at: string;
   // joined
   user_profile?: UserProfile;
+}
+
+// ---- Treasury AI ----
+
+export type RecommendationStatus =
+  | 'pending_approval' | 'approved' | 'rejected'
+  | 'executed' | 'expired' | 'auto_executed';
+export type RecommendationAction = 'onramp' | 'offramp' | 'no_action';
+
+export interface TreasuryRule {
+  id: string;
+  user_id: string;
+  label: string;
+  is_active: boolean;
+  safety_buffer_multiplier: string;
+  obligation_lookahead_days: number;
+  target_stablecoin: string;
+  target_chain: string;
+  approval_threshold_usd: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ManualObligation {
+  id: string;
+  user_id: string;
+  label: string;
+  description: string | null;
+  amount_usd: string;
+  due_date: string;
+  is_recurring: boolean;
+  recurrence_days: number | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AiRecommendation {
+  id: string;
+  user_id: string;
+  treasury_rule_id: string | null;
+  total_bank_balance_usd: string;
+  total_crypto_balance_usd: string;
+  obligations_in_window_usd: string;
+  safety_buffer_target_usd: string;
+  obligation_lookahead_days: number;
+  action: RecommendationAction;
+  recommended_amount_usd: string | null;
+  bank_account_id: string | null;
+  stablecoin_token: string | null;
+  stablecoin_chain: string | null;
+  ai_reasoning: string;
+  ai_model: string;
+  status: RecommendationStatus;
+  requires_approval: boolean;
+  approved_by: string | null;
+  approved_at: string | null;
+  rejected_by: string | null;
+  rejected_at: string | null;
+  rejection_reason: string | null;
+  executed_at: string | null;
+  fiat_transaction_id: string | null;
+  execution_error: string | null;
+  expires_at: string;
+  created_at: string;
+  updated_at: string;
+  // joined
+  bank_account?: Pick<BankAccount, 'id' | 'institution_name' | 'account_name' | 'last4'>;
 }
