@@ -27,19 +27,22 @@ export async function GET(req: NextRequest) {
   const status = searchParams.get('status');
   const supabase = createAdminClient();
 
-  const base = supabase
+  // Try with ERP join (requires erp_config_id column migration to have run)
+  let q = supabase
     .from('payments')
+    .select('*, from_wallet:wallets(*), invoice:invoices(*), erp_config:erp_configurations(id, label, provider)')
     .eq('user_id', session.user.id)
     .order('created_at', { ascending: false });
-
-  // Try with ERP join (requires erp_config_id column migration to have run)
-  let q = base.select('*, from_wallet:wallets(*), invoice:invoices(*), erp_config:erp_configurations(id, label, provider)');
   if (status) q = q.eq('status', status);
   let { data, error } = await q;
 
   if (error) {
     // Column not yet migrated — fall back to query without ERP join
-    let q2 = base.select('*, from_wallet:wallets(*), invoice:invoices(*)');
+    let q2 = supabase
+      .from('payments')
+      .select('*, from_wallet:wallets(*), invoice:invoices(*)')
+      .eq('user_id', session.user.id)
+      .order('created_at', { ascending: false });
     if (status) q2 = q2.eq('status', status);
     ({ data, error } = await q2);
   }
