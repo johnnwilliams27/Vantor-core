@@ -6,8 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 const ROLE_COLORS: Record<string, string> = {
-  treasury_manager: 'bg-teal-100 text-teal-800',
-  accountant: 'bg-teal-50 text-teal-700',
+  treasury_manager: 'bg-[#207679]/10 text-[#195a5c]',
+  accountant: 'bg-[#207679]/10 text-[#207679]',
   auditor: 'bg-gray-100 text-gray-700',
 };
 
@@ -39,7 +39,7 @@ export function Topbar({ title }: { title?: string }) {
 
         {/* User */}
         <div className="flex items-center gap-2">
-          <div className="flex items-center justify-center h-8 w-8 rounded-full bg-teal-700 text-white text-xs font-semibold">
+          <div className="flex items-center justify-center h-8 w-8 rounded-full bg-[#207679] text-white text-xs font-semibold">
             {session?.user?.name?.charAt(0).toUpperCase() ?? 'U'}
           </div>
           {session?.user?.email && (

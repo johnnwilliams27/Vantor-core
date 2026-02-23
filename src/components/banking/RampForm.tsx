@@ -200,8 +200,8 @@ export function RampForm() {
 
         {/* Quote */}
         {quote && (
-          <div className="mt-4 p-4 rounded-lg bg-teal-50 border border-teal-200 space-y-2">
-            <div className="text-sm font-semibold text-teal-900">Quote</div>
+          <div className="mt-4 p-4 rounded-lg bg-[#207679]/5 border border-[#207679]/20 space-y-2">
+            <div className="text-sm font-semibold text-[#195a5c]">Quote</div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">{direction === 'offramp' ? 'You send' : 'You pay'}</span>
               <span className="font-mono font-semibold">

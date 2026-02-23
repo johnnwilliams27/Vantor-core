@@ -123,7 +123,7 @@ function WalletsContent() {
           onClick={() => setActiveTab('crypto')}
           className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
             activeTab === 'crypto'
-              ? 'border-teal-600 text-teal-700'
+              ? 'border-[#207679] text-[#207679]'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
@@ -134,7 +134,7 @@ function WalletsContent() {
           onClick={() => setActiveTab('bank')}
           className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
             activeTab === 'bank'
-              ? 'border-teal-600 text-teal-700'
+              ? 'border-[#207679] text-[#207679]'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >

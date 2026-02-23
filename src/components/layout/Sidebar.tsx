@@ -57,16 +57,16 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        'flex flex-col bg-[#0f2625] text-white transition-all duration-300 shrink-0',
+        'flex flex-col bg-[#207679] text-white transition-all duration-300 shrink-0',
         sidebarOpen ? 'w-56' : 'w-16'
       )}
     >
       {/* Logo */}
       <div className="flex h-16 items-center justify-center px-3 border-b border-white/10">
         {sidebarOpen ? (
-          <Image src="/logo.png" alt="Vantor" width={130} height={36} className="object-contain" priority />
+          <Image src="/logo.png" alt="Vantor" width={140} height={46} className="object-contain" priority unoptimized />
         ) : (
-          <span className="text-lg font-bold text-teal-400">V</span>
+          <span className="text-lg font-bold text-white">V</span>
         )}
       </div>
 
@@ -81,8 +81,8 @@ export function Sidebar() {
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
                 active
-                  ? 'bg-teal-700 text-white'
-                  : 'text-gray-300 hover:bg-white/10 hover:text-white'
+                  ? 'bg-[#195a5c] text-white'
+                  : 'text-white/80 hover:bg-white/15 hover:text-white'
               )}
               title={!sidebarOpen ? item.label : undefined}
             >

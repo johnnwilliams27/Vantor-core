@@ -6,7 +6,7 @@ import { Providers } from './providers';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Vantor – Stablecoin Treasury Management',
+  title: 'Vantor – Autonomous Stablecoin Treasury Management',
   description: 'Manage USDC, USDT, and PYUSD treasury operations on Ethereum and Solana',
 };
 

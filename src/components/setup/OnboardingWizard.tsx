@@ -77,14 +77,14 @@ export function OnboardingWizard() {
               <div
                 key={s.id}
                 className={`h-2 flex-1 rounded-full transition-colors ${
-                  i <= step ? 'bg-teal-600' : 'bg-gray-200'
+                  i <= step ? 'bg-[#207679]' : 'bg-gray-200'
                 }`}
               />
             ))}
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-teal-50">
-              <Icon className="h-5 w-5 text-teal-700" />
+            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#207679]/5">
+              <Icon className="h-5 w-5 text-[#207679]" />
             </div>
             <div>
               <CardTitle>{current.title}</CardTitle>
@@ -99,14 +99,14 @@ export function OnboardingWizard() {
         <CardContent>
           {step === 1 && (
             <div className="space-y-3 mb-4">
-              <div className="p-3 rounded-lg border bg-teal-50 text-sm text-teal-800">
+              <div className="p-3 rounded-lg border bg-[#207679]/5 text-sm text-[#195a5c]">
                 After setup, navigate to <strong>Wallets</strong> to connect MetaMask (Ethereum) or Phantom (Solana). Each wallet requires a one-time signature verification.
               </div>
             </div>
           )}
           {step === 2 && (
             <div className="space-y-3 mb-4">
-              <div className="p-3 rounded-lg border bg-teal-50 text-sm text-teal-800">
+              <div className="p-3 rounded-lg border bg-[#207679]/5 text-sm text-[#195a5c]">
                 Navigate to <strong>ERP Settings</strong> to configure SAP or Oracle. Use mock mode (default) to explore the platform without real credentials.
               </div>
             </div>
