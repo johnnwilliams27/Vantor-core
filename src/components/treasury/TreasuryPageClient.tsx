@@ -1,10 +1,74 @@
 'use client';
+import { useState } from 'react';
 import { UnifiedBalanceCard } from './UnifiedBalanceCard';
 import { TreasuryRulesForm } from './TreasuryRulesForm';
 import { ObligationsPanel } from './ObligationsPanel';
 import { RecommendationList } from './RecommendationList';
+import { SimulationPanel } from './SimulationPanel';
+import { TreasuryReportPanel } from './TreasuryReportPanel';
+import { CashFlowChart } from '@/components/charts/CashFlowChart';
+import { Button } from '@/components/ui/button';
+import { RoleGate } from '@/components/auth/RoleGate';
+import { useTreasuryForecast, useGenerateForecast } from '@/hooks/useTreasury';
+import { useToast } from '@/components/ui/toast';
+import { TrendingUp, FlaskConical, FileBarChart } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+
+type ActivePanel = 'forecast' | 'simulation' | 'report' | null;
+
+function ForecastSection() {
+  const { data: forecast, isLoading } = useTreasuryForecast(30);
+  const generateForecast = useGenerateForecast();
+  const { toast } = useToast();
+
+  const handleGenerate = async () => {
+    try {
+      await generateForecast.mutateAsync({ lookahead_days: 30 });
+      toast({ title: 'Forecast generated', variant: 'success' });
+    } catch (err) {
+      toast({
+        title: 'Forecast generation failed',
+        description: (err as Error).message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="text-sm text-muted-foreground py-8 text-center">
+        Loading forecast…
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {forecast?.ai_summary && (
+        <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
+          <span className="font-medium text-foreground">AI Summary: </span>
+          {forecast.ai_summary}
+        </div>
+      )}
+      <CashFlowChart
+        forecastData={forecast?.forecast_data ?? []}
+        onGenerateForecast={handleGenerate}
+        isGenerating={generateForecast.isPending}
+      />
+    </div>
+  );
+}
 
 export function TreasuryPageClient() {
+  const [activePanel, setActivePanel] = useState<ActivePanel>(null);
+  const { data: session } = useSession();
+  const userRole = (session?.user?.role ?? 'auditor') as string;
+  const isTreasuryManager = userRole === 'treasury_manager';
+
+  const toggle = (panel: ActivePanel) => {
+    setActivePanel((prev) => (prev === panel ? null : panel));
+  };
+
   return (
     <div className="space-y-6">
       {/* Unified balance overview */}
@@ -18,6 +82,52 @@ export function TreasuryPageClient() {
 
       {/* Recommendation list */}
       <RecommendationList />
+
+      {/* Phase 2 toggle row */}
+      <div className="flex flex-wrap items-center gap-2 pt-2 border-t">
+        <Button
+          variant={activePanel === 'forecast' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => toggle('forecast')}
+          className="flex items-center gap-1.5"
+        >
+          <TrendingUp className="h-3.5 w-3.5" />
+          Forecast
+        </Button>
+
+        {isTreasuryManager && (
+          <Button
+            variant={activePanel === 'simulation' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => toggle('simulation')}
+            className="flex items-center gap-1.5"
+          >
+            <FlaskConical className="h-3.5 w-3.5" />
+            Paper Trading
+          </Button>
+        )}
+
+        <Button
+          variant={activePanel === 'report' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => toggle('report')}
+          className="flex items-center gap-1.5"
+        >
+          <FileBarChart className="h-3.5 w-3.5" />
+          Report
+        </Button>
+      </div>
+
+      {/* Conditionally rendered panels — lazy mount (no data fetched until opened) */}
+      {activePanel === 'forecast' && <ForecastSection />}
+
+      {activePanel === 'simulation' && (
+        <RoleGate requiredRole="treasury_manager">
+          <SimulationPanel />
+        </RoleGate>
+      )}
+
+      {activePanel === 'report' && <TreasuryReportPanel />}
     </div>
   );
 }

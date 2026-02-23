@@ -19,7 +19,9 @@ export type AuditAction =
   | 'treasury_obligation_create' | 'treasury_obligation_delete'
   | 'treasury_recommendation_generate' | 'treasury_recommendation_approve'
   | 'treasury_recommendation_reject' | 'treasury_recommendation_execute'
-  | 'bank_balance_refresh';
+  | 'bank_balance_refresh'
+  | 'treasury_forecast_generate' | 'treasury_simulation_run'
+  | 'treasury_report_export' | 'treasury_price_refresh';
 
 export interface UserProfile {
   id: string;
@@ -310,4 +312,72 @@ export interface AiRecommendation {
   updated_at: string;
   // joined
   bank_account?: Pick<BankAccount, 'id' | 'institution_name' | 'account_name' | 'last4'>;
+}
+
+// ---- Treasury AI Phase 2 ----
+
+export interface StablecoinPrices {
+  USDC: number;
+  USDT: number;
+  PYUSD: number;
+}
+
+export interface ForecastDataPoint {
+  date: string;
+  projectedBalanceUsd: number;
+  obligationsDueUsd: number;
+  safetyBufferUsd: number;
+  isBelow: boolean;
+  scheduledRampsUsd: number;
+  obligationLabels: string[];
+}
+
+export interface TreasuryForecast {
+  id: string;
+  user_id: string;
+  lookahead_days: number;
+  forecast_data: ForecastDataPoint[];
+  ai_summary: string | null;
+  generated_at: string;
+  created_at: string;
+}
+
+export interface SimulationRecordResult {
+  recommendation_id: string;
+  created_at: string;
+  action: RecommendationAction;
+  recommended_amount_usd: number;
+  status: RecommendationStatus;
+  actual_bank_balance_usd: number;
+  actual_obligations_usd: number;
+  actual_safety_buffer_usd: number;
+  simulated_action: RecommendationAction;
+  simulated_amount_usd: number | null;
+  simulated_safety_buffer_usd: number;
+  delta_usd: number | null;
+  was_executed: boolean;
+  counterfactual_note: string;
+}
+
+export interface SimulationSummary {
+  total_recommendations: number;
+  executed_count: number;
+  simulated_executed_count: number;
+  avg_delta_usd: number | null;
+  total_missed_opportunity_usd: number;
+  coverage_improvement_pct: number | null;
+}
+
+export interface SimulationRun {
+  id: string;
+  user_id: string;
+  rule_snapshot: {
+    safety_buffer_multiplier: number;
+    obligation_lookahead_days: number;
+    approval_threshold_usd: number;
+    label: string;
+  };
+  results: SimulationRecordResult[];
+  summary: SimulationSummary;
+  created_at: string;
 }

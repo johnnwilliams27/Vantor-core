@@ -1,7 +1,14 @@
 'use client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
-import type { TreasuryRule, ManualObligation, AiRecommendation } from '@/types/database';
+import type {
+  TreasuryRule,
+  ManualObligation,
+  AiRecommendation,
+  StablecoinPrices,
+  TreasuryForecast,
+  SimulationRun,
+} from '@/types/database';
 
 // ---- Overview ----
 
@@ -243,6 +250,123 @@ export function useRejectRecommendation() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['treasury-recommendations', session?.user?.id] });
     },
+  });
+}
+
+// ---- Stablecoin Prices ----
+
+export interface StablecoinPricesResponse {
+  USDC: number;
+  USDT: number;
+  PYUSD: number;
+  fetchedAt: string;
+  source: 'mock' | 'coingecko';
+}
+
+export function useStablecoinPrices() {
+  const { data: session } = useSession();
+  return useQuery<StablecoinPricesResponse>({
+    queryKey: ['stablecoin-prices'],
+    queryFn: async () => {
+      const res = await fetch('/api/treasury/prices');
+      if (!res.ok) throw new Error('Failed to fetch stablecoin prices');
+      const { data } = await res.json();
+      return data;
+    },
+    enabled: !!session?.user?.id,
+    staleTime: 60_000,
+    refetchInterval: 300_000,
+  });
+}
+
+// ---- Cash Flow Forecast ----
+
+export function useTreasuryForecast(days = 30) {
+  const { data: session } = useSession();
+  return useQuery<TreasuryForecast | null>({
+    queryKey: ['treasury-forecast', session?.user?.id, days],
+    queryFn: async () => {
+      const res = await fetch(`/api/treasury/forecast?days=${days}`);
+      if (!res.ok) throw new Error('Failed to fetch forecast');
+      const { data } = await res.json();
+      return data ?? null;
+    },
+    enabled: !!session?.user?.id,
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useGenerateForecast() {
+  const queryClient = useQueryClient();
+  const { data: session } = useSession();
+
+  return useMutation({
+    mutationFn: async (payload?: { lookahead_days?: number }) => {
+      const res = await fetch('/api/treasury/forecast/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload ?? {}),
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error ?? 'Failed to generate forecast');
+      }
+      return res.json();
+    },
+    onSuccess: (_data, variables) => {
+      const days = variables?.lookahead_days ?? 30;
+      queryClient.invalidateQueries({
+        queryKey: ['treasury-forecast', session?.user?.id, days],
+      });
+    },
+  });
+}
+
+// ---- Paper Trading Simulation ----
+
+export function useRunSimulation() {
+  return useMutation({
+    mutationFn: async (payload?: {
+      rule_overrides?: {
+        safety_buffer_multiplier?: number;
+        obligation_lookahead_days?: number;
+        approval_threshold_usd?: number;
+        label?: string;
+      };
+    }): Promise<SimulationRun> => {
+      const res = await fetch('/api/treasury/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload ?? {}),
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error ?? 'Failed to run simulation');
+      }
+      const json = await res.json();
+      return json.data as SimulationRun;
+    },
+  });
+}
+
+// ---- Treasury Reports ----
+
+import type { ReportData } from '@/lib/treasury/report';
+
+export function useTreasuryReport(from?: string, to?: string) {
+  const { data: session } = useSession();
+  return useQuery<ReportData | null>({
+    queryKey: ['treasury-report', session?.user?.id, from, to],
+    queryFn: async () => {
+      if (!from || !to) return null;
+      const params = new URLSearchParams({ format: 'json', from, to });
+      const res = await fetch(`/api/treasury/report?${params}`);
+      if (!res.ok) throw new Error('Failed to fetch report');
+      const { data } = await res.json();
+      return data ?? null;
+    },
+    enabled: !!session?.user?.id && !!from && !!to,
+    staleTime: 60_000,
   });
 }
 

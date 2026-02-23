@@ -1,10 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { TreasuryRule } from '@/types/database';
+import type { StablecoinPrices } from '@/types/database';
 import type {
   TreasurySnapshot,
   UpcomingObligation,
   RulesEngineResult,
 } from './interface';
+import { getStablecoinPrices, priceToken } from './oracle';
 
 export async function getActiveTreasuryRule(
   supabase: SupabaseClient,
@@ -25,7 +27,8 @@ export async function getActiveTreasuryRule(
 
 export async function buildTreasurySnapshot(
   supabase: SupabaseClient,
-  userId: string
+  userId: string,
+  prices?: StablecoinPrices
 ): Promise<TreasurySnapshot> {
   const [bankRes, walletRes] = await Promise.all([
     supabase
@@ -42,6 +45,9 @@ export async function buildTreasurySnapshot(
   if (bankRes.error) throw new Error(bankRes.error.message);
   if (walletRes.error) throw new Error(walletRes.error.message);
 
+  // Resolve prices: use provided prices or fetch from oracle
+  const resolvedPrices: StablecoinPrices = prices ?? (await getStablecoinPrices()).prices;
+
   const bankAccounts = (bankRes.data ?? []).map((acct) => ({
     id: acct.id as string,
     institutionName: acct.institution_name as string,
@@ -57,12 +63,15 @@ export async function buildTreasurySnapshot(
   for (const wallet of walletRes.data ?? []) {
     const balances = (wallet as any).wallet_balances ?? [];
     for (const wb of balances) {
-      const usdValue = wb.usd_value ? parseFloat(wb.usd_value) : parseFloat(wb.balance ?? '0');
+      const rawBalance = parseFloat(wb.balance ?? '0');
+      // Apply oracle price; fall back to stored usd_value if price not available
+      const usdValue = priceToken(wb.token as string, rawBalance, resolvedPrices) ||
+        (wb.usd_value ? parseFloat(wb.usd_value) : rawBalance);
       cryptoPositions.push({
         walletId: wallet.id as string,
         chain: wallet.chain as string,
         token: wb.token as string,
-        balance: parseFloat(wb.balance ?? '0'),
+        balance: rawBalance,
         usdValue,
       });
     }
@@ -140,8 +149,11 @@ export async function computeRecommendation(
   const multiplier = parseFloat(rule.safety_buffer_multiplier);
   const approvalThreshold = parseFloat(rule.approval_threshold_usd);
 
+  // Fetch prices once and pass to snapshot builder to avoid double fetch
+  const { prices } = await getStablecoinPrices();
+
   const [snapshot, obligations] = await Promise.all([
-    buildTreasurySnapshot(supabase, userId),
+    buildTreasurySnapshot(supabase, userId, prices),
     collectObligations(supabase, userId, lookaheadDays),
   ]);
 

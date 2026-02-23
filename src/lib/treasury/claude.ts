@@ -1,4 +1,5 @@
 import type { RecommendationInput } from './interface';
+import type { ForecastDataPoint } from '@/types/database';
 
 const MOCK_MODE = !process.env.ANTHROPIC_API_KEY;
 
@@ -38,6 +39,77 @@ function mockReasoning(input: RecommendationInput): string {
 
   // onramp
   return `[MOCK] Bank balance ${bankBal} falls short of the safety buffer target of ${target} by ${surplus}. With ${obligations} in fiat obligations due within ${lookaheadDays} days, it is necessary to liquidate ${formatUsd(recommendedAmountUsd ?? 0)} in ${input.targetStablecoinToken} to fiat to ensure adequate liquidity. Crypto treasury holds ${cryptoBal}.`;
+}
+
+export interface ForecastSummaryInput {
+  lookaheadDays: number;
+  currentBankBalanceUsd: number;
+  forecastPoints: ForecastDataPoint[];
+  dangerDays: number;
+  worstProjectedBalance: number;
+  totalObligationsInWindow: number;
+}
+
+function mockForecastSummary(input: ForecastSummaryInput): string {
+  const { lookaheadDays, currentBankBalanceUsd, dangerDays, worstProjectedBalance, totalObligationsInWindow } = input;
+  const fmt = (n: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
+
+  if (dangerDays === 0) {
+    return `[MOCK] Over the next ${lookaheadDays} days, the projected bank balance remains above the safety buffer throughout the window. Starting balance of ${fmt(currentBankBalanceUsd)} is sufficient to cover ${fmt(totalObligationsInWindow)} in total obligations. No liquidity risk detected.`;
+  }
+
+  return `[MOCK] Over the next ${lookaheadDays} days, the projected bank balance drops below the safety buffer on ${dangerDays} day(s), with a worst-case balance of ${fmt(worstProjectedBalance)}. Total obligations in the window are ${fmt(totalObligationsInWindow)}. Consider executing an on-ramp to restore adequate liquidity coverage.`;
+}
+
+export async function generateForecastSummary(
+  input: ForecastSummaryInput
+): Promise<ReasoningResult> {
+  if (MOCK_MODE) {
+    return {
+      reasoning: mockForecastSummary(input),
+      model: 'mock',
+    };
+  }
+
+  const Anthropic = (await import('@anthropic-ai/sdk')).default;
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+  const contextBlock = JSON.stringify({
+    lookaheadDays: input.lookaheadDays,
+    currentBankBalanceUsd: input.currentBankBalanceUsd,
+    dangerDays: input.dangerDays,
+    worstProjectedBalance: input.worstProjectedBalance,
+    totalObligationsInWindow: input.totalObligationsInWindow,
+    forecastSample: input.forecastPoints.slice(0, 7).map((p) => ({
+      date: p.date,
+      projectedBalanceUsd: p.projectedBalanceUsd,
+      obligationsDueUsd: p.obligationsDueUsd,
+      safetyBufferUsd: p.safetyBufferUsd,
+      isBelow: p.isBelow,
+    })),
+  }, null, 2);
+
+  const message = await client.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 256,
+    system:
+      'You are a treasury AI assistant for Vantor. Analyze the cash flow forecast data and provide a concise 2-3 sentence summary of the liquidity outlook. Be specific about dollar amounts, risk days, and whether action is recommended. Write in clear prose without bullet points.',
+    messages: [
+      {
+        role: 'user',
+        content: `Cash flow forecast summary:\n\n${contextBlock}\n\nProvide a brief treasury outlook summary.`,
+      },
+    ],
+  });
+
+  const content = message.content[0];
+  const reasoning = content.type === 'text' ? content.text : 'Summary unavailable.';
+
+  return {
+    reasoning,
+    model: 'claude-sonnet-4-6',
+  };
 }
 
 export async function generateTreasuryReasoning(
