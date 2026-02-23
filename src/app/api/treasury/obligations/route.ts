@@ -27,10 +27,10 @@ export async function GET(_req: NextRequest) {
 const createSchema = z.object({
   label: z.string().min(1).max(200),
   description: z.string().optional(),
-  amount_usd: z.number().positive(),
-  due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  is_recurring: z.boolean().default(false),
-  recurrence_days: z.number().int().positive().optional(),
+  amount_usd: z.coerce.number().positive(),
+  due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
+  is_recurring: z.coerce.boolean().default(false),
+  recurrence_days: z.coerce.number().int().positive().optional(),
 });
 
 export async function POST(req: NextRequest) {
