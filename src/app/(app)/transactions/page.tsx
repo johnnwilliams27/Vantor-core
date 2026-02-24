@@ -1,91 +1,62 @@
 'use client';
+import { useState } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
-import { useQuery } from '@tanstack/react-query';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatCurrency, formatDateTime, truncateAddress } from '@/lib/utils';
-import type { Transaction } from '@/types/database';
-import { Loader2, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AllTab } from '@/components/transactions/AllTab';
+import { PaymentsTab } from '@/components/transactions/PaymentsTab';
+import { SwapsTab } from '@/components/transactions/SwapsTab';
+import { RampsTab } from '@/components/transactions/RampsTab';
+import { OnChainTab } from '@/components/transactions/OnChainTab';
+import { useSession } from 'next-auth/react';
+import { hasRole } from '@/lib/auth/rbac';
+import type { UserRole } from '@/types/database';
+
+type ActiveTab = 'all' | 'payments' | 'swaps' | 'ramps' | 'onchain';
+
+const TABS: { id: ActiveTab; label: string; minRole?: UserRole }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'payments', label: 'Payments', minRole: 'treasury_manager' },
+  { id: 'swaps', label: 'Swaps', minRole: 'treasury_manager' },
+  { id: 'ramps', label: 'Ramps', minRole: 'treasury_manager' },
+  { id: 'onchain', label: 'On-Chain' },
+];
 
 export default function TransactionsPage() {
-  const { data, isLoading } = useQuery<Transaction[]>({
-    queryKey: ['transactions'],
-    queryFn: async () => {
-      const res = await fetch('/api/transactions?limit=100');
-      if (!res.ok) return [];
-      const { data } = await res.json();
-      return data ?? [];
-    },
-    staleTime: 30_000,
-  });
+  const [activeTab, setActiveTab] = useState<ActiveTab>('all');
+  const { data: session } = useSession();
+  const userRole = (session?.user?.role ?? 'auditor') as UserRole;
+
+  const visibleTabs = TABS.filter((t) => !t.minRole || hasRole(userRole, t.minRole));
 
   return (
     <AppShell title="Transactions">
-      <Card>
-        <CardHeader><CardTitle>On-Chain Transactions</CardTitle></CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Dir</TableHead>
-                <TableHead>TX Hash</TableHead>
-                <TableHead>From</TableHead>
-                <TableHead>To</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Chain</TableHead>
-                <TableHead>Date</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center">
-                    <Loader2 className="h-4 w-4 animate-spin mx-auto" />
-                  </TableCell>
-                </TableRow>
-              ) : data?.length ? (
-                data.map((tx) => (
-                  <TableRow key={tx.id}>
-                    <TableCell>
-                      {tx.direction === 'inbound' ? (
-                        <ArrowDownLeft className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <ArrowUpRight className="h-4 w-4 text-red-500" />
-                      )}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {truncateAddress(tx.tx_hash, 8)}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {truncateAddress(tx.from_address, 6)}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {truncateAddress(tx.to_address, 6)}
-                    </TableCell>
-                    <TableCell>
-                      {tx.amount ? (
-                        <span className="font-semibold">{formatCurrency(tx.amount)}</span>
-                      ) : '—'}
-                      {tx.token && <Badge variant="outline" className="ml-1">{tx.token}</Badge>}
-                    </TableCell>
-                    <TableCell><Badge variant="secondary">{tx.chain}</Badge></TableCell>
-                    <TableCell className="text-sm text-gray-500">
-                      {formatDateTime(tx.timestamp)}
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-gray-400 py-8">
-                    No transactions recorded yet.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        {/* Tab bar */}
+        <div className="flex gap-1 border-b pb-0">
+          {visibleTabs.map((tab) => (
+            <Button
+              key={tab.id}
+              variant="ghost"
+              size="sm"
+              onClick={() => setActiveTab(tab.id)}
+              className={
+                activeTab === tab.id
+                  ? 'border-b-2 border-[#207679] text-[#207679] rounded-none pb-2 font-semibold'
+                  : 'text-gray-500 hover:text-gray-700 rounded-none pb-2'
+              }
+            >
+              {tab.label}
+            </Button>
+          ))}
+        </div>
+
+        {/* Tab content — conditional render prevents unauthorized fetches */}
+        {activeTab === 'all'      && <AllTab />}
+        {activeTab === 'payments' && <PaymentsTab />}
+        {activeTab === 'swaps'    && <SwapsTab />}
+        {activeTab === 'ramps'    && <RampsTab />}
+        {activeTab === 'onchain'  && <OnChainTab />}
+      </div>
     </AppShell>
   );
 }

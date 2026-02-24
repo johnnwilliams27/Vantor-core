@@ -112,7 +112,9 @@ export interface Payment {
   user_id: string;
   erp_config_id: string | null;
   invoice_id: string | null;
-  from_wallet_id: string;
+  direction: 'sent' | 'received';
+  from_wallet_id: string | null;
+  from_address: string | null;
   to_address: string;
   chain: ChainType;
   token: TokenSymbol;

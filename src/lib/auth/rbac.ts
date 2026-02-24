@@ -4,6 +4,7 @@ import type { UserRole } from '@/types/database';
 export const ROLE_ROUTES: Record<string, UserRole> = {
   '/payments': 'treasury_manager',
   '/swaps': 'treasury_manager',
+  '/ramps': 'treasury_manager',
   '/treasury': 'treasury_manager',
   '/settings': 'accountant',
   '/invoices': 'accountant',

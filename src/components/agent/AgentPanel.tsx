@@ -1,6 +1,6 @@
 'use client';
 import { useState, useCallback } from 'react';
-import { X } from 'lucide-react';
+import { X, Trash2 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import type Anthropic from '@anthropic-ai/sdk';
 import { useAppStore } from '@/store/appStore';
@@ -18,11 +18,13 @@ function buildAnthropicHistory(messages: AgentMessage[]): Anthropic.MessageParam
 }
 
 export function AgentPanel() {
-  const { agentPanelOpen, toggleAgentPanel } = useAppStore();
+  const {
+    agentPanelOpen, toggleAgentPanel,
+    agentMessages: messages, setAgentMessages: setMessages, clearAgentMessages,
+    agentIsStreaming: isStreaming, setAgentIsStreaming: setIsStreaming,
+  } = useAppStore();
   const { data: session } = useSession();
 
-  const [messages, setMessages] = useState<AgentMessage[]>([]);
-  const [isStreaming, setIsStreaming] = useState(false);
   const [inputValue, setInputValue] = useState('');
 
   const userInitial = session?.user?.name?.charAt(0).toUpperCase() ?? session?.user?.email?.charAt(0).toUpperCase() ?? 'U';
@@ -30,24 +32,18 @@ export function AgentPanel() {
   const sendMessage = useCallback(async (text: string) => {
     if (isStreaming) return;
 
-    // Append user message
     const userMsg: AgentMessage = { role: 'user', content: text, displayContent: [{ type: 'text', text }] };
-    setMessages((prev) => [...prev, userMsg]);
+    const newAssistant: AgentMessage = { role: 'assistant', content: '', displayContent: [] };
+
+    // Snapshot current messages for history before state update
+    const historySnapshot = [...messages, userMsg];
+
+    setMessages((prev) => [...prev, userMsg, newAssistant]);
     setInputValue('');
     setIsStreaming(true);
 
-    // Prepare assistant placeholder
-    const assistantIdx = messages.length + 1; // index after we add user msg
-    const newAssistant: AgentMessage = {
-      role: 'assistant',
-      content: '',
-      displayContent: [],
-    };
-
-    setMessages((prev) => [...prev, newAssistant]);
-
     try {
-      const history = buildAnthropicHistory([...messages, userMsg]);
+      const history = buildAnthropicHistory(historySnapshot);
 
       const res = await fetch('/api/agent/chat', {
         method: 'POST',
@@ -179,13 +175,24 @@ export function AgentPanel() {
                 <p className="text-xs text-gray-500">Treasury AI</p>
               </div>
             </div>
-            <button
-              onClick={toggleAgentPanel}
-              className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
-              aria-label="Close agent panel"
-            >
-              <X className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={clearAgentMessages}
+                disabled={isStreaming || messages.length === 0}
+                className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                aria-label="Clear chat"
+                title="Clear chat"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+              <button
+                onClick={toggleAgentPanel}
+                className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                aria-label="Close agent panel"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
           {/* Messages */}

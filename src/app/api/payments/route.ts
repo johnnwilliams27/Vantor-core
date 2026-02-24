@@ -82,7 +82,9 @@ export async function POST(req: NextRequest) {
     .from('payments')
     .insert({
       user_id: session.user.id,
+      direction: 'sent',
       from_wallet_id: parsed.data.fromWalletId,
+      from_address: null,
       to_address: parsed.data.toAddress,
       chain: parsed.data.chain,
       token: parsed.data.token,
