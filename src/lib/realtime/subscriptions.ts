@@ -29,7 +29,7 @@ export function subscribeToWalletBalances(
           const newRow = payload.new as WalletBalance;
           if (!walletIds.includes(newRow.wallet_id)) return;
         }
-        onUpdate(payload as { new: WalletBalance; old: Partial<WalletBalance> });
+        onUpdate(payload as unknown as { new: WalletBalance; old: Partial<WalletBalance> });
       }
     )
     .subscribe();

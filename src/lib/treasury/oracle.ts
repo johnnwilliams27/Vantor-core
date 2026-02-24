@@ -57,6 +57,6 @@ export async function getStablecoinPrices(): Promise<OraclePricesResult> {
  * Falls back to 1.0 if the token is not found.
  */
 export function priceToken(token: string, balance: number, prices: StablecoinPrices): number {
-  const priceMap = prices as Record<string, number>;
+  const priceMap = prices as unknown as Record<string, number>;
   return balance * (priceMap[token] ?? 1.0);
 }

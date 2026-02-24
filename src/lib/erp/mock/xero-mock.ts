@@ -44,7 +44,7 @@ export class XeroMockAdapter implements IERPAdapter {
         id: 'XRO-V003',
         name: 'Clearwater Services',
         email: 'finance@clearwater.io',
-        walletAddress: null,
+        walletAddress: undefined,
         chain: undefined,
       },
     ];

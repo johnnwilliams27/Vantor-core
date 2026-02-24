@@ -1,9 +1,9 @@
 'use client';
 import { signOut, useSession } from 'next-auth/react';
-import { Bell, LogOut, User } from 'lucide-react';
+import { Bell, Bot, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useAppStore } from '@/store/appStore';
 
 const ROLE_COLORS: Record<string, string> = {
   treasury_manager: 'bg-[#207679]/10 text-[#195a5c]',
@@ -14,6 +14,7 @@ const ROLE_COLORS: Record<string, string> = {
 export function Topbar({ title }: { title?: string }) {
   const { data: session } = useSession();
   const role = session?.user?.role ?? 'auditor';
+  const { agentPanelOpen, toggleAgentPanel } = useAppStore();
 
   return (
     <header className="flex h-16 items-center justify-between border-b bg-white px-6 shrink-0">
@@ -31,6 +32,21 @@ export function Topbar({ title }: { title?: string }) {
         >
           {role.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
         </span>
+
+        {/* Vantor AI toggle */}
+        <button
+          onClick={toggleAgentPanel}
+          className={cn(
+            'relative p-2 rounded-lg transition-colors',
+            agentPanelOpen
+              ? 'bg-[#207679]/10 text-[#207679]'
+              : 'hover:bg-gray-100 text-gray-500'
+          )}
+          title="Toggle Vantor AI"
+          aria-label="Toggle Vantor AI assistant"
+        >
+          <Bot className="h-5 w-5" />
+        </button>
 
         {/* Notifications placeholder */}
         <button className="relative p-2 rounded-lg hover:bg-gray-100">

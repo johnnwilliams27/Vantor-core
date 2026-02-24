@@ -1,4 +1,5 @@
 import type { ChainType, TokenSymbol } from './database';
+export type { ChainType, TokenSymbol };
 
 export interface TokenBalance {
   token: TokenSymbol;

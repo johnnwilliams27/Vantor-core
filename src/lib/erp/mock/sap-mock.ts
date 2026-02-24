@@ -45,7 +45,7 @@ export class SAPMockAdapter implements IERPAdapter {
         id: 'V003',
         name: 'Global Materials Inc',
         email: 'ar@globalmaterials.com',
-        walletAddress: null,
+        walletAddress: undefined,
         chain: undefined,
       },
       {

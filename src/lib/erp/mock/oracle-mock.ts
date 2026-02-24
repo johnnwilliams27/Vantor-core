@@ -44,7 +44,7 @@ export class OracleMockAdapter implements IERPAdapter {
         id: 'ORC-V003',
         name: 'DataBridge Analytics',
         email: 'ar@databridge.com',
-        walletAddress: null,
+        walletAddress: undefined,
         chain: undefined,
       },
     ];

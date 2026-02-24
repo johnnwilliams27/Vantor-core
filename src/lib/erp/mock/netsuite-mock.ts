@@ -44,7 +44,7 @@ export class NetsuiteMockAdapter implements IERPAdapter {
         id: 'NS-V003',
         name: 'Atlas Engineering',
         email: 'billing@atlaseng.com',
-        walletAddress: null,
+        walletAddress: undefined,
         chain: undefined,
       },
       {
