@@ -1,10 +1,10 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { CheckCircle, Wallet, FileText, Settings2, LayoutDashboard } from 'lucide-react';
+import { CheckCircle, Wallet, Settings2, LayoutDashboard, LogOut } from 'lucide-react';
 
 
 const STEPS = [
@@ -56,8 +56,10 @@ export function OnboardingWizard() {
       const res = await fetch('/api/user/complete-onboarding', { method: 'POST' });
       if (!res.ok) throw new Error('Failed to complete onboarding');
 
-      // Force a full page reload so the middleware reads a fresh session
-      window.location.href = '/dashboard';
+      // Refresh the JWT so the middleware sees onboarding_done: true immediately,
+      // without relying on the short-lived bridge cookie.
+      await update();
+      router.push('/dashboard');
     } catch (err) {
       console.error('Failed to complete onboarding', err);
       setCompleting(false);
@@ -133,6 +135,16 @@ export function OnboardingWizard() {
             <Button onClick={handleNext} disabled={completing}>
               {isLast ? (completing ? 'Setting up…' : 'Go to Dashboard') : 'Next'}
             </Button>
+          </div>
+
+          <div className="mt-6 pt-4 border-t border-gray-100 flex justify-center">
+            <button
+              onClick={() => signOut({ callbackUrl: '/login' })}
+              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              Sign out
+            </button>
           </div>
         </CardContent>
       </Card>
