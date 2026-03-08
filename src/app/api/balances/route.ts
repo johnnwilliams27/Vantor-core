@@ -33,6 +33,7 @@ export async function GET(_req: NextRequest) {
   const walletMap = Object.fromEntries(wallets.map((w) => [w.id, w]));
   const result = (balances ?? []).map((b) => ({
     ...b,
+    walletId: b.wallet_id,
     walletAddress: walletMap[b.wallet_id]?.address,
     chain: walletMap[b.wallet_id]?.chain,
   }));
