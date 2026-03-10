@@ -16,21 +16,21 @@ export default async function Image() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          background: '#0a2a2b',
+          background: 'linear-gradient(135deg, #060d1f 0%, #0a1628 50%, #060d1f 100%)',
           position: 'relative',
         }}
       >
-        {/* Radial glow behind the logo */}
+        {/* Subtle teal accent glow */}
         <div
           style={{
             position: 'absolute',
-            top: '42%',
+            top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            width: 700,
-            height: 700,
+            width: 600,
+            height: 600,
             borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(32,118,121,0.5) 0%, rgba(32,118,121,0.2) 35%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(45,212,191,0.08) 0%, transparent 70%)',
           }}
         />
 
@@ -41,7 +41,7 @@ export default async function Image() {
           alt=""
           width={360}
           height={120}
-          style={{ objectFit: 'contain', position: 'relative' }}
+          style={{ objectFit: 'contain' }}
         />
 
         {/* Tagline */}
@@ -49,10 +49,9 @@ export default async function Image() {
           style={{
             marginTop: 32,
             fontSize: 28,
-            color: 'rgba(255, 255, 255, 0.85)',
+            color: 'rgba(148, 163, 184, 0.8)',
             fontFamily: 'system-ui, sans-serif',
             letterSpacing: '0.05em',
-            position: 'relative',
           }}
         >
           Agentic Stablecoin Treasury Management
