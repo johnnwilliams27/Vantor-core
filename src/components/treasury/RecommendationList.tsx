@@ -1,5 +1,6 @@
 'use client';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
 import { useTreasuryRecommendations, useGenerateRecommendation } from '@/hooks/useTreasury';
 import { RecommendationCard } from './RecommendationCard';
@@ -24,41 +25,41 @@ export function RecommendationList() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold">AI Recommendations</h2>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+        <CardTitle className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4" />
+          AI Recommendations
+        </CardTitle>
         <Button
+          size="sm"
+          variant="outline"
           onClick={handleGenerate}
           disabled={generate.isPending}
-          className="flex items-center gap-2"
+          className="flex items-center gap-1.5 shrink-0"
         >
           {generate.isPending ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Analyzing…
-            </>
+            <><Loader2 className="h-3.5 w-3.5 animate-spin" />Analyzing…</>
           ) : (
-            <>
-              <Sparkles className="h-4 w-4" />
-              Generate Recommendation
-            </>
+            <><Sparkles className="h-3.5 w-3.5" />Generate</>
           )}
         </Button>
-      </div>
-
-      {isLoading ? (
-        <div className="text-sm text-muted-foreground py-6 text-center">Loading…</div>
-      ) : !recommendations?.length ? (
-        <div className="text-sm text-muted-foreground text-center py-10 border rounded-lg bg-muted/20">
-          No recommendations yet. Click "Generate Recommendation" to analyze your treasury.
-        </div>
-      ) : (
-        <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
-          {recommendations.map((rec) => (
-            <RecommendationCard key={rec.id} rec={rec} />
-          ))}
-        </div>
-      )}
-    </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="text-sm text-muted-foreground py-6 text-center">Loading…</div>
+        ) : !recommendations?.length ? (
+          <div className="text-sm text-muted-foreground text-center py-8">
+            No recommendations yet. Click <span className="font-medium text-foreground">Generate</span> to analyze your treasury.
+          </div>
+        ) : (
+          <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+            {recommendations.map((rec) => (
+              <RecommendationCard key={rec.id} rec={rec} />
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

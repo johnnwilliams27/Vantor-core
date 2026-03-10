@@ -162,7 +162,7 @@ export function SwapForm() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Amount</Label>
               <Input placeholder="100.00" {...register('amount')} />
@@ -174,7 +174,7 @@ export function SwapForm() {
             </div>
           </div>
 
-          <Button type="button" variant="outline" className="w-full" onClick={getQuote} disabled={quoting}>
+          <Button type="button" className="w-full" onClick={getQuote} disabled={quoting}>
             {quoting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Getting Quote…</> : 'Get Quote'}
           </Button>
         </form>

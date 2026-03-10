@@ -3,7 +3,7 @@ import { useInvoices, useSyncInvoices } from '@/hooks/useInvoices';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, capitalize } from '@/lib/utils';
 import { RefreshCw, Loader2 } from 'lucide-react';
 import type { InvoiceStatus } from '@/types/database';
 import { useERPStore } from '@/store/erpStore';
@@ -45,7 +45,7 @@ export function InvoiceTable() {
         </Button>
       </div>
 
-      <div className="rounded-lg border bg-white">
+      <div className="rounded-lg border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -75,16 +75,16 @@ export function InvoiceTable() {
                     <Badge variant="outline">{inv.token}</Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={inv.chain === 'ethereum' ? 'info' as any : 'secondary'}>
-                      {inv.chain}
+                    <Badge variant="secondary">
+                      {capitalize(inv.chain)}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     <Badge variant={STATUS_VARIANTS[inv.status]}>
-                      {inv.status.replace('_', ' ')}
+                      {capitalize(inv.status)}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-sm text-gray-500">
+                  <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                     {inv.due_date ? formatDate(inv.due_date) : '—'}
                   </TableCell>
                 </TableRow>

@@ -6,7 +6,7 @@ import { FiatTransactionTable } from '@/components/banking/FiatTransactionTable'
 export default function RampsPage() {
   return (
     <AppShell title="Ramps">
-      <div className="space-y-6 max-w-3xl">
+      <div className="space-y-6">
         <RampForm />
         <FiatTransactionTable />
       </div>

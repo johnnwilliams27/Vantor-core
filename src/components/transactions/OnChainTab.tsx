@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatCurrency, formatDateTime, truncateAddress } from '@/lib/utils';
+import { formatCurrency, formatDateTime, truncateAddress, capitalize } from '@/lib/utils';
 import type { Transaction } from '@/types/database';
 import { Loader2, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 
@@ -23,6 +23,7 @@ export function OnChainTab() {
     <Card>
       <CardHeader><CardTitle>On-Chain Transactions</CardTitle></CardHeader>
       <CardContent>
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -67,21 +68,22 @@ export function OnChainTab() {
                     ) : '—'}
                     {tx.token && <Badge variant="outline" className="ml-1">{tx.token}</Badge>}
                   </TableCell>
-                  <TableCell><Badge variant="secondary">{tx.chain}</Badge></TableCell>
-                  <TableCell className="text-sm text-gray-500">
+                  <TableCell><Badge variant="secondary">{capitalize(tx.chain)}</Badge></TableCell>
+                  <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                     {formatDateTime(tx.timestamp)}
                   </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-gray-400 py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   No transactions recorded yet.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
+        </div>
       </CardContent>
     </Card>
   );

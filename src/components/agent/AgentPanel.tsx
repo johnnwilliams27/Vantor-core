@@ -157,7 +157,7 @@ export function AgentPanel() {
 
   return (
     <div
-      className={`flex flex-col border-l border-gray-200 bg-white transition-all duration-300 ease-in-out overflow-hidden shrink-0 ${
+      className={`flex flex-col border-l border-border bg-background dark:bg-gray-900 transition-all duration-300 ease-in-out overflow-hidden shrink-0 ${
         agentPanelOpen ? 'w-[380px]' : 'w-0'
       }`}
     >
@@ -165,21 +165,21 @@ export function AgentPanel() {
       {agentPanelOpen && (
         <>
           {/* Header */}
-          <div className="flex h-16 shrink-0 items-center justify-between border-b border-gray-200 px-4">
+          <div className="flex h-16 shrink-0 items-center justify-between border-b border-border px-4 dark:bg-gray-900">
             <div className="flex items-center gap-2.5">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#207679] text-white text-sm font-bold">
                 V
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-900">Vantor</p>
-                <p className="text-xs text-gray-500">Treasury AI</p>
+                <p className="text-sm font-semibold text-foreground">Vantor</p>
+                <p className="text-xs text-muted-foreground">Treasury AI</p>
               </div>
             </div>
             <div className="flex items-center gap-1">
               <button
                 onClick={clearAgentMessages}
                 disabled={isStreaming || messages.length === 0}
-                className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                 aria-label="Clear chat"
                 title="Clear chat"
               >
@@ -187,7 +187,7 @@ export function AgentPanel() {
               </button>
               <button
                 onClick={toggleAgentPanel}
-                className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                 aria-label="Close agent panel"
               >
                 <X className="h-4 w-4" />

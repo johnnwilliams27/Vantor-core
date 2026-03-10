@@ -147,10 +147,10 @@ export function UnifiedBalanceCard() {
       </div>
 
       {/* Total Treasury */}
-      <Card className="bg-[#207679] text-white">
+      <Card className="bg-[#207679] text-white dark:bg-slate-800 dark:text-foreground dark:border-slate-700">
         <CardContent className="py-4 flex items-center justify-between">
-          <span className="text-sm font-medium opacity-90">Total Treasury</span>
-          <span className="text-2xl font-bold tabular-nums">{formatUsd(totalTreasury)}</span>
+          <span className="text-base font-semibold opacity-90 dark:opacity-100 dark:text-foreground">Total Treasury</span>
+          <span className="text-2xl font-bold tabular-nums dark:text-white">{formatUsd(totalTreasury)}</span>
         </CardContent>
       </Card>
     </div>

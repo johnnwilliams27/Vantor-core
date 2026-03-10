@@ -48,10 +48,22 @@ export function EthWalletConnect() {
 
   return (
     <div className="space-y-4">
-      <ConnectButton />
+      <ConnectButton.Custom>
+        {({ account, chain, openConnectModal, mounted }) => {
+          const connected = mounted && account && chain;
+          if (!connected) {
+            return (
+              <Button size="sm" onClick={openConnectModal}>
+                Link Wallet
+              </Button>
+            );
+          }
+          return <ConnectButton />;
+        }}
+      </ConnectButton.Custom>
 
       {isConnected && address && !linked && (
-        <div className="space-y-3 p-4 rounded-lg border bg-gray-50">
+        <div className="space-y-3 p-4 rounded-lg border bg-muted/40">
           <div className="text-sm font-medium">Link this wallet to your account</div>
           <div className="space-y-2">
             <Label htmlFor="eth-label">Wallet label (optional)</Label>

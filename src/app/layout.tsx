@@ -6,13 +6,13 @@ import { Providers } from './providers';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Vantor – Autonomous Stablecoin Treasury Management',
+  title: 'Vantor – Agentic Stablecoin Treasury Management',
   description: 'Manage USDC, USDT, and PYUSD treasury operations on Ethereum and Solana',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <Providers>{children}</Providers>
       </body>

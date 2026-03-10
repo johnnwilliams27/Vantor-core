@@ -35,8 +35,8 @@ export function AgentInput({ onSend, isStreaming, value, onChange }: AgentInputP
   };
 
   return (
-    <div className="border-t border-gray-200 bg-white p-3">
-      <div className="flex items-end gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 focus-within:border-[#207679] focus-within:ring-1 focus-within:ring-[#207679]/30 transition-all">
+    <div className="border-t border-border bg-background dark:bg-gray-900 p-3">
+      <div className="flex items-end gap-2 rounded-xl border border-border bg-muted/50 px-3 py-2 focus-within:border-[#207679] focus-within:ring-1 focus-within:ring-[#207679]/30 transition-all">
         <textarea
           ref={textareaRef}
           value={value}
@@ -46,7 +46,7 @@ export function AgentInput({ onSend, isStreaming, value, onChange }: AgentInputP
           rows={1}
           placeholder="Ask Vantor anything… (⌘↵ to send)"
           className={cn(
-            'flex-1 resize-none bg-transparent text-sm text-gray-800 placeholder:text-gray-400 outline-none min-h-[24px] max-h-[160px] leading-6',
+            'flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none min-h-[24px] max-h-[160px] leading-6',
             isStreaming && 'opacity-60'
           )}
         />
@@ -56,7 +56,7 @@ export function AgentInput({ onSend, isStreaming, value, onChange }: AgentInputP
           className={cn(
             'mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors',
             isStreaming || !value.trim()
-              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              ? 'bg-muted text-muted-foreground cursor-not-allowed'
               : 'bg-[#207679] text-white hover:bg-[#195a5c]'
           )}
           aria-label="Send message"
@@ -64,7 +64,7 @@ export function AgentInput({ onSend, isStreaming, value, onChange }: AgentInputP
           <SendHorizonal className="h-3.5 w-3.5" />
         </button>
       </div>
-      <p className="mt-1.5 text-center text-[10px] text-gray-400">
+      <p className="mt-1.5 text-center text-[10px] text-muted-foreground">
         Vantor can make mistakes. Verify important actions.
       </p>
     </div>

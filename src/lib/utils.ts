@@ -35,3 +35,8 @@ export function formatDateTime(iso: string): string {
     minute: '2-digit',
   });
 }
+
+/** Capitalizes each word; converts underscores to spaces. e.g. "payment_execute" → "Payment Execute" */
+export function capitalize(str: string): string {
+  return str.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}

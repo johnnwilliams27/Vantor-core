@@ -1,4 +1,4 @@
-import { BalanceSummary } from '@/components/balances/BalanceSummary';
+import { UnifiedBalanceCard } from '@/components/treasury/UnifiedBalanceCard';
 import { BalanceOverTime } from '@/components/charts/BalanceOverTime';
 import { PaymentVolume } from '@/components/charts/PaymentVolume';
 import { InvoiceAging } from '@/components/charts/InvoiceAging';
@@ -11,7 +11,7 @@ export default function DashboardPage() {
   return (
     <AppShell title="Dashboard">
       <div className="space-y-6">
-        <BalanceSummary />
+        <UnifiedBalanceCard />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <BalanceOverTime />
           <TokenDistribution />

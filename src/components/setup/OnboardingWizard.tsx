@@ -109,7 +109,7 @@ export function OnboardingWizard() {
           {step === 2 && (
             <div className="space-y-3 mb-4">
               <div className="p-3 rounded-lg border bg-[#207679]/5 text-sm text-[#195a5c]">
-                Navigate to <strong>ERP Settings</strong> to configure SAP or Oracle. Use mock mode (default) to explore the platform without real credentials.
+                Navigate to <strong>ERP Systems</strong> to configure SAP or Oracle. Use mock mode (default) to explore the platform without real credentials.
               </div>
             </div>
           )}

@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatCurrency, formatDateTime, truncateAddress } from '@/lib/utils';
+import { formatCurrency, formatDateTime, truncateAddress, capitalize } from '@/lib/utils';
 import type { Payment } from '@/types/database';
 import { Loader2, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 
@@ -58,6 +58,7 @@ export function PaymentsTab() {
     <Card>
       <CardHeader><CardTitle>Payments</CardTitle></CardHeader>
       <CardContent>
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -85,30 +86,31 @@ export function PaymentsTab() {
                     <span className="font-semibold">{formatCurrency(p.amount)}</span>{' '}
                     <Badge variant="outline">{p.token}</Badge>
                   </TableCell>
-                  <TableCell><Badge variant="secondary">{p.chain}</Badge></TableCell>
+                  <TableCell><Badge variant="secondary">{capitalize(p.chain)}</Badge></TableCell>
                   <TableCell>
                     <Badge variant={
                       p.status === 'completed' ? 'success' as any :
                       p.status === 'failed' ? 'destructive' :
                       'warning' as any
                     }>
-                      {p.status}
+                      {capitalize(p.status)}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-sm text-gray-500">
+                  <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                     {formatDateTime(p.created_at)}
                   </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-gray-400 py-8">
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                   No payments yet.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
+        </div>
       </CardContent>
     </Card>
   );

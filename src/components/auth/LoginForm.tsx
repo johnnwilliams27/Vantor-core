@@ -48,7 +48,7 @@ export function LoginForm() {
       <CardContent className="p-0">
         <div className="bg-[#207679] rounded-t-xl px-8 pt-8 pb-5 flex flex-col items-center">
           <Image
-            src="/logo.png"
+            src="/logo-dark.png"
             alt="Vantor"
             width={200}
             height={78}
@@ -57,7 +57,7 @@ export function LoginForm() {
             unoptimized
           />
           <p className="text-white text-sm mt-3 text-center tracking-wide font-semibold">
-            Autonomous Stablecoin Treasury Management
+            Agentic Stablecoin Treasury Management
           </p>
         </div>
 

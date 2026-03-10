@@ -3,23 +3,10 @@ import { useQuery } from '@tanstack/react-query';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatDateTime } from '@/lib/utils';
+import { formatDateTime, capitalize } from '@/lib/utils';
 import type { AuditLog } from '@/types/database';
 import { Loader2, Shield } from 'lucide-react';
 
-const ACTION_COLORS: Record<string, string> = {
-  login: 'info',
-  logout: 'secondary',
-  payment_execute: 'warning',
-  payment_create: 'default',
-  payment_schedule: 'default',
-  invoice_sync: 'info',
-  swap_execute: 'warning',
-  wallet_connect: 'success',
-  wallet_disconnect: 'destructive',
-  erp_connect: 'info',
-  gl_post: 'secondary',
-};
 
 export function AuditTable() {
   const { data: result, isLoading } = useQuery<{ data: AuditLog[]; total: number }>({
@@ -44,7 +31,7 @@ export function AuditTable() {
         )}
       </div>
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -72,8 +59,8 @@ export function AuditTable() {
                       {(log as any).user_profile?.email ?? log.user_id?.slice(0, 8) ?? 'System'}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={(ACTION_COLORS[log.action] ?? 'default') as any}>
-                        {log.action.replace(/_/g, ' ')}
+                      <Badge variant="secondary">
+                        {capitalize(log.action)}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-gray-500">

@@ -2,7 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatDate } from '@/lib/utils';
+import { formatDate, capitalize } from '@/lib/utils';
 import type { FiatTransaction } from '@/types/database';
 import { ArrowDownLeft, ArrowUpRight, History } from 'lucide-react';
 
@@ -20,21 +20,21 @@ function StatusBadge({ status }: { status: string }) {
     payment_submitted: 'warning',
     failed: 'destructive',
   };
-  return <Badge variant={variantMap[status] ?? 'secondary'}>{status}</Badge>;
+  return <Badge variant={variantMap[status] ?? 'secondary'}>{capitalize(status)}</Badge>;
 }
 
 function DirectionBadge({ direction }: { direction: 'onramp' | 'offramp' }) {
   if (direction === 'onramp') {
     return (
-      <span className="inline-flex items-center gap-1 text-green-700 text-xs font-semibold">
-        <ArrowDownLeft className="h-3 w-3" />
+      <span className="inline-flex items-center gap-1 text-green-700 text-xs font-semibold whitespace-nowrap">
+        <ArrowDownLeft className="h-3 w-3 shrink-0" />
         On-ramp
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 text-orange-700 text-xs font-semibold">
-      <ArrowUpRight className="h-3 w-3" />
+    <span className="inline-flex items-center gap-1 text-orange-700 text-xs font-semibold whitespace-nowrap">
+      <ArrowUpRight className="h-3 w-3 shrink-0" />
       Off-ramp
     </span>
   );
@@ -49,7 +49,7 @@ export function FiatTransactionTable() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
+        <CardTitle className="flex items-center gap-2">
           <History className="h-4 w-4" />
           Ramp History
         </CardTitle>

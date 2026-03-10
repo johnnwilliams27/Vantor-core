@@ -33,8 +33,8 @@
     --card-foreground: 210 40% 98%;
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 182 50% 48%;
+    --primary-foreground: 0 0% 100%;
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
     --muted: 217.2 32.6% 17.5%;
@@ -45,7 +45,7 @@
     --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --ring: 182 50% 48%;
   }
 }
 
@@ -56,4 +56,47 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+@layer utilities {
+  .glass-sm {
+    @apply bg-white/60 dark:bg-white/5 backdrop-blur-sm border border-white/20 dark:border-white/10;
+  }
+  .glass-strong {
+    @apply bg-white/80 dark:bg-gray-900/80 backdrop-blur-md;
+  }
+  .fade-in {
+    animation: fadeIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .animate-dropdown {
+    animation: dropdownIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dropdownIn {
+  from { opacity: 0; transform: translateY(-6px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.nav-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2.5px;
+  z-index: 9999;
+  pointer-events: none;
+  background: hsl(var(--primary));
+  animation: navProgress 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes navProgress {
+  0%   { transform: scaleX(0); transform-origin: left; opacity: 1; }
+  70%  { transform: scaleX(1); transform-origin: left; opacity: 1; }
+  100% { transform: scaleX(1); transform-origin: left; opacity: 0; }
 }

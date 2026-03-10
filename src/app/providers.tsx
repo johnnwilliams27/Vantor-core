@@ -1,4 +1,5 @@
 'use client';
+import { ThemeProvider } from 'next-themes';
 import { SessionProvider } from 'next-auth/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
@@ -11,21 +12,29 @@ export function Providers({ children }: { children: React.ReactNode }) {
     () =>
       new QueryClient({
         defaultOptions: {
-          queries: { retry: 1, staleTime: 30_000 },
+          queries: {
+            retry: 1,
+            staleTime: 2 * 60 * 1000,      // 2 min — cached data shows instantly on re-visit
+            gcTime: 10 * 60 * 1000,         // keep unused data in memory 10 min
+            refetchOnWindowFocus: false,     // don't re-fetch just because user switched tabs
+            refetchOnReconnect: false,       // don't re-fetch on network reconnect
+          },
         },
       })
   );
 
   return (
-    <SessionProvider>
-      <QueryClientProvider client={queryClient}>
-        <WagmiConfig>
-          <ToastProvider>
-            {children}
-          </ToastProvider>
-        </WagmiConfig>
-        <ReactQueryDevtools initialIsOpen={false} />
-      </QueryClientProvider>
-    </SessionProvider>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem storageKey="vantor-theme">
+      <SessionProvider>
+        <QueryClientProvider client={queryClient}>
+          <WagmiConfig>
+            <ToastProvider>
+              {children}
+            </ToastProvider>
+          </WagmiConfig>
+          <ReactQueryDevtools initialIsOpen={false} />
+        </QueryClientProvider>
+      </SessionProvider>
+    </ThemeProvider>
   );
 }

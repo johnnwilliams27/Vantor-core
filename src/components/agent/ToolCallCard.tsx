@@ -79,31 +79,31 @@ export function ToolCallCard({ toolCall }: { toolCall: ToolCallDisplay }) {
     : '';
 
   return (
-    <div className="flex items-start gap-2 my-2 px-3 py-2 rounded-lg bg-gray-100 border border-gray-200 text-sm">
+    <div className="flex items-start gap-2 my-2 px-3 py-2 rounded-lg bg-muted border border-border text-sm">
       <div className="mt-0.5 shrink-0">
         {toolCall.status === 'pending' && (
-          <Loader2 className="h-4 w-4 animate-spin text-[#207679]" />
+          <Loader2 className="h-4 w-4 animate-spin text-[#207679] dark:text-teal-400" />
         )}
         {toolCall.status === 'done' && (
-          <CheckCircle2 className="h-4 w-4 text-green-600" />
+          <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
         )}
         {toolCall.status === 'error' && (
-          <XCircle className="h-4 w-4 text-red-500" />
+          <XCircle className="h-4 w-4 text-red-500 dark:text-red-400" />
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5 text-gray-700 font-medium">
-          <Wrench className="h-3 w-3 text-gray-400 shrink-0" />
+        <div className="flex items-center gap-1.5 text-foreground font-medium">
+          <Wrench className="h-3 w-3 text-muted-foreground shrink-0" />
           <span>{label}</span>
         </div>
         {toolCall.status === 'pending' && (
-          <p className="text-xs text-gray-500 mt-0.5">Running...</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Running...</p>
         )}
         {toolCall.status === 'done' && summary && (
-          <p className="text-xs text-gray-500 mt-0.5">{summary}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{summary}</p>
         )}
         {toolCall.status === 'error' && (
-          <p className="text-xs text-red-500 mt-0.5">{toolCall.error}</p>
+          <p className="text-xs text-red-500 dark:text-red-400 mt-0.5">{toolCall.error}</p>
         )}
       </div>
     </div>

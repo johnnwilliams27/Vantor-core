@@ -9,6 +9,7 @@ export const ROLE_ROUTES: Record<string, UserRole> = {
   '/settings': 'accountant',
   '/invoices': 'accountant',
   '/wallets': 'accountant',
+  '/bank-accounts': 'accountant',
 };
 
 const ROLE_RANK: Record<UserRole, number> = {

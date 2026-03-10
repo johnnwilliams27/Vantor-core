@@ -134,7 +134,7 @@ export function RampForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Convert Funds</CardTitle>
+        <CardTitle>Convert Funds</CardTitle>
       </CardHeader>
       <CardContent>
         <form className="space-y-4">
@@ -144,14 +144,14 @@ export function RampForm() {
               <input type="radio" value="offramp" {...register('direction')} className="sr-only" />
               <div className={`flex items-center justify-center gap-2 py-2 text-sm font-medium cursor-pointer transition-colors ${direction === 'offramp' ? 'bg-orange-50 text-orange-700 border-r border-orange-200' : 'text-gray-500 hover:bg-gray-50 border-r'}`}>
                 <ArrowUpRight className="h-4 w-4" />
-                Off-ramp (crypto → fiat)
+                Off-ramp (Crypto → Fiat)
               </div>
             </label>
             <label className="flex-1">
               <input type="radio" value="onramp" {...register('direction')} className="sr-only" />
               <div className={`flex items-center justify-center gap-2 py-2 text-sm font-medium cursor-pointer transition-colors ${direction === 'onramp' ? 'bg-green-50 text-green-700' : 'text-gray-500 hover:bg-gray-50'}`}>
                 <ArrowDownLeft className="h-4 w-4" />
-                On-ramp (fiat → crypto)
+                On-ramp (Fiat → Crypto)
               </div>
             </label>
           </div>
@@ -171,7 +171,7 @@ export function RampForm() {
           </div>
 
           {/* Token + amount */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>Token</Label>
               <Select {...register('cryptoToken')}>
@@ -193,7 +193,7 @@ export function RampForm() {
             </div>
           </div>
 
-          <Button type="button" variant="outline" className="w-full" onClick={getQuote} disabled={quoting}>
+          <Button type="button" className="w-full" onClick={getQuote} disabled={quoting}>
             {quoting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Getting Quote…</> : 'Get Quote'}
           </Button>
         </form>

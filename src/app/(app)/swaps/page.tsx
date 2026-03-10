@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatCurrency, formatDateTime } from '@/lib/utils';
+import { formatCurrency, formatDateTime, capitalize } from '@/lib/utils';
 import type { Swap } from '@/types/database';
 import { Loader2 } from 'lucide-react';
 
@@ -25,6 +25,7 @@ function SwapHistory() {
     <Card>
       <CardHeader><CardTitle>Swap History</CardTitle></CardHeader>
       <CardContent>
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -53,26 +54,27 @@ function SwapHistory() {
                     <span className="font-semibold">{s.to_amount ? formatCurrency(s.to_amount) : '…'}</span>{' '}
                     <Badge variant="outline">{s.to_token}</Badge>
                   </TableCell>
-                  <TableCell><Badge variant="secondary">{s.chain}</Badge></TableCell>
+                  <TableCell><Badge variant="secondary">{capitalize(s.chain)}</Badge></TableCell>
                   <TableCell>
                     <Badge variant={s.status === 'completed' ? 'success' as any : 'warning' as any}>
-                      {s.status}
+                      {capitalize(s.status)}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-sm text-gray-500">
+                  <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                     {formatDateTime(s.created_at)}
                   </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-gray-400 py-8">
+                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                   No swaps yet.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
+        </div>
       </CardContent>
     </Card>
   );
@@ -81,7 +83,7 @@ function SwapHistory() {
 export default function SwapsPage() {
   return (
     <AppShell title="Swaps">
-      <div className="space-y-6 max-w-3xl">
+      <div className="space-y-6">
         <SwapForm />
         <SwapHistory />
       </div>

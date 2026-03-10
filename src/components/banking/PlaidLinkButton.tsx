@@ -91,9 +91,9 @@ export function PlaidLinkButton({ onSuccess, plaidConfigured = false }: PlaidLin
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
-            Add Bank Account
+            Link Bank Account
           </CardTitle>
         </CardHeader>
         <CardContent>

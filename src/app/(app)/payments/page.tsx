@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatCurrency, formatDateTime, truncateAddress } from '@/lib/utils';
+import { formatCurrency, formatDateTime, truncateAddress, capitalize } from '@/lib/utils';
 import type { Payment } from '@/types/database';
 import { Loader2 } from 'lucide-react';
 
@@ -34,6 +34,7 @@ function PaymentList() {
     <Card>
       <CardHeader><CardTitle>Payment History</CardTitle></CardHeader>
       <CardContent>
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -61,9 +62,9 @@ function PaymentList() {
                     <span className="font-semibold">{formatCurrency(p.amount)}</span>{' '}
                     <Badge variant="outline">{p.token}</Badge>
                   </TableCell>
-                  <TableCell><Badge variant="secondary">{p.chain}</Badge></TableCell>
+                  <TableCell><Badge variant="secondary">{capitalize(p.chain)}</Badge></TableCell>
                   <TableCell>
-                    <Badge variant={STATUS_COLORS[p.status] as any}>{p.status}</Badge>
+                    <Badge variant={STATUS_COLORS[p.status] as any}>{capitalize(p.status)}</Badge>
                   </TableCell>
                   <TableCell className="text-sm">
                     {p.erp_config ? (
@@ -71,26 +72,27 @@ function PaymentList() {
                         {p.erp_config.provider.toUpperCase()}
                       </span>
                     ) : (
-                      <span className="text-gray-400">—</span>
+                      <span className="text-muted-foreground">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-sm text-gray-500">
+                  <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                     {p.scheduled_for ? formatDateTime(p.scheduled_for) : 'Immediate'}
                   </TableCell>
-                  <TableCell className="text-sm text-gray-500">
+                  <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                     {formatDateTime(p.created_at)}
                   </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-gray-400 py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   No payments yet.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
+        </div>
       </CardContent>
     </Card>
   );

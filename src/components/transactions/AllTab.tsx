@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatCurrency, formatDateTime } from '@/lib/utils';
+import { formatCurrency, formatDateTime, capitalize } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 import type { Payment, Swap, FiatTransaction, Transaction } from '@/types/database';
 
@@ -75,10 +75,10 @@ function mapOnchain(txs: Transaction[]): UnifiedRow[] {
 }
 
 const TYPE_BADGE: Record<UnifiedRow['type'], string> = {
-  payment: 'bg-[#207679]/10 text-[#195a5c]',
-  swap: 'bg-gray-100 text-gray-700',
-  ramp: 'bg-amber-50 text-amber-700',
-  onchain: 'bg-white border text-gray-600',
+  payment: 'bg-[#207679]/10 text-[#195a5c] dark:bg-[#207679]/25 dark:text-teal-300',
+  swap: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200',
+  ramp: 'bg-amber-50 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  onchain: 'bg-white border text-gray-600 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300',
 };
 
 export function AllTab() {
@@ -113,6 +113,7 @@ export function AllTab() {
     <Card>
       <CardHeader><CardTitle>All Activity</CardTitle></CardHeader>
       <CardContent>
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -136,16 +137,16 @@ export function AllTab() {
                 <TableRow key={row.id}>
                   <TableCell>
                     <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold border ${TYPE_BADGE[row.type]}`}>
-                      {row.type}
+                      {capitalize(row.type)}
                     </span>
                   </TableCell>
-                  <TableCell className="text-sm text-gray-700">{row.description}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{row.description}</TableCell>
                   <TableCell>
                     <span className="font-semibold">{formatCurrency(row.amount)}</span>{' '}
                     {row.token !== '—' && <Badge variant="outline">{row.token}</Badge>}
                   </TableCell>
                   <TableCell>
-                    {row.chain ? <Badge variant="secondary">{row.chain}</Badge> : '—'}
+                    {row.chain ? <Badge variant="secondary">{capitalize(row.chain)}</Badge> : '—'}
                   </TableCell>
                   <TableCell>
                     <Badge variant={
@@ -153,23 +154,24 @@ export function AllTab() {
                       row.status === 'failed' ? 'destructive' :
                       'warning' as any
                     }>
-                      {row.status}
+                      {capitalize(row.status)}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-sm text-gray-500 whitespace-nowrap">
+                  <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                     {formatDateTime(row.date)}
                   </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-gray-400 py-8">
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                   No activity yet.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
+        </div>
       </CardContent>
     </Card>
   );
