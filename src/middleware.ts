@@ -3,10 +3,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { canAccessRoute } from '@/lib/auth/rbac';
 import type { UserRole } from '@/types/database';
 
-const PUBLIC_PATHS = ['/login', '/register', '/api/auth'];
+const PUBLIC_PATHS = ['/login', '/register', '/api/auth', '/api/contact'];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // Allow landing page (root)
+  if (pathname === '/') {
+    return NextResponse.next();
+  }
 
   // Allow public paths
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {

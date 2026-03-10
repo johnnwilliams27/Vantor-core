@@ -100,3 +100,105 @@
   70%  { transform: scaleX(1); transform-origin: left; opacity: 1; }
   100% { transform: scaleX(1); transform-origin: left; opacity: 0; }
 }
+
+/* ---- Landing page ---- */
+
+.landing-page {
+  scroll-behavior: smooth;
+}
+
+/* Organic blob background */
+.blob-wrap {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.4;
+  will-change: transform;
+}
+.blob-1 {
+  width: 600px;
+  height: 600px;
+  top: -10%;
+  left: -10%;
+  background: radial-gradient(circle, rgba(45,212,191,0.18) 0%, transparent 70%);
+  animation: blobFloat1 18s ease-in-out infinite;
+}
+.blob-2 {
+  width: 500px;
+  height: 500px;
+  top: 20%;
+  right: -8%;
+  background: radial-gradient(circle, rgba(34,211,238,0.12) 0%, transparent 70%);
+  animation: blobFloat2 22s ease-in-out infinite;
+}
+.blob-3 {
+  width: 400px;
+  height: 400px;
+  bottom: -5%;
+  left: 30%;
+  background: radial-gradient(circle, rgba(45,212,191,0.10) 0%, transparent 70%);
+  animation: blobFloat3 20s ease-in-out infinite;
+}
+
+@keyframes blobFloat1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(60px, 40px) scale(1.08); }
+  66%      { transform: translate(-30px, 70px) scale(0.95); }
+}
+@keyframes blobFloat2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(-50px, 30px) scale(1.05); }
+  66%      { transform: translate(40px, -50px) scale(0.97); }
+}
+@keyframes blobFloat3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(30px, -40px) scale(1.06); }
+  66%      { transform: translate(-60px, 20px) scale(0.94); }
+}
+
+/* Fade-in animation for landing page elements */
+.landing-fade-in {
+  animation: landingFadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.landing-delay-1 { animation-delay: 0.15s; }
+.landing-delay-2 { animation-delay: 0.3s; }
+.landing-delay-3 { animation-delay: 0.45s; }
+.landing-delay-4 { animation-delay: 0.6s; }
+
+@keyframes landingFadeIn {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Login dropdown animation */
+.login-dropdown {
+  transform-origin: top right;
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.login-dropdown-open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+.login-dropdown-closed {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.96);
+  pointer-events: none;
+}
+
+/* Hero badge glow */
+.hero-badge-glow {
+  box-shadow: 0 0 30px rgba(45, 212, 191, 0.1), inset 0 0 20px rgba(45, 212, 191, 0.05);
+  animation: badgePulse 3s ease-in-out infinite;
+}
+@keyframes badgePulse {
+  0%, 100% { box-shadow: 0 0 30px rgba(45, 212, 191, 0.1), inset 0 0 20px rgba(45, 212, 191, 0.05); }
+  50%      { box-shadow: 0 0 40px rgba(45, 212, 191, 0.2), inset 0 0 25px rgba(45, 212, 191, 0.08); }
+}
