@@ -437,12 +437,48 @@ function Navbar() {
               {l.label}
             </a>
           ))}
-          <button
-            onClick={() => { setMobileOpen(false); setLoginOpen(true); }}
-            className="block w-full text-center px-5 py-2.5 rounded-full text-sm font-medium bg-gradient-to-r from-teal-500 to-cyan-400 text-white"
-          >
-            Login
-          </button>
+          {!loginOpen ? (
+            <button
+              onClick={() => setLoginOpen(true)}
+              className="block w-full text-center px-5 py-2.5 rounded-full text-sm font-medium bg-gradient-to-r from-teal-500 to-cyan-400 text-white"
+            >
+              Login
+            </button>
+          ) : (
+            <form onSubmit={handleLogin} className="space-y-3 pt-2 border-t border-white/[0.06]">
+              <p className="text-white font-semibold text-sm">Sign in to Vantor</p>
+              <input
+                name="email"
+                type="email"
+                required
+                className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.05] border border-white/[0.08] text-white text-sm placeholder-gray-500 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all duration-300"
+                placeholder="you@company.com"
+              />
+              <input
+                name="password"
+                type="password"
+                required
+                className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.05] border border-white/[0.08] text-white text-sm placeholder-gray-500 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all duration-300"
+                placeholder="••••••••"
+              />
+              {loginError && (
+                <div className="rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 text-xs text-red-400">
+                  {loginError}
+                </div>
+              )}
+              <button
+                type="submit"
+                disabled={loginLoading}
+                className="w-full py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-teal-500 to-cyan-400 text-white hover:shadow-[0_0_24px_rgba(45,212,191,0.3)] transition-all duration-300 disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {loginLoading ? (
+                  <><Loader2 size={14} className="animate-spin" /> Signing in...</>
+                ) : (
+                  'Sign in'
+                )}
+              </button>
+            </form>
+          )}
         </div>
       )}
     </nav>
