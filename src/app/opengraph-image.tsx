@@ -49,7 +49,7 @@ export default async function Image() {
           style={{
             marginTop: 32,
             fontSize: 28,
-            color: 'rgba(148, 163, 184, 0.8)',
+            color: '#207679',
             fontFamily: 'system-ui, sans-serif',
             letterSpacing: '0.05em',
           }}
