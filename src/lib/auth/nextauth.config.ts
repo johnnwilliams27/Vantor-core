@@ -31,6 +31,16 @@ export const authOptions: NextAuthOptions = {
           .eq('id', data.user.id)
           .single();
 
+        let enterpriseName: string | null = null;
+        if (profile?.enterprise_id) {
+          const { data: ent } = await supabase
+            .from('enterprises')
+            .select('name')
+            .eq('id', profile.enterprise_id)
+            .single();
+          enterpriseName = ent?.name ?? null;
+        }
+
         return {
           id: data.user.id,
           email: data.user.email!,
@@ -38,6 +48,7 @@ export const authOptions: NextAuthOptions = {
           role: profile?.role ?? 'auditor',
           onboarding_done: profile?.onboarding_done ?? false,
           enterprise_id: profile?.enterprise_id ?? null,
+          enterprise_name: enterpriseName,
           is_app_admin: profile?.is_app_admin ?? false,
         };
       },
@@ -52,6 +63,8 @@ export const authOptions: NextAuthOptions = {
           (user as { onboarding_done?: boolean }).onboarding_done ?? false;
         token.enterprise_id =
           (user as { enterprise_id?: string | null }).enterprise_id ?? null;
+        token.enterprise_name =
+          (user as { enterprise_name?: string | null }).enterprise_name ?? null;
         token.is_app_admin =
           (user as { is_app_admin?: boolean }).is_app_admin ?? false;
       }
@@ -69,6 +82,16 @@ export const authOptions: NextAuthOptions = {
           token.onboarding_done = profile.onboarding_done;
           token.enterprise_id = profile.enterprise_id;
           token.is_app_admin = profile.is_app_admin;
+          if (profile.enterprise_id) {
+            const { data: ent } = await supabase
+              .from('enterprises')
+              .select('name')
+              .eq('id', profile.enterprise_id)
+              .single();
+            token.enterprise_name = ent?.name ?? null;
+          } else {
+            token.enterprise_name = null;
+          }
         }
       }
       return token;
@@ -79,6 +102,7 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role as string;
         session.user.onboarding_done = token.onboarding_done as boolean;
         session.user.enterprise_id = token.enterprise_id as string | null;
+        session.user.enterprise_name = token.enterprise_name as string | null;
         session.user.is_app_admin = token.is_app_admin as boolean;
       }
       return session;
@@ -96,6 +120,7 @@ declare module 'next-auth' {
       role: string;
       onboarding_done: boolean;
       enterprise_id: string | null;
+      enterprise_name: string | null;
       is_app_admin: boolean;
     };
   }
@@ -107,6 +132,7 @@ declare module 'next-auth/jwt' {
     role: string;
     onboarding_done: boolean;
     enterprise_id: string | null;
+    enterprise_name: string | null;
     is_app_admin: boolean;
   }
 }

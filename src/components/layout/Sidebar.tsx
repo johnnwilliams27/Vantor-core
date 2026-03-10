@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useTheme } from 'next-themes';
+import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
@@ -108,6 +109,17 @@ export function Sidebar() {
   const logoSrc = resolvedTheme === 'light' ? '/logo-light.png' : '/logo-dark.png';
   const userRole = session?.user?.role ?? 'auditor';
   const isAppAdmin = !!(session?.user as Record<string, unknown>)?.is_app_admin;
+  const enterpriseId = session?.user?.enterprise_id;
+  const [enterpriseName, setEnterpriseName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!enterpriseId) return;
+    fetch('/api/user/enterprise')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.name) setEnterpriseName(d.name); })
+      .catch(() => {});
+  }, [enterpriseId]);
+
   const navGroups = isAppAdmin ? ADMIN_NAV_GROUPS : NAV_GROUPS;
 
   return (
@@ -125,6 +137,30 @@ export function Sidebar() {
           <span className="text-lg font-bold text-white">V</span>
         )}
       </div>
+
+      {/* Enterprise name */}
+      {enterpriseName && (
+        <div className={cn(
+          'flex items-center border-b border-white/10 px-3 py-2',
+          sidebarOpen ? 'gap-2' : 'justify-center'
+        )}>
+          <Building2 className="h-4 w-4 shrink-0 text-teal-400" />
+          {sidebarOpen && (
+            <span className="text-xs font-medium text-white/70 truncate">{enterpriseName}</span>
+          )}
+        </div>
+      )}
+      {isAppAdmin && (
+        <div className={cn(
+          'flex items-center border-b border-white/10 px-3 py-2',
+          sidebarOpen ? 'gap-2' : 'justify-center'
+        )}>
+          <ShieldCheck className="h-4 w-4 shrink-0 text-amber-400" />
+          {sidebarOpen && (
+            <span className="text-xs font-medium text-amber-400/80 truncate">App Admin</span>
+          )}
+        </div>
+      )}
 
       {/* Nav */}
       <nav className="flex-1 py-4 px-2 space-y-4 overflow-y-auto">

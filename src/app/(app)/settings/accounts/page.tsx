@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
-import { Check, CheckCircle2, ChevronDown, Trash2, UserPlus, XCircle } from 'lucide-react';
+import { Building2, Check, CheckCircle2, ChevronDown, Shield, Trash2, UserPlus, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/types/database';
 
@@ -129,6 +130,7 @@ function RolePicker({ value, onChange }: { value: UserRole; onChange: (r: UserRo
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function AccountManagementPage() {
+  const { data: session } = useSession();
   const [users, setUsers] = useState<TeamMember[]>(INITIAL_USERS);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState<TeamMember | null>(null);
@@ -137,6 +139,16 @@ export default function AccountManagementPage() {
   const [inviteRole, setInviteRole] = useState<UserRole>('auditor');
   const [confirmRole, setConfirmRole] = useState<{ user: TeamMember; newRole: UserRole } | null>(null);
   const { toast } = useToast();
+  const [enterpriseName, setEnterpriseName] = useState<string | null>(null);
+  const enterpriseId = session?.user?.enterprise_id;
+
+  useEffect(() => {
+    if (!enterpriseId) return;
+    fetch('/api/user/enterprise')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.name) setEnterpriseName(d.name); })
+      .catch(() => {});
+  }, [enterpriseId]);
 
   const handleRoleChange = (id: string, newRole: UserRole) => {
     const user = users.find((u) => u.id === id);
@@ -183,6 +195,25 @@ export default function AccountManagementPage() {
   return (
     <AppShell title="Account Management">
       <div className="space-y-6">
+
+        {/* Organization Info */}
+        {enterpriseName && (
+          <Card>
+            <CardContent className="flex items-center gap-4 py-5">
+              <div className="flex items-center justify-center h-12 w-12 rounded-xl bg-[#207679]/10 dark:bg-teal-500/15">
+                <Building2 className="h-6 w-6 text-[#207679] dark:text-teal-400" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-lg font-semibold">{enterpriseName}</h2>
+                <p className="text-sm text-muted-foreground">Organization</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-emerald-500" />
+                <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">KYC Verified</span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Confirm role change dialog */}
         <Dialog open={!!confirmRole} onOpenChange={(o) => { if (!o) setConfirmRole(null); }}>

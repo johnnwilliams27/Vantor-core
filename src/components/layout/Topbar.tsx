@@ -8,6 +8,7 @@ import { SettingsMenu } from './SettingsMenu';
 import { NotificationsPanel } from '@/components/notifications/NotificationsPanel';
 
 const ROLE_COLORS: Record<string, string> = {
+  app_admin: 'bg-amber-500/10 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
   treasury_manager: 'bg-[#207679]/10 text-[#195a5c] dark:bg-teal-500/15 dark:text-teal-300',
   accountant: 'bg-[#207679]/10 text-[#207679] dark:bg-teal-500/15 dark:text-teal-300',
   auditor: 'bg-black/5 text-muted-foreground dark:bg-white/10 dark:text-muted-foreground',
@@ -15,7 +16,8 @@ const ROLE_COLORS: Record<string, string> = {
 
 export function Topbar({ title }: { title?: string }) {
   const { data: session } = useSession();
-  const role = session?.user?.role ?? 'auditor';
+  const isAppAdmin = !!session?.user?.is_app_admin;
+  const role = isAppAdmin ? 'app_admin' : (session?.user?.role ?? 'auditor');
   const { agentPanelOpen, toggleAgentPanel } = useAppStore();
 
   return (
