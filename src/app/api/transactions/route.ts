@@ -2,15 +2,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/nextauth.config';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { z } from 'zod';
+
+const querySchema = z.object({
+  chain: z.enum(['ethereum', 'solana']).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).max(10000).default(0),
+});
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
-  const chain = searchParams.get('chain');
-  const limit = parseInt(searchParams.get('limit') ?? '50', 10);
-  const offset = parseInt(searchParams.get('offset') ?? '0', 10);
+  const parsed = querySchema.safeParse({
+    chain: searchParams.get('chain') ?? undefined,
+    limit: searchParams.get('limit') ?? undefined,
+    offset: searchParams.get('offset') ?? undefined,
+  });
+  if (!parsed.success) return NextResponse.json({ error: 'Invalid query parameters' }, { status: 400 });
+  const { chain, limit, offset } = parsed.data;
 
   const supabase = createAdminClient();
 

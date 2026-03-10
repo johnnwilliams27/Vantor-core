@@ -9,10 +9,10 @@ import bs58 from 'bs58';
 
 const schema = z.object({
   chain: z.enum(['ethereum', 'solana']),
-  address: z.string(),
-  message: z.string(),
-  signature: z.string(),
-  label: z.string().optional(),
+  address: z.string().min(32).max(100),
+  message: z.string().max(2000),
+  signature: z.string().max(500),
+  label: z.string().max(100).optional(),
 });
 
 export async function POST(req: NextRequest) {

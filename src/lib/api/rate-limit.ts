@@ -1,3 +1,10 @@
+import { z } from 'zod';
+
+/** Returns true if the string is a valid UUID v4. */
+export function isValidUUID(id: string): boolean {
+  return z.string().uuid().safeParse(id).success;
+}
+
 /**
  * Simple in-memory rate limiter.
  * Resets on server restart. Good enough for single-instance dev/prod.

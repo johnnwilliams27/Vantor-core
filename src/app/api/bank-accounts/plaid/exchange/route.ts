@@ -8,8 +8,8 @@ import { exchangePublicToken, getAccountDetails } from '@/lib/banking/plaid';
 import { z } from 'zod';
 
 const schema = z.object({
-  publicToken: z.string().min(1),
-  accountId: z.string().min(1),
+  publicToken: z.string().min(1).max(500),
+  accountId: z.string().min(1).max(200),
 });
 
 export async function POST(req: NextRequest) {

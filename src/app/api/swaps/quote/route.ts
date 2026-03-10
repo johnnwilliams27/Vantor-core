@@ -12,9 +12,9 @@ const schema = z.object({
   chain: z.enum(['ethereum', 'solana']),
   fromToken: z.enum(['USDC', 'USDT', 'PYUSD']),
   toToken: z.enum(['USDC', 'USDT', 'PYUSD']),
-  amount: z.string(),
-  slippageBps: z.number().optional(),
-  walletAddress: z.string(),
+  amount: z.string().max(50),
+  slippageBps: z.number().int().min(0).max(10000).optional(),
+  walletAddress: z.string().min(32).max(100),
 });
 
 export async function POST(req: NextRequest) {

@@ -25,12 +25,12 @@ export async function GET(_req: NextRequest) {
 }
 
 const addSchema = z.object({
-  institution_name: z.string().min(1),
-  account_name: z.string().min(1),
+  institution_name: z.string().min(1).max(200),
+  account_name: z.string().min(1).max(200),
   account_type: z.enum(['checking', 'savings']).default('checking'),
   last4: z.string().length(4).optional(),
-  routing_number: z.string().optional(),
-  currency: z.string().default('USD'),
+  routing_number: z.string().max(20).optional(),
+  currency: z.string().length(3).default('USD'),
 });
 
 export async function POST(req: NextRequest) {

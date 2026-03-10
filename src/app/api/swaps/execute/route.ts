@@ -13,8 +13,8 @@ const schema = z.object({
   toToken: z.enum(['USDC', 'USDT', 'PYUSD']),
   fromAmount: z.string(),
   toAmount: z.string(),
-  quoteData: z.record(z.unknown()),
-  txHash: z.string().optional(),
+  quoteData: z.record(z.unknown()).refine((obj) => JSON.stringify(obj).length <= 10000, 'quoteData too large'),
+  txHash: z.string().max(100).optional(),
 });
 
 export async function POST(req: NextRequest) {

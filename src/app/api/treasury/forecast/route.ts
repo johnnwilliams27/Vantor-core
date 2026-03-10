@@ -11,7 +11,8 @@ export async function GET(req: NextRequest) {
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
 
   const { searchParams } = new URL(req.url);
-  const days = parseInt(searchParams.get('days') ?? '30', 10);
+  const daysRaw = parseInt(searchParams.get('days') ?? '30', 10);
+  const days = Number.isInteger(daysRaw) && daysRaw >= 7 && daysRaw <= 365 ? daysRaw : 30;
 
   const supabase = createAdminClient();
 

@@ -14,8 +14,8 @@ const schema = z.object({
   paymentId: z.string().uuid().optional(),
   amount: z.string(),
   token: z.enum(['USDC', 'USDT', 'PYUSD']),
-  glAccount: z.string(),
-  memo: z.string().optional(),
+  glAccount: z.string().min(1).max(100),
+  memo: z.string().max(2000).optional(),
 });
 
 export async function POST(req: NextRequest) {

@@ -1,3 +1,4 @@
+import { isValidUUID } from '@/lib/api/rate-limit';
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/nextauth.config';
@@ -20,6 +21,8 @@ export async function PATCH(
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try { requireRole(session.user.role as any, 'accountant'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
+
+  if (!isValidUUID(params.id)) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
 
   const body = await req.json();
   const parsed = updateSchema.safeParse(body);
@@ -60,6 +63,8 @@ export async function DELETE(
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try { requireRole(session.user.role as any, 'treasury_manager'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
+
+  if (!isValidUUID(params.id)) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
 
   const supabase = createAdminClient();
   const { error } = await supabase

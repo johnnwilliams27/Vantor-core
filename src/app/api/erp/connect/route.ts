@@ -10,14 +10,14 @@ import type { ErpProvider } from '@/types/database';
 
 const schema = z.object({
   provider: z.enum(['sap', 'oracle', 'xero', 'netsuite']),
-  label: z.string().min(1),
+  label: z.string().min(1).max(200),
   credentials: z.object({
-    apiUrl: z.string().url(),
-    clientId: z.string(),
-    clientSecret: z.string(),
-    companyCode: z.string().optional(),
-    tenantId: z.string().optional(),
-    accountId: z.string().optional(),
+    apiUrl: z.string().url().max(500),
+    clientId: z.string().min(1).max(500),
+    clientSecret: z.string().min(1).max(500),
+    companyCode: z.string().max(100).optional(),
+    tenantId: z.string().max(200).optional(),
+    accountId: z.string().max(200).optional(),
   }),
   testOnly: z.boolean().optional(),
 });
@@ -85,10 +85,12 @@ export async function PATCH(req: NextRequest) {
   try { requireRole(session.user.role as any, 'accountant'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
 
-  const { id, is_active } = await req.json();
-  if (!id || typeof is_active !== 'boolean') {
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
-  }
+  let rawBody: unknown;
+  try { rawBody = await req.json(); } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }); }
+  const patchSchema = z.object({ id: z.string().uuid(), is_active: z.boolean() });
+  const patchParsed = patchSchema.safeParse(rawBody);
+  if (!patchParsed.success) return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+  const { id, is_active } = patchParsed.data;
 
   const supabase = createAdminClient();
 

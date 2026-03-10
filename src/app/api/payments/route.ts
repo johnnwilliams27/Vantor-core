@@ -7,16 +7,18 @@ import { executePayment } from '@/lib/payments/executor';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { z } from 'zod';
 
+const PAYMENT_STATUSES = ['pending', 'processing', 'completed', 'failed', 'cancelled'] as const;
+
 const schema = z.object({
   fromWalletId: z.string().uuid(),
-  toAddress: z.string(),
+  toAddress: z.string().min(32).max(100),
   chain: z.enum(['ethereum', 'solana']),
   token: z.enum(['USDC', 'USDT', 'PYUSD']),
-  amount: z.string(),
-  memo: z.string().optional(),
+  amount: z.string().max(50),
+  memo: z.string().max(2000).optional(),
   invoiceId: z.string().uuid().optional(),
   erpConfigId: z.string().uuid().optional(),
-  scheduledFor: z.string().optional(),  // ISO timestamp for scheduled payments
+  scheduledFor: z.string().datetime().optional(),
 });
 
 export async function GET(req: NextRequest) {
@@ -24,7 +26,8 @@ export async function GET(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
-  const status = searchParams.get('status');
+  const rawStatus = searchParams.get('status');
+  const status = rawStatus && (PAYMENT_STATUSES as readonly string[]).includes(rawStatus) ? rawStatus : null;
   const supabase = createAdminClient();
 
   // Try with ERP join (requires erp_config_id column migration to have run)
@@ -43,7 +46,7 @@ export async function GET(req: NextRequest) {
       .select('*, from_wallet:wallets(*), invoice:invoices(*)')
       .eq('user_id', session.user.id)
       .order('created_at', { ascending: false });
-    if (status) q2 = q2.eq('status', status);
+    if (status) q2 = q2.eq('status', status as string);
     ({ data, error } = await q2);
   }
 

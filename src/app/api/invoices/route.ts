@@ -6,13 +6,15 @@ import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { z } from 'zod';
 
+const INVOICE_STATUSES = ['draft', 'pending', 'paid', 'overdue', 'cancelled'] as const;
+
 const createSchema = z.object({
-  invoiceNumber: z.string(),
-  description: z.string().optional(),
-  amount: z.string(),
+  invoiceNumber: z.string().min(1).max(100),
+  description: z.string().max(2000).optional(),
+  amount: z.string().max(50),
   token: z.enum(['USDC', 'USDT', 'PYUSD']),
   chain: z.enum(['ethereum', 'solana']),
-  dueDate: z.string().optional(),
+  dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   vendorId: z.string().uuid().optional(),
 });
 
@@ -23,7 +25,8 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const status = searchParams.get('status');
+  const rawStatus = searchParams.get('status');
+  const status = rawStatus && (INVOICE_STATUSES as readonly string[]).includes(rawStatus) ? rawStatus : null;
   const supabase = createAdminClient();
 
   let query = supabase

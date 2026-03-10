@@ -24,8 +24,8 @@ export async function GET(_req: NextRequest) {
 
 const linkSchema = z.object({
   chain: z.enum(['ethereum', 'solana']),
-  address: z.string().min(32).max(44),
-  label: z.string().optional(),
+  address: z.string().min(32).max(100),
+  label: z.string().max(100).optional(),
 });
 
 // Manual (watch-only) wallet link — no signature required, saved as unverified
