@@ -961,7 +961,7 @@ function Footer() {
         <div className="flex items-center gap-3">
           <Image src="/logo-dark.png" alt="Vantor" width={100} height={32} className="object-contain opacity-60" unoptimized />
         </div>
-        <p className="text-gray-500 text-sm">&copy; {new Date().getFullYear()} Vantor. All rights reserved.</p>
+        <p className="text-gray-500 text-sm">&copy; {new Date().getFullYear()} Vantor Treasury, Inc. All rights reserved.</p>
         <div className="flex items-center gap-6">
           <a href="#features" className="text-gray-500 hover:text-gray-300 text-sm transition-colors">Features</a>
           <a href="#security" className="text-gray-500 hover:text-gray-300 text-sm transition-colors">Security</a>
