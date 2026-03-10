@@ -20,6 +20,7 @@ import {
   ChevronLeft,
   ChevronRight,
   BrainCircuit,
+  Plug,
 } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import type { UserRole } from '@/types/database';
@@ -71,6 +72,7 @@ const NAV_GROUPS: NavGroup[] = [
     heading: 'Settings',
     items: [
       { label: 'Account Management', href: '/settings/accounts', icon: Users, minRole: 'treasury_manager' },
+      { label: 'External Integrations', href: '/settings/integrations', icon: Plug, minRole: 'treasury_manager' },
     ],
   },
 ];

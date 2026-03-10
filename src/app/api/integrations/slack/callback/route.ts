@@ -1,0 +1,303 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { writeAuditLog } from '@/lib/audit/logger';
+import {
+  decryptSlackCredentials,
+  verifySlackSignature,
+  updateSlackMessage,
+  postEphemeralConfirmation,
+} from '@/lib/integrations/slack';
+import { getBankingAdapter } from '@/lib/banking/factory';
+
+// No session auth — authenticated via Slack HMAC signature verification
+
+export async function POST(req: NextRequest) {
+  const rawBody = await req.text();
+  const timestamp = req.headers.get('x-slack-request-timestamp') ?? '';
+  const slackSignature = req.headers.get('x-slack-signature') ?? '';
+
+  // Parse URL-encoded payload from Slack
+  const params = new URLSearchParams(rawBody);
+  const payloadStr = params.get('payload');
+  if (!payloadStr) {
+    return NextResponse.json({ error: 'Missing payload' }, { status: 400 });
+  }
+
+  let payload: SlackInteractionPayload;
+  try {
+    payload = JSON.parse(payloadStr) as SlackInteractionPayload;
+  } catch {
+    return NextResponse.json({ error: 'Invalid payload JSON' }, { status: 400 });
+  }
+
+  const teamId = payload.team?.id;
+  const supabase = createAdminClient();
+
+  // Look up integration by team_id to get signing secret
+  const { data: integration } = await supabase
+    .from('slack_integrations')
+    .select('id, user_id, channel_id, credentials')
+    .eq('team_id', teamId)
+    .eq('is_active', true)
+    .maybeSingle();
+
+  if (!integration) {
+    // If no team_id match, fall back to finding the integration for validation
+    return NextResponse.json({ error: 'Unknown workspace' }, { status: 401 });
+  }
+
+  // Verify signature
+  let creds;
+  try {
+    creds = decryptSlackCredentials(integration.credentials);
+  } catch {
+    return NextResponse.json({ error: 'Credential error' }, { status: 500 });
+  }
+
+  if (!verifySlackSignature(creds.signingSecret, timestamp, rawBody, slackSignature)) {
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+  }
+
+  const action = payload.actions?.[0];
+  if (!action) {
+    return NextResponse.json({ ok: true });
+  }
+
+  const actionId = action.action_id;
+  const recId = action.value;
+  const responseUrl = payload.response_url;
+  const slackUsername = payload.user?.name ?? payload.user?.username ?? 'unknown';
+  const ownerId = integration.user_id;
+
+  // Respond immediately — Slack requires HTTP 200 within 3 seconds
+  // We process async via the response_url
+  if (actionId === 'slack_approve_confirm') {
+    // Show ephemeral confirmation
+    const { data: rec } = await supabase
+      .from('ai_recommendations')
+      .select('action, recommended_amount_usd, stablecoin_token')
+      .eq('id', recId)
+      .maybeSingle();
+
+    const amount = rec?.recommended_amount_usd ? `$${parseFloat(rec.recommended_amount_usd).toLocaleString()} ${rec.stablecoin_token ?? 'USDC'}` : 'this amount';
+    const actionLabel = rec?.action === 'onramp' ? `${amount} on-ramp` : rec?.action === 'offramp' ? `${amount} off-ramp` : 'this action';
+
+    await postEphemeralConfirmation(responseUrl, recId, actionLabel);
+    return NextResponse.json({ ok: true });
+  }
+
+  if (actionId === 'slack_approve_cancel') {
+    // Dismiss — do nothing, just ack
+    await fetch(responseUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        response_type: 'ephemeral',
+        replace_original: false,
+        delete_original: false,
+        text: 'Action cancelled.',
+      }),
+    });
+    return NextResponse.json({ ok: true });
+  }
+
+  if (actionId === 'slack_approve_execute') {
+    // Execute the recommendation
+    const { data: rec, error: fetchErr } = await supabase
+      .from('ai_recommendations')
+      .select('*')
+      .eq('id', recId)
+      .eq('user_id', ownerId)
+      .maybeSingle();
+
+    if (fetchErr || !rec) {
+      await respondViaUrl(responseUrl, '❌ Recommendation not found or access denied.');
+      return NextResponse.json({ ok: true });
+    }
+    if (rec.status !== 'pending_approval') {
+      await respondViaUrl(responseUrl, `❌ Cannot execute: recommendation is already ${rec.status}.`);
+      return NextResponse.json({ ok: true });
+    }
+    if (new Date(rec.expires_at) < new Date()) {
+      await respondViaUrl(responseUrl, '❌ This recommendation has expired.');
+      return NextResponse.json({ ok: true });
+    }
+    if (rec.action === 'no_action' || !rec.recommended_amount_usd) {
+      await respondViaUrl(responseUrl, '❌ No action to execute.');
+      return NextResponse.json({ ok: true });
+    }
+
+    // Mark approved
+    await supabase
+      .from('ai_recommendations')
+      .update({
+        status: 'approved',
+        approved_by: ownerId,
+        approved_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', recId);
+
+    await writeAuditLog({
+      userId: ownerId,
+      action: 'slack_recommendation_approve',
+      entityType: 'ai_recommendation',
+      entityId: recId,
+      details: { slack_user: slackUsername, action: rec.action, amount_usd: rec.recommended_amount_usd },
+    });
+
+    // Execute ramp
+    try {
+      const adapter = getBankingAdapter();
+      const rampResult = await adapter.executeRamp({
+        direction: rec.action as 'onramp' | 'offramp',
+        cryptoToken: rec.stablecoin_token ?? 'USDC',
+        cryptoAmount: parseFloat(rec.recommended_amount_usd),
+        fiatAmount: parseFloat(rec.recommended_amount_usd),
+        fiatCurrency: 'USD',
+        exchangeRate: 1,
+        feeAmount: 0,
+        bankAccountRef: rec.bank_account_id ?? undefined,
+      });
+
+      const { data: fiatTx } = await supabase
+        .from('fiat_transactions')
+        .insert({
+          user_id: ownerId,
+          bank_account_id: rec.bank_account_id,
+          direction: rec.action,
+          crypto_amount: parseFloat(rec.recommended_amount_usd),
+          crypto_token: rec.stablecoin_token ?? 'USDC',
+          fiat_amount: parseFloat(rec.recommended_amount_usd),
+          fiat_currency: 'USD',
+          exchange_rate: 1,
+          fee_amount: 0,
+          status: rampResult.status,
+          provider: 'bridge',
+          provider_transaction_id: rampResult.providerTransactionId,
+          settled_at: rampResult.settledAt,
+        })
+        .select()
+        .single();
+
+      await supabase
+        .from('ai_recommendations')
+        .update({
+          status: 'executed',
+          executed_at: new Date().toISOString(),
+          fiat_transaction_id: fiatTx?.id ?? null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', recId);
+
+      await writeAuditLog({
+        userId: ownerId,
+        action: 'treasury_recommendation_execute',
+        entityType: 'ai_recommendation',
+        entityId: recId,
+        details: { provider_tx_id: rampResult.providerTransactionId, via_slack: true, slack_user: slackUsername },
+      });
+
+      const amount = `$${parseFloat(rec.recommended_amount_usd).toLocaleString()} ${rec.stablecoin_token ?? 'USDC'}`;
+      const verb = rec.action === 'onramp' ? 'on-ramp' : 'off-ramp';
+
+      // Update original message
+      if (payload.container?.channel_id && payload.container?.message_ts) {
+        await updateSlackMessage(
+          creds.botToken,
+          payload.container.channel_id,
+          payload.container.message_ts,
+          `✅ Approved and executed by @${slackUsername} (via Slack) — ${amount} ${verb} initiated`
+        );
+      }
+
+      // Dismiss ephemeral
+      await respondViaUrl(responseUrl, `✅ Executed! ${amount} ${verb} initiated.`);
+    } catch (execErr) {
+      await supabase
+        .from('ai_recommendations')
+        .update({
+          execution_error: (execErr as Error).message,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', recId);
+
+      await respondViaUrl(responseUrl, `❌ Execution failed: ${(execErr as Error).message}`);
+    }
+
+    return NextResponse.json({ ok: true });
+  }
+
+  if (actionId === 'slack_reject') {
+    const { data: rec, error: fetchErr } = await supabase
+      .from('ai_recommendations')
+      .select('id, status, action, recommended_amount_usd, stablecoin_token')
+      .eq('id', recId)
+      .eq('user_id', ownerId)
+      .maybeSingle();
+
+    if (fetchErr || !rec) {
+      await respondViaUrl(responseUrl, '❌ Recommendation not found or access denied.');
+      return NextResponse.json({ ok: true });
+    }
+    if (rec.status !== 'pending_approval') {
+      await respondViaUrl(responseUrl, `❌ Cannot reject: recommendation is already ${rec.status}.`);
+      return NextResponse.json({ ok: true });
+    }
+
+    await supabase
+      .from('ai_recommendations')
+      .update({
+        status: 'rejected',
+        rejected_by: ownerId,
+        rejected_at: new Date().toISOString(),
+        rejection_reason: `Rejected via Slack by @${slackUsername}`,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', recId);
+
+    await writeAuditLog({
+      userId: ownerId,
+      action: 'slack_recommendation_reject',
+      entityType: 'ai_recommendation',
+      entityId: recId,
+      details: { slack_user: slackUsername, action: rec.action, amount_usd: rec.recommended_amount_usd },
+    });
+
+    const amount = rec.recommended_amount_usd
+      ? `$${parseFloat(rec.recommended_amount_usd).toLocaleString()} ${rec.stablecoin_token ?? 'USDC'}`
+      : 'recommendation';
+
+    // Update original message
+    if (payload.container?.channel_id && payload.container?.message_ts) {
+      await updateSlackMessage(
+        creds.botToken,
+        payload.container.channel_id,
+        payload.container.message_ts,
+        `❌ Rejected by @${slackUsername} (via Slack) — ${amount} ${rec.action}`
+      );
+    }
+
+    return NextResponse.json({ ok: true });
+  }
+
+  return NextResponse.json({ ok: true });
+}
+
+async function respondViaUrl(responseUrl: string, text: string) {
+  await fetch(responseUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ response_type: 'ephemeral', replace_original: false, text }),
+  });
+}
+
+// ---- Slack Payload Types ----
+
+interface SlackInteractionPayload {
+  team?: { id: string; domain: string };
+  user?: { id: string; name?: string; username?: string };
+  response_url: string;
+  container?: { channel_id: string; message_ts: string };
+  actions?: Array<{ action_id: string; value: string }>;
+}

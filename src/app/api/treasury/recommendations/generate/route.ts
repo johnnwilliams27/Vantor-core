@@ -8,6 +8,7 @@ import { getActiveTreasuryRule, computeRecommendation } from '@/lib/treasury/rul
 import { generateTreasuryReasoning } from '@/lib/treasury/claude';
 import { getBankingAdapter } from '@/lib/banking/factory';
 import { checkRateLimit } from '@/lib/api/rate-limit';
+import { decryptSlackCredentials, postRecommendationToSlack } from '@/lib/integrations/slack';
 
 export async function POST(_req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -74,6 +75,41 @@ export async function POST(_req: NextRequest) {
     .single();
 
   if (insertErr) return NextResponse.json({ error: insertErr.message }, { status: 500 });
+
+  // Non-blocking Slack notification — never fail the request if Slack is down
+  if (requiresApproval) {
+    (async () => {
+      try {
+        const { data: slackIntegration } = await supabase
+          .from('slack_integrations')
+          .select('channel_id, credentials')
+          .eq('user_id', session.user.id)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        if (slackIntegration) {
+          const creds = decryptSlackCredentials(slackIntegration.credentials);
+          await postRecommendationToSlack(creds.botToken, slackIntegration.channel_id, {
+            id: rec.id,
+            action: result.action,
+            recommendedAmountUsd: result.recommendedAmountUsd,
+            stablecoinToken: result.targetStablecoinToken ?? null,
+            stablecoinChain: result.targetChain ?? null,
+            aiReasoning: reasoning,
+          });
+          await writeAuditLog({
+            userId: session.user.id,
+            action: 'slack_recommendation_notify',
+            entityType: 'ai_recommendation',
+            entityId: rec.id,
+            details: { channel_id: slackIntegration.channel_id },
+          });
+        }
+      } catch {
+        // Silently ignore Slack errors
+      }
+    })();
+  }
 
   await writeAuditLog({
     userId: session.user.id,

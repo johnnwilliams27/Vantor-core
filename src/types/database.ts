@@ -21,7 +21,9 @@ export type AuditAction =
   | 'treasury_recommendation_reject' | 'treasury_recommendation_execute'
   | 'bank_balance_refresh'
   | 'treasury_forecast_generate' | 'treasury_simulation_run'
-  | 'treasury_report_export' | 'treasury_price_refresh';
+  | 'treasury_report_export' | 'treasury_price_refresh'
+  | 'slack_connect' | 'slack_disconnect' | 'slack_test'
+  | 'slack_recommendation_notify' | 'slack_recommendation_approve' | 'slack_recommendation_reject';
 
 export interface UserProfile {
   id: string;
