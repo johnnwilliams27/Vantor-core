@@ -9,7 +9,22 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Vantor – Agentic Stablecoin Treasury Management',
-  description: 'Manage USDC, USDT, and PYUSD treasury operations on Ethereum and Solana',
+  description:
+    'Manage USDC, USDT, and PYUSD treasury operations on Ethereum and Solana. AI-powered yield optimization, compliance, and cash flow forecasting.',
+  metadataBase: new URL('https://www.vantor.xyz'),
+  openGraph: {
+    title: 'Vantor – Agentic Stablecoin Treasury Management',
+    description:
+      'Manage USDC, USDT, and PYUSD treasury operations on Ethereum and Solana. AI-powered yield optimization, compliance, and cash flow forecasting.',
+    siteName: 'Vantor',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Vantor – Agentic Stablecoin Treasury Management',
+    description:
+      'AI-powered stablecoin treasury management across Ethereum and Solana.',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
