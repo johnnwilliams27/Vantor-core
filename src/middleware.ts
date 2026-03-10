@@ -41,11 +41,17 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/login', req.url));
   }
 
-  // Onboarding redirect (skip for setup page and API)
-  // Also skip if the onboarding_complete cookie is present (set immediately
-  // after completing onboarding, before the JWT is re-issued)
+  const isAppAdmin = token.is_app_admin as boolean;
+
+  // App admin: redirect from root app pages to /admin
+  if (isAppAdmin && (pathname === '/dashboard' || pathname === '/setup')) {
+    return NextResponse.redirect(new URL('/admin', req.url));
+  }
+
+  // Onboarding redirect — skip for app admins (they don't need onboarding)
   const justCompleted = req.cookies.get('onboarding_complete')?.value === '1';
   if (
+    !isAppAdmin &&
     !token.onboarding_done &&
     !justCompleted &&
     !pathname.startsWith('/setup') &&
@@ -56,11 +62,13 @@ export async function middleware(req: NextRequest) {
 
   // RBAC check
   const userRole = token.role as UserRole;
-  if (!canAccessRoute(userRole, pathname)) {
+  if (!canAccessRoute(userRole, pathname, isAppAdmin)) {
     if (pathname.startsWith('/api/')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-    return NextResponse.redirect(new URL('/dashboard', req.url));
+    return NextResponse.redirect(
+      new URL(isAppAdmin ? '/admin' : '/dashboard', req.url),
+    );
   }
 
   return NextResponse.next();

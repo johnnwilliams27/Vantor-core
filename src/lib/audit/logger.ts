@@ -3,6 +3,7 @@ import type { AuditAction } from '@/types/database';
 
 export interface AuditLogEntry {
   userId?: string;
+  enterpriseId?: string | null;
   action: AuditAction;
   entityType?: string;
   entityId?: string;
@@ -16,6 +17,7 @@ export async function writeAuditLog(entry: AuditLogEntry): Promise<void> {
     const supabase = createAdminClient();
     await supabase.from('audit_logs').insert({
       user_id: entry.userId ?? null,
+      enterprise_id: entry.enterpriseId ?? null,
       action: entry.action,
       entity_type: entry.entityType ?? null,
       entity_id: entry.entityId ?? null,

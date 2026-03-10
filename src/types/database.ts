@@ -1,4 +1,18 @@
 export type UserRole = 'treasury_manager' | 'accountant' | 'auditor';
+export type EnterpriseStatus = 'active' | 'frozen' | 'suspended' | 'pending_kyc';
+export type KycStatus = 'none' | 'pending' | 'verified' | 'rejected';
+
+export interface Enterprise {
+  id: string;
+  name: string;
+  status: EnterpriseStatus;
+  kyc_status: KycStatus;
+  kyc_submitted_at: string | null;
+  kyc_verified_at: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
 export type ChainType = 'ethereum' | 'solana';
 export type TokenSymbol = 'USDC' | 'USDT' | 'PYUSD';
 export type PaymentStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
@@ -33,6 +47,8 @@ export interface UserProfile {
   full_name: string | null;
   role: UserRole;
   onboarding_done: boolean;
+  enterprise_id: string | null;
+  is_app_admin: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -40,6 +56,7 @@ export interface UserProfile {
 export interface Wallet {
   id: string;
   user_id: string;
+  enterprise_id: string | null;
   chain: ChainType;
   address: string;
   label: string | null;

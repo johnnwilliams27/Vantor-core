@@ -25,15 +25,23 @@ export async function GET(req: NextRequest) {
 
   const supabase = createAdminClient();
 
-  // Treasury managers can see all audit logs; others see only their own
   const role = session.user.role;
+  const isAppAdmin = session.user.is_app_admin;
   let query = supabase
     .from('audit_logs')
     .select('*, user_profile:user_profiles(email, full_name)', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
-  if (role !== 'treasury_manager') {
+  if (isAppAdmin) {
+    // App admins can see all audit logs across enterprises (no financial data)
+  } else if (session.user.enterprise_id) {
+    // Enterprise-scoped: treasury managers see all within enterprise, others see own
+    query = query.eq('enterprise_id', session.user.enterprise_id);
+    if (role !== 'treasury_manager') {
+      query = query.eq('user_id', session.user.id);
+    }
+  } else {
     query = query.eq('user_id', session.user.id);
   }
 

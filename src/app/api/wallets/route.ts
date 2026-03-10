@@ -12,11 +12,17 @@ export async function GET(_req: NextRequest) {
   }
 
   const supabase = createAdminClient();
-  const { data, error } = await supabase
+  const query = supabase
     .from('wallets')
     .select('*')
     .eq('user_id', session.user.id)
     .order('created_at', { ascending: true });
+
+  if (session.user.enterprise_id) {
+    query.eq('enterprise_id', session.user.enterprise_id);
+  }
+
+  const { data, error } = await query;
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ data });
@@ -47,7 +53,7 @@ export async function POST(req: NextRequest) {
   const { data: wallet, error } = await supabase
     .from('wallets')
     .upsert(
-      { user_id: session.user.id, chain, address, label: label ?? null, verified_at: null },
+      { user_id: session.user.id, enterprise_id: session.user.enterprise_id, chain, address, label: label ?? null, verified_at: null },
       { onConflict: 'user_id,chain,address', ignoreDuplicates: true }
     )
     .select()

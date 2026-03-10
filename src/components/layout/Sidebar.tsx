@@ -22,6 +22,7 @@ import {
   BrainCircuit,
   Plug,
   ShieldCheck,
+  FileSearch,
 } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import type { UserRole } from '@/types/database';
@@ -37,6 +38,15 @@ interface NavGroup {
   heading?: string;
   items: NavItem[];
 }
+
+const ADMIN_NAV_GROUPS: NavGroup[] = [
+  {
+    items: [
+      { label: 'Admin Dashboard', href: '/admin', icon: LayoutDashboard },
+      { label: 'Audit', href: '/audit', icon: FileSearch },
+    ],
+  },
+];
 
 const NAV_GROUPS: NavGroup[] = [
   {
@@ -97,6 +107,8 @@ export function Sidebar() {
   const { sidebarOpen, toggleSidebar } = useAppStore();
   const logoSrc = resolvedTheme === 'light' ? '/logo-light.png' : '/logo-dark.png';
   const userRole = session?.user?.role ?? 'auditor';
+  const isAppAdmin = !!(session?.user as Record<string, unknown>)?.is_app_admin;
+  const navGroups = isAppAdmin ? ADMIN_NAV_GROUPS : NAV_GROUPS;
 
   return (
     <aside
@@ -116,8 +128,10 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 py-4 px-2 space-y-4 overflow-y-auto">
-        {NAV_GROUPS.map((group, gi) => {
-          const visibleItems = group.items.filter((item) => hasAccess(userRole, item.minRole));
+        {navGroups.map((group, gi) => {
+          const visibleItems = isAppAdmin
+            ? group.items
+            : group.items.filter((item) => hasAccess(userRole, item.minRole));
           if (!visibleItems.length) return null;
           return (
             <div key={gi}>
