@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { getActiveTreasuryRule, buildTreasurySnapshot } from '@/lib/treasury/rules-engine';
 import { generateCashFlowForecast } from '@/lib/treasury/predictions';
 import { generateForecastSummary } from '@/lib/treasury/claude';
+import { checkRateLimit } from '@/lib/api/rate-limit';
 
 const schema = z.object({
   lookahead_days: z.number().int().min(7).max(365).default(30),
@@ -18,6 +19,11 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try { requireRole(session.user.role as any, 'treasury_manager'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
+
+  // 10 forecast generations per hour per user
+  if (!checkRateLimit('treasury-forecast', session.user.id, 10, 60 * 60 * 1000)) {
+    return NextResponse.json({ error: 'Rate limit exceeded. Try again in an hour.' }, { status: 429 });
+  }
 
   let body: unknown = {};
   try {

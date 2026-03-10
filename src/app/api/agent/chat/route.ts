@@ -6,8 +6,12 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { buildSystemPrompt } from '@/lib/agent/context';
 import { getToolsForRole, dispatchTool } from '@/lib/agent/tools';
 import type { UserRole, SseEvent } from '@/lib/agent/types';
+import { checkRateLimit } from '@/lib/api/rate-limit';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+const MAX_LOOP_ITERATIONS = 8;
+const MAX_MESSAGES = 40;
 
 function encodeEvent(event: SseEvent): string {
   return `data: ${JSON.stringify(event)}\n\n`;
@@ -22,11 +26,19 @@ export async function POST(req: NextRequest) {
   const userId = session.user.id;
   const userRole = (session.user.role ?? 'auditor') as UserRole;
 
+  if (!checkRateLimit('agent-chat', userId, 20, 60 * 60 * 1000)) {
+    return new Response(JSON.stringify({ error: 'Rate limit exceeded. Try again in an hour.' }), { status: 429 });
+  }
+
   let body: { messages: Anthropic.MessageParam[] };
   try {
     body = await req.json();
   } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400 });
+  }
+
+  if (!Array.isArray(body.messages) || body.messages.length > MAX_MESSAGES) {
+    return new Response(JSON.stringify({ error: 'Invalid or oversized message history' }), { status: 400 });
   }
 
   const supabase = createAdminClient();
@@ -44,8 +56,10 @@ export async function POST(req: NextRequest) {
         // Mutable copy of messages for the agentic loop
         const messages: Anthropic.MessageParam[] = [...body.messages];
 
-        // Agentic loop — continues until stop_reason is not 'tool_use'
-        while (true) {
+        // Agentic loop — capped at MAX_LOOP_ITERATIONS to prevent runaway costs
+        let iterations = 0;
+        while (iterations < MAX_LOOP_ITERATIONS) {
+          iterations++;
           const anthropicStream = anthropic.messages.stream({
             model: 'claude-sonnet-4-6',
             max_tokens: 4096,
@@ -94,6 +108,11 @@ export async function POST(req: NextRequest) {
           messages.push({ role: 'assistant', content: finalMessage.content });
 
           if (finalMessage.stop_reason !== 'tool_use') {
+            send({ type: 'done', message: finalMessage });
+            break;
+          }
+
+          if (iterations >= MAX_LOOP_ITERATIONS) {
             send({ type: 'done', message: finalMessage });
             break;
           }

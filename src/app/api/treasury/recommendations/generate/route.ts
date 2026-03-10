@@ -7,12 +7,18 @@ import { writeAuditLog } from '@/lib/audit/logger';
 import { getActiveTreasuryRule, computeRecommendation } from '@/lib/treasury/rules-engine';
 import { generateTreasuryReasoning } from '@/lib/treasury/claude';
 import { getBankingAdapter } from '@/lib/banking/factory';
+import { checkRateLimit } from '@/lib/api/rate-limit';
 
 export async function POST(_req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try { requireRole(session.user.role as any, 'treasury_manager'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
+
+  // 10 AI recommendation generations per hour per user
+  if (!checkRateLimit('treasury-recommend', session.user.id, 10, 60 * 60 * 1000)) {
+    return NextResponse.json({ error: 'Rate limit exceeded. Try again in an hour.' }, { status: 429 });
+  }
 
   const supabase = createAdminClient();
 
