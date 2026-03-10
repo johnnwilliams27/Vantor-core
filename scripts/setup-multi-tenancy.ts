@@ -62,30 +62,27 @@ async function main() {
 
   // 1. Create "Test Company" enterprise
   console.log('1. Creating "Test Company" enterprise...');
-  const { data: enterprise, error: entErr } = await supabase
+  // Check if enterprise already exists
+  const { data: existing } = await supabase
     .from('enterprises')
-    .upsert(
-      { name: 'Test Company', status: 'active', kyc_status: 'verified' },
-      { onConflict: 'name', ignoreDuplicates: true },
-    )
-    .select()
+    .select('id')
+    .eq('name', 'Test Company')
     .single();
 
   let enterpriseId: string;
-  if (entErr) {
-    // May already exist — try to fetch
-    const { data: existing } = await supabase
-      .from('enterprises')
-      .select('id')
-      .eq('name', 'Test Company')
-      .single();
-    if (!existing) {
-      console.error('Failed to create enterprise:', entErr.message);
-      process.exit(1);
-    }
+  if (existing) {
     enterpriseId = existing.id;
     console.log(`   Enterprise already exists: ${enterpriseId}`);
   } else {
+    const { data: enterprise, error: entErr } = await supabase
+      .from('enterprises')
+      .insert({ name: 'Test Company', status: 'active', kyc_status: 'verified' })
+      .select()
+      .single();
+    if (entErr || !enterprise) {
+      console.error('Failed to create enterprise:', entErr?.message);
+      process.exit(1);
+    }
     enterpriseId = enterprise.id;
     console.log(`   Created enterprise: ${enterpriseId}`);
   }

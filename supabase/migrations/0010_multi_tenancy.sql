@@ -129,7 +129,7 @@ $$;
 -- 7. Updated_at trigger for enterprises
 CREATE OR REPLACE TRIGGER set_enterprises_updated_at
   BEFORE UPDATE ON enterprises
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- 8. Re-lock audit_logs
 CREATE RULE no_update_audit_logs AS ON UPDATE TO audit_logs DO INSTEAD NOTHING;
