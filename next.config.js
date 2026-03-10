@@ -11,7 +11,11 @@ const nextConfig = {
       net: false,
       tls: false,
     };
-    config.externals.push('pino-pretty', '@react-native-async-storage/async-storage');
+    config.externals.push('pino-pretty');
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@react-native-async-storage/async-storage': false,
+    };
     return config;
   },
 };
