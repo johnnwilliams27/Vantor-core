@@ -12,6 +12,7 @@ export async function GET(_req: NextRequest) {
     .from('swaps')
     .select('*')
     .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id)
     .order('created_at', { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

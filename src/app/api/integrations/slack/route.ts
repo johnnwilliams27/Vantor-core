@@ -25,6 +25,7 @@ export async function GET(_req: NextRequest) {
     .from('slack_integrations')
     .select('id, workspace_name, team_id, channel_id, channel_name, is_active, verified_at, created_at')
     .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id)
     .eq('is_active', true)
     .maybeSingle();
 
@@ -52,6 +53,7 @@ export async function POST(req: NextRequest) {
     .from('slack_integrations')
     .upsert({
       user_id: session.user.id,
+      enterprise_id: session.user.enterprise_id,
       workspace_name: workspaceName ?? null,
       team_id: teamId ?? null,
       channel_id: channelId,
@@ -89,6 +91,7 @@ export async function DELETE(_req: NextRequest) {
     .from('slack_integrations')
     .select('id')
     .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id)
     .eq('is_active', true)
     .maybeSingle();
 
@@ -97,7 +100,8 @@ export async function DELETE(_req: NextRequest) {
   const { error } = await supabase
     .from('slack_integrations')
     .update({ is_active: false, updated_at: new Date().toISOString() })
-    .eq('user_id', session.user.id);
+    .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

@@ -55,6 +55,7 @@ export async function POST(_req: NextRequest) {
     .from('ai_recommendations')
     .insert({
       user_id: session.user.id,
+      enterprise_id: session.user.enterprise_id,
       treasury_rule_id: rule.id,
       total_bank_balance_usd: result.snapshot.totalBankBalanceUsd,
       total_crypto_balance_usd: result.snapshot.totalCryptoBalanceUsd,
@@ -84,6 +85,7 @@ export async function POST(_req: NextRequest) {
           .from('slack_integrations')
           .select('channel_id, credentials')
           .eq('user_id', session.user.id)
+          .eq('enterprise_id', session.user.enterprise_id)
           .eq('is_active', true)
           .maybeSingle();
 
@@ -142,6 +144,7 @@ export async function POST(_req: NextRequest) {
         .from('fiat_transactions')
         .insert({
           user_id: session.user.id,
+          enterprise_id: session.user.enterprise_id,
           bank_account_id: result.targetBankAccountId,
           direction: result.action,
           crypto_amount: result.recommendedAmountUsd,

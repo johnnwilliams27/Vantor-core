@@ -12,6 +12,7 @@ export interface ToolContext {
   supabase: SupabaseClient;
   userId: string;
   userRole: UserRole;
+  enterpriseId: string | null;
 }
 
 type ToolHandler = (input: Record<string, unknown>, ctx: ToolContext) => Promise<unknown>;
@@ -54,7 +55,8 @@ const getWallets: AgentTool = {
     const { data, error } = await ctx.supabase
       .from('wallets')
       .select('id, chain, address, label, wallet_balances(token, balance, usd_value)')
-      .eq('user_id', ctx.userId);
+      .eq('user_id', ctx.userId)
+      .eq('enterprise_id', ctx.enterpriseId);
     if (error) throw new Error(error.message);
     return data;
   },
@@ -70,6 +72,7 @@ const getBankAccounts: AgentTool = {
       .from('bank_accounts')
       .select('id, institution_name, account_name, last4, current_balance, balance_as_of, currency')
       .eq('user_id', ctx.userId)
+      .eq('enterprise_id', ctx.enterpriseId)
       .eq('is_active', true);
     if (error) throw new Error(error.message);
     return data;
@@ -97,6 +100,7 @@ const getInvoices: AgentTool = {
       .from('invoices')
       .select('id, invoice_number, counterparty_name, amount, currency, status, due_date, created_at')
       .eq('user_id', ctx.userId)
+      .eq('enterprise_id', ctx.enterpriseId)
       .order('created_at', { ascending: false })
       .limit((input.limit as number) ?? 20);
     if (input.status) q = q.eq('status', input.status as string);
@@ -127,6 +131,7 @@ const getPayments: AgentTool = {
       .from('payments')
       .select('id, to_address, chain, token, amount, status, memo, created_at, executed_at, tx_hash')
       .eq('user_id', ctx.userId)
+      .eq('enterprise_id', ctx.enterpriseId)
       .order('created_at', { ascending: false })
       .limit((input.limit as number) ?? 20);
     if (input.status) q = q.eq('status', input.status as string);
@@ -152,6 +157,7 @@ const getTransactions: AgentTool = {
       .from('transactions')
       .select('id, chain, tx_hash, token, amount, direction, counterparty, status, confirmed_at')
       .eq('user_id', ctx.userId)
+      .eq('enterprise_id', ctx.enterpriseId)
       .order('confirmed_at', { ascending: false })
       .limit((input.limit as number) ?? 20);
     if (error) throw new Error(error.message);
@@ -193,6 +199,7 @@ const getForecast: AgentTool = {
       .from('cash_flow_forecasts')
       .select('*')
       .eq('user_id', ctx.userId)
+      .eq('enterprise_id', ctx.enterpriseId)
       .order('forecast_date', { ascending: true })
       .limit((input.limit as number) ?? 30);
     if (error) throw new Error(error.message);
@@ -221,6 +228,7 @@ const getRecommendations: AgentTool = {
       .from('treasury_recommendations')
       .select('*')
       .eq('user_id', ctx.userId)
+      .eq('enterprise_id', ctx.enterpriseId)
       .order('created_at', { ascending: false })
       .limit((input.limit as number) ?? 10);
     if (input.status) q = q.eq('status', input.status as string);
@@ -251,6 +259,7 @@ const syncErpInvoices: AgentTool = {
       .select('*')
       .eq('id', input.erpConfigId as string)
       .eq('user_id', ctx.userId)
+      .eq('enterprise_id', ctx.enterpriseId)
       .single();
     if (error || !config) throw new Error('ERP configuration not found');
 
@@ -583,6 +592,7 @@ const approveRecommendation: AgentTool = {
       .update({ status: 'approved', approved_by: ctx.userId, approved_at: new Date().toISOString() })
       .eq('id', input.recommendationId as string)
       .eq('user_id', ctx.userId)
+      .eq('enterprise_id', ctx.enterpriseId)
       .select()
       .single();
     if (error) throw new Error(error.message);
@@ -609,6 +619,7 @@ const rejectRecommendation: AgentTool = {
       .update({ status: 'rejected', rejected_at: new Date().toISOString(), rejection_reason: input.reason as string | undefined })
       .eq('id', input.recommendationId as string)
       .eq('user_id', ctx.userId)
+      .eq('enterprise_id', ctx.enterpriseId)
       .select()
       .single();
     if (error) throw new Error(error.message);

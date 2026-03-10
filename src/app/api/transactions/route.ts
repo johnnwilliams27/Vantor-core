@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
     .from('transactions')
     .select('*', { count: 'exact' })
     .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id)
     .order('timestamp', { ascending: false })
     .range(offset, offset + limit - 1);
 

@@ -18,6 +18,7 @@ export async function GET(_req: NextRequest) {
       bank_account:bank_accounts(id, institution_name, account_name, last4)
     `)
     .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id)
     .order('created_at', { ascending: false })
     .limit(50);
 

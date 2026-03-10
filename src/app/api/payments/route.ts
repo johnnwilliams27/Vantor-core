@@ -45,6 +45,7 @@ export async function GET(req: NextRequest) {
     .from('payments')
     .select('*, from_wallet:wallets(*), invoice:invoices(*), erp_config:erp_configurations(id, label, provider)')
     .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id)
     .order('created_at', { ascending: false });
   if (status) q = q.eq('status', status);
   let { data, error } = await q;
@@ -55,6 +56,7 @@ export async function GET(req: NextRequest) {
       .from('payments')
       .select('*, from_wallet:wallets(*), invoice:invoices(*)')
       .eq('user_id', session.user.id)
+      .eq('enterprise_id', session.user.enterprise_id)
       .order('created_at', { ascending: false });
     if (status) q2 = q2.eq('status', status as string);
     ({ data, error } = await q2);
@@ -84,6 +86,7 @@ export async function POST(req: NextRequest) {
     .select('id, chain')
     .eq('id', parsed.data.fromWalletId)
     .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id)
     .single();
 
   if (!wallet) return NextResponse.json({ error: 'Wallet not found' }, { status: 404 });
@@ -124,6 +127,7 @@ export async function POST(req: NextRequest) {
     .from('payments')
     .insert({
       user_id: session.user.id,
+      enterprise_id: session.user.enterprise_id,
       direction: 'sent',
       from_wallet_id: parsed.data.fromWalletId,
       from_address: null,

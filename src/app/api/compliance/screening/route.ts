@@ -25,6 +25,7 @@ export async function GET(req: NextRequest) {
     .from('sanctions_screenings')
     .select('*')
     .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id)
     .order('screened_at', { ascending: false })
     .limit(100);
 

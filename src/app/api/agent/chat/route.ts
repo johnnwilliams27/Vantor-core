@@ -42,9 +42,10 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = createAdminClient();
+  const enterpriseId = session.user.enterprise_id ?? null;
   const systemPrompt = await buildSystemPrompt(supabase, userId, userRole);
   const tools = getToolsForRole(userRole);
-  const ctx = { supabase, userId, userRole };
+  const ctx = { supabase, userId, userRole, enterpriseId };
 
   const stream = new ReadableStream({
     async start(controller) {

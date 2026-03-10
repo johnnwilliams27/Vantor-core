@@ -5,6 +5,9 @@ import type { Payment } from '@/types/database';
 
 const BATCH_SIZE = 50;
 
+// Cross-enterprise system job: processes scheduled payments across all enterprises.
+// No session available — authenticated via CRON_SECRET. Each payment record already
+// contains its own user_id/enterprise_id context, so no cross-enterprise data leakage occurs.
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {

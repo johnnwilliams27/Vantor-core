@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
     .from('kyt_transfers')
     .select('*')
     .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id)
     .order('registered_at', { ascending: false })
     .limit(100);
 

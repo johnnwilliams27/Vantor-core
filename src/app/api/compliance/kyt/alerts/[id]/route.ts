@@ -35,6 +35,7 @@ export async function PATCH(
     .select('id')
     .eq('id', id)
     .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id)
     .single();
 
   if (!existing) return NextResponse.json({ error: 'Alert not found' }, { status: 404 });

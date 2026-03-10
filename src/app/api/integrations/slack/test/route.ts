@@ -17,6 +17,7 @@ export async function POST(_req: NextRequest) {
     .from('slack_integrations')
     .select('id, channel_id, credentials')
     .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id)
     .eq('is_active', true)
     .maybeSingle();
 

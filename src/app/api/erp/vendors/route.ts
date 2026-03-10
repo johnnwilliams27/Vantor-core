@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
     .from('erp_vendors')
     .select('*, erp_configuration:erp_configurations!inner(user_id)')
     .eq('erp_configuration.user_id', session.user.id)
+    .eq('erp_configuration.enterprise_id', session.user.enterprise_id)
     .order('name');
 
   if (erpConfigId) query = query.eq('erp_config_id', erpConfigId);

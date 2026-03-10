@@ -82,6 +82,7 @@ export async function POST(req: NextRequest) {
       .upsert(
         {
           user_id: userId,
+          enterprise_id: session.user.enterprise_id,
           lookahead_days,
           forecast_data: forecastPoints,
           ai_summary: summaryResult.reasoning,

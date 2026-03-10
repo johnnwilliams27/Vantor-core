@@ -15,7 +15,8 @@ export async function GET(_req: NextRequest) {
   const { data: wallets, error: wErr } = await supabase
     .from('wallets')
     .select('id, address, chain')
-    .eq('user_id', session.user.id);
+    .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id);
 
   if (wErr) return NextResponse.json({ error: wErr.message }, { status: 500 });
   if (!wallets?.length) return NextResponse.json({ data: [] });

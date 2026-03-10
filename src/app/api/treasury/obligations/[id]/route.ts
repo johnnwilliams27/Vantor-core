@@ -39,6 +39,7 @@ export async function PATCH(
     .update({ ...parsed.data, updated_at: new Date().toISOString() })
     .eq('id', params.id)
     .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id)
     .select()
     .single();
 
@@ -64,7 +65,8 @@ export async function DELETE(
     .from('manual_obligations')
     .update({ is_active: false, updated_at: new Date().toISOString() })
     .eq('id', params.id)
-    .eq('user_id', session.user.id);
+    .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

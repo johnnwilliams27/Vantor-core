@@ -35,6 +35,7 @@ export async function POST(
     .select('id, status, action, recommended_amount_usd')
     .eq('id', params.id)
     .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id)
     .maybeSingle();
 
   if (fetchErr) return NextResponse.json({ error: fetchErr.message }, { status: 500 });

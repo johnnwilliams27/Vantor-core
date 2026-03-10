@@ -16,16 +16,20 @@ export async function GET(_req: NextRequest) {
 
   try {
     // Screenings in last 24h
+    const enterpriseId = session.user.enterprise_id;
+
     const { count: totalScreenings } = await supabase
       .from('sanctions_screenings')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
+      .eq('enterprise_id', enterpriseId)
       .gte('screened_at', twentyFourHoursAgo);
 
     const { count: sanctionedHits } = await supabase
       .from('sanctions_screenings')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
+      .eq('enterprise_id', enterpriseId)
       .eq('result', 'sanctioned')
       .gte('screened_at', twentyFourHoursAgo);
 
@@ -34,6 +38,7 @@ export async function GET(_req: NextRequest) {
       .from('kyt_alerts')
       .select('severity')
       .eq('user_id', userId)
+      .eq('enterprise_id', enterpriseId)
       .eq('status', 'open');
 
     const alertsBySeverity = { low: 0, medium: 0, high: 0, severe: 0 };
@@ -48,6 +53,7 @@ export async function GET(_req: NextRequest) {
       .from('travel_rule_transfers')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
+      .eq('enterprise_id', enterpriseId)
       .eq('status', 'pending');
 
     // Recent high-risk KYT transfers
@@ -55,6 +61,7 @@ export async function GET(_req: NextRequest) {
       .from('kyt_transfers')
       .select('id, external_id, chain, direction, amount, asset_amount_usd, risk_score, registered_at')
       .eq('user_id', userId)
+      .eq('enterprise_id', enterpriseId)
       .gte('risk_score', 50)
       .order('registered_at', { ascending: false })
       .limit(5);

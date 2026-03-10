@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
     .select('*')
     .eq('id', parsed.data.erpConfigId)
     .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id)
     .single();
 
   if (!erpConfig) return NextResponse.json({ error: 'ERP config not found' }, { status: 404 });
@@ -54,6 +55,7 @@ export async function POST(req: NextRequest) {
     .from('gl_postings')
     .insert({
       user_id: session.user.id,
+      enterprise_id: session.user.enterprise_id,
       erp_config_id: parsed.data.erpConfigId,
       invoice_id: parsed.data.invoiceId ?? null,
       payment_id: parsed.data.paymentId ?? null,

@@ -17,6 +17,7 @@ export async function GET(_req: NextRequest) {
     .from('treasury_rules')
     .select('*')
     .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id)
     .eq('is_active', true)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -54,12 +55,14 @@ export async function POST(req: NextRequest) {
     .from('treasury_rules')
     .update({ is_active: false })
     .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id)
     .eq('is_active', true);
 
   const { data: rule, error } = await supabase
     .from('treasury_rules')
     .insert({
       user_id: session.user.id,
+      enterprise_id: session.user.enterprise_id,
       label: parsed.data.label,
       safety_buffer_multiplier: parsed.data.safety_buffer_multiplier,
       obligation_lookahead_days: parsed.data.obligation_lookahead_days,

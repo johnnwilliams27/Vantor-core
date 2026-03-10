@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
   // Look up integration by team_id to get signing secret
   const { data: integration } = await supabase
     .from('slack_integrations')
-    .select('id, user_id, channel_id, credentials')
+    .select('id, user_id, enterprise_id, channel_id, credentials')
     .eq('team_id', teamId)
     .eq('is_active', true)
     .maybeSingle();
@@ -68,6 +68,7 @@ export async function POST(req: NextRequest) {
   const responseUrl = payload.response_url;
   const slackUsername = payload.user?.name ?? payload.user?.username ?? 'unknown';
   const ownerId = integration.user_id;
+  const enterpriseId = integration.enterprise_id;
 
   // Respond immediately — Slack requires HTTP 200 within 3 seconds
   // We process async via the response_url
@@ -77,6 +78,7 @@ export async function POST(req: NextRequest) {
       .from('ai_recommendations')
       .select('action, recommended_amount_usd, stablecoin_token')
       .eq('id', recId)
+      .eq('enterprise_id', enterpriseId)
       .maybeSingle();
 
     const amount = rec?.recommended_amount_usd ? `$${parseFloat(rec.recommended_amount_usd).toLocaleString()} ${rec.stablecoin_token ?? 'USDC'}` : 'this amount';
@@ -108,6 +110,7 @@ export async function POST(req: NextRequest) {
       .select('*')
       .eq('id', recId)
       .eq('user_id', ownerId)
+      .eq('enterprise_id', enterpriseId)
       .maybeSingle();
 
     if (fetchErr || !rec) {
@@ -164,6 +167,7 @@ export async function POST(req: NextRequest) {
         .from('fiat_transactions')
         .insert({
           user_id: ownerId,
+          enterprise_id: enterpriseId,
           bank_account_id: rec.bank_account_id,
           direction: rec.action,
           crypto_amount: parseFloat(rec.recommended_amount_usd),
@@ -234,6 +238,7 @@ export async function POST(req: NextRequest) {
       .select('id, status, action, recommended_amount_usd, stablecoin_token')
       .eq('id', recId)
       .eq('user_id', ownerId)
+      .eq('enterprise_id', enterpriseId)
       .maybeSingle();
 
     if (fetchErr || !rec) {

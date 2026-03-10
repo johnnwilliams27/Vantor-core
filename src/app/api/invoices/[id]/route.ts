@@ -39,6 +39,7 @@ export async function PATCH(
     .update(updateData)
     .eq('id', params.id)
     .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id)
     .select()
     .single();
 
@@ -71,7 +72,8 @@ export async function DELETE(
     .from('invoices')
     .delete()
     .eq('id', params.id)
-    .eq('user_id', session.user.id);
+    .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ message: 'Invoice deleted' });

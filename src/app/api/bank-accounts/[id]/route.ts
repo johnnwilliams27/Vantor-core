@@ -25,6 +25,7 @@ export async function DELETE(
     .select('id, institution_name')
     .eq('id', params.id)
     .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id)
     .single();
 
   if (!account) return NextResponse.json({ error: 'Not found' }, { status: 404 });

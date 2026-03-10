@@ -21,6 +21,7 @@ export async function GET(_req: NextRequest) {
       .from('ai_recommendations')
       .select('id, action, recommended_amount_usd, status, expires_at, created_at')
       .eq('user_id', session.user.id)
+      .eq('enterprise_id', session.user.enterprise_id)
       .eq('status', 'pending_approval')
       .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false })

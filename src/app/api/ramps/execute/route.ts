@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
     .select('id, plaid_account_id, institution_name')
     .eq('id', parsed.data.bankAccountId)
     .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id)
     .eq('is_active', true)
     .single();
 
@@ -58,6 +59,7 @@ export async function POST(req: NextRequest) {
       .from('fiat_transactions')
       .insert({
         user_id: session.user.id,
+        enterprise_id: session.user.enterprise_id,
         bank_account_id: parsed.data.bankAccountId,
         direction: parsed.data.direction,
         crypto_amount: parsed.data.cryptoAmount,

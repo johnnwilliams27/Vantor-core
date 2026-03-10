@@ -26,6 +26,7 @@ export async function POST(
     .select('*')
     .eq('id', params.id)
     .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id)
     .maybeSingle();
 
   if (fetchErr) return NextResponse.json({ error: fetchErr.message }, { status: 500 });
@@ -77,6 +78,7 @@ export async function POST(
       .from('fiat_transactions')
       .insert({
         user_id: session.user.id,
+        enterprise_id: session.user.enterprise_id,
         bank_account_id: rec.bank_account_id,
         direction: rec.action,
         crypto_amount: parseFloat(rec.recommended_amount_usd),

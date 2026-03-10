@@ -27,6 +27,7 @@ export async function GET(
     .select('*')
     .eq('id', id)
     .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id)
     .single();
 
   if (error || !data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -57,6 +58,7 @@ export async function PATCH(
     .select('id')
     .eq('id', id)
     .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id)
     .single();
 
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });

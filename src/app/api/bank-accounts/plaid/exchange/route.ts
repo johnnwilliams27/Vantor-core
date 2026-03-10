@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
       .from('bank_accounts')
       .insert({
         user_id: session.user.id,
+        enterprise_id: session.user.enterprise_id,
         plaid_item_id: itemId,
         plaid_account_id: parsed.data.accountId,
         institution_name: details.institutionName,

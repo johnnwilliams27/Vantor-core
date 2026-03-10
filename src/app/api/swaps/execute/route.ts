@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
     .select('id')
     .eq('id', parsed.data.walletId)
     .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id)
     .single();
 
   if (!wallet) return NextResponse.json({ error: 'Wallet not found' }, { status: 404 });
@@ -45,6 +46,7 @@ export async function POST(req: NextRequest) {
     .from('swaps')
     .insert({
       user_id: session.user.id,
+      enterprise_id: session.user.enterprise_id,
       wallet_id: parsed.data.walletId,
       chain: parsed.data.chain,
       from_token: parsed.data.fromToken,

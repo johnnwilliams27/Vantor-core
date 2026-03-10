@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
     .select('*')
     .eq('id', parsed.data.erpConfigId)
     .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id)
     .single();
 
   if (cfgErr || !erpConfig) {
@@ -77,6 +78,7 @@ export async function POST(req: NextRequest) {
     const { error } = await supabase.from('invoices').upsert(
       {
         user_id: session.user.id,
+        enterprise_id: session.user.enterprise_id,
         erp_config_id: erpConfig.id,
         erp_invoice_id: inv.id,
         vendor_id: vendor?.id ?? null,

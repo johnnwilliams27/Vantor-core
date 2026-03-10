@@ -25,6 +25,7 @@ export async function DELETE(
     .select('id, status')
     .eq('id', params.id)
     .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id)
     .single();
 
   if (!payment) return NextResponse.json({ error: 'Payment not found' }, { status: 404 });

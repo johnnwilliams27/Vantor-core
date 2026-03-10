@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
       .from('treasury_forecasts')
       .select('*')
       .eq('user_id', session.user.id)
+      .eq('enterprise_id', session.user.enterprise_id)
       .eq('lookahead_days', days)
       .maybeSingle();
 

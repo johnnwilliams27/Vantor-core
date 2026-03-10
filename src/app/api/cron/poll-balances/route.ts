@@ -5,6 +5,9 @@ import { fetchSolanaBalances } from '@/lib/blockchain/solana/balances';
 import type { Wallet } from '@/types/database';
 import type { TokenBalance } from '@/types/blockchain';
 
+// Cross-enterprise system job: processes wallet balances across all enterprises.
+// No session available — authenticated via CRON_SECRET. Data isolation is enforced
+// by wallet ownership (wallet_id FK) so no cross-enterprise data leakage occurs.
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {

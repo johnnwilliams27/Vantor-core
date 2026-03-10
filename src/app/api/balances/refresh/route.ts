@@ -17,7 +17,8 @@ export async function POST(_req: NextRequest) {
   const { data: wallets, error } = await supabase
     .from('wallets')
     .select('*')
-    .eq('user_id', session.user.id);
+    .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!wallets?.length) return NextResponse.json({ data: [] });

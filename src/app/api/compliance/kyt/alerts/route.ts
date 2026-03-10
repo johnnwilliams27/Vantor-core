@@ -19,6 +19,7 @@ export async function GET(req: NextRequest) {
     .from('kyt_alerts')
     .select('*, kyt_transfer:kyt_transfers(*)')
     .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id)
     .order('created_at', { ascending: false })
     .limit(100);
 

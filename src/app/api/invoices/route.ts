@@ -33,6 +33,7 @@ export async function GET(req: NextRequest) {
     .from('invoices')
     .select('*, vendor:erp_vendors(*)')
     .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id)
     .order('created_at', { ascending: false });
 
   if (status) query = query.eq('status', status);
@@ -61,6 +62,7 @@ export async function POST(req: NextRequest) {
     .from('invoices')
     .insert({
       user_id: session.user.id,
+      enterprise_id: session.user.enterprise_id,
       invoice_number: parsed.data.invoiceNumber,
       description: parsed.data.description,
       amount: parsed.data.amount,

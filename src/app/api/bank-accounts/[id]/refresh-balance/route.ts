@@ -26,6 +26,7 @@ export async function POST(
     .select('id, plaid_item_id, plaid_account_id')
     .eq('id', params.id)
     .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id)
     .eq('is_active', true)
     .maybeSingle();
 

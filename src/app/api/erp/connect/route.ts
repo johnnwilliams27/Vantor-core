@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
     .upsert(
       {
         user_id: session.user.id,
+        enterprise_id: session.user.enterprise_id,
         provider,
         label,
         credentials: encrypted,
@@ -99,6 +100,7 @@ export async function PATCH(req: NextRequest) {
     .update({ is_active })
     .eq('id', id)
     .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id)
     .select('id, provider, label, is_active, last_synced, created_at')
     .single();
 
@@ -114,7 +116,8 @@ export async function GET(_req: NextRequest) {
   const { data, error } = await supabase
     .from('erp_configurations')
     .select('id, provider, label, is_active, last_synced, created_at')
-    .eq('user_id', session.user.id);
+    .eq('user_id', session.user.id)
+    .eq('enterprise_id', session.user.enterprise_id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ data });
