@@ -21,6 +21,7 @@ import {
   ChevronRight,
   BrainCircuit,
   Plug,
+  ShieldCheck,
 } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import type { UserRole } from '@/types/database';
@@ -42,6 +43,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
       { label: 'Treasury AI', href: '/treasury', icon: BrainCircuit, minRole: 'treasury_manager' },
+      { label: 'Compliance', href: '/compliance', icon: ShieldCheck, minRole: 'accountant' },
     ],
   },
   {

@@ -23,7 +23,9 @@ export type AuditAction =
   | 'treasury_forecast_generate' | 'treasury_simulation_run'
   | 'treasury_report_export' | 'treasury_price_refresh'
   | 'slack_connect' | 'slack_disconnect' | 'slack_test'
-  | 'slack_recommendation_notify' | 'slack_recommendation_approve' | 'slack_recommendation_reject';
+  | 'slack_recommendation_notify' | 'slack_recommendation_approve' | 'slack_recommendation_reject'
+  | 'compliance_sanctions_screen' | 'compliance_kyt_register' | 'compliance_kyt_alert'
+  | 'compliance_travel_rule_create' | 'compliance_travel_rule_update' | 'compliance_override';
 
 export interface UserProfile {
   id: string;
@@ -316,6 +318,98 @@ export interface AiRecommendation {
   updated_at: string;
   // joined
   bank_account?: Pick<BankAccount, 'id' | 'institution_name' | 'account_name' | 'last4'>;
+}
+
+// ---- Treasury AI Phase 2 ----
+
+// ---- Chainalysis Compliance ----
+
+export type ScreeningResult = 'clear' | 'sanctioned' | 'partial_match' | 'error';
+export type KytAlertSeverity = 'low' | 'medium' | 'high' | 'severe';
+export type KytAlertStatus = 'open' | 'under_review' | 'dismissed' | 'escalated' | 'resolved';
+export type TravelRuleStatus = 'pending' | 'sent' | 'received' | 'accepted' | 'rejected' | 'failed';
+
+export interface SanctionsScreening {
+  id: string;
+  user_id: string;
+  address: string;
+  chain: ChainType;
+  result: ScreeningResult;
+  risk_score: string | null;
+  match_details: Record<string, unknown> | null;
+  provider: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  screened_at: string;
+  expires_at: string;
+  created_at: string;
+}
+
+export interface KytTransfer {
+  id: string;
+  user_id: string;
+  external_id: string;
+  chain: ChainType;
+  direction: 'sent' | 'received';
+  tx_hash: string | null;
+  from_address: string;
+  to_address: string;
+  token: TokenSymbol | null;
+  amount: string | null;
+  asset_amount_usd: string | null;
+  risk_score: string | null;
+  cluster_name: string | null;
+  cluster_category: string | null;
+  raw_response: Record<string, unknown> | null;
+  payment_id: string | null;
+  transaction_id: string | null;
+  registered_at: string;
+  created_at: string;
+}
+
+export interface KytAlert {
+  id: string;
+  user_id: string;
+  kyt_transfer_id: string | null;
+  external_alert_id: string | null;
+  severity: KytAlertSeverity;
+  status: KytAlertStatus;
+  category: string | null;
+  description: string | null;
+  raw_data: Record<string, unknown> | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  review_notes: string | null;
+  created_at: string;
+  updated_at: string;
+  // joined
+  kyt_transfer?: KytTransfer;
+}
+
+export interface TravelRuleTransfer {
+  id: string;
+  user_id: string;
+  payment_id: string | null;
+  direction: 'outgoing' | 'incoming';
+  amount_usd: string;
+  originator_name: string | null;
+  originator_address: string | null;
+  originator_wallet: string;
+  originator_chain: ChainType;
+  originator_vasp: string | null;
+  beneficiary_name: string | null;
+  beneficiary_address: string | null;
+  beneficiary_wallet: string;
+  beneficiary_chain: ChainType;
+  beneficiary_vasp: string | null;
+  status: TravelRuleStatus;
+  provider_ref: string | null;
+  raw_response: Record<string, unknown> | null;
+  error_message: string | null;
+  sent_at: string | null;
+  received_at: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 // ---- Treasury AI Phase 2 ----

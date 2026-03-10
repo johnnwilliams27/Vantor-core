@@ -6,6 +6,7 @@ export const ROLE_ROUTES: Record<string, UserRole> = {
   '/swaps': 'treasury_manager',
   '/ramps': 'treasury_manager',
   '/treasury': 'treasury_manager',
+  '/compliance': 'accountant',
   '/settings': 'accountant',
   '/invoices': 'accountant',
   '/wallets': 'accountant',

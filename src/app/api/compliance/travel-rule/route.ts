@@ -1,0 +1,73 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/nextauth.config';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { requireRole } from '@/lib/auth/rbac';
+import { createTravelRuleTransfer } from '@/lib/compliance/travel-rule';
+import { z } from 'zod';
+
+const createSchema = z.object({
+  paymentId: z.string().uuid().optional(),
+  direction: z.enum(['outgoing', 'incoming']),
+  amountUsd: z.number().positive(),
+  originatorName: z.string().min(1),
+  originatorAddress: z.string().optional(),
+  originatorWallet: z.string().min(20),
+  originatorChain: z.enum(['ethereum', 'solana']),
+  originatorVasp: z.string().optional(),
+  beneficiaryName: z.string().min(1),
+  beneficiaryAddress: z.string().optional(),
+  beneficiaryWallet: z.string().min(20),
+  beneficiaryChain: z.enum(['ethereum', 'solana']),
+  beneficiaryVasp: z.string().optional(),
+});
+
+export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try { requireRole(session.user.role as any, 'accountant'); }
+  catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
+
+  const supabase = createAdminClient();
+  const { searchParams } = new URL(req.url);
+  const status = searchParams.get('status');
+
+  let q = supabase
+    .from('travel_rule_transfers')
+    .select('*')
+    .eq('user_id', session.user.id)
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  if (status) q = q.eq('status', status);
+
+  const { data, error } = await q;
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  return NextResponse.json({ data });
+}
+
+export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try { requireRole(session.user.role as any, 'treasury_manager'); }
+  catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
+
+  const body = await req.json();
+  const parsed = createSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid request', details: parsed.error.issues }, { status: 400 });
+  }
+
+  try {
+    const transfer = await createTravelRuleTransfer(
+      session.user.id,
+      parsed.data.paymentId ?? '',
+      parsed.data
+    );
+
+    return NextResponse.json({ data: transfer }, { status: 201 });
+  } catch (err) {
+    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+  }
+}
