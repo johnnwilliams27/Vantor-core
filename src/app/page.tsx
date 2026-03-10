@@ -300,7 +300,7 @@ function Navbar() {
   useEffect(() => {
     if (!loginOpen) return;
     const onClick = (e: MouseEvent) => {
-      if (loginRef.current && !loginRef.current.contains(e.target as Node)) {
+      if (loginRef.current && !loginRef.current.contains(e.target as globalThis.Node)) {
         setLoginOpen(false);
       }
     };
