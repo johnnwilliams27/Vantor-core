@@ -61,7 +61,7 @@ export function Topbar({ title }: { title?: string }) {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => signOut({ callbackUrl: '/login' })}
+          onClick={() => signOut({ callbackUrl: '/' })}
           title="Sign out"
         >
           <LogOut className="h-5 w-5 text-muted-foreground" />
