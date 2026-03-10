@@ -11,7 +11,7 @@ const nextConfig = {
       net: false,
       tls: false,
     };
-    config.externals.push('pino-pretty');
+    config.externals.push('pino-pretty', '@react-native-async-storage/async-storage');
     return config;
   },
 };
