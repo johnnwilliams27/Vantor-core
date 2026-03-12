@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { decryptSlackCredentials, postTestMessage } from '@/lib/integrations/slack';
+import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 export async function POST(_req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -12,12 +13,14 @@ export async function POST(_req: NextRequest) {
   try { requireRole(session.user.role as any, 'treasury_manager'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
 
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
+
   const supabase = createAdminClient();
   const { data: integration, error } = await supabase
     .from('slack_integrations')
     .select('id, channel_id, credentials')
     .eq('user_id', session.user.id)
-    .eq('enterprise_id', session.user.enterprise_id)
+    .eq('enterprise_id', enterpriseId)
     .eq('is_active', true)
     .maybeSingle();
 

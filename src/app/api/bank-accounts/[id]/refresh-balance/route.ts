@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { getAccountBalance } from '@/lib/banking/plaid';
+import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 export async function POST(
   _req: NextRequest,
@@ -15,6 +16,8 @@ export async function POST(
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try { requireRole(session.user.role as any, 'accountant'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
+
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
 
   if (!checkRateLimit('bank-refresh-balance', session.user.id, 20, 60 * 60 * 1000)) {
     return rateLimitResponse();
@@ -30,7 +33,7 @@ export async function POST(
     .select('id, plaid_item_id, plaid_account_id')
     .eq('id', params.id)
     .eq('user_id', session.user.id)
-    .eq('enterprise_id', session.user.enterprise_id)
+    .eq('enterprise_id', enterpriseId)
     .eq('is_active', true)
     .maybeSingle();
 

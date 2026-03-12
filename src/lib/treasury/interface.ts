@@ -16,6 +16,7 @@ export interface TreasurySnapshot {
     institutionName: string;
     accountName: string;
     last4: string | null;
+    currency: string;
     currentBalanceUsd: number;
     balanceAsOf: string | null;
   }>;

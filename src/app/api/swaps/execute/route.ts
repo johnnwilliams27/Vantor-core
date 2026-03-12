@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { z } from 'zod';
+import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 const schema = z.object({
   walletId: z.string().uuid(),
@@ -23,6 +24,8 @@ export async function POST(req: NextRequest) {
   try { requireRole(session.user.role as any, 'treasury_manager'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
 
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
+
   const body = await req.json();
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
@@ -37,7 +40,7 @@ export async function POST(req: NextRequest) {
     .select('id')
     .eq('id', parsed.data.walletId)
     .eq('user_id', session.user.id)
-    .eq('enterprise_id', session.user.enterprise_id)
+    .eq('enterprise_id', enterpriseId)
     .single();
 
   if (!wallet) return NextResponse.json({ error: 'Wallet not found' }, { status: 404 });
@@ -46,7 +49,7 @@ export async function POST(req: NextRequest) {
     .from('swaps')
     .insert({
       user_id: session.user.id,
-      enterprise_id: session.user.enterprise_id,
+      enterprise_id: enterpriseId,
       wallet_id: parsed.data.walletId,
       chain: parsed.data.chain,
       from_token: parsed.data.fromToken,

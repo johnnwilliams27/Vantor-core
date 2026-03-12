@@ -1,5 +1,8 @@
 'use client';
 import { useKytTransfers } from '@/hooks/useCompliance';
+import { Badge } from '@/components/ui/badge';
+import { capitalize } from '@/lib/utils';
+import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 
 function riskColor(score: number | null): string {
   if (score === null) return 'text-muted-foreground';
@@ -26,8 +29,8 @@ export function KytTransfersTable() {
             <thead>
               <tr className="border-b text-left text-muted-foreground">
                 <th className="px-4 py-2 font-medium">Direction</th>
-                <th className="px-4 py-2 font-medium">Chain</th>
                 <th className="px-4 py-2 font-medium">Amount (USD)</th>
+                <th className="px-4 py-2 font-medium">Chain</th>
                 <th className="px-4 py-2 font-medium">Risk Score</th>
                 <th className="px-4 py-2 font-medium">Cluster</th>
                 <th className="px-4 py-2 font-medium">Tx Hash</th>
@@ -39,9 +42,29 @@ export function KytTransfersTable() {
                 const score = t.risk_score !== null ? parseFloat(t.risk_score) : null;
                 return (
                   <tr key={t.id} className="border-b last:border-0 hover:bg-muted/30">
-                    <td className="px-4 py-2 capitalize">{t.direction}</td>
-                    <td className="px-4 py-2 capitalize">{t.chain}</td>
-                    <td className="px-4 py-2">${t.asset_amount_usd ?? t.amount ?? '-'}</td>
+                    <td className="px-4 py-2">
+                      {t.direction === 'received' ? (
+                        <Badge variant="onramp" className="gap-1">
+                          <ArrowDownLeft className="h-3 w-3 shrink-0" />
+                          Received
+                        </Badge>
+                      ) : (
+                        <Badge variant="offramp" className="gap-1">
+                          <ArrowUpRight className="h-3 w-3 shrink-0" />
+                          Sent
+                        </Badge>
+                      )}
+                    </td>
+                    <td className="px-4 py-2">
+                      {t.asset_amount_usd || t.amount
+                        ? Number(t.asset_amount_usd ?? t.amount).toLocaleString('en-US', { style: 'currency', currency: 'USD' })
+                        : '-'}
+                    </td>
+                    <td className="px-4 py-2">
+                      <Badge variant={t.chain === 'ethereum' ? 'ethereum' : 'solana'}>
+                        {capitalize(t.chain)}
+                      </Badge>
+                    </td>
                     <td className={`px-4 py-2 font-medium ${riskColor(score)}`}>
                       {score !== null ? score.toFixed(1) : '-'}
                     </td>

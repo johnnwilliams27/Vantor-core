@@ -49,12 +49,17 @@ export function SwapsTab() {
                     <Badge variant="outline">{s.from_token}</Badge>
                   </TableCell>
                   <TableCell>
-                    <span className="font-semibold">{s.to_amount ? formatCurrency(s.to_amount) : '…'}</span>{' '}
+                    <span className="font-semibold">{formatCurrency(s.to_amount ?? s.from_amount)}</span>{' '}
                     <Badge variant="outline">{s.to_token}</Badge>
+                    {!s.to_amount && <span className="text-xs text-muted-foreground ml-1">(est.)</span>}
                   </TableCell>
-                  <TableCell><Badge variant="secondary">{capitalize(s.chain)}</Badge></TableCell>
+                  <TableCell><Badge variant={s.chain === 'ethereum' ? 'ethereum' : 'solana'}>{capitalize(s.chain)}</Badge></TableCell>
                   <TableCell>
-                    <Badge variant={s.status === 'completed' ? 'success' as any : 'warning' as any}>
+                    <Badge variant={
+                      s.status === 'completed' ? 'success' as any :
+                      s.status === 'failed' ? 'destructive' :
+                      'warning' as any
+                    }>
                       {capitalize(s.status)}
                     </Badge>
                   </TableCell>

@@ -3,6 +3,9 @@ import { useState } from 'react';
 import { useSanctionsScreenings, useScreenAddress } from '@/hooks/useCompliance';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
+import { Select } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { capitalize } from '@/lib/utils';
 import { Search, ShieldCheck, ShieldAlert, AlertTriangle } from 'lucide-react';
 
 const RESULT_BADGE: Record<string, { label: string; className: string; icon: React.ComponentType<{ className?: string }> }> = {
@@ -48,14 +51,14 @@ export function SanctionsScreeningPanel() {
             placeholder="Enter wallet address..."
             className="flex-1 rounded-md border bg-background px-3 py-2 text-sm"
           />
-          <select
+          <Select
             value={chain}
             onChange={(e) => setChain(e.target.value as 'ethereum' | 'solana')}
-            className="rounded-md border bg-background px-3 py-2 text-sm w-32"
+            className="w-36"
           >
             <option value="ethereum">Ethereum</option>
             <option value="solana">Solana</option>
-          </select>
+          </Select>
           <Button
             onClick={handleScreen}
             disabled={!address.trim() || screenAddress.isPending}
@@ -98,7 +101,11 @@ export function SanctionsScreeningPanel() {
                       <td className="px-4 py-2 font-mono text-xs">
                         {s.address.slice(0, 10)}...{s.address.slice(-6)}
                       </td>
-                      <td className="px-4 py-2 capitalize">{s.chain}</td>
+                      <td className="px-4 py-2">
+                        <Badge variant={s.chain === 'ethereum' ? 'ethereum' : 'solana'}>
+                          {capitalize(s.chain)}
+                        </Badge>
+                      </td>
                       <td className="px-4 py-2">
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${badge.className}`}>
                           <Icon className="h-3 w-3" />

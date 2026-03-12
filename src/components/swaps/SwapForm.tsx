@@ -10,13 +10,14 @@ import { Select } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
 import { useWallets } from '@/hooks/useWallets';
+import { useWalletTokenBalance } from '@/hooks/useBalances';
+import { BalanceHint } from '@/components/ui/balance-hint';
 import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, ArrowLeftRight, ArrowRight } from 'lucide-react';
 import type { SwapQuoteResponse } from '@/types/api';
 
 const schema = z.object({
   walletId: z.string().uuid('Select a wallet'),
-  chain: z.enum(['ethereum', 'solana']),
   fromToken: z.enum(['USDC', 'USDT', 'PYUSD']),
   toToken: z.enum(['USDC', 'USDT', 'PYUSD']),
   amount: z.string().regex(/^\d+(\.\d{1,6})?$/, 'Enter a valid amount'),
@@ -41,16 +42,27 @@ export function SwapForm() {
     handleSubmit,
     getValues,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { chain: 'solana', fromToken: 'USDC', toToken: 'USDT', slippageBps: '50' },
+    defaultValues: { fromToken: 'USDC', toToken: 'USDT', slippageBps: '50' },
   });
 
   const selectedWalletId = watch('walletId');
+  const fromToken = watch('fromToken');
+  const amount = watch('amount');
   const selectedWallet = wallets?.find((w) => w.id === selectedWalletId);
+  const selectedChain = selectedWallet?.chain;
+  const dexLabel = selectedChain === 'ethereum' ? '1inch Fusion' : selectedChain === 'solana' ? 'Jupiter' : null;
+  const balance = useWalletTokenBalance(selectedWalletId, fromToken);
+  const exceeds = balance !== null && amount ? parseFloat(amount) > balance : false;
 
   const getQuote = async () => {
+    if (exceeds) {
+      toast({ title: 'Insufficient balance', description: `You don't have enough ${fromToken} in this wallet.`, variant: 'destructive' });
+      return;
+    }
     const data = getValues();
     const wallet = wallets?.find((w) => w.id === data.walletId);
     if (!wallet) return;
@@ -61,7 +73,7 @@ export function SwapForm() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          chain: data.chain,
+          chain: wallet.chain,
           fromToken: data.fromToken,
           toToken: data.toToken,
           amount: data.amount,
@@ -80,7 +92,7 @@ export function SwapForm() {
   };
 
   const executeSwap = async () => {
-    if (!quote) return;
+    if (!quote || !selectedWallet) return;
     const data = getValues();
     setExecuting(true);
     try {
@@ -89,7 +101,7 @@ export function SwapForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           walletId: data.walletId,
-          chain: data.chain,
+          chain: selectedWallet.chain,
           fromToken: data.fromToken,
           toToken: data.toToken,
           fromAmount: quote.fromAmount,
@@ -101,6 +113,7 @@ export function SwapForm() {
       if (!res.ok) throw new Error(json.error);
       toast({ title: 'Swap recorded', description: `${quote.fromAmount} ${data.fromToken} → ${quote.toAmount} ${data.toToken}`, variant: 'success' });
       setQuote(null);
+      queryClient.invalidateQueries({ queryKey: ['balances'] });
     } catch (err) {
       toast({ title: 'Swap failed', description: (err as Error).message, variant: 'destructive' });
     } finally {
@@ -122,21 +135,19 @@ export function SwapForm() {
             <Label>Wallet</Label>
             <Select {...register('walletId')}>
               <option value="">Select wallet…</option>
-              {wallets?.map((w) => (
-                <option key={w.id} value={w.id}>
-                  {w.label ?? `${w.chain} – ${w.address.slice(0, 10)}…`}
-                </option>
-              ))}
+              {wallets?.map((w) => {
+                const chain = w.chain.charAt(0).toUpperCase() + w.chain.slice(1);
+                return (
+                  <option key={w.id} value={w.id}>
+                    {w.label ? `${w.label} · ${chain} (${w.address.slice(0, 6)}…${w.address.slice(-4)})` : `${chain} · ${w.address.slice(0, 6)}…${w.address.slice(-4)}`}
+                  </option>
+                );
+              })}
             </Select>
             {errors.walletId && <p className="text-sm text-red-500">{errors.walletId.message}</p>}
-          </div>
-
-          <div className="space-y-2">
-            <Label>Chain</Label>
-            <Select {...register('chain')}>
-              <option value="solana">Solana (Jupiter)</option>
-              <option value="ethereum">Ethereum (1inch Fusion)</option>
-            </Select>
+            {dexLabel && (
+              <p className="text-xs text-muted-foreground">DEX: {dexLabel}</p>
+            )}
           </div>
 
           <div className="grid grid-cols-5 gap-2 items-end">
@@ -166,6 +177,12 @@ export function SwapForm() {
             <div className="space-y-2">
               <Label>Amount</Label>
               <Input placeholder="100.00" {...register('amount')} />
+              <BalanceHint
+                balance={balance}
+                token={fromToken ?? 'USDC'}
+                currentAmount={amount}
+                onMax={(max) => setValue('amount', max)}
+              />
               {errors.amount && <p className="text-sm text-red-500">{errors.amount.message}</p>}
             </div>
             <div className="space-y-2">
@@ -174,7 +191,7 @@ export function SwapForm() {
             </div>
           </div>
 
-          <Button type="button" className="w-full" onClick={getQuote} disabled={quoting}>
+          <Button type="button" className="w-full" onClick={getQuote} disabled={quoting || exceeds}>
             {quoting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Getting Quote…</> : 'Get Quote'}
           </Button>
         </form>

@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { z } from 'zod';
+import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 const updateSchema = z.object({
   status: z.enum(['accepted', 'rejected']),
@@ -19,6 +20,8 @@ export async function GET(
   try { requireRole(session.user.role as any, 'accountant'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
 
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
+
   const { id } = await params;
   const supabase = createAdminClient();
 
@@ -27,7 +30,7 @@ export async function GET(
     .select('*')
     .eq('id', id)
     .eq('user_id', session.user.id)
-    .eq('enterprise_id', session.user.enterprise_id)
+    .eq('enterprise_id', enterpriseId)
     .single();
 
   if (error || !data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -44,6 +47,8 @@ export async function PATCH(
   try { requireRole(session.user.role as any, 'treasury_manager'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
 
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
+
   const { id } = await params;
   const body = await req.json();
   const parsed = updateSchema.safeParse(body);
@@ -58,7 +63,7 @@ export async function PATCH(
     .select('id')
     .eq('id', id)
     .eq('user_id', session.user.id)
-    .eq('enterprise_id', session.user.enterprise_id)
+    .eq('enterprise_id', enterpriseId)
     .single();
 
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });

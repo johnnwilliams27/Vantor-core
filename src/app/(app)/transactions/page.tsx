@@ -7,17 +7,19 @@ import { PaymentsTab } from '@/components/transactions/PaymentsTab';
 import { SwapsTab } from '@/components/transactions/SwapsTab';
 import { RampsTab } from '@/components/transactions/RampsTab';
 import { OnChainTab } from '@/components/transactions/OnChainTab';
+import { YieldTab } from '@/components/transactions/YieldTab';
 import { useSession } from 'next-auth/react';
 import { hasRole } from '@/lib/auth/rbac';
 import type { UserRole } from '@/types/database';
 
-type ActiveTab = 'all' | 'payments' | 'swaps' | 'ramps' | 'onchain';
+type ActiveTab = 'all' | 'payments' | 'swaps' | 'ramps' | 'yield' | 'onchain';
 
 const TABS: { id: ActiveTab; label: string; minRole?: UserRole }[] = [
   { id: 'all', label: 'All' },
   { id: 'payments', label: 'Payments', minRole: 'treasury_manager' },
   { id: 'swaps', label: 'Swaps', minRole: 'treasury_manager' },
   { id: 'ramps', label: 'Ramps', minRole: 'treasury_manager' },
+  { id: 'yield', label: 'Yield', minRole: 'treasury_manager' },
   { id: 'onchain', label: 'On-Chain' },
 ];
 
@@ -55,6 +57,7 @@ export default function TransactionsPage() {
         {activeTab === 'payments' && <PaymentsTab />}
         {activeTab === 'swaps'    && <SwapsTab />}
         {activeTab === 'ramps'    && <RampsTab />}
+        {activeTab === 'yield'    && <YieldTab />}
         {activeTab === 'onchain'  && <OnChainTab />}
       </div>
     </AppShell>

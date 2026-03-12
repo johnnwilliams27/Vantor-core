@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { z } from 'zod';
+import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 export async function GET(_req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -12,12 +13,14 @@ export async function GET(_req: NextRequest) {
   try { requireRole(session.user.role as any, 'accountant'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
 
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
+
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('manual_obligations')
     .select('*')
     .eq('user_id', session.user.id)
-    .eq('enterprise_id', session.user.enterprise_id)
+    .eq('enterprise_id', enterpriseId)
     .eq('is_active', true)
     .order('due_date', { ascending: true });
 
@@ -40,6 +43,8 @@ export async function POST(req: NextRequest) {
   try { requireRole(session.user.role as any, 'accountant'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
 
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
+
   const body = await req.json();
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
@@ -51,7 +56,7 @@ export async function POST(req: NextRequest) {
     .from('manual_obligations')
     .insert({
       user_id: session.user.id,
-      enterprise_id: session.user.enterprise_id,
+      enterprise_id: enterpriseId,
       label: parsed.data.label,
       description: parsed.data.description ?? null,
       amount_usd: parsed.data.amount_usd,

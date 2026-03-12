@@ -86,7 +86,7 @@ export function PaymentsTab() {
                     <span className="font-semibold">{formatCurrency(p.amount)}</span>{' '}
                     <Badge variant="outline">{p.token}</Badge>
                   </TableCell>
-                  <TableCell><Badge variant="secondary">{capitalize(p.chain)}</Badge></TableCell>
+                  <TableCell><Badge variant={p.chain === 'ethereum' ? 'ethereum' : 'solana'}>{capitalize(p.chain)}</Badge></TableCell>
                   <TableCell>
                     <Badge variant={
                       p.status === 'completed' ? 'success' as any :

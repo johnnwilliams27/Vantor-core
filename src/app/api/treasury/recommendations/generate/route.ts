@@ -9,12 +9,15 @@ import { generateTreasuryReasoning } from '@/lib/treasury/claude';
 import { getBankingAdapter } from '@/lib/banking/factory';
 import { checkRateLimit } from '@/lib/api/rate-limit';
 import { decryptSlackCredentials, postRecommendationToSlack } from '@/lib/integrations/slack';
+import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 export async function POST(_req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try { requireRole(session.user.role as any, 'treasury_manager'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
+
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
 
   // 10 AI recommendation generations per hour per user
   if (!checkRateLimit('treasury-recommend', session.user.id, 10, 60 * 60 * 1000)) {
@@ -24,7 +27,7 @@ export async function POST(_req: NextRequest) {
   const supabase = createAdminClient();
 
   // 1. Get active rule
-  const rule = await getActiveTreasuryRule(supabase, session.user.id);
+  const rule = await getActiveTreasuryRule(supabase, session.user.id, enterpriseId);
   if (!rule) {
     return NextResponse.json(
       { error: 'No active treasury rule configured. Please create a rule first.' },
@@ -33,7 +36,7 @@ export async function POST(_req: NextRequest) {
   }
 
   // 2. Compute recommendation
-  const result = await computeRecommendation(supabase, session.user.id, rule);
+  const result = await computeRecommendation(supabase, session.user.id, rule, enterpriseId);
 
   // 3. Generate AI reasoning
   const { reasoning, model } = await generateTreasuryReasoning({
@@ -55,7 +58,7 @@ export async function POST(_req: NextRequest) {
     .from('ai_recommendations')
     .insert({
       user_id: session.user.id,
-      enterprise_id: session.user.enterprise_id,
+      enterprise_id: enterpriseId,
       treasury_rule_id: rule.id,
       total_bank_balance_usd: result.snapshot.totalBankBalanceUsd,
       total_crypto_balance_usd: result.snapshot.totalCryptoBalanceUsd,
@@ -85,7 +88,7 @@ export async function POST(_req: NextRequest) {
           .from('slack_integrations')
           .select('channel_id, credentials')
           .eq('user_id', session.user.id)
-          .eq('enterprise_id', session.user.enterprise_id)
+          .eq('enterprise_id', enterpriseId)
           .eq('is_active', true)
           .maybeSingle();
 
@@ -144,7 +147,7 @@ export async function POST(_req: NextRequest) {
         .from('fiat_transactions')
         .insert({
           user_id: session.user.id,
-          enterprise_id: session.user.enterprise_id,
+          enterprise_id: enterpriseId,
           bank_account_id: result.targetBankAccountId,
           direction: result.action,
           crypto_amount: result.recommendedAmountUsd,

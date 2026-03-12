@@ -10,16 +10,22 @@ import { getStablecoinPrices, priceToken } from './oracle';
 
 export async function getActiveTreasuryRule(
   supabase: SupabaseClient,
-  userId: string
+  userId: string,
+  enterpriseId?: string | null
 ): Promise<TreasuryRule | null> {
-  const { data, error } = await supabase
+  let query = supabase
     .from('treasury_rules')
     .select('*')
     .eq('user_id', userId)
     .eq('is_active', true)
     .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
+
+  if (enterpriseId) {
+    query = query.eq('enterprise_id', enterpriseId);
+  }
+
+  const { data, error } = await query.maybeSingle();
 
   if (error) throw new Error(error.message);
   return data;
@@ -28,19 +34,26 @@ export async function getActiveTreasuryRule(
 export async function buildTreasurySnapshot(
   supabase: SupabaseClient,
   userId: string,
-  prices?: StablecoinPrices
+  prices?: StablecoinPrices,
+  enterpriseId?: string | null
 ): Promise<TreasurySnapshot> {
-  const [bankRes, walletRes] = await Promise.all([
-    supabase
-      .from('bank_accounts')
-      .select('id, institution_name, account_name, last4, current_balance, balance_as_of')
-      .eq('user_id', userId)
-      .eq('is_active', true),
-    supabase
-      .from('wallets')
-      .select('id, chain, wallet_balances(token, balance, usd_value)')
-      .eq('user_id', userId),
-  ]);
+  let bankQuery = supabase
+    .from('bank_accounts')
+    .select('id, institution_name, account_name, last4, currency, current_balance, balance_as_of')
+    .eq('user_id', userId)
+    .eq('is_active', true);
+
+  let walletQuery = supabase
+    .from('wallets')
+    .select('id, chain, wallet_balances(token, balance, usd_value)')
+    .eq('user_id', userId);
+
+  if (enterpriseId) {
+    bankQuery = bankQuery.eq('enterprise_id', enterpriseId);
+    walletQuery = walletQuery.eq('enterprise_id', enterpriseId);
+  }
+
+  const [bankRes, walletRes] = await Promise.all([bankQuery, walletQuery]);
 
   if (bankRes.error) throw new Error(bankRes.error.message);
   if (walletRes.error) throw new Error(walletRes.error.message);
@@ -53,6 +66,7 @@ export async function buildTreasurySnapshot(
     institutionName: acct.institution_name as string,
     accountName: acct.account_name as string,
     last4: acct.last4 as string | null,
+    currency: (acct.currency as string) ?? 'USD',
     currentBalanceUsd: acct.current_balance ? parseFloat(acct.current_balance as string) : 0,
     balanceAsOf: acct.balance_as_of as string | null,
   }));
@@ -90,27 +104,34 @@ export async function buildTreasurySnapshot(
 export async function collectObligations(
   supabase: SupabaseClient,
   userId: string,
-  lookaheadDays: number
+  lookaheadDays: number,
+  enterpriseId?: string | null
 ): Promise<UpcomingObligation[]> {
   const windowEnd = new Date();
   windowEnd.setDate(windowEnd.getDate() + lookaheadDays);
   const windowEndStr = windowEnd.toISOString().split('T')[0];
 
-  const [invoiceRes, manualRes] = await Promise.all([
-    supabase
-      .from('invoices')
-      .select('id, invoice_number, description, amount, due_date')
-      .eq('user_id', userId)
-      .in('status', ['unpaid', 'overdue'])
-      .not('due_date', 'is', null)
-      .lte('due_date', windowEndStr),
-    supabase
-      .from('manual_obligations')
-      .select('id, label, amount_usd, due_date')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .lte('due_date', windowEndStr),
-  ]);
+  let invoiceQuery = supabase
+    .from('invoices')
+    .select('id, invoice_number, description, amount, due_date')
+    .eq('user_id', userId)
+    .in('status', ['unpaid', 'overdue'])
+    .not('due_date', 'is', null)
+    .lte('due_date', windowEndStr);
+
+  let manualQuery = supabase
+    .from('manual_obligations')
+    .select('id, label, amount_usd, due_date')
+    .eq('user_id', userId)
+    .eq('is_active', true)
+    .lte('due_date', windowEndStr);
+
+  if (enterpriseId) {
+    invoiceQuery = invoiceQuery.eq('enterprise_id', enterpriseId);
+    manualQuery = manualQuery.eq('enterprise_id', enterpriseId);
+  }
+
+  const [invoiceRes, manualRes] = await Promise.all([invoiceQuery, manualQuery]);
 
   if (invoiceRes.error) throw new Error(invoiceRes.error.message);
   if (manualRes.error) throw new Error(manualRes.error.message);
@@ -143,7 +164,8 @@ export async function collectObligations(
 export async function computeRecommendation(
   supabase: SupabaseClient,
   userId: string,
-  rule: TreasuryRule
+  rule: TreasuryRule,
+  enterpriseId?: string | null
 ): Promise<RulesEngineResult> {
   const lookaheadDays = rule.obligation_lookahead_days;
   const multiplier = parseFloat(rule.safety_buffer_multiplier);
@@ -153,8 +175,8 @@ export async function computeRecommendation(
   const { prices } = await getStablecoinPrices();
 
   const [snapshot, obligations] = await Promise.all([
-    buildTreasurySnapshot(supabase, userId, prices),
-    collectObligations(supabase, userId, lookaheadDays),
+    buildTreasurySnapshot(supabase, userId, prices, enterpriseId),
+    collectObligations(supabase, userId, lookaheadDays, enterpriseId),
   ]);
 
   const totalObligationsUsd = obligations.reduce((sum, o) => sum + o.amountUsd, 0);

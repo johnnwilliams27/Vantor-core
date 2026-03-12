@@ -16,6 +16,9 @@ interface AppState {
 
   agentIsStreaming: boolean;
   setAgentIsStreaming: (streaming: boolean) => void;
+
+  testMode: boolean;
+  setTestMode: (enabled: boolean) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -36,4 +39,7 @@ export const useAppStore = create<AppState>((set) => ({
 
   agentIsStreaming: false,
   setAgentIsStreaming: (streaming) => set({ agentIsStreaming: streaming }),
+
+  testMode: false,
+  setTestMode: (enabled) => set({ testMode: enabled }),
 }));

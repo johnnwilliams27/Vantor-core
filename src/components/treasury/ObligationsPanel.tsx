@@ -15,6 +15,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useToast } from '@/components/ui/toast';
 import { useManualObligations, useCreateObligation, useDeleteObligation } from '@/hooks/useTreasury';
 import { useQuery } from '@tanstack/react-query';
@@ -54,6 +55,7 @@ function DueBadge({ days }: { days: number }) {
 export function ObligationsPanel() {
   const [tab, setTab] = useState<'manual' | 'erp'>('manual');
   const [showAdd, setShowAdd] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string } | null>(null);
   const { toast } = useToast();
   const { data: session } = useSession();
 
@@ -97,12 +99,15 @@ export function ObligationsPanel() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await deleteObligation.mutateAsync(id);
+      await deleteObligation.mutateAsync(deleteTarget.id);
       toast({ title: 'Obligation removed', variant: 'success' });
     } catch (err) {
       toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -175,7 +180,7 @@ export function ObligationsPanel() {
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7"
-                            onClick={() => handleDelete(ob.id)}
+                            onClick={() => setDeleteTarget({ id: ob.id, label: ob.label })}
                           >
                             <Trash2 className="h-3.5 w-3.5 text-red-400" />
                           </Button>
@@ -316,6 +321,16 @@ export function ObligationsPanel() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        title="Delete obligation?"
+        description={`Are you sure you want to delete "${deleteTarget?.label ?? 'this obligation'}"? This action cannot be undone.`}
+        confirmLabel="Delete Obligation"
+        isPending={deleteObligation.isPending}
+        onConfirm={handleDelete}
+      />
     </>
   );
 }

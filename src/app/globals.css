@@ -193,6 +193,20 @@
   pointer-events: none;
 }
 
+/* Partner scroll */
+@keyframes partnerScroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.partner-scroll-track {
+  display: flex;
+  animation: partnerScroll 30s linear infinite;
+  width: max-content;
+}
+.partner-scroll-track:hover {
+  animation-play-state: paused;
+}
+
 /* Hero badge glow */
 .hero-badge-glow {
   box-shadow: 0 0 30px rgba(45, 212, 191, 0.1), inset 0 0 20px rgba(45, 212, 191, 0.05);

@@ -8,6 +8,7 @@ import { writeAuditLog } from '@/lib/audit/logger';
 import { screenAddressWithCache } from '@/lib/compliance/screening';
 import { isAboveTravelRuleThreshold, createTravelRuleTransfer } from '@/lib/compliance/travel-rule';
 import { z } from 'zod';
+import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 const PAYMENT_STATUSES = ['pending', 'processing', 'completed', 'failed', 'cancelled'] as const;
 
@@ -35,6 +36,8 @@ export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
+
   const { searchParams } = new URL(req.url);
   const rawStatus = searchParams.get('status');
   const status = rawStatus && (PAYMENT_STATUSES as readonly string[]).includes(rawStatus) ? rawStatus : null;
@@ -45,7 +48,7 @@ export async function GET(req: NextRequest) {
     .from('payments')
     .select('*, from_wallet:wallets(*), invoice:invoices(*), erp_config:erp_configurations(id, label, provider)')
     .eq('user_id', session.user.id)
-    .eq('enterprise_id', session.user.enterprise_id)
+    .eq('enterprise_id', enterpriseId)
     .order('created_at', { ascending: false });
   if (status) q = q.eq('status', status);
   let { data, error } = await q;
@@ -56,7 +59,7 @@ export async function GET(req: NextRequest) {
       .from('payments')
       .select('*, from_wallet:wallets(*), invoice:invoices(*)')
       .eq('user_id', session.user.id)
-      .eq('enterprise_id', session.user.enterprise_id)
+      .eq('enterprise_id', enterpriseId)
       .order('created_at', { ascending: false });
     if (status) q2 = q2.eq('status', status as string);
     ({ data, error } = await q2);
@@ -72,6 +75,8 @@ export async function POST(req: NextRequest) {
   try { requireRole(session.user.role as any, 'treasury_manager'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
 
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
+
   const body = await req.json();
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
@@ -86,7 +91,7 @@ export async function POST(req: NextRequest) {
     .select('id, chain')
     .eq('id', parsed.data.fromWalletId)
     .eq('user_id', session.user.id)
-    .eq('enterprise_id', session.user.enterprise_id)
+    .eq('enterprise_id', enterpriseId)
     .single();
 
   if (!wallet) return NextResponse.json({ error: 'Wallet not found' }, { status: 404 });
@@ -127,7 +132,7 @@ export async function POST(req: NextRequest) {
     .from('payments')
     .insert({
       user_id: session.user.id,
-      enterprise_id: session.user.enterprise_id,
+      enterprise_id: enterpriseId,
       direction: 'sent',
       from_wallet_id: parsed.data.fromWalletId,
       from_address: null,

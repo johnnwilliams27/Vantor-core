@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/nextauth.config';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 export async function GET(_req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
 
   const supabase = createAdminClient();
 
@@ -16,7 +19,7 @@ export async function GET(_req: NextRequest) {
     .from('wallets')
     .select('id, address, chain')
     .eq('user_id', session.user.id)
-    .eq('enterprise_id', session.user.enterprise_id);
+    .eq('enterprise_id', enterpriseId);
 
   if (wErr) return NextResponse.json({ error: wErr.message }, { status: 500 });
   if (!wallets?.length) return NextResponse.json({ data: [] });

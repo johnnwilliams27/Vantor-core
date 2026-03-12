@@ -1,4 +1,5 @@
 'use client';
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 
@@ -26,4 +27,27 @@ export function useBalances() {
     refetchInterval: 60_000, // fallback poll every 60s
     staleTime: 30_000,
   });
+}
+
+/** Look up the balance for a specific wallet + token pair. */
+export function useWalletTokenBalance(walletId: string | undefined, token: string | undefined) {
+  const { data: balances } = useBalances();
+
+  return useMemo(() => {
+    if (!walletId || !token || !balances) return null;
+    const match = balances.find((b) => b.walletId === walletId && b.token === token);
+    return match ? parseFloat(match.balance) : 0;
+  }, [balances, walletId, token]);
+}
+
+/** Look up total balance across all tokens for a wallet. */
+export function useWalletTotalBalance(walletId: string | undefined) {
+  const { data: balances } = useBalances();
+
+  return useMemo(() => {
+    if (!walletId || !balances) return null;
+    return balances
+      .filter((b) => b.walletId === walletId)
+      .reduce((sum, b) => sum + (b.usdValue ? parseFloat(b.usdValue) : 0), 0);
+  }, [balances, walletId]);
 }

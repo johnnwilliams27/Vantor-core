@@ -40,6 +40,7 @@ function PaymentList() {
             <TableRow>
               <TableHead>To</TableHead>
               <TableHead>Amount</TableHead>
+              <TableHead>Token</TableHead>
               <TableHead>Chain</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>ERP</TableHead>
@@ -50,7 +51,7 @@ function PaymentList() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center">
+                <TableCell colSpan={8} className="text-center">
                   <Loader2 className="h-4 w-4 animate-spin mx-auto" />
                 </TableCell>
               </TableRow>
@@ -59,10 +60,10 @@ function PaymentList() {
                 <TableRow key={p.id}>
                   <TableCell className="font-mono text-sm">{truncateAddress(p.to_address, 6)}</TableCell>
                   <TableCell>
-                    <span className="font-semibold">{formatCurrency(p.amount)}</span>{' '}
-                    <Badge variant="outline">{p.token}</Badge>
+                    <span className="font-semibold">{formatCurrency(p.amount)}</span>
                   </TableCell>
-                  <TableCell><Badge variant="secondary">{capitalize(p.chain)}</Badge></TableCell>
+                  <TableCell><Badge variant="outline">{p.token}</Badge></TableCell>
+                  <TableCell><Badge variant={p.chain === 'ethereum' ? 'ethereum' : 'solana'}>{capitalize(p.chain)}</Badge></TableCell>
                   <TableCell>
                     <Badge variant={STATUS_COLORS[p.status] as any}>{capitalize(p.status)}</Badge>
                   </TableCell>
@@ -85,7 +86,7 @@ function PaymentList() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                   No payments yet.
                 </TableCell>
               </TableRow>

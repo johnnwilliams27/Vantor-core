@@ -35,7 +35,7 @@ const getTreasuryOverview: AgentTool = {
   input_schema: { type: 'object', properties: {}, required: [] },
   minRole: 'auditor',
   async handler(_input, ctx) {
-    const snapshot = await buildTreasurySnapshot(ctx.supabase, ctx.userId);
+    const snapshot = await buildTreasurySnapshot(ctx.supabase, ctx.userId, undefined, ctx.enterpriseId);
     return {
       totalAumUsd: snapshot.totalBankBalanceUsd + snapshot.totalCryptoBalanceUsd,
       totalBankBalanceUsd: snapshot.totalBankBalanceUsd,
@@ -178,7 +178,7 @@ const getObligations: AgentTool = {
   minRole: 'auditor',
   async handler(input, ctx) {
     const days = (input.days as number) ?? 30;
-    const obligations = await collectObligations(ctx.supabase, ctx.userId, days);
+    const obligations = await collectObligations(ctx.supabase, ctx.userId, days, ctx.enterpriseId);
     return { days, obligations, totalUsd: obligations.reduce((s, o) => s + o.amountUsd, 0) };
   },
 };

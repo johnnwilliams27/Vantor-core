@@ -7,6 +7,7 @@ import { getERPAdapter, decryptCredentials } from '@/lib/erp/factory';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { z } from 'zod';
 import type { ErpProvider } from '@/types/database';
+import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 const schema = z.object({ erpConfigId: z.string().uuid() });
 
@@ -15,6 +16,8 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
   try { requireRole(session.user.role as any, 'accountant'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
 
@@ -32,7 +35,7 @@ export async function POST(req: NextRequest) {
     .select('*')
     .eq('id', parsed.data.erpConfigId)
     .eq('user_id', session.user.id)
-    .eq('enterprise_id', session.user.enterprise_id)
+    .eq('enterprise_id', enterpriseId)
     .single();
 
   if (cfgErr || !erpConfig) {
@@ -78,7 +81,7 @@ export async function POST(req: NextRequest) {
     const { error } = await supabase.from('invoices').upsert(
       {
         user_id: session.user.id,
-        enterprise_id: session.user.enterprise_id,
+        enterprise_id: enterpriseId,
         erp_config_id: erpConfig.id,
         erp_invoice_id: inv.id,
         vendor_id: vendor?.id ?? null,

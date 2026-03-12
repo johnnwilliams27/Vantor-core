@@ -9,6 +9,8 @@ import { Select } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
 import { useWallets } from '@/hooks/useWallets';
+import { useWalletTokenBalance } from '@/hooks/useBalances';
+import { BalanceHint } from '@/components/ui/balance-hint';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Calendar } from 'lucide-react';
 import type { ErpConfiguration } from '@/types/database';
@@ -16,7 +18,6 @@ import type { ErpConfiguration } from '@/types/database';
 const schema = z.object({
   fromWalletId: z.string().uuid('Select a wallet'),
   toAddress: z.string().min(10, 'Enter a valid address'),
-  chain: z.enum(['ethereum', 'solana']),
   token: z.enum(['USDC', 'USDT', 'PYUSD']),
   amount: z.string().regex(/^\d+(\.\d{1,6})?$/, 'Enter a valid amount'),
   scheduledFor: z.string().min(1, 'Select a date/time'),
@@ -44,16 +45,32 @@ export function SchedulePaymentForm() {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
+  const selectedWalletId = watch('fromWalletId');
+  const selectedToken = watch('token');
+  const amount = watch('amount');
+  const selectedWallet = wallets?.find((w) => w.id === selectedWalletId);
+  const balance = useWalletTokenBalance(selectedWalletId, selectedToken);
+  const exceeds = balance !== null && amount ? parseFloat(amount) > balance : false;
+
   const onSubmit = async (data: FormData) => {
+    if (exceeds) {
+      toast({ title: 'Insufficient balance', description: `You don't have enough ${data.token} in this wallet.`, variant: 'destructive' });
+      return;
+    }
+    const wallet = wallets?.find((w) => w.id === data.fromWalletId);
+    if (!wallet) return;
     try {
       const res = await fetch('/api/payments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...data,
+          chain: wallet.chain,
           scheduledFor: new Date(data.scheduledFor).toISOString(),
         }),
       });
@@ -80,31 +97,25 @@ export function SchedulePaymentForm() {
             <Label>From Wallet</Label>
             <Select {...register('fromWalletId')}>
               <option value="">Select wallet…</option>
-              {wallets?.map((w) => (
-                <option key={w.id} value={w.id}>
-                  {w.label ?? `${w.chain} – ${w.address.slice(0, 10)}…`}
-                </option>
-              ))}
+              {wallets?.map((w) => {
+                const chain = w.chain.charAt(0).toUpperCase() + w.chain.slice(1);
+                return (
+                  <option key={w.id} value={w.id}>
+                    {w.label ? `${w.label} · ${chain} (${w.address.slice(0, 6)}…${w.address.slice(-4)})` : `${chain} · ${w.address.slice(0, 6)}…${w.address.slice(-4)}`}
+                  </option>
+                );
+              })}
             </Select>
             {errors.fromWalletId && <p className="text-sm text-red-500">{errors.fromWalletId.message}</p>}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Chain</Label>
-              <Select {...register('chain')}>
-                <option value="ethereum">Ethereum</option>
-                <option value="solana">Solana</option>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Token</Label>
-              <Select {...register('token')}>
-                <option value="USDC">USDC</option>
-                <option value="USDT">USDT</option>
-                <option value="PYUSD">PYUSD</option>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label>Token</Label>
+            <Select {...register('token')}>
+              <option value="USDC">USDC</option>
+              <option value="USDT">USDT</option>
+              <option value="PYUSD">PYUSD</option>
+            </Select>
           </div>
 
           <div className="space-y-2">
@@ -117,6 +128,12 @@ export function SchedulePaymentForm() {
             <div className="space-y-2">
               <Label>Amount</Label>
               <Input placeholder="100.00" {...register('amount')} />
+              <BalanceHint
+                balance={balance}
+                token={selectedToken ?? 'USDC'}
+                currentAmount={amount}
+                onMax={(max) => setValue('amount', max)}
+              />
               {errors.amount && <p className="text-sm text-red-500">{errors.amount.message}</p>}
             </div>
             <div className="space-y-2">
@@ -145,7 +162,7 @@ export function SchedulePaymentForm() {
             <Input placeholder="Payment reference…" {...register('memo')} />
           </div>
 
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
+          <Button type="submit" className="w-full" disabled={isSubmitting || exceeds}>
             {isSubmitting ? (
               <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Scheduling…</>
             ) : (

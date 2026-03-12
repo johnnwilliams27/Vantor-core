@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { canAccessRoute } from '@/lib/auth/rbac';
 import type { UserRole } from '@/types/database';
 
-const PUBLIC_PATHS = ['/login', '/register', '/api/auth', '/api/contact', '/opengraph-image', '/terms', '/privacy'];
+const PUBLIC_PATHS = ['/login', '/register', '/api/auth', '/api/contact', '/opengraph-image', '/terms', '/privacy', '/robots.txt', '/sitemap.xml', '/api/indexnow'];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -76,6 +76,6 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|otf|eot)).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|otf|eot|txt)).*)',
   ],
 };

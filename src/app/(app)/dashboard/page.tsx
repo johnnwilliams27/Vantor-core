@@ -1,7 +1,7 @@
 import { UnifiedBalanceCard } from '@/components/treasury/UnifiedBalanceCard';
 import { BalanceOverTime } from '@/components/charts/BalanceOverTime';
-import { PaymentVolume } from '@/components/charts/PaymentVolume';
-import { InvoiceAging } from '@/components/charts/InvoiceAging';
+import { YieldEarned } from '@/components/charts/YieldEarned';
+import { RecommendationsCard } from '@/components/charts/RecommendationsCard';
 import { TokenDistribution } from '@/components/charts/TokenDistribution';
 import { AppShell } from '@/components/layout/AppShell';
 
@@ -13,12 +13,12 @@ export default function DashboardPage() {
       <div className="space-y-6">
         <UnifiedBalanceCard />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <BalanceOverTime />
-          <TokenDistribution />
+          <YieldEarned />
+          <RecommendationsCard />
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <PaymentVolume />
-          <InvoiceAging />
+          <BalanceOverTime />
+          <TokenDistribution />
         </div>
       </div>
     </AppShell>

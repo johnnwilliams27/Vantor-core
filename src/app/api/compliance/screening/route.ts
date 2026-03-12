@@ -6,6 +6,7 @@ import { requireRole } from '@/lib/auth/rbac';
 import { screenAddressWithCache } from '@/lib/compliance/screening';
 import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
 import { z } from 'zod';
+import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 const screenSchema = z.object({
   address: z.string().min(20).max(100),
@@ -18,6 +19,8 @@ export async function GET(req: NextRequest) {
   try { requireRole(session.user.role as any, 'accountant'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
 
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
+
   const supabase = createAdminClient();
   const { searchParams } = new URL(req.url);
   const result = searchParams.get('result');
@@ -26,7 +29,7 @@ export async function GET(req: NextRequest) {
     .from('sanctions_screenings')
     .select('*')
     .eq('user_id', session.user.id)
-    .eq('enterprise_id', session.user.enterprise_id)
+    .eq('enterprise_id', enterpriseId)
     .order('screened_at', { ascending: false })
     .limit(100);
 

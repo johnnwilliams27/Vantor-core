@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { fetchSolanaBalances } from '@/lib/blockchain/solana/balances';
 import { fetchEthereumBalances } from '@/lib/blockchain/ethereum/balances';
 import type { Wallet } from '@/types/database';
+import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 export async function POST(_req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -12,13 +13,15 @@ export async function POST(_req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
+
   const supabase = createAdminClient();
 
   const { data: wallets, error } = await supabase
     .from('wallets')
     .select('*')
     .eq('user_id', session.user.id)
-    .eq('enterprise_id', session.user.enterprise_id);
+    .eq('enterprise_id', enterpriseId);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!wallets?.length) return NextResponse.json({ data: [] });

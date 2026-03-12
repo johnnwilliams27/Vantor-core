@@ -10,15 +10,16 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useToast } from '@/components/ui/toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useERPStore } from '@/store/erpStore';
 import type { ErpConfiguration } from '@/types/database';
-import { Loader2, CheckCircle, XCircle, Settings2 } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, Settings2, Trash2, Pencil, Check, X } from 'lucide-react';
 
 const schema = z.object({
   provider: z.enum(['sap', 'oracle', 'xero', 'netsuite']),
-  label: z.string().min(1, 'Label required'),
+  label: z.string().min(1, 'Nickname required'),
   apiUrl: z.string().url('Enter a valid URL'),
   clientId: z.string().min(1, 'Client ID required'),
   clientSecret: z.string().min(1, 'Client secret required'),
@@ -35,6 +36,12 @@ export default function ERPSettingsPage() {
   const { setErpConfigs, setActiveConfigId } = useERPStore();
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [testing, setTesting] = useState(false);
+  const [deactivateTarget, setDeactivateTarget] = useState<{ id: string; label: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string } | null>(null);
+  const [actionPending, setActionPending] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const [savingNickname, setSavingNickname] = useState(false);
 
   const { data: configs, isLoading } = useQuery<ErpConfiguration[]>({
     queryKey: ['erp-configs'],
@@ -59,6 +66,7 @@ export default function ERPSettingsPage() {
   });
 
   const handleSetActive = async (id: string, is_active: boolean) => {
+    setActionPending(true);
     try {
       const res = await fetch('/api/erp/connect', {
         method: 'PATCH',
@@ -70,8 +78,52 @@ export default function ERPSettingsPage() {
       queryClient.invalidateQueries({ queryKey: ['erp-configs'] });
       if (is_active) setActiveConfigId(id);
       else setActiveConfigId(null);
+      toast({ title: is_active ? 'ERP reactivated' : 'ERP deactivated', variant: 'success' });
     } catch (err) {
       toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
+    } finally {
+      setActionPending(false);
+      setDeactivateTarget(null);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setActionPending(true);
+    try {
+      const res = await fetch('/api/erp/connect', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: deleteTarget.id }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      queryClient.invalidateQueries({ queryKey: ['erp-configs'] });
+      toast({ title: 'ERP system deleted', variant: 'success' });
+    } catch (err) {
+      toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
+    } finally {
+      setActionPending(false);
+      setDeleteTarget(null);
+    }
+  };
+
+  const handleSaveNickname = async (id: string) => {
+    setSavingNickname(true);
+    try {
+      const res = await fetch('/api/erp/connect', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, label: editValue.trim() }),
+      });
+      if (!res.ok) throw new Error('Failed to save');
+      queryClient.invalidateQueries({ queryKey: ['erp-configs'] });
+      toast({ title: 'Nickname saved', variant: 'success' });
+    } catch (err) {
+      toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
+    } finally {
+      setSavingNickname(false);
+      setEditingId(null);
     }
   };
 
@@ -156,7 +208,7 @@ export default function ERPSettingsPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Label</Label>
+                  <Label>Nickname</Label>
                   <Input placeholder="e.g. Production SAP" {...register('label')} />
                   {errors.label && <p className="text-sm text-red-500">{errors.label.message}</p>}
                 </div>
@@ -227,41 +279,116 @@ export default function ERPSettingsPage() {
             <CardHeader><CardTitle>Linked ERP Systems</CardTitle></CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {configs.map((cfg) => (
+                {configs.map((cfg) => {
+                  const isEditing = editingId === cfg.id;
+                  return (
                   <div key={cfg.id} className="flex items-center justify-between p-3 rounded-lg border">
                     <div className="flex items-center gap-3">
                       <Settings2 className="h-5 w-5 text-muted-foreground" />
                       <div>
-                        <div className="font-medium">{cfg.label}</div>
+                        {isEditing ? (
+                          <div className="flex items-center gap-1">
+                            <Input
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              placeholder="Enter nickname…"
+                              className="h-7 text-sm w-44"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && editValue.trim()) handleSaveNickname(cfg.id);
+                                if (e.key === 'Escape') setEditingId(null);
+                              }}
+                              disabled={savingNickname}
+                            />
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSaveNickname(cfg.id)} disabled={savingNickname || !editValue.trim()}>
+                              <Check className="h-3.5 w-3.5 text-green-600" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingId(null)} disabled={savingNickname}>
+                              <X className="h-3.5 w-3.5 text-muted-foreground" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-medium">{cfg.label}</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => { setEditingId(cfg.id); setEditValue(cfg.label); }}
+                            >
+                              <Pencil className="h-3 w-3 text-muted-foreground" />
+                            </Button>
+                          </div>
+                        )}
                         <div className="text-sm text-muted-foreground">
                           {cfg.provider.toUpperCase()} · Last synced: {cfg.last_synced ? new Date(cfg.last_synced).toLocaleDateString() : 'Never'}
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {cfg.is_active && <Badge variant="success">Active</Badge>}
                       {cfg.is_active ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleSetActive(cfg.id, false)}
-                          className="dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950 dark:hover:text-red-300"
-                        >
-                          Deactivate
-                        </Button>
+                        <>
+                          <Badge variant="success">Active</Badge>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setDeactivateTarget({ id: cfg.id, label: cfg.label })}
+                            disabled={actionPending}
+                          >
+                            Deactivate
+                          </Button>
+                        </>
                       ) : (
-                        <Button variant="outline" size="sm" onClick={() => handleSetActive(cfg.id, true)}>
-                          Set Active
-                        </Button>
+                        <>
+                          <Badge variant="secondary">Inactive</Badge>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleSetActive(cfg.id, true)}
+                            disabled={actionPending}
+                          >
+                            Reactivate
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setDeleteTarget({ id: cfg.id, label: cfg.label })}
+                            disabled={actionPending}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-400" />
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!deactivateTarget}
+        onOpenChange={(open) => { if (!open) setDeactivateTarget(null); }}
+        title="Deactivate ERP system?"
+        description={`Are you sure you want to deactivate "${deactivateTarget?.label ?? ''}"? It will stop syncing invoices and vendors. You can reactivate it later.`}
+        confirmLabel="Deactivate"
+        isPending={actionPending}
+        onConfirm={() => deactivateTarget && handleSetActive(deactivateTarget.id, false)}
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        title="Delete ERP system?"
+        description={`Are you sure you want to permanently delete "${deleteTarget?.label ?? ''}"? This will remove all configuration data and cannot be undone.`}
+        confirmLabel="Delete"
+        isPending={actionPending}
+        onConfirm={handleDelete}
+      />
     </AppShell>
   );
 }

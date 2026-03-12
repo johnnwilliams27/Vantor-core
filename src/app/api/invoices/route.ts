@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { z } from 'zod';
+import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 const INVOICE_STATUSES = ['draft', 'pending', 'paid', 'overdue', 'cancelled'] as const;
 
@@ -24,6 +25,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
+
   const { searchParams } = new URL(req.url);
   const rawStatus = searchParams.get('status');
   const status = rawStatus && (INVOICE_STATUSES as readonly string[]).includes(rawStatus) ? rawStatus : null;
@@ -33,7 +36,7 @@ export async function GET(req: NextRequest) {
     .from('invoices')
     .select('*, vendor:erp_vendors(*)')
     .eq('user_id', session.user.id)
-    .eq('enterprise_id', session.user.enterprise_id)
+    .eq('enterprise_id', enterpriseId)
     .order('created_at', { ascending: false });
 
   if (status) query = query.eq('status', status);
@@ -48,6 +51,8 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
   try { requireRole(session.user.role as any, 'accountant'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
 
@@ -62,7 +67,7 @@ export async function POST(req: NextRequest) {
     .from('invoices')
     .insert({
       user_id: session.user.id,
-      enterprise_id: session.user.enterprise_id,
+      enterprise_id: enterpriseId,
       invoice_number: parsed.data.invoiceNumber,
       description: parsed.data.description,
       amount: parsed.data.amount,

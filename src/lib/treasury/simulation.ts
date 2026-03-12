@@ -67,10 +67,11 @@ export function simulateRecommendation(
 export async function runHistoricalSimulation(
   supabase: SupabaseClient,
   userId: string,
-  ruleOverrides?: RuleOverrides
+  ruleOverrides?: RuleOverrides,
+  enterpriseId?: string | null
 ): Promise<SimulationRun> {
   // Get active rule
-  const activeRule = await getActiveTreasuryRule(supabase, userId);
+  const activeRule = await getActiveTreasuryRule(supabase, userId, enterpriseId);
 
   // Build effective rule (merge overrides into active rule defaults)
   const effectiveRule = {

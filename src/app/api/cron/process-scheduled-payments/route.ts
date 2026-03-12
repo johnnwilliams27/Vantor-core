@@ -16,14 +16,27 @@ export async function GET(req: NextRequest) {
 
   const supabase = createAdminClient();
 
-  // Find due scheduled payments
-  const { data: payments, error } = await supabase
+  // Get test enterprise IDs to exclude from cron processing
+  const { data: testEnts } = await supabase
+    .from('enterprises')
+    .select('id')
+    .eq('is_test_enterprise', true);
+  const testEntIds = (testEnts ?? []).map((e) => e.id);
+
+  // Find due scheduled payments (excluding test enterprises)
+  let query = supabase
     .from('payments')
     .select('*')
     .eq('status', 'pending')
     .not('scheduled_for', 'is', null)
     .lte('scheduled_for', new Date().toISOString())
     .limit(BATCH_SIZE);
+
+  if (testEntIds.length > 0) {
+    query = query.not('enterprise_id', 'in', `(${testEntIds.join(',')})`);
+  }
+
+  const { data: payments, error } = await query;
 
   if (error) {
     console.error('[cron/payments]', error);

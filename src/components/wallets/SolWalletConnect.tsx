@@ -61,7 +61,7 @@ export function SolWalletConnect() {
         />
       </div>
       <div className="space-y-1">
-        <Label htmlFor="sol-label">Label (optional)</Label>
+        <Label htmlFor="sol-label">Nickname (optional)</Label>
         <Input
           id="sol-label"
           value={label}

@@ -1,16 +1,17 @@
 'use client';
 import { useState } from 'react';
-import { useAccount, useSignMessage } from 'wagmi';
+import { useAccount, useDisconnect, useSignMessage } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toast';
 import { useQueryClient } from '@tanstack/react-query';
-import { Loader2, CheckCircle } from 'lucide-react';
+import { Loader2, CheckCircle, X } from 'lucide-react';
 
 export function EthWalletConnect() {
   const { address, isConnected } = useAccount();
+  const { disconnect } = useDisconnect();
   const { signMessageAsync } = useSignMessage();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -48,25 +49,35 @@ export function EthWalletConnect() {
 
   return (
     <div className="space-y-4">
-      <ConnectButton.Custom>
-        {({ account, chain, openConnectModal, mounted }) => {
-          const connected = mounted && account && chain;
-          if (!connected) {
+      {!isConnected && !linked && (
+        <ConnectButton.Custom>
+          {({ openConnectModal, mounted }) => {
+            if (!mounted) return null;
             return (
               <Button size="sm" onClick={openConnectModal}>
                 Link Wallet
               </Button>
             );
-          }
-          return <ConnectButton />;
-        }}
-      </ConnectButton.Custom>
+          }}
+        </ConnectButton.Custom>
+      )}
 
       {isConnected && address && !linked && (
         <div className="space-y-3 p-4 rounded-lg border bg-muted/40">
-          <div className="text-sm font-medium">Link this wallet to your account</div>
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-medium">Link this wallet to your account</div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => disconnect()}
+            >
+              <X className="h-3.5 w-3.5 text-muted-foreground" />
+            </Button>
+          </div>
+          <div className="text-xs font-mono text-muted-foreground">{address}</div>
           <div className="space-y-2">
-            <Label htmlFor="eth-label">Wallet label (optional)</Label>
+            <Label htmlFor="eth-label">Wallet nickname (optional)</Label>
             <Input
               id="eth-label"
               value={label}
@@ -85,9 +96,18 @@ export function EthWalletConnect() {
       )}
 
       {linked && (
-        <div className="flex items-center gap-2 text-green-600 text-sm">
-          <CheckCircle className="h-4 w-4" />
-          Wallet linked successfully
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-green-600 text-sm">
+            <CheckCircle className="h-4 w-4" />
+            Wallet linked successfully
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => { setLinked(false); setLabel(''); disconnect(); }}
+          >
+            Link Another
+          </Button>
         </div>
       )}
     </div>

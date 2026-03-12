@@ -4,17 +4,14 @@ import { UnifiedBalanceCard } from './UnifiedBalanceCard';
 import { TreasuryRulesForm } from './TreasuryRulesForm';
 import { ObligationsPanel } from './ObligationsPanel';
 import { RecommendationList } from './RecommendationList';
-import { SimulationPanel } from './SimulationPanel';
 import { TreasuryReportPanel } from './TreasuryReportPanel';
 import { CashFlowChart } from '@/components/charts/CashFlowChart';
 import { Button } from '@/components/ui/button';
-import { RoleGate } from '@/components/auth/RoleGate';
 import { useTreasuryForecast, useGenerateForecast } from '@/hooks/useTreasury';
 import { useToast } from '@/components/ui/toast';
-import { TrendingUp, FlaskConical, FileBarChart } from 'lucide-react';
-import { useSession } from 'next-auth/react';
+import { TrendingUp, FileBarChart } from 'lucide-react';
 
-type ActivePanel = 'forecast' | 'simulation' | 'report' | null;
+type ActivePanel = 'forecast' | 'report' | null;
 
 function ForecastSection() {
   const { data: forecast, isLoading } = useTreasuryForecast(30);
@@ -61,9 +58,6 @@ function ForecastSection() {
 
 export function TreasuryPageClient() {
   const [activePanel, setActivePanel] = useState<ActivePanel>(null);
-  const { data: session } = useSession();
-  const userRole = (session?.user?.role ?? 'auditor') as string;
-  const isTreasuryManager = userRole === 'treasury_manager';
 
   const toggle = (panel: ActivePanel) => {
     setActivePanel((prev) => (prev === panel ? null : panel));
@@ -95,18 +89,6 @@ export function TreasuryPageClient() {
           Forecast
         </Button>
 
-        {isTreasuryManager && (
-          <Button
-            variant={activePanel === 'simulation' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => toggle('simulation')}
-            className="flex items-center gap-1.5"
-          >
-            <FlaskConical className="h-3.5 w-3.5" />
-            Paper Trading
-          </Button>
-        )}
-
         <Button
           variant={activePanel === 'report' ? 'default' : 'outline'}
           size="sm"
@@ -120,13 +102,6 @@ export function TreasuryPageClient() {
 
       {/* Conditionally rendered panels — lazy mount (no data fetched until opened) */}
       {activePanel === 'forecast' && <ForecastSection />}
-
-      {activePanel === 'simulation' && (
-        <RoleGate requiredRole="treasury_manager">
-          <SimulationPanel />
-        </RoleGate>
-      )}
-
       {activePanel === 'report' && <TreasuryReportPanel />}
     </div>
   );

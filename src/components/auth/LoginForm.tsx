@@ -39,8 +39,8 @@ export function LoginForm() {
       setError('Invalid email or password');
       return;
     }
-    router.push('/dashboard');
-    router.refresh();
+    // Full page navigation ensures the session cookie is sent on the first request
+    window.location.href = '/dashboard';
   };
 
   return (

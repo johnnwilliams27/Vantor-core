@@ -1,5 +1,8 @@
 'use client';
 import { useTravelRuleTransfers } from '@/hooks/useCompliance';
+import { capitalize } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 
 const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
@@ -40,7 +43,19 @@ export function TravelRulePanel() {
             <tbody>
               {transfers.map((t) => (
                 <tr key={t.id} className="border-b last:border-0 hover:bg-muted/30">
-                  <td className="px-4 py-2 capitalize">{t.direction}</td>
+                  <td className="px-4 py-2">
+                    {t.direction === 'incoming' ? (
+                      <Badge variant="onramp" className="gap-1">
+                        <ArrowDownLeft className="h-3 w-3 shrink-0" />
+                        Received
+                      </Badge>
+                    ) : (
+                      <Badge variant="offramp" className="gap-1">
+                        <ArrowUpRight className="h-3 w-3 shrink-0" />
+                        Sent
+                      </Badge>
+                    )}
+                  </td>
                   <td className="px-4 py-2 font-medium">${Number(t.amount_usd).toLocaleString()}</td>
                   <td className="px-4 py-2">
                     <div>{t.originator_name ?? '-'}</div>
@@ -56,7 +71,7 @@ export function TravelRulePanel() {
                   </td>
                   <td className="px-4 py-2">
                     <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[t.status] ?? ''}`}>
-                      {t.status}
+                      {capitalize(t.status)}
                     </span>
                   </td>
                   <td className="px-4 py-2 text-muted-foreground">

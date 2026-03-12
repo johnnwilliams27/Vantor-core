@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth/nextauth.config';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
+import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 export async function DELETE(
   _req: NextRequest,
@@ -14,6 +15,8 @@ export async function DELETE(
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try { requireRole(session.user.role as any, 'treasury_manager'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
+
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
 
   if (!isValidUUID(params.id)) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
 
@@ -25,7 +28,7 @@ export async function DELETE(
     .select('id, status')
     .eq('id', params.id)
     .eq('user_id', session.user.id)
-    .eq('enterprise_id', session.user.enterprise_id)
+    .eq('enterprise_id', enterpriseId)
     .single();
 
   if (!payment) return NextResponse.json({ error: 'Payment not found' }, { status: 404 });

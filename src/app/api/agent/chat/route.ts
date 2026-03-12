@@ -7,6 +7,7 @@ import { buildSystemPrompt } from '@/lib/agent/context';
 import { getToolsForRole, dispatchTool } from '@/lib/agent/tools';
 import type { UserRole, SseEvent } from '@/lib/agent/types';
 import { checkRateLimit } from '@/lib/api/rate-limit';
+import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -51,8 +52,8 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = createAdminClient();
-  const enterpriseId = session.user.enterprise_id ?? null;
-  const systemPrompt = await buildSystemPrompt(supabase, userId, userRole);
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
+  const systemPrompt = await buildSystemPrompt(supabase, userId, userRole, enterpriseId);
   const tools = getToolsForRole(userRole);
   const ctx = { supabase, userId, userRole, enterpriseId };
 

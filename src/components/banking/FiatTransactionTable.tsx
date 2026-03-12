@@ -2,7 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatDate, capitalize } from '@/lib/utils';
+import { formatDateTime, capitalize } from '@/lib/utils';
 import type { FiatTransaction } from '@/types/database';
 import { ArrowDownLeft, ArrowUpRight, History } from 'lucide-react';
 
@@ -26,17 +26,17 @@ function StatusBadge({ status }: { status: string }) {
 function DirectionBadge({ direction }: { direction: 'onramp' | 'offramp' }) {
   if (direction === 'onramp') {
     return (
-      <span className="inline-flex items-center gap-1 text-green-700 text-xs font-semibold whitespace-nowrap">
+      <Badge variant="onramp" className="gap-1">
         <ArrowDownLeft className="h-3 w-3 shrink-0" />
         On-ramp
-      </span>
+      </Badge>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 text-orange-700 text-xs font-semibold whitespace-nowrap">
+    <Badge variant="offramp" className="gap-1">
       <ArrowUpRight className="h-3 w-3 shrink-0" />
       Off-ramp
-    </span>
+    </Badge>
   );
 }
 
@@ -100,14 +100,14 @@ export function FiatTransactionTable() {
                     </td>
                     <td className="py-2 pr-4 text-gray-600">
                       {tx.bank_account
-                        ? `${tx.bank_account.institution_name}${tx.bank_account.last4 ? ` ****${tx.bank_account.last4}` : ''}`
+                        ? `${tx.bank_account.nickname ? `${tx.bank_account.nickname} – ` : ''}${tx.bank_account.institution_name}${tx.bank_account.last4 ? ` ****${tx.bank_account.last4}` : ''}`
                         : '—'}
                     </td>
                     <td className="py-2 pr-4">
                       <StatusBadge status={tx.status} />
                     </td>
                     <td className="py-2 text-gray-400 whitespace-nowrap">
-                      {formatDate(tx.created_at)}
+                      {formatDateTime(tx.created_at)}
                     </td>
                   </tr>
                 ))}

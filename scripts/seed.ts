@@ -86,20 +86,23 @@ const args = process.argv.slice(2);
 const emailArg = args.find(a => a.startsWith('--email='))?.split('=')[1];
 const userIdArg = args.find(a => a.startsWith('--user-id='))?.split('=')[1];
 
-async function resolveUserId(): Promise<string> {
-  if (userIdArg) return userIdArg;
+async function resolveUser(): Promise<{ userId: string; enterpriseId: string | null }> {
+  let profile: { id: string; email: string; enterprise_id: string | null } | null = null;
 
-  if (emailArg) {
-    const { data, error } = await sb.from('user_profiles').select('id, email').eq('email', emailArg).single();
-    if (error || !data) throw new Error(`User not found: ${emailArg}\n  Create an account via the app first.`);
-    console.log(`✓ Seeding for ${data.email} (${data.id})`);
-    return data.id;
+  if (userIdArg) {
+    const { data } = await sb.from('user_profiles').select('id, email, enterprise_id').eq('id', userIdArg).single();
+    profile = data;
+  } else if (emailArg) {
+    const { data } = await sb.from('user_profiles').select('id, email, enterprise_id').eq('email', emailArg).single();
+    profile = data;
+  } else {
+    const { data } = await sb.from('user_profiles').select('id, email, enterprise_id').limit(1).single();
+    profile = data;
   }
 
-  const { data, error } = await sb.from('user_profiles').select('id, email').limit(1).single();
-  if (error || !data) throw new Error('No users found.\n  Sign up in the app first, then run: npm run seed');
-  console.log(`✓ Seeding for ${data.email} (${data.id})`);
-  return data.id;
+  if (!profile) throw new Error('User not found.\n  Create an account via the app first, then run: npm run seed');
+  console.log(`✓ Seeding for ${profile.email} (${profile.id})${profile.enterprise_id ? ` [enterprise: ${profile.enterprise_id}]` : ''}`);
+  return { userId: profile.id, enterpriseId: profile.enterprise_id };
 }
 
 // ─── Clean ──────────────────────────────────────────────────────────────────
@@ -109,7 +112,8 @@ async function cleanUserData(userId: string) {
 
   // Must delete in FK-safe order
   for (const t of ['simulation_runs', 'treasury_forecasts', 'ai_recommendations',
-    'manual_obligations', 'treasury_rules', 'fiat_transactions', 'gl_postings']) {
+    'manual_obligations', 'treasury_rules', 'fiat_transactions', 'gl_postings',
+    'kyt_alerts', 'kyt_transfers', 'sanctions_screenings', 'travel_rule_transfers']) {
     await sb.from(t).delete().eq('user_id', userId);
   }
 
@@ -145,7 +149,9 @@ async function cleanUserData(userId: string) {
 async function main() {
   console.log('\n🌱 crypto-treasury seed script\n');
 
-  const userId = await resolveUserId();
+  const { userId, enterpriseId } = await resolveUser();
+  // Shorthand for inserting enterprise_id on every row
+  const eid = enterpriseId ? { enterprise_id: enterpriseId } : {};
 
   await cleanUserData(userId);
 
@@ -157,6 +163,7 @@ async function main() {
   const { data: wallets, error: wErr } = await sb.from('wallets').insert([
     {
       user_id: userId,
+      ...eid,
       chain: 'ethereum',
       address: '0x742d35Cc6634C0532925a3b844Bc454d0a2c3e1f',
       label: 'Treasury Main',
@@ -165,6 +172,7 @@ async function main() {
     },
     {
       user_id: userId,
+      ...eid,
       chain: 'ethereum',
       address: '0x8b3a350cf5c34c9194ca85829a2df0ec3153be0e',
       label: 'Operations',
@@ -173,6 +181,7 @@ async function main() {
     },
     {
       user_id: userId,
+      ...eid,
       chain: 'ethereum',
       address: '0x2e988a386a799f506693793c6a5af6b54dfaabfb',
       label: 'Reserve',
@@ -181,6 +190,7 @@ async function main() {
     },
     {
       user_id: userId,
+      ...eid,
       chain: 'solana',
       address: '5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1',
       label: 'Solana Treasury',
@@ -189,6 +199,7 @@ async function main() {
     },
     {
       user_id: userId,
+      ...eid,
       chain: 'solana',
       address: 'GKvqsuBMwKpQYBMFnKLKVJSHzWRRCFJiNL3qYhGV7Ls',
       label: 'Solana Payments',
@@ -226,6 +237,7 @@ async function main() {
     for (const [token, bal] of Object.entries(tokens)) {
       balanceRows.push({
         wallet_id: walletId,
+        ...eid,
         token,
         balance: fmt2(bal),
         usd_value: fmt2(bal),
@@ -244,6 +256,7 @@ async function main() {
   const { data: banks, error: bErr } = await sb.from('bank_accounts').insert([
     {
       user_id: userId,
+      ...eid,
       institution_name: 'JPMorgan Chase',
       account_name: 'Business Checking',
       account_type: 'checking',
@@ -260,6 +273,7 @@ async function main() {
     },
     {
       user_id: userId,
+      ...eid,
       institution_name: 'Silicon Valley Bank',
       account_name: 'Operating Account',
       account_type: 'checking',
@@ -276,6 +290,7 @@ async function main() {
     },
     {
       user_id: userId,
+      ...eid,
       institution_name: 'Mercury',
       account_name: 'Expense Account',
       account_type: 'checking',
@@ -289,6 +304,34 @@ async function main() {
       verified_at: ts(daysAgo(15)),
       plaid_item_id: 'mock-item-mercury-001',
       plaid_account_id: 'mock-acct-mercury-001',
+    },
+    {
+      user_id: userId,
+      ...eid,
+      institution_name: 'Barclays',
+      account_name: 'EUR Treasury',
+      account_type: 'checking',
+      last4: '5531',
+      currency: 'EUR',
+      current_balance: 320_000,
+      balance_currency: 'EUR',
+      balance_as_of: ts(new Date()),
+      is_active: true,
+      verified_at: ts(daysAgo(20)),
+    },
+    {
+      user_id: userId,
+      ...eid,
+      institution_name: 'HSBC',
+      account_name: 'GBP Operations',
+      account_type: 'checking',
+      last4: '8812',
+      currency: 'GBP',
+      current_balance: 175_000,
+      balance_currency: 'GBP',
+      balance_as_of: ts(new Date()),
+      is_active: true,
+      verified_at: ts(daysAgo(10)),
     },
   ]).select();
 
@@ -304,6 +347,7 @@ async function main() {
   const coreErpRows = [
     {
       user_id: userId,
+      ...eid,
       provider: 'sap',
       label: 'SAP S/4HANA Cloud',
       credentials: b64creds({
@@ -317,6 +361,7 @@ async function main() {
     },
     {
       user_id: userId,
+      ...eid,
       provider: 'oracle',
       label: 'Oracle Fusion Cloud',
       credentials: b64creds({
@@ -336,6 +381,7 @@ async function main() {
   const extErpRows = [
     {
       user_id: userId,
+      ...eid,
       provider: 'xero',
       label: 'Xero Accounting',
       credentials: b64creds({
@@ -348,6 +394,7 @@ async function main() {
     },
     {
       user_id: userId,
+      ...eid,
       provider: 'netsuite',
       label: 'NetSuite ERP',
       credentials: b64creds({
@@ -403,7 +450,7 @@ async function main() {
   const vendorRows: object[] = [];
   for (const cfg of allErp) {
     for (const v of (vendorDefs[cfg.provider] ?? [])) {
-      vendorRows.push({ ...(v as object), erp_config_id: cfg.id, synced_at: cfg.last_synced });
+      vendorRows.push({ ...(v as object), ...eid, erp_config_id: cfg.id, synced_at: cfg.last_synced });
     }
   }
 
@@ -444,6 +491,7 @@ async function main() {
     const paidD = daysAgo(ic.daysBack - 3);
     invoiceRows.push({
       user_id: userId,
+      ...eid,
       erp_config_id: cfg.id,
       erp_invoice_id: `${ic.erp.toUpperCase()}-INV-${invNum}`,
       vendor_id: vendor.id,
@@ -470,6 +518,7 @@ async function main() {
     if (!cfg || !vendor) continue;
     invoiceRows.push({
       user_id: userId,
+      ...eid,
       erp_config_id: cfg.id,
       erp_invoice_id: `${ic.erp.toUpperCase()}-INV-${invNum}`,
       vendor_id: vendor.id,
@@ -497,6 +546,7 @@ async function main() {
     if (!cfg || !vendor) continue;
     invoiceRows.push({
       user_id: userId,
+      ...eid,
       erp_config_id: cfg.id,
       erp_invoice_id: `${ic.erp.toUpperCase()}-INV-${invNum}`,
       vendor_id: vendor.id,
@@ -535,6 +585,7 @@ async function main() {
 
       txRows.push({
         user_id: userId,
+        ...eid,
         wallet_id: wallet.id,
         chain: wallet.chain,
         tx_hash: isEth ? ethHash() : solHash(),
@@ -568,6 +619,7 @@ async function main() {
     const execAt = inv.paid_at ?? ts(daysAgo(5));
     paymentRows.push({
       user_id: userId,
+      ...eid,
       invoice_id: inv.id,
       from_wallet_id: wallet.id,
       to_address: inv.chain === 'ethereum'
@@ -590,6 +642,7 @@ async function main() {
     const execAt = daysAgo(randInt(1, 89));
     paymentRows.push({
       user_id: userId,
+      ...eid,
       from_wallet_id: wallet.id,
       to_address: isEth ? '0x' + Math.random().toString(16).slice(2).padEnd(40, '0').slice(0, 40) : 'AdHocSolanaAddr11111111111111111111111111111',
       chain: wallet.chain,
@@ -607,6 +660,7 @@ async function main() {
   for (const d of scheduledDays) {
     paymentRows.push({
       user_id: userId,
+      ...eid,
       from_wallet_id: ethMain.id,
       to_address: '0x' + Math.random().toString(16).slice(2).padEnd(40, '0').slice(0, 40),
       chain: 'ethereum',
@@ -622,6 +676,50 @@ async function main() {
   console.log(`✓ ${payments?.length ?? 0} payments (${paidInvoiceRows.length} invoice-linked, 15 ad-hoc, ${scheduledDays.length} scheduled)`);
 
   // ════════════════════════════════════════════════════════
+  // 8b. SWAPS (historical, last 90 days)
+  // ════════════════════════════════════════════════════════
+  console.log('\n🔄 Seeding swaps...');
+
+  const swapPairs: [string, string][] = [
+    ['USDC', 'USDT'], ['USDT', 'USDC'], ['USDC', 'PYUSD'],
+    ['PYUSD', 'USDC'], ['USDT', 'PYUSD'], ['PYUSD', 'USDT'],
+  ];
+  const swapStatuses: string[] = ['completed', 'completed', 'completed', 'completed', 'pending', 'failed'];
+  const allWallets = [ethMain, ethOps, ethRes, solMain, solPay];
+  const swapRows: object[] = [];
+
+  for (let i = 0; i < 25; i++) {
+    const wallet = pick(allWallets);
+    const [fromToken, toToken] = pick(swapPairs);
+    const fromAmount = fmt2(rand(500, 50_000));
+    const rate = fmt2(rand(0.997, 1.003));
+    const toAmount = fmt2(fromAmount * rate);
+    const status = pick(swapStatuses);
+    const createdAt = daysAgo(randInt(1, 85));
+    const executedAt = status === 'completed' ? new Date(createdAt.getTime() + randInt(5, 120) * 1000) : null;
+
+    swapRows.push({
+      user_id: userId,
+      ...eid,
+      wallet_id: wallet.id,
+      chain: wallet.chain,
+      from_token: fromToken,
+      to_token: toToken,
+      from_amount: fromAmount,
+      to_amount: status === 'completed' ? toAmount : null,
+      rate: status === 'completed' ? rate : null,
+      slippage_bps: pick([25, 50, 50, 100]),
+      tx_hash: wallet.chain === 'ethereum' ? ethHash() : solHash(),
+      status,
+      executed_at: executedAt ? ts(executedAt) : null,
+      created_at: ts(createdAt),
+    });
+  }
+
+  await sb.from('swaps').insert(swapRows);
+  console.log(`✓ ${swapRows.length} swaps`);
+
+  // ════════════════════════════════════════════════════════
   // 9. BALANCE SNAPSHOTS (daily, 90 days historical)
   // ════════════════════════════════════════════════════════
   console.log('\n📊 Seeding balance snapshots (90 days × wallets × tokens)...');
@@ -635,6 +733,7 @@ async function main() {
         snappedAt.setHours(0, 5, 0, 0);
         snapshotRows.push({
           wallet_id: walletId,
+          ...eid,
           token,
           balance: fmt2(history[day]),
           usd_value: fmt2(history[day]),
@@ -672,6 +771,7 @@ async function main() {
     const settledAt = daysAgo(r.daysBack - 1);
     fiatRows.push({
       user_id: userId,
+      ...eid,
       bank_account_id: r.bank.id,
       direction: r.dir,
       crypto_amount: r.crypto,
@@ -698,6 +798,7 @@ async function main() {
 
   const { data: rule } = await sb.from('treasury_rules').insert({
     user_id: userId,
+    ...eid,
     label: 'Default Treasury Policy',
     is_active: true,
     safety_buffer_multiplier: 1.5,
@@ -734,6 +835,7 @@ async function main() {
       if (d > new Date() && d <= daysFromNow(90)) {
         obligationRows.push({
           user_id: userId,
+          ...eid,
           label: ob.label,
           description: `Monthly recurring — due on the ${ob.dayOfMonth}${ob.dayOfMonth === 1 ? 'st' : ob.dayOfMonth === 15 ? 'th' : 'th'}`,
           amount_usd: ob.amount,
@@ -752,6 +854,7 @@ async function main() {
     if (d <= daysFromNow(90)) {
       obligationRows.push({
         user_id: userId,
+        ...eid,
         label: 'Payroll Processing',
         description: 'Bi-weekly payroll via USDC',
         amount_usd: 180_000,
@@ -775,6 +878,7 @@ async function main() {
   for (const ob of oneTimeFuture) {
     obligationRows.push({
       user_id: userId,
+      ...eid,
       label: ob.label,
       description: `One-time payment due in ${ob.days} days`,
       amount_usd: ob.amount,
@@ -800,6 +904,7 @@ async function main() {
     // Executed onramp 8 weeks ago
     {
       user_id: userId,
+      ...eid,
       treasury_rule_id: ruleId,
       total_bank_balance_usd: 820_000,
       total_crypto_balance_usd: 1_400_000,
@@ -823,6 +928,7 @@ async function main() {
     // Approved + executed offramp 3 weeks ago
     {
       user_id: userId,
+      ...eid,
       treasury_rule_id: ruleId,
       total_bank_balance_usd: 980_000,
       total_crypto_balance_usd: 2_350_000,
@@ -846,6 +952,7 @@ async function main() {
     // No-action recommendation last week
     {
       user_id: userId,
+      ...eid,
       treasury_rule_id: ruleId,
       total_bank_balance_usd: totalBank,
       total_crypto_balance_usd: totalCrypto,
@@ -869,6 +976,7 @@ async function main() {
     // Pending onramp recommendation (requires approval)
     {
       user_id: userId,
+      ...eid,
       treasury_rule_id: ruleId,
       total_bank_balance_usd: totalBank,
       total_crypto_balance_usd: totalCrypto,
@@ -891,6 +999,7 @@ async function main() {
     // Rejected recommendation (declined by user last month)
     {
       user_id: userId,
+      ...eid,
       treasury_rule_id: ruleId,
       total_bank_balance_usd: 1_500_000,
       total_crypto_balance_usd: 1_900_000,
@@ -967,6 +1076,7 @@ async function main() {
 
   const { error: fcErr } = await sb.from('treasury_forecasts').upsert({
     user_id: userId,
+    ...eid,
     lookahead_days: 90,
     forecast_data: forecastData,
     ai_summary: [
@@ -983,12 +1093,227 @@ async function main() {
   else console.log(`✓ Treasury forecast (${forecastData.length} data points)`);
 
   // ════════════════════════════════════════════════════════
+  // 10. COMPLIANCE — Sanctions, KYT, Travel Rule
+  // ════════════════════════════════════════════════════════
+  console.log('\n🛡️  Seeding compliance data...');
+
+  // --- Sanctions Screenings ---
+  const sanctionsRows = [
+    {
+      user_id: userId, ...eid, address: wallets[0].address, chain: 'ethereum' as const,
+      result: 'clear', risk_score: 0.00, provider: 'chainalysis',
+      match_details: { identifications: [] },
+      screened_at: ts(daysAgo(1)), expires_at: ts(daysFromNow(0)),
+    },
+    {
+      user_id: userId, ...eid, address: wallets[1].address, chain: 'ethereum' as const,
+      result: 'clear', risk_score: 2.10, provider: 'chainalysis',
+      match_details: { identifications: [] },
+      screened_at: ts(daysAgo(3)), expires_at: ts(daysAgo(2)),
+    },
+    {
+      user_id: userId, ...eid, address: wallets[3].address, chain: 'solana' as const,
+      result: 'clear', risk_score: 0.50, provider: 'chainalysis',
+      match_details: { identifications: [] },
+      screened_at: ts(daysAgo(5)), expires_at: ts(daysAgo(4)),
+    },
+    {
+      user_id: userId, ...eid, address: '0xDEAD000000000000000000000000000000000001', chain: 'ethereum' as const,
+      result: 'sanctioned', risk_score: 100.00, provider: 'chainalysis',
+      match_details: { identifications: [{ source: 'OFAC SDN', category: 'sanctions', name: 'Lazarus Group' }] },
+      screened_at: ts(daysAgo(10)), expires_at: ts(daysAgo(9)),
+    },
+    {
+      user_id: userId, ...eid, address: '0x1234567890abcdef1234567890abcdef12345678', chain: 'ethereum' as const,
+      result: 'partial_match', risk_score: 45.00, provider: 'chainalysis',
+      match_details: { identifications: [{ source: 'OFAC SDN', category: 'possible_match', name: 'Unknown Entity' }] },
+      screened_at: ts(daysAgo(7)), expires_at: ts(daysAgo(6)),
+    },
+    // Most recent — pending-style (just screened)
+    {
+      user_id: userId, ...eid, address: wallets[2].address, chain: 'ethereum' as const,
+      result: 'clear', risk_score: 1.20, provider: 'chainalysis',
+      match_details: { identifications: [] },
+      screened_at: ts(new Date()), expires_at: ts(daysFromNow(1)),
+    },
+  ];
+
+  const { error: sanctErr } = await sb.from('sanctions_screenings').insert(sanctionsRows);
+  if (sanctErr) console.error('  Sanctions error:', sanctErr.message);
+  else console.log(`✓ Sanctions screenings: ${sanctionsRows.length}`);
+
+  // --- KYT Transfers ---
+  const kytTransferRows = [
+    {
+      user_id: userId, ...eid, external_id: `kyt-${Date.now()}-1`,
+      chain: 'ethereum' as const, direction: 'sent',
+      tx_hash: ethHash(), from_address: wallets[0].address,
+      to_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+      token: 'USDC', amount: 50000.00, asset_amount_usd: 50000.00,
+      risk_score: 1.50, cluster_name: 'Circle', cluster_category: 'exchange',
+      registered_at: ts(daysAgo(2)),
+    },
+    {
+      user_id: userId, ...eid, external_id: `kyt-${Date.now()}-2`,
+      chain: 'ethereum' as const, direction: 'received',
+      tx_hash: ethHash(), from_address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+      to_address: wallets[0].address,
+      token: 'USDT', amount: 125000.00, asset_amount_usd: 125000.00,
+      risk_score: 8.30, cluster_name: 'Unknown', cluster_category: 'unhosted',
+      registered_at: ts(daysAgo(5)),
+    },
+    {
+      user_id: userId, ...eid, external_id: `kyt-${Date.now()}-3`,
+      chain: 'ethereum' as const, direction: 'sent',
+      tx_hash: ethHash(), from_address: wallets[1].address,
+      to_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+      token: 'USDC', amount: 75000.00, asset_amount_usd: 75000.00,
+      risk_score: 0.80, cluster_name: 'Aave V3', cluster_category: 'defi',
+      registered_at: ts(daysAgo(8)),
+    },
+    {
+      user_id: userId, ...eid, external_id: `kyt-${Date.now()}-4`,
+      chain: 'solana' as const, direction: 'sent',
+      tx_hash: solHash(), from_address: wallets[3].address,
+      to_address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+      token: 'USDC', amount: 30000.00, asset_amount_usd: 30000.00,
+      risk_score: 2.00, cluster_name: 'Solana Pay Merchant', cluster_category: 'merchant',
+      registered_at: ts(daysAgo(12)),
+    },
+    {
+      user_id: userId, ...eid, external_id: `kyt-${Date.now()}-5`,
+      chain: 'ethereum' as const, direction: 'received',
+      tx_hash: ethHash(), from_address: '0xBAD0000000000000000000000000000000000001',
+      to_address: wallets[0].address,
+      token: 'USDC', amount: 15000.00, asset_amount_usd: 15000.00,
+      risk_score: 72.50, cluster_name: 'Tornado Cash', cluster_category: 'mixing',
+      registered_at: ts(daysAgo(15)),
+    },
+    // Most recent
+    {
+      user_id: userId, ...eid, external_id: `kyt-${Date.now()}-6`,
+      chain: 'ethereum' as const, direction: 'sent',
+      tx_hash: ethHash(), from_address: wallets[0].address,
+      to_address: '0x2e988a386a799f506693793c6a5af6b54dfaabfb',
+      token: 'USDC', amount: 200000.00, asset_amount_usd: 200000.00,
+      risk_score: 0.30, cluster_name: 'Coinbase', cluster_category: 'exchange',
+      registered_at: ts(new Date()),
+    },
+  ];
+
+  const { data: kytTransfers, error: kytErr } = await sb.from('kyt_transfers').insert(kytTransferRows).select('id');
+  if (kytErr) console.error('  KYT transfers error:', kytErr.message);
+  else console.log(`✓ KYT transfers: ${kytTransferRows.length}`);
+
+  // --- KYT Alerts ---
+  const kytAlertRows = kytTransfers ? [
+    {
+      user_id: userId, ...eid, kyt_transfer_id: kytTransfers[1]?.id,
+      external_alert_id: 'alert-001', severity: 'medium', status: 'resolved',
+      category: 'unhosted_wallet', description: 'Received $125,000 USDT from unhosted wallet with limited transaction history.',
+      reviewed_by: userId, reviewed_at: ts(daysAgo(4)),
+      review_notes: 'Verified — counterparty is known OTC desk. No further action required.',
+    },
+    {
+      user_id: userId, ...eid, kyt_transfer_id: kytTransfers[4]?.id,
+      external_alert_id: 'alert-002', severity: 'high', status: 'escalated',
+      category: 'mixing_service', description: 'Received $15,000 USDC from address linked to Tornado Cash mixing service.',
+    },
+    {
+      user_id: userId, ...eid, kyt_transfer_id: kytTransfers[4]?.id,
+      external_alert_id: 'alert-003', severity: 'severe', status: 'under_review',
+      category: 'sanctions_exposure', description: 'Indirect exposure to OFAC-sanctioned mixing protocol via intermediary wallet.',
+    },
+    // Most recent — open alert
+    {
+      user_id: userId, ...eid, kyt_transfer_id: kytTransfers[1]?.id,
+      external_alert_id: 'alert-004', severity: 'low', status: 'open',
+      category: 'large_transaction', description: 'Large inbound transfer of $125,000 flagged for review per policy threshold.',
+    },
+  ] : [];
+
+  if (kytAlertRows.length) {
+    const { error: alertErr } = await sb.from('kyt_alerts').insert(kytAlertRows);
+    if (alertErr) console.error('  KYT alerts error:', alertErr.message);
+    else console.log(`✓ KYT alerts: ${kytAlertRows.length}`);
+  }
+
+  // --- Travel Rule Transfers ---
+  const travelRuleRows = [
+    {
+      user_id: userId, ...eid, direction: 'outgoing',
+      amount_usd: 50000.00,
+      originator_name: 'Vantor Treasury', originator_address: '350 5th Ave, New York, NY 10118',
+      originator_wallet: wallets[0].address, originator_chain: 'ethereum' as const,
+      originator_vasp: 'Vantor Inc.',
+      beneficiary_name: 'Circle Internet Financial', beneficiary_address: '99 High St, Boston, MA 02110',
+      beneficiary_wallet: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', beneficiary_chain: 'ethereum' as const,
+      beneficiary_vasp: 'Circle',
+      status: 'accepted', provider_ref: 'TR-20260301-001',
+      sent_at: ts(daysAgo(11)), received_at: ts(daysAgo(11)),
+    },
+    {
+      user_id: userId, ...eid, direction: 'outgoing',
+      amount_usd: 75000.00,
+      originator_name: 'Vantor Treasury', originator_address: '350 5th Ave, New York, NY 10118',
+      originator_wallet: wallets[1].address, originator_chain: 'ethereum' as const,
+      originator_vasp: 'Vantor Inc.',
+      beneficiary_name: 'MakerDAO Foundation', beneficiary_address: 'George Town, Cayman Islands',
+      beneficiary_wallet: '0x6B175474E89094C44Da98b954EedeAC495271d0F', beneficiary_chain: 'ethereum' as const,
+      beneficiary_vasp: 'MakerDAO',
+      status: 'sent', provider_ref: 'TR-20260303-002',
+      sent_at: ts(daysAgo(9)),
+    },
+    {
+      user_id: userId, ...eid, direction: 'incoming',
+      amount_usd: 125000.00,
+      originator_name: 'OTC Desk Ltd.', originator_address: 'Singapore',
+      originator_wallet: '0xdAC17F958D2ee523a2206206994597C13D831ec7', originator_chain: 'ethereum' as const,
+      originator_vasp: 'OTC Desk VASP',
+      beneficiary_name: 'Vantor Treasury', beneficiary_address: '350 5th Ave, New York, NY 10118',
+      beneficiary_wallet: wallets[0].address, beneficiary_chain: 'ethereum' as const,
+      beneficiary_vasp: 'Vantor Inc.',
+      status: 'received', provider_ref: 'TR-20260305-003',
+      sent_at: ts(daysAgo(7)), received_at: ts(daysAgo(7)),
+    },
+    {
+      user_id: userId, ...eid, direction: 'outgoing',
+      amount_usd: 30000.00,
+      originator_name: 'Vantor Treasury', originator_address: '350 5th Ave, New York, NY 10118',
+      originator_wallet: wallets[3].address, originator_chain: 'solana' as const,
+      originator_vasp: 'Vantor Inc.',
+      beneficiary_name: 'Solana Pay Merchant', beneficiary_address: 'Miami, FL',
+      beneficiary_wallet: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', beneficiary_chain: 'solana' as const,
+      beneficiary_vasp: 'SolPay Inc.',
+      status: 'rejected', provider_ref: 'TR-20260228-004',
+      error_message: 'Beneficiary VASP did not respond within timeout window.',
+      sent_at: ts(daysAgo(12)),
+    },
+    // Most recent — pending
+    {
+      user_id: userId, ...eid, direction: 'outgoing',
+      amount_usd: 200000.00,
+      originator_name: 'Vantor Treasury', originator_address: '350 5th Ave, New York, NY 10118',
+      originator_wallet: wallets[0].address, originator_chain: 'ethereum' as const,
+      originator_vasp: 'Vantor Inc.',
+      beneficiary_name: 'Coinbase Custody', beneficiary_address: '100 Pine St, San Francisco, CA 94111',
+      beneficiary_wallet: '0x2e988a386a799f506693793c6a5af6b54dfaabfb', beneficiary_chain: 'ethereum' as const,
+      beneficiary_vasp: 'Coinbase Inc.',
+      status: 'pending', provider_ref: 'TR-20260312-005',
+    },
+  ];
+
+  const { error: trErr } = await sb.from('travel_rule_transfers').insert(travelRuleRows);
+  if (trErr) console.error('  Travel rule error:', trErr.message);
+  else console.log(`✓ Travel rule transfers: ${travelRuleRows.length}`);
+
+  // ════════════════════════════════════════════════════════
   // Summary
   // ════════════════════════════════════════════════════════
   console.log('\n' + '═'.repeat(60));
   console.log('✅  Seed complete!\n');
   console.log('  Wallets          :', wallets.length, '(3 Ethereum + 2 Solana)');
-  console.log('  Bank accounts    :', banks.length, '(Chase, SVB, Mercury)');
+  console.log('  Bank accounts    :', banks.length, '(Chase, SVB, Mercury, Barclays EUR, HSBC GBP)');
   console.log('  ERP configs      :', allErp.length);
   console.log('  ERP vendors      :', vendors?.length ?? 0);
   console.log('  Invoices         :', invoices?.length ?? 0);
@@ -999,6 +1324,10 @@ async function main() {
   console.log('  Obligations      :', obligationRows.length, '(next 90 days)');
   console.log('  AI recommendations:', aiRows.length);
   console.log('  Forecast         : 90-day projection');
+  console.log('  Sanctions screens:', sanctionsRows.length);
+  console.log('  KYT transfers    :', kytTransferRows.length);
+  console.log('  KYT alerts       :', kytAlertRows.length);
+  console.log('  Travel rule      :', travelRuleRows.length);
   console.log('');
   console.log('  Total bank balance  : $1,735,000');
   console.log('  Total crypto balance: $2,150,000');

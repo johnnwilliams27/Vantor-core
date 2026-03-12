@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/nextauth.config';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { z } from 'zod';
+import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 const querySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
@@ -13,6 +14,8 @@ const querySchema = z.object({
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
 
   const { searchParams } = new URL(req.url);
   const parsed = querySchema.safeParse({
@@ -35,9 +38,9 @@ export async function GET(req: NextRequest) {
 
   if (isAppAdmin) {
     // App admins can see all audit logs across enterprises (no financial data)
-  } else if (session.user.enterprise_id) {
+  } else if (enterpriseId) {
     // Enterprise-scoped: treasury managers see all within enterprise, others see own
-    query = query.eq('enterprise_id', session.user.enterprise_id);
+    query = query.eq('enterprise_id', enterpriseId);
     if (role !== 'treasury_manager') {
       query = query.eq('user_id', session.user.id);
     }

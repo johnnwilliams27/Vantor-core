@@ -5,11 +5,11 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency, formatDateTime, capitalize } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
-import type { Payment, Swap, FiatTransaction, Transaction } from '@/types/database';
+import type { Payment, Swap, FiatTransaction, Transaction, YieldTransaction } from '@/types/database';
 
 interface UnifiedRow {
   id: string;
-  type: 'payment' | 'swap' | 'ramp' | 'onchain';
+  type: 'payment' | 'swap' | 'ramp' | 'onchain' | 'yield';
   date: string;
   amount: string;
   token: string;
@@ -74,34 +74,53 @@ function mapOnchain(txs: Transaction[]): UnifiedRow[] {
   }));
 }
 
+function mapYield(txs: YieldTransaction[]): UnifiedRow[] {
+  return txs.map((y) => ({
+    id: `yield-${y.id}`,
+    type: 'yield',
+    date: y.executed_at ?? y.created_at,
+    amount: y.amount,
+    token: y.underlying_token,
+    chain: y.chain,
+    status: y.status,
+    description: y.tx_type === 'deposit'
+      ? `Deposit into ${y.protocol}`
+      : `Withdraw from ${y.protocol}`,
+  }));
+}
+
 const TYPE_BADGE: Record<UnifiedRow['type'], string> = {
   payment: 'bg-[#207679]/10 text-[#195a5c] dark:bg-[#207679]/25 dark:text-teal-300',
   swap: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200',
   ramp: 'bg-amber-50 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
   onchain: 'bg-white border text-gray-600 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300',
+  yield: 'bg-green-50 text-green-700 dark:bg-green-900/40 dark:text-green-300',
 };
 
 export function AllTab() {
   const { data, isLoading } = useQuery<UnifiedRow[]>({
     queryKey: ['unified-transactions'],
     queryFn: async () => {
-      const [p, s, r, t] = await Promise.allSettled([
+      const [p, s, r, t, y] = await Promise.allSettled([
         fetch('/api/payments').then((res) => res.json()),
         fetch('/api/swaps').then((res) => res.json()),
         fetch('/api/ramps').then((res) => res.json()),
         fetch('/api/transactions?limit=100').then((res) => res.json()),
+        fetch('/api/yield/transactions').then((res) => res.json()),
       ]);
 
       const payments: Payment[] = p.status === 'fulfilled' ? (p.value.data ?? []) : [];
       const swaps: Swap[] = s.status === 'fulfilled' ? (s.value.data ?? []) : [];
       const ramps: FiatTransaction[] = r.status === 'fulfilled' ? (r.value.data ?? []) : [];
       const onchain: Transaction[] = t.status === 'fulfilled' ? (t.value.data ?? []) : [];
+      const yieldTxs: YieldTransaction[] = y.status === 'fulfilled' ? (y.value.data ?? []) : [];
 
       const all: UnifiedRow[] = [
         ...mapPayments(payments),
         ...mapSwaps(swaps),
         ...mapRamps(ramps),
         ...mapOnchain(onchain),
+        ...mapYield(yieldTxs),
       ];
 
       return all.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -120,6 +139,7 @@ export function AllTab() {
               <TableHead>Type</TableHead>
               <TableHead>Description</TableHead>
               <TableHead>Amount</TableHead>
+              <TableHead>Token</TableHead>
               <TableHead>Chain</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Date</TableHead>
@@ -128,7 +148,7 @@ export function AllTab() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center">
+                <TableCell colSpan={7} className="text-center">
                   <Loader2 className="h-4 w-4 animate-spin mx-auto" />
                 </TableCell>
               </TableRow>
@@ -142,11 +162,13 @@ export function AllTab() {
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{row.description}</TableCell>
                   <TableCell>
-                    <span className="font-semibold">{formatCurrency(row.amount)}</span>{' '}
-                    {row.token !== '—' && <Badge variant="outline">{row.token}</Badge>}
+                    <span className="font-semibold">{formatCurrency(row.amount)}</span>
                   </TableCell>
                   <TableCell>
-                    {row.chain ? <Badge variant="secondary">{capitalize(row.chain)}</Badge> : '—'}
+                    {row.token !== '—' ? <Badge variant="outline">{row.token}</Badge> : '—'}
+                  </TableCell>
+                  <TableCell>
+                    {row.chain ? <Badge variant={row.chain === 'ethereum' ? 'ethereum' : 'solana'}>{capitalize(row.chain)}</Badge> : '—'}
                   </TableCell>
                   <TableCell>
                     <Badge variant={
@@ -164,7 +186,7 @@ export function AllTab() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   No activity yet.
                 </TableCell>
               </TableRow>

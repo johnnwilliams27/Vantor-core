@@ -2,6 +2,7 @@
 import { usePathname } from 'next/navigation';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
+import { TestModeBanner } from './TestModeBanner';
 import { NavigationProgress } from './NavigationProgress';
 import { AgentPanel } from '@/components/agent/AgentPanel';
 
@@ -18,6 +19,7 @@ export function AppShell({ children, title }: AppShellProps) {
       <NavigationProgress />
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden min-w-0">
+        <TestModeBanner />
         <Topbar title={title} />
         <main className="flex-1 overflow-auto p-6">
           <div key={pathname} className="fade-in">{children}</div>

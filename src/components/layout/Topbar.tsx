@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/appStore';
 import { SettingsMenu } from './SettingsMenu';
+import { TestModeToggle } from './TestModeToggle';
 import { NotificationsPanel } from '@/components/notifications/NotificationsPanel';
 
 const ROLE_COLORS: Record<string, string> = {
@@ -27,6 +28,8 @@ export function Topbar({ title }: { title?: string }) {
       </div>
 
       <div className="flex items-center gap-4">
+        {!isAppAdmin && <TestModeToggle />}
+
         <span className={cn('text-xs font-medium px-2.5 py-1 rounded-full', ROLE_COLORS[role] ?? ROLE_COLORS.auditor)}>
           {role.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
         </span>

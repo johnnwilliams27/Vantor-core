@@ -487,11 +487,52 @@ function Navbar() {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Partner Scroll                                                     */
+/* ------------------------------------------------------------------ */
+const PARTNERS = [
+  { name: 'SAP', src: '/partners/SAP_idL9dEduKh_0.svg', className: 'h-11' },
+  { name: 'NetSuite', src: '/partners/NetSuite_idAICRYoQY_0.svg', className: 'h-11' },
+  { name: 'Xero', src: '/partners/xero-cutout.svg', className: 'h-12' },
+  { name: 'MetaMask', src: '/partners/MetaMask_Logo_0.svg', className: 'h-11' },
+  { name: 'Phantom', src: '/partners/Phantom_Logo_0.svg', className: 'h-11' },
+  { name: 'WalletConnect', src: '/partners/walletconnect-white.svg', className: 'h-8' },
+  { name: 'Plaid', src: '/partners/Plaid_id25TiQUJW_0.svg', className: 'h-11' },
+];
+
+function PartnerScroll() {
+  return (
+    <section className="relative py-14 border-y border-white/[0.06] shrink-0">
+      <div className="max-w-5xl mx-auto text-center px-6">
+        <div className="relative overflow-hidden max-w-4xl mx-auto" style={{ maskImage: 'linear-gradient(to right, transparent, black 8%, black 92%, transparent)' }}>
+          <div className="partner-scroll-track">
+            {[...PARTNERS, ...PARTNERS].map((p, i) => (
+              <div
+                key={`${p.name}-${i}`}
+                className="flex items-center justify-center px-8 shrink-0"
+              >
+                <Image
+                  src={p.src}
+                  alt={p.name}
+                  width={160}
+                  height={56}
+                  className={`${p.className} w-auto object-contain opacity-70`}
+                  unoptimized
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Hero                                                              */
 /* ------------------------------------------------------------------ */
 function Hero() {
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden mt-8">
+    <section className="relative flex-1 flex items-center justify-center overflow-hidden">
       <BlobBackground />
       <NetworkCanvas />
 
@@ -505,7 +546,7 @@ function Hero() {
         </h1>
 
         <p className="mt-6 text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed landing-fade-in landing-delay-2">
-          Connect ERP systems with digital asset wallets and bank accounts for agentic treasury management. Let Vantor's agents optimize yield, hedge FX exposure, and manage compliance — always with a human in the loop.
+          Connect your ERP system, digital asset wallets, and bank accounts for agentic treasury management. Let Vantor's agents optimize yield, hedge FX exposure, and manage compliance — always with a human in the loop.
         </p>
 
         <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 landing-fade-in landing-delay-3">
@@ -973,7 +1014,12 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#060d1f] text-white overflow-x-hidden landing-page">
       <Navbar />
-      <Hero />
+      <div className="flex flex-col min-h-screen">
+        {/* Spacer for fixed navbar (h-16 = 64px) */}
+        <div className="h-16 shrink-0" />
+        <Hero />
+        <PartnerScroll />
+      </div>
       <Features />
       <AgentSection />
       <Security />

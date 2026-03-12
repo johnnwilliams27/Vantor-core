@@ -7,6 +7,7 @@ import { writeAuditLog } from '@/lib/audit/logger';
 import { exchangePublicToken, getAccountDetails } from '@/lib/banking/plaid';
 import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
 import { z } from 'zod';
+import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 const schema = z.object({
   publicToken: z.string().min(1).max(500),
@@ -18,6 +19,8 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try { requireRole(session.user.role as any, 'accountant'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
+
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
 
   if (!checkRateLimit('plaid-exchange', session.user.id, 10, 60 * 60 * 1000)) {
     return rateLimitResponse();
@@ -36,7 +39,7 @@ export async function POST(req: NextRequest) {
       .from('bank_accounts')
       .insert({
         user_id: session.user.id,
-        enterprise_id: session.user.enterprise_id,
+        enterprise_id: enterpriseId,
         plaid_item_id: itemId,
         plaid_account_id: parsed.data.accountId,
         institution_name: details.institutionName,

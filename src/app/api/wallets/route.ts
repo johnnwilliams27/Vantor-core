@@ -4,12 +4,15 @@ import { authOptions } from '@/lib/auth/nextauth.config';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { z } from 'zod';
+import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 export async function GET(_req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
 
   const supabase = createAdminClient();
   const query = supabase
@@ -18,8 +21,8 @@ export async function GET(_req: NextRequest) {
     .eq('user_id', session.user.id)
     .order('created_at', { ascending: true });
 
-  if (session.user.enterprise_id) {
-    query.eq('enterprise_id', session.user.enterprise_id);
+  if (enterpriseId) {
+    query.eq('enterprise_id', enterpriseId);
   }
 
   const { data, error } = await query;
@@ -41,6 +44,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
+
   const body = await req.json();
   const parsed = linkSchema.safeParse(body);
   if (!parsed.success) {
@@ -53,7 +58,7 @@ export async function POST(req: NextRequest) {
   const { data: wallet, error } = await supabase
     .from('wallets')
     .upsert(
-      { user_id: session.user.id, enterprise_id: session.user.enterprise_id, chain, address, label: label ?? null, verified_at: null },
+      { user_id: session.user.id, enterprise_id: enterpriseId, chain, address, label: label ?? null, verified_at: null },
       { onConflict: 'user_id,chain,address', ignoreDuplicates: true }
     )
     .select()

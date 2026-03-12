@@ -6,6 +6,7 @@ import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { z } from 'zod';
 import { runHistoricalSimulation } from '@/lib/treasury/simulation';
+import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 const schema = z.object({
   rule_overrides: z
@@ -40,11 +41,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid request', details: parsed.error.flatten() }, { status: 400 });
   }
 
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
   const supabase = createAdminClient();
   const userId = session.user.id;
 
   try {
-    const run = await runHistoricalSimulation(supabase, userId, parsed.data.rule_overrides);
+    const run = await runHistoricalSimulation(supabase, userId, parsed.data.rule_overrides, enterpriseId);
 
     await writeAuditLog({
       userId,

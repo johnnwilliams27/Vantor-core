@@ -1,5 +1,6 @@
 'use client';
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 import { X } from 'lucide-react';
 
@@ -10,6 +11,10 @@ interface DialogProps {
 }
 
 export function Dialog({ open, onOpenChange, children }: DialogProps) {
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => setMounted(true), []);
+
   React.useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onOpenChange(false);
@@ -18,16 +23,17 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
     return () => document.removeEventListener('keydown', handler);
   }, [open, onOpenChange]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center">
       <div
         className="fixed inset-0 bg-black/50"
         onClick={() => onOpenChange(false)}
       />
-      <div className="relative z-50 w-full max-w-lg">{children}</div>
-    </div>
+      <div className="relative z-[9999] w-full max-w-lg mx-4">{children}</div>
+    </div>,
+    document.body
   );
 }
 

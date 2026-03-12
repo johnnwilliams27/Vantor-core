@@ -3,10 +3,13 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/nextauth.config';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { z } from 'zod';
+import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
 
   const { searchParams } = new URL(req.url);
   const rawId = searchParams.get('erpConfigId');
@@ -21,7 +24,7 @@ export async function GET(req: NextRequest) {
     .from('erp_vendors')
     .select('*, erp_configuration:erp_configurations!inner(user_id)')
     .eq('erp_configuration.user_id', session.user.id)
-    .eq('erp_configuration.enterprise_id', session.user.enterprise_id)
+    .eq('erp_configuration.enterprise_id', enterpriseId)
     .order('name');
 
   if (erpConfigId) query = query.eq('erp_config_id', erpConfigId);

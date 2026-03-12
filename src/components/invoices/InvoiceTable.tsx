@@ -3,7 +3,7 @@ import { useInvoices, useSyncInvoices } from '@/hooks/useInvoices';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { formatCurrency, formatDate, capitalize } from '@/lib/utils';
+import { formatCurrency, formatDateTime, capitalize } from '@/lib/utils';
 import { RefreshCw, Loader2 } from 'lucide-react';
 import type { InvoiceStatus } from '@/types/database';
 import { useERPStore } from '@/store/erpStore';
@@ -75,7 +75,7 @@ export function InvoiceTable() {
                     <Badge variant="outline">{inv.token}</Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary">
+                    <Badge variant={inv.chain === 'ethereum' ? 'ethereum' : 'solana'}>
                       {capitalize(inv.chain)}
                     </Badge>
                   </TableCell>
@@ -85,7 +85,7 @@ export function InvoiceTable() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                    {inv.due_date ? formatDate(inv.due_date) : '—'}
+                    {inv.due_date ? formatDateTime(inv.due_date) : '—'}
                   </TableCell>
                 </TableRow>
               ))

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/nextauth.config';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
+import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 export async function GET(_req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -16,7 +17,7 @@ export async function GET(_req: NextRequest) {
 
   try {
     // Screenings in last 24h
-    const enterpriseId = session.user.enterprise_id;
+    const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
 
     const { count: totalScreenings } = await supabase
       .from('sanctions_screenings')

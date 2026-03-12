@@ -8,6 +8,12 @@ const config: Config = {
     "./app/**/*.{ts,tsx}",
     "./src/**/*.{ts,tsx}",
   ],
+  safelist: [
+    'bg-indigo-100', 'text-indigo-700',
+    'bg-fuchsia-100', 'text-fuchsia-700',
+    'bg-sky-100', 'text-sky-700',
+    'bg-violet-100', 'text-violet-700',
+  ],
   prefix: "",
   theme: {
     container: {

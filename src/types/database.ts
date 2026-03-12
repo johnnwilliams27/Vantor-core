@@ -39,7 +39,8 @@ export type AuditAction =
   | 'slack_connect' | 'slack_disconnect' | 'slack_test'
   | 'slack_recommendation_notify' | 'slack_recommendation_approve' | 'slack_recommendation_reject'
   | 'compliance_sanctions_screen' | 'compliance_kyt_register' | 'compliance_kyt_alert'
-  | 'compliance_travel_rule_create' | 'compliance_travel_rule_update' | 'compliance_override';
+  | 'compliance_travel_rule_create' | 'compliance_travel_rule_update' | 'compliance_override'
+  | 'yield_deposit' | 'yield_withdraw' | 'yield_position_refresh';
 
 export interface UserProfile {
   id: string;
@@ -233,6 +234,7 @@ export interface BankAccount {
   current_balance: string | null;
   balance_currency: string;
   balance_as_of: string | null;
+  nickname: string | null;
 }
 
 export interface FiatTransaction {
@@ -252,7 +254,7 @@ export interface FiatTransaction {
   settled_at: string | null;
   created_at: string;
   // joined
-  bank_account?: Pick<BankAccount, 'institution_name' | 'account_name' | 'last4'>;
+  bank_account?: Pick<BankAccount, 'institution_name' | 'account_name' | 'last4' | 'nickname'>;
 }
 
 export interface AuditLog {
@@ -495,4 +497,50 @@ export interface SimulationRun {
   results: SimulationRecordResult[];
   summary: SimulationSummary;
   created_at: string;
+}
+
+// ---- Yield Protocols ----
+
+export type YieldProtocolId = 'aave_v3' | 'morpho' | 'kamino' | 'ondo';
+export type YieldTxType = 'deposit' | 'withdraw';
+export type YieldTxStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
+
+export interface YieldPosition {
+  id: string;
+  user_id: string;
+  enterprise_id: string | null;
+  wallet_id: string | null;
+  protocol: YieldProtocolId;
+  chain: ChainType;
+  underlying_token: TokenSymbol;
+  yield_token: string;
+  deposited_amount: string;
+  current_value_usd: string;
+  accrued_yield_usd: string;
+  apy_snapshot: string | null;
+  last_refreshed_at: string | null;
+  is_active: boolean;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface YieldTransaction {
+  id: string;
+  user_id: string;
+  enterprise_id: string | null;
+  position_id: string | null;
+  protocol: YieldProtocolId;
+  chain: ChainType;
+  tx_type: YieldTxType;
+  underlying_token: TokenSymbol;
+  amount: string;
+  amount_usd: string | null;
+  tx_hash: string | null;
+  status: YieldTxStatus;
+  error_message: string | null;
+  executed_at: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
 }

@@ -75,7 +75,7 @@ export function BalanceSummary() {
               className="flex items-center justify-between p-3 rounded-lg border bg-white"
             >
               <div className="flex items-center gap-3">
-                <Badge variant={b.chain === 'ethereum' ? 'info' : 'secondary'}>
+                <Badge variant={b.chain === 'ethereum' ? 'ethereum' : 'solana'}>
                   {b.chain === 'ethereum' ? 'ETH' : 'SOL'}
                 </Badge>
                 <span className="text-sm text-gray-500 font-mono">

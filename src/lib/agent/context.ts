@@ -11,12 +11,13 @@ const ROLE_CAPABILITIES: Record<UserRole, string> = {
 export async function buildSystemPrompt(
   supabase: SupabaseClient,
   userId: string,
-  userRole: UserRole
+  userRole: UserRole,
+  enterpriseId?: string | null
 ): Promise<string> {
   let snapshotSummary = 'Treasury snapshot unavailable.';
 
   try {
-    const snapshot = await buildTreasurySnapshot(supabase, userId);
+    const snapshot = await buildTreasurySnapshot(supabase, userId, undefined, enterpriseId);
     const totalAum = snapshot.totalBankBalanceUsd + snapshot.totalCryptoBalanceUsd;
     snapshotSummary = [
       `Total AUM: $${totalAum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,

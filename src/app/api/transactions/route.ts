@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/nextauth.config';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { z } from 'zod';
+import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 const querySchema = z.object({
   chain: z.enum(['ethereum', 'solana']).optional(),
@@ -13,6 +14,8 @@ const querySchema = z.object({
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
 
   const { searchParams } = new URL(req.url);
   const parsed = querySchema.safeParse({
@@ -29,7 +32,7 @@ export async function GET(req: NextRequest) {
     .from('transactions')
     .select('*', { count: 'exact' })
     .eq('user_id', session.user.id)
-    .eq('enterprise_id', session.user.enterprise_id)
+    .eq('enterprise_id', enterpriseId)
     .order('timestamp', { ascending: false })
     .range(offset, offset + limit - 1);
 

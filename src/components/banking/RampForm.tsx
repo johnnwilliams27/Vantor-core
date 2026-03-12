@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,7 +10,10 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
-import { Loader2, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { useWallets } from '@/hooks/useWallets';
+import { useBalances } from '@/hooks/useBalances';
+import { BalanceHint, FiatBalanceHint } from '@/components/ui/balance-hint';
+import { Loader2, ArrowDownLeft, ArrowUpRight, ArrowDown } from 'lucide-react';
 import type { BankAccount } from '@/types/database';
 
 interface RampQuote {
@@ -24,6 +27,7 @@ interface RampQuote {
 const schema = z.object({
   direction: z.enum(['onramp', 'offramp']),
   bankAccountId: z.string().uuid('Select a bank account'),
+  walletId: z.string().uuid('Select a wallet'),
   cryptoToken: z.enum(['USDC', 'USDT', 'PYUSD']),
   amount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Enter a valid amount'),
   amountType: z.enum(['crypto', 'fiat']),
@@ -50,7 +54,10 @@ export function RampForm() {
     queryFn: fetchBankAccounts,
   });
 
-  const { register, handleSubmit, watch, getValues, formState: { errors } } = useForm<FormData>({
+  const { data: wallets } = useWallets();
+  const { data: balances } = useBalances();
+
+  const { register, handleSubmit, watch, getValues, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
       direction: 'offramp',
@@ -60,13 +67,44 @@ export function RampForm() {
   });
 
   const direction = watch('direction');
+  const selectedWalletId = watch('walletId');
+  const selectedBankId = watch('bankAccountId');
+  const cryptoToken = watch('cryptoToken');
+  const amountType = watch('amountType');
+  const amount = watch('amount');
+  const selectedWallet = wallets?.find((w) => w.id === selectedWalletId);
+
+  // Off-ramp: source is crypto wallet. On-ramp: source is bank account.
+  const isOfframp = direction === 'offramp';
+
+  const cryptoBalance = useMemo(() => {
+    if (!selectedWalletId || !cryptoToken || !balances) return null;
+    const match = balances.find((b) => b.walletId === selectedWalletId && b.token === cryptoToken);
+    return match ? parseFloat(match.balance) : 0;
+  }, [balances, selectedWalletId, cryptoToken]);
+
+  const selectedBank = bankAccounts?.find((a) => a.id === selectedBankId);
+  const bankBalance = selectedBank?.current_balance ? parseFloat(selectedBank.current_balance) : null;
+
+  // Determine if amount exceeds source balance
+  const exceeds = useMemo(() => {
+    if (!amount) return false;
+    const val = parseFloat(amount);
+    if (isOfframp && amountType === 'crypto' && cryptoBalance !== null) return val > cryptoBalance;
+    if (!isOfframp && amountType === 'fiat' && bankBalance !== null) return val > bankBalance;
+    return false;
+  }, [amount, isOfframp, amountType, cryptoBalance, bankBalance]);
 
   // Clear quote when direction changes
   useEffect(() => { setQuote(null); }, [direction]);
 
   const getQuote = async () => {
+    if (exceeds) {
+      toast({ title: 'Insufficient balance', variant: 'destructive' });
+      return;
+    }
     const data = getValues();
-    if (!data.bankAccountId || !data.amount) return;
+    if (!data.bankAccountId || !data.walletId || !data.amount) return;
     setQuoting(true);
     setQuote(null);
     try {
@@ -106,6 +144,7 @@ export function RampForm() {
         body: JSON.stringify({
           direction: data.direction,
           bankAccountId: data.bankAccountId,
+          walletId: data.walletId,
           cryptoToken: data.cryptoToken,
           cryptoAmount: quote.cryptoAmount,
           fiatAmount: quote.fiatAmount,
@@ -118,12 +157,14 @@ export function RampForm() {
       if (!res.ok) throw new Error(json.error);
 
       const desc = data.direction === 'offramp'
-        ? `${quote.cryptoAmount} ${data.cryptoToken} → $${quote.fiatAmount.toLocaleString()}`
+        ? `${quote.cryptoAmount.toLocaleString()} ${data.cryptoToken} → $${quote.fiatAmount.toLocaleString()}`
         : `$${quote.fiatAmount.toLocaleString()} → ${quote.cryptoAmount} ${data.cryptoToken}`;
 
       toast({ title: `${data.direction === 'offramp' ? 'Off-ramp' : 'On-ramp'} executed`, description: desc, variant: 'success' });
       setQuote(null);
       queryClient.invalidateQueries({ queryKey: ['fiat-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['balances'] });
+      queryClient.invalidateQueries({ queryKey: ['bank-accounts'] });
     } catch (err) {
       toast({ title: 'Execution failed', description: (err as Error).message, variant: 'destructive' });
     } finally {
@@ -142,32 +183,95 @@ export function RampForm() {
           <div className="flex rounded-lg border overflow-hidden">
             <label className="flex-1">
               <input type="radio" value="offramp" {...register('direction')} className="sr-only" />
-              <div className={`flex items-center justify-center gap-2 py-2 text-sm font-medium cursor-pointer transition-colors ${direction === 'offramp' ? 'bg-orange-50 text-orange-700 border-r border-orange-200' : 'text-gray-500 hover:bg-gray-50 border-r'}`}>
+              <div className={`flex items-center justify-center gap-2 py-2 text-sm font-medium cursor-pointer transition-colors ${direction === 'offramp' ? 'bg-violet-50 text-violet-700 border-r border-violet-200' : 'text-gray-500 hover:bg-violet-50 hover:text-violet-600 border-r'}`}>
                 <ArrowUpRight className="h-4 w-4" />
                 Off-ramp (Crypto → Fiat)
               </div>
             </label>
             <label className="flex-1">
               <input type="radio" value="onramp" {...register('direction')} className="sr-only" />
-              <div className={`flex items-center justify-center gap-2 py-2 text-sm font-medium cursor-pointer transition-colors ${direction === 'onramp' ? 'bg-green-50 text-green-700' : 'text-gray-500 hover:bg-gray-50'}`}>
+              <div className={`flex items-center justify-center gap-2 py-2 text-sm font-medium cursor-pointer transition-colors ${direction === 'onramp' ? 'bg-sky-50 text-sky-700' : 'text-gray-500 hover:bg-sky-50 hover:text-sky-600'}`}>
                 <ArrowDownLeft className="h-4 w-4" />
                 On-ramp (Fiat → Crypto)
               </div>
             </label>
           </div>
 
-          {/* Bank account */}
+          {/* From */}
           <div className="space-y-2">
-            <Label>Bank Account</Label>
-            <Select {...register('bankAccountId')}>
-              <option value="">Select account…</option>
-              {bankAccounts?.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.institution_name} – {a.account_name}{a.last4 ? ` ****${a.last4}` : ''}
-                </option>
-              ))}
-            </Select>
-            {errors.bankAccountId && <p className="text-xs text-red-500">{errors.bankAccountId.message}</p>}
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+              From {isOfframp ? '(Crypto Wallet)' : '(Bank Account)'}
+            </Label>
+            {isOfframp ? (
+              <>
+                <Select {...register('walletId')}>
+                  <option value="">Select wallet…</option>
+                  {wallets?.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.label ? `${w.label} · ${w.chain.charAt(0).toUpperCase() + w.chain.slice(1)} (${w.address.slice(0, 6)}…${w.address.slice(-4)})` : `${w.chain.charAt(0).toUpperCase() + w.chain.slice(1)} · ${w.address.slice(0, 6)}…${w.address.slice(-4)}`}
+                    </option>
+                  ))}
+                </Select>
+                {errors.walletId && <p className="text-xs text-red-500">{errors.walletId.message}</p>}
+              </>
+            ) : (
+              <>
+                <Select {...register('bankAccountId')}>
+                  <option value="">Select account…</option>
+                  {bankAccounts?.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {`${a.nickname ? `${a.nickname} – ` : ''}${a.institution_name}${a.last4 ? ` ****${a.last4}` : ''}`}
+                    </option>
+                  ))}
+                </Select>
+                {!isOfframp && selectedBank && bankBalance !== null && (
+                  <FiatBalanceHint
+                    balance={bankBalance}
+                    currency={selectedBank.balance_currency ?? 'USD'}
+                  />
+                )}
+                {errors.bankAccountId && <p className="text-xs text-red-500">{errors.bankAccountId.message}</p>}
+              </>
+            )}
+          </div>
+
+          {/* Arrow */}
+          <div className="flex justify-center">
+            <div className="rounded-full border p-1.5 bg-muted/50">
+              <ArrowDown className="h-4 w-4 text-muted-foreground" />
+            </div>
+          </div>
+
+          {/* To */}
+          <div className="space-y-2">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+              To {isOfframp ? '(Bank Account)' : '(Crypto Wallet)'}
+            </Label>
+            {isOfframp ? (
+              <>
+                <Select {...register('bankAccountId')}>
+                  <option value="">Select account…</option>
+                  {bankAccounts?.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {`${a.nickname ? `${a.nickname} – ` : ''}${a.institution_name}${a.last4 ? ` ****${a.last4}` : ''}`}
+                    </option>
+                  ))}
+                </Select>
+                {errors.bankAccountId && <p className="text-xs text-red-500">{errors.bankAccountId.message}</p>}
+              </>
+            ) : (
+              <>
+                <Select {...register('walletId')}>
+                  <option value="">Select wallet…</option>
+                  {wallets?.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.label ? `${w.label} · ${w.chain.charAt(0).toUpperCase() + w.chain.slice(1)} (${w.address.slice(0, 6)}…${w.address.slice(-4)})` : `${w.chain.charAt(0).toUpperCase() + w.chain.slice(1)} · ${w.address.slice(0, 6)}…${w.address.slice(-4)}`}
+                    </option>
+                  ))}
+                </Select>
+                {errors.walletId && <p className="text-xs text-red-500">{errors.walletId.message}</p>}
+              </>
+            )}
           </div>
 
           {/* Token + amount */}
@@ -189,11 +293,26 @@ export function RampForm() {
                   <option value="fiat">USD</option>
                 </Select>
               </div>
+              {isOfframp && amountType === 'crypto' && cryptoBalance !== null && (
+                <BalanceHint
+                  balance={cryptoBalance}
+                  token={cryptoToken ?? 'USDC'}
+                  currentAmount={amount}
+                  onMax={(max) => setValue('amount', max)}
+                />
+              )}
+              {!isOfframp && amountType === 'fiat' && selectedBank && bankBalance !== null && (
+                <FiatBalanceHint
+                  balance={bankBalance}
+                  currency={selectedBank.balance_currency ?? 'USD'}
+                  currentAmount={amount}
+                />
+              )}
               {errors.amount && <p className="text-xs text-red-500">{errors.amount.message}</p>}
             </div>
           </div>
 
-          <Button type="button" className="w-full" onClick={getQuote} disabled={quoting}>
+          <Button type="button" className="w-full" onClick={getQuote} disabled={quoting || exceeds}>
             {quoting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Getting Quote…</> : 'Get Quote'}
           </Button>
         </form>
@@ -203,17 +322,17 @@ export function RampForm() {
           <div className="mt-4 p-4 rounded-lg bg-[#207679]/5 border border-[#207679]/20 space-y-2">
             <div className="text-sm font-semibold text-[#195a5c]">Quote</div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">{direction === 'offramp' ? 'You send' : 'You pay'}</span>
+              <span className="text-gray-600">{isOfframp ? 'You send' : 'You pay'}</span>
               <span className="font-mono font-semibold">
-                {direction === 'offramp'
+                {isOfframp
                   ? `${quote.cryptoAmount.toLocaleString()} ${getValues('cryptoToken')}`
                   : `$${quote.fiatAmount.toLocaleString()}`}
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">{direction === 'offramp' ? 'You receive' : 'You receive'}</span>
+              <span className="text-gray-600">You receive</span>
               <span className="font-mono font-semibold text-green-700">
-                {direction === 'offramp'
+                {isOfframp
                   ? `$${quote.fiatAmount.toLocaleString()}`
                   : `${quote.cryptoAmount.toLocaleString()} ${getValues('cryptoToken')}`}
               </span>
@@ -232,7 +351,7 @@ export function RampForm() {
             <Button className="w-full mt-2" onClick={executeRamp} disabled={executing}>
               {executing
                 ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Executing…</>
-                : `Execute ${direction === 'offramp' ? 'Off-ramp' : 'On-ramp'}`}
+                : `Execute ${isOfframp ? 'Off-ramp' : 'On-ramp'}`}
             </Button>
           </div>
         )}

@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { z } from 'zod';
+import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 const updateSchema = z.object({
   status: z.enum(['under_review', 'dismissed', 'escalated', 'resolved']),
@@ -19,6 +20,8 @@ export async function PATCH(
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try { requireRole(session.user.role as any, 'treasury_manager'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
+
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
 
   const { id } = await params;
   const body = await req.json();
@@ -35,7 +38,7 @@ export async function PATCH(
     .select('id')
     .eq('id', id)
     .eq('user_id', session.user.id)
-    .eq('enterprise_id', session.user.enterprise_id)
+    .eq('enterprise_id', enterpriseId)
     .single();
 
   if (!existing) return NextResponse.json({ error: 'Alert not found' }, { status: 404 });

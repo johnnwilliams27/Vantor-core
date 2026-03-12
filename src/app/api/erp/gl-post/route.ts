@@ -7,6 +7,7 @@ import { getERPAdapter, decryptCredentials } from '@/lib/erp/factory';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { z } from 'zod';
 import type { ErpProvider } from '@/types/database';
+import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 const schema = z.object({
   erpConfigId: z.string().uuid(),
@@ -24,6 +25,8 @@ export async function POST(req: NextRequest) {
   try { requireRole(session.user.role as any, 'accountant'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
 
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
+
   const body = await req.json();
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
@@ -34,7 +37,7 @@ export async function POST(req: NextRequest) {
     .select('*')
     .eq('id', parsed.data.erpConfigId)
     .eq('user_id', session.user.id)
-    .eq('enterprise_id', session.user.enterprise_id)
+    .eq('enterprise_id', enterpriseId)
     .single();
 
   if (!erpConfig) return NextResponse.json({ error: 'ERP config not found' }, { status: 404 });
@@ -55,7 +58,7 @@ export async function POST(req: NextRequest) {
     .from('gl_postings')
     .insert({
       user_id: session.user.id,
-      enterprise_id: session.user.enterprise_id,
+      enterprise_id: enterpriseId,
       erp_config_id: parsed.data.erpConfigId,
       invoice_id: parsed.data.invoiceId ?? null,
       payment_id: parsed.data.paymentId ?? null,

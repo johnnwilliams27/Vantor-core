@@ -9,6 +9,7 @@ import { getActiveTreasuryRule, buildTreasurySnapshot } from '@/lib/treasury/rul
 import { generateCashFlowForecast } from '@/lib/treasury/predictions';
 import { generateForecastSummary } from '@/lib/treasury/claude';
 import { checkRateLimit } from '@/lib/api/rate-limit';
+import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 const schema = z.object({
   lookahead_days: z.number().int().min(7).max(365).default(30),
@@ -19,6 +20,8 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try { requireRole(session.user.role as any, 'treasury_manager'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
+
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
 
   // 10 forecast generations per hour per user
   if (!checkRateLimit('treasury-forecast', session.user.id, 10, 60 * 60 * 1000)) {
@@ -47,7 +50,7 @@ export async function POST(req: NextRequest) {
 
   try {
     // Require an active rule to exist
-    const rule = await getActiveTreasuryRule(supabase, userId);
+    const rule = await getActiveTreasuryRule(supabase, userId, enterpriseId);
     if (!rule) {
       return NextResponse.json(
         { error: 'No active treasury rule found. Create a rule before generating a forecast.' },
@@ -56,7 +59,7 @@ export async function POST(req: NextRequest) {
     }
 
     const [snapshot, forecastPoints] = await Promise.all([
-      buildTreasurySnapshot(supabase, userId),
+      buildTreasurySnapshot(supabase, userId, undefined, enterpriseId),
       generateCashFlowForecast(supabase, userId, lookahead_days),
     ]);
 
@@ -85,7 +88,7 @@ export async function POST(req: NextRequest) {
       .upsert(
         {
           user_id: userId,
-          enterprise_id: session.user.enterprise_id,
+          enterprise_id: enterpriseId,
           lookahead_days,
           forecast_data: forecastPoints,
           ai_summary: summaryResult.reasoning,

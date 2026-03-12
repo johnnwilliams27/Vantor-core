@@ -12,7 +12,7 @@ import { Loader2 } from 'lucide-react';
 
 const schema = z.object({
   institution_name: z.string().min(1, 'Institution name is required'),
-  account_name: z.string().min(1, 'Account name is required'),
+  nickname: z.string().max(200).optional(),
   account_type: z.enum(['checking', 'savings']),
   last4: z.string().length(4, 'Must be exactly 4 digits').regex(/^\d{4}$/).optional().or(z.literal('')),
   routing_number: z.string().optional(),
@@ -66,9 +66,9 @@ export function ManualBankForm({ onSuccess }: ManualBankFormProps) {
           {errors.institution_name && <p className="text-xs text-red-500">{errors.institution_name.message}</p>}
         </div>
         <div className="space-y-2">
-          <Label>Account Name</Label>
-          <Input placeholder="Checking, Business Account…" {...register('account_name')} />
-          {errors.account_name && <p className="text-xs text-red-500">{errors.account_name.message}</p>}
+          <Label>Nickname <span className="text-gray-400 text-xs">(optional)</span></Label>
+          <Input placeholder="Operating, Payroll…" {...register('nickname')} />
+          {errors.nickname && <p className="text-xs text-red-500">{errors.nickname.message}</p>}
         </div>
       </div>
 

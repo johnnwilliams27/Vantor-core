@@ -6,6 +6,7 @@ import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { encryptSlackCredentials } from '@/lib/integrations/slack';
 import { z } from 'zod';
+import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 const connectSchema = z.object({
   botToken: z.string().min(1).max(500),
@@ -20,12 +21,13 @@ export async function GET(_req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('slack_integrations')
     .select('id, workspace_name, team_id, channel_id, channel_name, is_active, verified_at, created_at')
     .eq('user_id', session.user.id)
-    .eq('enterprise_id', session.user.enterprise_id)
+    .eq('enterprise_id', enterpriseId)
     .eq('is_active', true)
     .maybeSingle();
 
@@ -38,6 +40,8 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try { requireRole(session.user.role as any, 'treasury_manager'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
+
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
 
   const body = await req.json().catch(() => ({}));
   const parsed = connectSchema.safeParse(body);
@@ -53,7 +57,7 @@ export async function POST(req: NextRequest) {
     .from('slack_integrations')
     .upsert({
       user_id: session.user.id,
-      enterprise_id: session.user.enterprise_id,
+      enterprise_id: enterpriseId,
       workspace_name: workspaceName ?? null,
       team_id: teamId ?? null,
       channel_id: channelId,
@@ -85,13 +89,15 @@ export async function DELETE(_req: NextRequest) {
   try { requireRole(session.user.role as any, 'treasury_manager'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
 
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
+
   const supabase = createAdminClient();
 
   const { data: existing } = await supabase
     .from('slack_integrations')
     .select('id')
     .eq('user_id', session.user.id)
-    .eq('enterprise_id', session.user.enterprise_id)
+    .eq('enterprise_id', enterpriseId)
     .eq('is_active', true)
     .maybeSingle();
 
@@ -101,7 +107,7 @@ export async function DELETE(_req: NextRequest) {
     .from('slack_integrations')
     .update({ is_active: false, updated_at: new Date().toISOString() })
     .eq('user_id', session.user.id)
-    .eq('enterprise_id', session.user.enterprise_id);
+    .eq('enterprise_id', enterpriseId);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { z } from 'zod';
+import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 const updateSchema = z.object({
   status: z.enum(['unpaid', 'paid', 'partially_paid', 'overdue', 'cancelled']).optional(),
@@ -21,6 +22,8 @@ export async function PATCH(
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try { requireRole(session.user.role as any, 'accountant'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
+
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
 
   if (!isValidUUID(params.id)) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
 
@@ -39,7 +42,7 @@ export async function PATCH(
     .update(updateData)
     .eq('id', params.id)
     .eq('user_id', session.user.id)
-    .eq('enterprise_id', session.user.enterprise_id)
+    .eq('enterprise_id', enterpriseId)
     .select()
     .single();
 
@@ -65,6 +68,8 @@ export async function DELETE(
   try { requireRole(session.user.role as any, 'treasury_manager'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
 
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
+
   if (!isValidUUID(params.id)) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
 
   const supabase = createAdminClient();
@@ -73,7 +78,7 @@ export async function DELETE(
     .delete()
     .eq('id', params.id)
     .eq('user_id', session.user.id)
-    .eq('enterprise_id', session.user.enterprise_id);
+    .eq('enterprise_id', enterpriseId);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ message: 'Invoice deleted' });

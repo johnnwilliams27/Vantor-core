@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { getBankingAdapter } from '@/lib/banking/factory';
+import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 export async function POST(
   _req: NextRequest,
@@ -15,6 +16,8 @@ export async function POST(
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try { requireRole(session.user.role as any, 'treasury_manager'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
+
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
 
   if (!isValidUUID(params.id)) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
 
@@ -26,7 +29,7 @@ export async function POST(
     .select('*')
     .eq('id', params.id)
     .eq('user_id', session.user.id)
-    .eq('enterprise_id', session.user.enterprise_id)
+    .eq('enterprise_id', enterpriseId)
     .maybeSingle();
 
   if (fetchErr) return NextResponse.json({ error: fetchErr.message }, { status: 500 });
@@ -78,7 +81,7 @@ export async function POST(
       .from('fiat_transactions')
       .insert({
         user_id: session.user.id,
-        enterprise_id: session.user.enterprise_id,
+        enterprise_id: enterpriseId,
         bank_account_id: rec.bank_account_id,
         direction: rec.action,
         crypto_amount: parseFloat(rec.recommended_amount_usd),

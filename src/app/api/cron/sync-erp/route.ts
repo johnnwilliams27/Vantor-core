@@ -13,10 +13,23 @@ export async function GET(req: NextRequest) {
 
   const supabase = createAdminClient();
 
-  const { data: configs, error } = await supabase
+  // Get test enterprise IDs to exclude from cron processing
+  const { data: testEnts } = await supabase
+    .from('enterprises')
+    .select('id')
+    .eq('is_test_enterprise', true);
+  const testEntIds = (testEnts ?? []).map((e) => e.id);
+
+  let configQuery = supabase
     .from('erp_configurations')
     .select('*')
     .eq('is_active', true);
+
+  if (testEntIds.length > 0) {
+    configQuery = configQuery.not('enterprise_id', 'in', `(${testEntIds.join(',')})`);
+  }
+
+  const { data: configs, error } = await configQuery;
 
   if (error) {
     console.error('[cron/sync-erp]', error);

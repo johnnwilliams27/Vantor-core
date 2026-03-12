@@ -68,7 +68,7 @@ export function OnChainTab() {
                     ) : '—'}
                     {tx.token && <Badge variant="outline" className="ml-1">{tx.token}</Badge>}
                   </TableCell>
-                  <TableCell><Badge variant="secondary">{capitalize(tx.chain)}</Badge></TableCell>
+                  <TableCell><Badge variant={tx.chain === 'ethereum' ? 'ethereum' : 'solana'}>{capitalize(tx.chain)}</Badge></TableCell>
                   <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                     {formatDateTime(tx.timestamp)}
                   </TableCell>
