@@ -497,6 +497,10 @@ const PARTNERS = [
   { name: 'Phantom', src: '/partners/Phantom_Logo_0.svg', className: 'h-11' },
   { name: 'WalletConnect', src: '/partners/walletconnect-white.svg', className: 'h-8' },
   { name: 'Plaid', src: '/partners/Plaid_id25TiQUJW_0.svg', className: 'h-11' },
+  { name: 'Aave', src: '/partners/Aave_idWRQ7YLO7_0.svg', className: 'h-11' },
+  { name: 'Kamino', src: '/partners/kamino-logo.svg', className: 'h-8' },
+  { name: 'Ondo', src: '/partners/Ondo_Logo_0.svg', className: 'h-11' },
+  { name: 'Morpho', src: '/partners/morpho-white.svg', className: 'h-11' },
 ];
 
 function PartnerScroll() {
