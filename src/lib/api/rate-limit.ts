@@ -26,7 +26,7 @@ function getStore(key: string): Map<string, RateLimitEntry> {
 /**
  * Returns true if the request is allowed, false if rate limited.
  * @param storeKey  Identifies the limit bucket (e.g. 'agent-chat')
- * @param userId    Per-user identifier
+ * @param userId    Per-user identifier (or IP for unauthenticated routes)
  * @param max       Max requests allowed in the window
  * @param windowMs  Window duration in milliseconds
  */
@@ -47,4 +47,21 @@ export function checkRateLimit(
   if (entry.count >= max) return false;
   entry.count++;
   return true;
+}
+
+/** Extract client IP from request headers (works behind proxies). */
+export function getClientIp(req: { headers: { get(name: string): string | null } }): string {
+  return (
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    req.headers.get('x-real-ip') ||
+    '127.0.0.1'
+  );
+}
+
+/** Standard 429 JSON response. */
+export function rateLimitResponse() {
+  return new Response(
+    JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
+    { status: 429, headers: { 'Content-Type': 'application/json' } }
+  );
 }

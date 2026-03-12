@@ -5,6 +5,7 @@ import { requireRole } from '@/lib/auth/rbac';
 import { getJupiterQuote } from '@/lib/swaps/jupiter';
 import { getOneInchQuote } from '@/lib/swaps/oneinch';
 import { writeAuditLog } from '@/lib/audit/logger';
+import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
 import { z } from 'zod';
 import type { TokenSymbol } from '@/types/database';
 
@@ -22,6 +23,10 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try { requireRole(session.user.role as any, 'treasury_manager'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
+
+  if (!checkRateLimit('swaps-quote', session.user.id, 30, 60 * 60 * 1000)) {
+    return rateLimitResponse();
+  }
 
   const body = await req.json();
   const parsed = schema.safeParse(body);

@@ -18,6 +18,18 @@ export async function getOneInchQuote(
   walletAddress: string,
   slippageBps = 50
 ): Promise<SwapQuoteResponse> {
+  if (process.env.ONEINCH_USE_MOCK === 'true') {
+    return {
+      fromToken,
+      toToken,
+      fromAmount: humanAmount,
+      toAmount: humanAmount,
+      rate: '1.00000000',
+      slippageBps,
+      quoteData: { mock: true },
+    };
+  }
+
   const srcToken = ETH_TOKEN_ADDRESSES[fromToken];
   const dstToken = ETH_TOKEN_ADDRESSES[toToken];
   const decimals = TOKEN_DECIMALS[fromToken];

@@ -45,13 +45,27 @@ cron.schedule('*/5 * * * *', () => {
   callCron('/api/cron/poll-balances');
 });
 
-// Every 6 hours: generate treasury recommendations + refresh forecasts
+// Every 6 hours: refresh bank account balances + generate treasury analysis
 cron.schedule('0 */6 * * *', () => {
+  callCron('/api/cron/poll-bank-balances');
   callCron('/api/cron/treasury-analysis');
+});
+
+// Every 12 hours: sync ERP data (invoices + vendors)
+cron.schedule('0 */12 * * *', () => {
+  callCron('/api/cron/sync-erp');
+});
+
+// Daily at 8am: send error digest email
+cron.schedule('0 8 * * *', () => {
+  callCron('/api/cron/error-digest');
 });
 
 console.log('[cron-runner] Started. Schedules:');
 console.log('  * * * * *      → /api/cron/process-scheduled-payments');
 console.log('  */5 * * * *    → /api/cron/poll-balances');
+console.log('  0 */6 * * *    → /api/cron/poll-bank-balances');
 console.log('  0 */6 * * *    → /api/cron/treasury-analysis');
+console.log('  0 */12 * * *   → /api/cron/sync-erp');
+console.log('  0 8 * * *      → /api/cron/error-digest');
 console.log('[cron-runner] Press Ctrl+C to stop.');

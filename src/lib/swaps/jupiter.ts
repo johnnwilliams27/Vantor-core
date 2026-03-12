@@ -17,6 +17,19 @@ export async function getJupiterQuote(
   humanAmount: string,
   slippageBps = 50
 ): Promise<SwapQuoteResponse> {
+  if (process.env.JUPITER_USE_MOCK === 'true') {
+    return {
+      fromToken,
+      toToken,
+      fromAmount: humanAmount,
+      toAmount: humanAmount,
+      rate: '1.00000000',
+      slippageBps,
+      priceImpact: '0.00',
+      quoteData: { mock: true },
+    };
+  }
+
   const inputMint = SOL_TOKEN_ADDRESSES[fromToken];
   const outputMint = SOL_TOKEN_ADDRESSES[toToken];
   const decimals = TOKEN_DECIMALS[fromToken];

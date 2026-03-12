@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth/nextauth.config';
 import { requireRole } from '@/lib/auth/rbac';
 import { getBankingAdapter } from '@/lib/banking/factory';
 import { writeAuditLog } from '@/lib/audit/logger';
+import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
 import { z } from 'zod';
 
 const schema = z.object({
@@ -21,6 +22,10 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try { requireRole(session.user.role as any, 'accountant'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
+
+  if (!checkRateLimit('ramps-quote', session.user.id, 20, 60 * 60 * 1000)) {
+    return rateLimitResponse();
+  }
 
   const body = await req.json();
   const parsed = schema.safeParse(body);

@@ -41,6 +41,15 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'Invalid or oversized message history' }), { status: 400 });
   }
 
+  // Validate individual message sizes (max 50KB per message content)
+  const MAX_MESSAGE_SIZE = 50_000;
+  for (const msg of body.messages) {
+    const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+    if (content.length > MAX_MESSAGE_SIZE) {
+      return new Response(JSON.stringify({ error: 'Individual message too large (max 50KB)' }), { status: 400 });
+    }
+  }
+
   const supabase = createAdminClient();
   const enterpriseId = session.user.enterprise_id ?? null;
   const systemPrompt = await buildSystemPrompt(supabase, userId, userRole);

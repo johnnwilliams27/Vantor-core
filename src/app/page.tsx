@@ -26,7 +26,6 @@ import {
   X,
   ChevronDown,
   Layers,
-  Zap,
   BarChart3,
   Loader2,
 } from 'lucide-react';
@@ -289,6 +288,7 @@ function Navbar() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loginLoading, setLoginLoading] = useState(false);
   const loginRef = useRef<HTMLDivElement>(null);
+  const mobileLoginRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 32);
@@ -300,9 +300,10 @@ function Navbar() {
   useEffect(() => {
     if (!loginOpen) return;
     const onClick = (e: MouseEvent) => {
-      if (loginRef.current && !loginRef.current.contains(e.target as globalThis.Node)) {
-        setLoginOpen(false);
-      }
+      const target = e.target as globalThis.Node;
+      if (loginRef.current && loginRef.current.contains(target)) return;
+      if (mobileLoginRef.current && mobileLoginRef.current.contains(target)) return;
+      setLoginOpen(false);
     };
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
@@ -445,7 +446,7 @@ function Navbar() {
               Login
             </button>
           ) : (
-            <form onSubmit={handleLogin} className="space-y-3 pt-2 border-t border-white/[0.06]">
+            <form ref={mobileLoginRef} onSubmit={handleLogin} className="space-y-3 pt-2 border-t border-white/[0.06]">
               <p className="text-white font-semibold text-sm">Sign in to Vantor</p>
               <input
                 name="email"
@@ -490,20 +491,11 @@ function Navbar() {
 /* ------------------------------------------------------------------ */
 function Hero() {
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden mt-8">
       <BlobBackground />
       <NetworkCanvas />
 
       <div className="relative z-10 max-w-5xl mx-auto text-center px-6">
-        <div className="inline-flex items-center gap-3 px-6 py-2.5 rounded-full bg-teal-500/[0.08] border border-teal-500/25 mb-10 landing-fade-in hero-badge-glow">
-          <div className="w-8 h-8 rounded-full bg-teal-500/20 flex items-center justify-center">
-            <Zap size={16} className="text-teal-400" />
-          </div>
-          <span className="text-base sm:text-lg font-semibold tracking-wide bg-gradient-to-r from-teal-300 to-cyan-300 bg-clip-text text-transparent">
-            Agentic Stablecoin Treasury Management
-          </span>
-        </div>
-
         <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.08] landing-fade-in landing-delay-1">
           <span className="text-white">Put Your Idle Treasury</span>
           <br />
@@ -513,7 +505,7 @@ function Hero() {
         </h1>
 
         <p className="mt-6 text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed landing-fade-in landing-delay-2">
-          Connect your ERP systems with stablecoin wallets and bank accounts for intelligent treasury management. Let AI-powered agents optimize yield, hedge FX exposure, and manage compliance — with a human always in the loop.
+          Connect ERP systems with digital asset wallets and bank accounts for agentic treasury management. Let Vantor's agents optimize yield, hedge FX exposure, and manage compliance — always with a human in the loop.
         </p>
 
         <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 landing-fade-in landing-delay-3">
@@ -536,7 +528,7 @@ function Hero() {
         <div className="mt-16 flex flex-col items-center gap-4 landing-fade-in landing-delay-4">
           <div className="flex flex-wrap items-center justify-center gap-6">
             {[
-              { label: 'Multi-Chain Support', icon: Globe },
+              { label: 'Multi-Chain Stablecoin Support', icon: Globe },
               { label: 'Institutional Grade Infrastructure', icon: Shield },
               { label: 'Human-in-the-Loop', icon: Users },
             ].map(({ label, icon: Icon }) => (
@@ -587,7 +579,7 @@ function Section({
   className?: string;
 }) {
   return (
-    <section id={id} className={`relative py-16 sm:py-20 ${className}`}>
+    <section id={id} className={`relative py-10 sm:py-14 scroll-mt-20 ${className}`}>
       <div className="max-w-7xl mx-auto px-6">{children}</div>
     </section>
   );
@@ -627,7 +619,7 @@ function Features() {
     {
       icon: TrendingUp,
       title: 'Yield Optimization',
-      desc: 'AI-driven strategies to deploy idle stablecoin reserves into vetted DeFi yield opportunities. Risk-scored recommendations with full transparency on APY and exposure.',
+      desc: 'AI-driven strategies to deploy treasury reserves into vetted yield opportunities. Risk-scored recommendations with full transparency on APY and exposure.',
     },
     {
       icon: Globe,
@@ -646,7 +638,7 @@ function Features() {
       <SectionHeading
         eyebrow="Platform"
         title="One Platform, Total Treasury Visibility"
-        subtitle="Connect every financial system and asset class. Vantor unifies your ERP, wallets, and bank accounts into a single command center for institutional treasury management."
+        subtitle="Connect every financial system and asset class. Vantor unifies your ERP, digital asset wallets, and bank accounts into a single command center for modern treasury management."
       />
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {features.map((f, i) => {
@@ -770,7 +762,7 @@ function Security() {
     {
       icon: Globe,
       title: 'Travel Rule Compliance',
-      desc: 'Built-in Travel Rule compliance for cross-border stablecoin transfers. Automatic originator and beneficiary data collection and transmission.',
+      desc: 'Built-in Travel Rule compliance for cross-border digital asset transfers. Automatic originator and beneficiary data collection and transmission.',
     },
     {
       icon: Eye,
@@ -799,7 +791,7 @@ function Security() {
       <SectionHeading
         eyebrow="Security & Compliance"
         title="Institutional-Grade from Day One"
-        subtitle="Vantor is built for regulated institutions. Every layer — from wallet onboarding to AI recommendations — is designed with compliance, auditability, and security at its core."
+        subtitle="Vantor is built for secure treasury management. Every layer — from wallet onboarding to AI recommendations — is designed with compliance, auditability, and security at its core."
       />
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {pillars.map((p, i) => {
@@ -868,7 +860,7 @@ function ContactForm() {
         <SectionHeading
           eyebrow="Contact"
           title="Ready to Optimize Your Treasury?"
-          subtitle="Get in touch to learn how Vantor can transform your stablecoin treasury operations."
+          subtitle="Get in touch to learn how Vantor can transform your treasury operations."
         />
 
         <div
@@ -966,6 +958,8 @@ function Footer() {
           <a href="#features" className="text-gray-500 hover:text-gray-300 text-sm transition-colors">Features</a>
           <a href="#security" className="text-gray-500 hover:text-gray-300 text-sm transition-colors">Security</a>
           <a href="#contact" className="text-gray-500 hover:text-gray-300 text-sm transition-colors">Contact</a>
+          <Link href="/terms" className="text-gray-500 hover:text-gray-300 text-sm transition-colors">Terms</Link>
+          <Link href="/privacy" className="text-gray-500 hover:text-gray-300 text-sm transition-colors">Privacy</Link>
         </div>
       </div>
     </footer>

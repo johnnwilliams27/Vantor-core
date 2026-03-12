@@ -1,4 +1,4 @@
-import { isValidUUID } from '@/lib/api/rate-limit';
+import { isValidUUID, checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/nextauth.config';
@@ -15,6 +15,10 @@ export async function POST(
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try { requireRole(session.user.role as any, 'accountant'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
+
+  if (!checkRateLimit('bank-refresh-balance', session.user.id, 20, 60 * 60 * 1000)) {
+    return rateLimitResponse();
+  }
 
   if (!isValidUUID(params.id)) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
 

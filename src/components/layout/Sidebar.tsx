@@ -106,7 +106,7 @@ export function Sidebar() {
   const { data: session } = useSession();
   const { resolvedTheme } = useTheme();
   const { sidebarOpen, toggleSidebar } = useAppStore();
-  const logoSrc = resolvedTheme === 'light' ? '/logo-light.png' : '/logo-dark.png';
+  const logoSrc = '/logo-dark.png';
   const userRole = session?.user?.role ?? 'auditor';
   const isAppAdmin = !!(session?.user as Record<string, unknown>)?.is_app_admin;
   const enterpriseId = session?.user?.enterprise_id;

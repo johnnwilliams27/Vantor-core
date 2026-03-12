@@ -28,6 +28,9 @@ export async function POST(req: NextRequest) {
   let body: unknown = {};
   try {
     const text = await req.text();
+    if (text.length > 10_000) {
+      return NextResponse.json({ error: 'Request body too large' }, { status: 400 });
+    }
     if (text) body = JSON.parse(text);
   } catch {
     // empty body is fine — defaults apply

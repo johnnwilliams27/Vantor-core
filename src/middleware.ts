@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { canAccessRoute } from '@/lib/auth/rbac';
 import type { UserRole } from '@/types/database';
 
-const PUBLIC_PATHS = ['/login', '/register', '/api/auth', '/api/contact', '/opengraph-image'];
+const PUBLIC_PATHS = ['/login', '/register', '/api/auth', '/api/contact', '/opengraph-image', '/terms', '/privacy'];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;

@@ -4,22 +4,23 @@ import { authOptions } from '@/lib/auth/nextauth.config';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { createTravelRuleTransfer } from '@/lib/compliance/travel-rule';
+import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
 import { z } from 'zod';
 
 const createSchema = z.object({
   paymentId: z.string().uuid().optional(),
   direction: z.enum(['outgoing', 'incoming']),
   amountUsd: z.number().positive(),
-  originatorName: z.string().min(1),
-  originatorAddress: z.string().optional(),
-  originatorWallet: z.string().min(20),
+  originatorName: z.string().min(1).max(300),
+  originatorAddress: z.string().max(500).optional(),
+  originatorWallet: z.string().min(20).max(100),
   originatorChain: z.enum(['ethereum', 'solana']),
-  originatorVasp: z.string().optional(),
-  beneficiaryName: z.string().min(1),
-  beneficiaryAddress: z.string().optional(),
-  beneficiaryWallet: z.string().min(20),
+  originatorVasp: z.string().max(300).optional(),
+  beneficiaryName: z.string().min(1).max(300),
+  beneficiaryAddress: z.string().max(500).optional(),
+  beneficiaryWallet: z.string().min(20).max(100),
   beneficiaryChain: z.enum(['ethereum', 'solana']),
-  beneficiaryVasp: z.string().optional(),
+  beneficiaryVasp: z.string().max(300).optional(),
 });
 
 export async function GET(req: NextRequest) {
@@ -53,6 +54,10 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try { requireRole(session.user.role as any, 'treasury_manager'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
+
+  if (!checkRateLimit('compliance-travel-rule', session.user.id, 30, 60 * 60 * 1000)) {
+    return rateLimitResponse();
+  }
 
   const body = await req.json();
   const parsed = createSchema.safeParse(body);

@@ -58,6 +58,9 @@ export async function POST(req: NextRequest) {
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
       return NextResponse.json({ error: 'name is required' }, { status: 400 });
     }
+    if (name.length > 200) {
+      return NextResponse.json({ error: 'Name too long (max 200 chars)' }, { status: 400 });
+    }
 
     const { data, error } = await supabase
       .from('enterprises')

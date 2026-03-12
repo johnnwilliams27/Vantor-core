@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
+import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/api/rate-limit';
 
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+  if (!checkRateLimit('contact-ip', ip, 5, 60 * 1000)) {
+    return rateLimitResponse();
+  }
+
   try {
     const { name, email, company, message } = await req.json();
 
@@ -9,9 +15,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    if (typeof name !== 'string' || name.length > 200) {
+      return NextResponse.json({ error: 'Name too long (max 200 chars)' }, { status: 400 });
+    }
+    if (typeof email !== 'string' || email.length > 320) {
+      return NextResponse.json({ error: 'Email too long' }, { status: 400 });
+    }
+    if (typeof message !== 'string' || message.length > 5000) {
+      return NextResponse.json({ error: 'Message too long (max 5000 chars)' }, { status: 400 });
+    }
+    if (company && (typeof company !== 'string' || company.length > 200)) {
+      return NextResponse.json({ error: 'Company name too long (max 200 chars)' }, { status: 400 });
+    }
+
     // Basic email validation
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return NextResponse.json({ error: 'Invalid email' }, { status: 400 });
+    }
+
+    if (!checkRateLimit('contact-email', email, 3, 60 * 60 * 1000)) {
+      return rateLimitResponse();
+    }
+
+    if (process.env.SMTP_USE_MOCK === 'true') {
+      console.log('[MOCK SMTP] Would send contact email:', { name, email, company, message: message.slice(0, 100) });
+      return NextResponse.json({ success: true });
     }
 
     const transporter = nodemailer.createTransport({
