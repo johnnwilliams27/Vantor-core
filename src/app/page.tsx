@@ -683,7 +683,7 @@ function Features() {
       <SectionHeading
         eyebrow="Platform"
         title="One Platform, Total Treasury Visibility"
-        subtitle="Connect every financial system and asset class. Vantor unifies your ERP, digital asset wallets, and bank accounts into a single command center for modern treasury management."
+        subtitle="Connect every financial system and asset class. Vantor unifies your ERP, digital asset wallets, and bank accounts into a single agentic hub for modern treasury management."
       />
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {features.map((f, i) => {
