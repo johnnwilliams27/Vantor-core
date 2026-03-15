@@ -42,8 +42,18 @@ export function verifySlackSignature(
   rawBody: string,
   slackSignature: string
 ): boolean {
-  const fiveMinutesAgo = Math.floor(Date.now() / 1000) - 5 * 60;
-  if (parseInt(timestamp, 10) < fiveMinutesAgo) return false;
+  if (!timestamp || !slackSignature) {
+    console.warn('[Slack] Missing timestamp or signature header');
+    return false;
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const ts = parseInt(timestamp, 10);
+  // Allow 10 minutes to account for Vercel cold starts and network delays
+  if (Math.abs(now - ts) > 600) {
+    console.warn(`[Slack] Timestamp too old: ${now - ts}s ago`);
+    return false;
+  }
 
   const baseString = `v0:${timestamp}:${rawBody}`;
   const hmac = crypto.createHmac('sha256', signingSecret);
@@ -52,7 +62,8 @@ export function verifySlackSignature(
 
   try {
     return crypto.timingSafeEqual(Buffer.from(computed), Buffer.from(slackSignature));
-  } catch {
+  } catch (err) {
+    console.warn(`[Slack] Signature comparison failed: ${(err as Error).message}`);
     return false;
   }
 }

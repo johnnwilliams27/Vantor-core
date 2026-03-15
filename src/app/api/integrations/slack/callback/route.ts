@@ -69,18 +69,23 @@ export async function POST(req: NextRequest) {
   }
 
   if (!integration) {
+    console.error('[Slack callback] No integration found. team_id:', teamId, 'channel_id:', channelId);
     return NextResponse.json({ error: 'No active Slack integration found' }, { status: 401 });
   }
+
+  console.log('[Slack callback] Found integration:', integration.id, 'channel:', integration.channel_id);
 
   // Verify signature
   let creds;
   try {
     creds = decryptSlackCredentials(integration.credentials);
-  } catch {
+  } catch (err) {
+    console.error('[Slack callback] Credential decrypt failed:', (err as Error).message);
     return NextResponse.json({ error: 'Credential error' }, { status: 500 });
   }
 
   if (!verifySlackSignature(creds.signingSecret, timestamp, rawBody, slackSignature)) {
+    console.error('[Slack callback] Signature verification failed. timestamp:', timestamp, 'has_signature:', !!slackSignature);
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
   }
 
