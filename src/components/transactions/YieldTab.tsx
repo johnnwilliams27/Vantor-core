@@ -3,15 +3,32 @@ import { useQuery } from '@tanstack/react-query';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FilterBar } from '@/components/ui/filter-bar';
+import { TablePagination } from '@/components/ui/table-pagination';
+import { useTableFilter } from '@/hooks/useTableFilter';
 import { formatCurrency, formatDateTime, capitalize } from '@/lib/utils';
 import type { YieldTransaction } from '@/types/database';
-import { Loader2 } from 'lucide-react';
+import { CardSpinner } from '@/components/ui/spinner';
 
 const PROTOCOL_LABELS: Record<string, string> = {
   aave_v3: 'Aave V3',
   morpho: 'Morpho',
   kamino: 'Kamino',
   ondo: 'Ondo (USDY)',
+};
+
+const YIELD_FILTER_CONFIG = {
+  searchFields: [
+    'protocol' as const,
+    'underlying_token' as const,
+  ],
+  dropdowns: [
+    { key: 'tx_type', accessor: (item: YieldTransaction) => item.tx_type },
+    { key: 'protocol', accessor: (item: YieldTransaction) => item.protocol },
+    { key: 'status', accessor: (item: YieldTransaction) => item.status },
+    { key: 'chain', accessor: (item: YieldTransaction) => item.chain },
+  ],
+  dateField: (item: YieldTransaction) => item.executed_at ?? item.created_at,
 };
 
 export function YieldTab() {
@@ -26,10 +43,34 @@ export function YieldTab() {
     staleTime: 30_000,
   });
 
+  const filter = useTableFilter(data, YIELD_FILTER_CONFIG);
+
   return (
     <Card>
       <CardHeader><CardTitle>Yield Transactions</CardTitle></CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        <FilterBar
+          search={filter.search}
+          onSearchChange={filter.setSearch}
+          searchPlaceholder="Search yield..."
+          dropdowns={[
+            { key: 'tx_type', label: 'Type', options: filter.dropdownOptions.tx_type ?? [] },
+            { key: 'protocol', label: 'Protocol', options: filter.dropdownOptions.protocol ?? [] },
+            { key: 'status', label: 'Status', options: filter.dropdownOptions.status ?? [] },
+            { key: 'chain', label: 'Chain', options: filter.dropdownOptions.chain ?? [] },
+          ]}
+          filters={filter.filters}
+          onFilterChange={filter.setFilter}
+          showDateRange
+          dateFrom={filter.dateFrom}
+          dateTo={filter.dateTo}
+          onDateFromChange={filter.setDateFrom}
+          onDateToChange={filter.setDateTo}
+          resultCount={filter.filteredData.length}
+          totalCount={filter.totalCount}
+          activeFilterCount={filter.activeFilterCount}
+          onClear={filter.clearAll}
+        />
         <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -46,12 +87,12 @@ export function YieldTab() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center">
-                  <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                <TableCell colSpan={7}>
+                  <CardSpinner />
                 </TableCell>
               </TableRow>
-            ) : data?.length ? (
-              data.map((tx) => (
+            ) : filter.pagedData.length ? (
+              filter.pagedData.map((tx) => (
                 <TableRow key={tx.id}>
                   <TableCell>
                     <Badge variant={tx.tx_type === 'deposit' ? 'onramp' : 'offramp'}>
@@ -83,13 +124,22 @@ export function YieldTab() {
             ) : (
               <TableRow>
                 <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                  No yield transactions yet.
+                  {filter.activeFilterCount > 0 ? 'No matching transactions.' : 'No yield transactions yet.'}
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
         </div>
+
+        <TablePagination
+          page={filter.page}
+          totalPages={filter.totalPages}
+          pageSize={filter.pageSize}
+          filteredCount={filter.filteredCount}
+          onPageChange={filter.setPage}
+          onPageSizeChange={filter.setPageSize}
+        />
       </CardContent>
     </Card>
   );

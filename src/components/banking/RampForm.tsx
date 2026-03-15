@@ -183,14 +183,14 @@ export function RampForm() {
           <div className="flex rounded-lg border overflow-hidden">
             <label className="flex-1">
               <input type="radio" value="offramp" {...register('direction')} className="sr-only" />
-              <div className={`flex items-center justify-center gap-2 py-2 text-sm font-medium cursor-pointer transition-colors ${direction === 'offramp' ? 'bg-violet-50 text-violet-700 border-r border-violet-200' : 'text-gray-500 hover:bg-violet-50 hover:text-violet-600 border-r'}`}>
+              <div className={`flex items-center justify-center gap-2 py-2 text-sm font-medium cursor-pointer transition-colors ${direction === 'offramp' ? 'bg-muted text-foreground border-r border-border' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground/70 border-r border-border'}`}>
                 <ArrowUpRight className="h-4 w-4" />
                 Off-ramp (Crypto → Fiat)
               </div>
             </label>
             <label className="flex-1">
               <input type="radio" value="onramp" {...register('direction')} className="sr-only" />
-              <div className={`flex items-center justify-center gap-2 py-2 text-sm font-medium cursor-pointer transition-colors ${direction === 'onramp' ? 'bg-sky-50 text-sky-700' : 'text-gray-500 hover:bg-sky-50 hover:text-sky-600'}`}>
+              <div className={`flex items-center justify-center gap-2 py-2 text-sm font-medium cursor-pointer transition-colors ${direction === 'onramp' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground/70'}`}>
                 <ArrowDownLeft className="h-4 w-4" />
                 On-ramp (Fiat → Crypto)
               </div>
@@ -319,8 +319,8 @@ export function RampForm() {
 
         {/* Quote */}
         {quote && (
-          <div className="mt-4 p-4 rounded-lg bg-[#207679]/5 border border-[#207679]/20 space-y-2">
-            <div className="text-sm font-semibold text-[#195a5c]">Quote</div>
+          <div className="mt-4 p-4 rounded-lg bg-[#19595b]/5 border border-[#19595b]/20 space-y-2">
+            <div className="text-sm font-semibold text-[#134849]">Quote</div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">{isOfframp ? 'You send' : 'You pay'}</span>
               <span className="font-mono font-semibold">

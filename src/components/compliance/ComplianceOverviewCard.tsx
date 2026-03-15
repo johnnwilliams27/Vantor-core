@@ -1,21 +1,13 @@
 'use client';
 import { useComplianceOverview } from '@/hooks/useCompliance';
+import { CardSpinner } from '@/components/ui/spinner';
 import { ShieldCheck, ShieldAlert, Eye, Plane } from 'lucide-react';
 
 export function ComplianceOverviewCard() {
   const { data, isLoading } = useComplianceOverview();
 
   if (isLoading) {
-    return (
-      <div className="rounded-lg border bg-card p-6 animate-pulse">
-        <div className="h-6 w-48 bg-muted rounded mb-4" />
-        <div className="grid grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-16 bg-muted rounded" />
-          ))}
-        </div>
-      </div>
-    );
+    return <CardSpinner />;
   }
 
   if (!data) return null;

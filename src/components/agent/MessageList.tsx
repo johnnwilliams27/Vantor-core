@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 
 function AssistantAvatar() {
   return (
-    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#207679] text-white text-xs font-bold select-none">
+    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#19595b] text-white text-xs font-bold select-none">
       V
     </div>
   );
@@ -36,8 +36,8 @@ export function MessageList({ messages, isStreaming, userInitial }: MessageListP
   if (messages.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center text-muted-foreground">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#207679]/10">
-          <span className="text-2xl font-bold text-[#207679] dark:text-teal-400">V</span>
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#19595b]/10">
+          <span className="text-2xl font-bold text-[#19595b] dark:text-teal-400">V</span>
         </div>
         <p className="text-sm font-medium text-foreground">Ask Vantor anything</p>
         <p className="text-xs text-muted-foreground max-w-[240px]">
@@ -56,7 +56,7 @@ export function MessageList({ messages, isStreaming, userInitial }: MessageListP
             : '';
           return (
             <div key={i} className="flex items-end justify-end gap-2">
-              <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-[#207679] px-3.5 py-2.5 text-sm text-white leading-relaxed whitespace-pre-wrap break-words">
+              <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-[#19595b] px-3.5 py-2.5 text-sm text-white leading-relaxed whitespace-pre-wrap break-words">
                 {text}
               </div>
               <UserAvatar initial={userInitial} />

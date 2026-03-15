@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Building2, Coins } from 'lucide-react';
 import { useTreasuryOverview } from '@/hooks/useTreasury';
+import { CardSpinner } from '@/components/ui/spinner';
 
 const TOKEN_COLORS: Record<string, string> = {
   USDC: 'bg-blue-100 text-blue-800',
@@ -53,7 +54,7 @@ export function UnifiedBalanceCard() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="text-sm text-muted-foreground py-4">Loading…</div>
+              <CardSpinner />
             ) : !Object.keys(fiatByCurrency).length ? (
               <div className="text-sm text-muted-foreground py-4">No bank accounts connected.</div>
             ) : (
@@ -85,7 +86,7 @@ export function UnifiedBalanceCard() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="text-sm text-muted-foreground py-4">Loading…</div>
+              <CardSpinner />
             ) : !Object.keys(cryptoByToken).length ? (
               <div className="text-sm text-muted-foreground py-4">No stablecoin positions found.</div>
             ) : (
@@ -109,7 +110,7 @@ export function UnifiedBalanceCard() {
       </div>
 
       {/* Total Treasury */}
-      <Card className="bg-[#207679] text-white dark:bg-slate-800 dark:text-foreground dark:border-slate-700">
+      <Card className="bg-[#19595b] text-white dark:bg-slate-800 dark:text-foreground dark:border-slate-700">
         <CardContent className="py-4 flex items-center justify-between">
           <span className="text-2xl font-semibold opacity-90 dark:opacity-100 dark:text-foreground">Total Treasury</span>
           <span className="text-2xl font-bold tabular-nums dark:text-white">{formatUsdEquiv(totalTreasury)}</span>

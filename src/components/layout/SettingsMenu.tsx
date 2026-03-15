@@ -71,7 +71,7 @@ export function SettingsMenu() {
         className={cn(
           'p-2 rounded-lg transition-colors',
           open
-            ? 'bg-[#207679]/10 text-[#207679] dark:bg-teal-500/20 dark:text-teal-300'
+            ? 'bg-[#19595b]/10 text-[#19595b] dark:bg-teal-500/20 dark:text-teal-300'
             : 'hover:bg-black/5 dark:hover:bg-white/10 text-muted-foreground'
         )}
         title="Settings"
@@ -95,14 +95,14 @@ export function SettingsMenu() {
                 className={cn(
                   'flex w-full items-center gap-3 px-3 py-2 text-sm transition-colors',
                   theme === value
-                    ? 'text-[#207679] dark:text-teal-300 font-medium bg-[#207679]/10 dark:bg-teal-500/15'
+                    ? 'text-[#19595b] dark:text-teal-300 font-medium bg-[#19595b]/10 dark:bg-teal-500/15'
                     : 'text-foreground hover:bg-black/5 dark:hover:bg-white/10'
                 )}
               >
                 <Icon className="h-4 w-4 shrink-0" />
                 {label}
                 {theme === value && (
-                  <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#207679] dark:bg-teal-400" />
+                  <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#19595b] dark:bg-teal-400" />
                 )}
               </button>
             ))}
@@ -128,7 +128,7 @@ export function SettingsMenu() {
                 className={cn(
                   'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200',
                   confirmArmed
-                    ? 'bg-[#207679] dark:bg-teal-500'
+                    ? 'bg-[#19595b] dark:bg-teal-500'
                     : 'bg-black/15 dark:bg-white/15'
                 )}
               >
@@ -148,7 +148,7 @@ export function SettingsMenu() {
               className={cn(
                 'flex w-full items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
                 confirmArmed && !refreshing
-                  ? 'bg-[#207679] text-white hover:bg-[#195a5c] dark:bg-teal-600 dark:hover:bg-teal-500 cursor-pointer'
+                  ? 'bg-[#19595b] text-white hover:bg-[#134849] dark:bg-teal-600 dark:hover:bg-teal-500 cursor-pointer'
                   : 'bg-black/5 text-muted-foreground dark:bg-white/5 cursor-not-allowed opacity-60'
               )}
             >

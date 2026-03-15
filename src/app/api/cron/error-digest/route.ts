@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
         (issue) => `
         <tr>
           <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb;">
-            <a href="${escapeHtml(issue.permalink)}" style="color: #207679; text-decoration: none; font-weight: 500;">
+            <a href="${escapeHtml(issue.permalink)}" style="color: #19595b; text-decoration: none; font-weight: 500;">
               ${escapeHtml(issue.title)}
             </a>
             <br/>
@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
 
     const html = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 700px; margin: 0 auto;">
-        <div style="background: linear-gradient(135deg, #207679, #2dd4bf); padding: 24px 32px; border-radius: 12px 12px 0 0;">
+        <div style="background: linear-gradient(135deg, #19595b, #2dd4bf); padding: 24px 32px; border-radius: 12px 12px 0 0;">
           <h1 style="margin: 0; color: white; font-size: 20px;">Vantor Error Digest</h1>
           <p style="margin: 4px 0 0; color: rgba(255,255,255,0.8); font-size: 14px;">
             ${recentIssues.length} issue${recentIssues.length !== 1 ? 's' : ''} &middot; ${totalEvents} event${totalEvents !== 1 ? 's' : ''} in the last 24 hours
@@ -110,7 +110,7 @@ export async function GET(req: NextRequest) {
         </div>
 
         <p style="text-align: center; color: #999; font-size: 12px; margin-top: 16px;">
-          <a href="https://sentry.io/organizations/${escapeHtml(sentryOrg)}/issues/?project=${escapeHtml(sentryProject)}" style="color: #207679;">
+          <a href="https://sentry.io/organizations/${escapeHtml(sentryOrg)}/issues/?project=${escapeHtml(sentryProject)}" style="color: #19595b;">
             View all issues in Sentry
           </a>
         </p>

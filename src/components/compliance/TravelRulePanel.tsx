@@ -3,6 +3,7 @@ import { useTravelRuleTransfers } from '@/hooks/useCompliance';
 import { capitalize } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { CardSpinner } from '@/components/ui/spinner';
 
 const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
@@ -22,7 +23,7 @@ export function TravelRulePanel() {
         <h3 className="text-sm font-semibold">Travel Rule Transfers</h3>
       </div>
       {isLoading ? (
-        <div className="p-8 text-center text-sm text-muted-foreground">Loading...</div>
+        <CardSpinner />
       ) : !transfers?.length ? (
         <div className="p-8 text-center text-sm text-muted-foreground">
           No travel rule transfers yet. Transfers above the threshold will automatically appear here.

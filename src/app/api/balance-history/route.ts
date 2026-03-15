@@ -97,9 +97,22 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ data: [] });
   }
 
+  // Filter by time range if provided
+  const range = req.nextUrl.searchParams.get('range') ?? '3m';
+  const rangeMs: Record<string, number> = {
+    '1d': 1 * 86_400_000,
+    '7d': 7 * 86_400_000,
+    '1m': 30 * 86_400_000,
+    '3m': 90 * 86_400_000,
+    '6m': 180 * 86_400_000,
+  };
+  const cutoff = new Date(Date.now() - (rangeMs[range] ?? rangeMs['3m']));
+  const cutoffStr = cutoff.toISOString().split('T')[0];
+
   // Build combined series: fiat is constant (we only have current balance),
   // stablecoin varies by day from snapshots
   const chartData = Object.entries(cryptoByDate)
+    .filter(([date]) => date >= cutoffStr)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, stablecoin]) => ({
       date,

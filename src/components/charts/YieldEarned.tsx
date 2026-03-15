@@ -5,6 +5,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useYieldPositions, useYieldTransactions } from '@/hooks/useYield';
 import { TrendingUp } from 'lucide-react';
+import { CardSpinner } from '@/components/ui/spinner';
 
 function formatUsd(value: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -40,9 +41,36 @@ const PROTOCOL_COLORS: Record<string, string> = {
   drift: '#a855f7',
 };
 
+function CustomTooltip({ active, payload }: any) {
+  if (!active || !payload?.length) return null;
+  const d = payload[0]?.payload;
+  if (!d) return null;
+
+  return (
+    <div className="rounded-lg border bg-background/95 backdrop-blur-sm px-3 py-2.5 shadow-lg">
+      <div className="flex items-center gap-2">
+        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: d.fill }} />
+        <span className="text-xs font-medium">{d.protocol}</span>
+      </div>
+      <p className="text-xs font-semibold tabular-nums mt-1 ml-4">{formatUsd(d.earned)}</p>
+    </div>
+  );
+}
+
 export function YieldEarned() {
-  const { data: positions } = useYieldPositions();
+  const { data: positions, isLoading } = useYieldPositions();
   const { data: transactions } = useYieldTransactions();
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader><CardTitle>Yield Earned</CardTitle></CardHeader>
+        <CardContent>
+          <CardSpinner />
+        </CardContent>
+      </Card>
+    );
+  }
 
   // Total accrued yield across all active positions
   const totalYield = (positions ?? []).reduce(
@@ -107,7 +135,7 @@ export function YieldEarned() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="protocol" tick={{ fontSize: 11, fill: 'hsl(var(--foreground))' }} />
                 <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--foreground))' }} tickFormatter={(v) => `$${v}`} />
-                <Tooltip formatter={(v: number) => [formatUsd(v), 'Earned']} />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(var(--foreground) / 0.05)' }} offset={20} />
                 <Bar dataKey="earned" radius={[4, 4, 0, 0]} maxBarSize={80}>
                   {chartData.map((entry, i) => (
                     <Cell key={i} fill={entry.fill} />

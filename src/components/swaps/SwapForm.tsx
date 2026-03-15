@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -14,6 +14,7 @@ import { useWalletTokenBalance } from '@/hooks/useBalances';
 import { BalanceHint } from '@/components/ui/balance-hint';
 import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, ArrowLeftRight, ArrowRight } from 'lucide-react';
+import { InfoTooltip } from '@/components/ui/info-tooltip';
 import type { SwapQuoteResponse } from '@/types/api';
 
 const schema = z.object({
@@ -51,7 +52,19 @@ export function SwapForm() {
 
   const selectedWalletId = watch('walletId');
   const fromToken = watch('fromToken');
+  const toToken = watch('toToken');
   const amount = watch('amount');
+
+  const TOKENS = ['USDC', 'USDT', 'PYUSD'] as const;
+  const toTokenOptions = TOKENS.filter((t) => t !== fromToken);
+
+  // Auto-switch toToken if it matches fromToken
+  useEffect(() => {
+    if (fromToken && fromToken === toToken) {
+      const next = toTokenOptions[0];
+      if (next) setValue('toToken', next);
+    }
+  }, [fromToken]);
   const selectedWallet = wallets?.find((w) => w.id === selectedWalletId);
   const selectedChain = selectedWallet?.chain;
   const dexLabel = selectedChain === 'ethereum' ? '1inch Fusion' : selectedChain === 'solana' ? 'Jupiter' : null;
@@ -165,11 +178,10 @@ export function SwapForm() {
             <div className="col-span-2 space-y-2">
               <Label>To Token</Label>
               <Select {...register('toToken')}>
-                <option value="USDC">USDC</option>
-                <option value="USDT">USDT</option>
-                <option value="PYUSD">PYUSD</option>
+                {toTokenOptions.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
               </Select>
-              {errors.toToken && <p className="text-sm text-red-500">{errors.toToken.message}</p>}
             </div>
           </div>
 
@@ -186,7 +198,10 @@ export function SwapForm() {
               {errors.amount && <p className="text-sm text-red-500">{errors.amount.message}</p>}
             </div>
             <div className="space-y-2">
-              <Label>Slippage (bps)</Label>
+              <Label className="inline-flex items-center gap-1.5">
+                Slippage (bps)
+                <InfoTooltip content="Slippage tolerance in basis points (1 bps = 0.01%). This is the maximum price change you'll accept between submitting and executing the swap. For stablecoins, 50 bps (0.5%) is typical." />
+              </Label>
               <Input placeholder="50" {...register('slippageBps')} />
             </div>
           </div>
@@ -198,8 +213,8 @@ export function SwapForm() {
 
         {/* Quote display */}
         {quote && (
-          <div className="mt-4 p-4 rounded-lg bg-[#207679]/5 border border-[#207679]/20 space-y-2">
-            <div className="text-sm font-semibold text-[#195a5c]">Quote</div>
+          <div className="mt-4 p-4 rounded-lg bg-[#19595b]/5 border border-[#19595b]/20 space-y-2">
+            <div className="text-sm font-semibold text-[#134849]">Quote</div>
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-600">You pay</span>
               <span className="font-mono font-semibold">{quote.fromAmount} {quote.fromToken}</span>

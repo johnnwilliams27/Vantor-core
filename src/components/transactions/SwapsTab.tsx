@@ -3,9 +3,24 @@ import { useQuery } from '@tanstack/react-query';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FilterBar } from '@/components/ui/filter-bar';
+import { TablePagination } from '@/components/ui/table-pagination';
+import { useTableFilter } from '@/hooks/useTableFilter';
 import { formatCurrency, formatDateTime, capitalize } from '@/lib/utils';
 import type { Swap } from '@/types/database';
-import { Loader2 } from 'lucide-react';
+import { CardSpinner } from '@/components/ui/spinner';
+
+const SWAPS_TAB_FILTER_CONFIG = {
+  searchFields: [
+    'from_token' as const,
+    'to_token' as const,
+  ],
+  dropdowns: [
+    { key: 'status', accessor: (item: Swap) => item.status },
+    { key: 'chain', accessor: (item: Swap) => item.chain },
+  ],
+  dateField: (item: Swap) => item.created_at,
+};
 
 export function SwapsTab() {
   const { data, isLoading } = useQuery<Swap[]>({
@@ -19,10 +34,32 @@ export function SwapsTab() {
     staleTime: 30_000,
   });
 
+  const filter = useTableFilter(data, SWAPS_TAB_FILTER_CONFIG);
+
   return (
     <Card>
       <CardHeader><CardTitle>Swaps</CardTitle></CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        <FilterBar
+          search={filter.search}
+          onSearchChange={filter.setSearch}
+          searchPlaceholder="Search swaps..."
+          dropdowns={[
+            { key: 'status', label: 'Status', options: filter.dropdownOptions.status ?? [] },
+            { key: 'chain', label: 'Chain', options: filter.dropdownOptions.chain ?? [] },
+          ]}
+          filters={filter.filters}
+          onFilterChange={filter.setFilter}
+          showDateRange
+          dateFrom={filter.dateFrom}
+          dateTo={filter.dateTo}
+          onDateFromChange={filter.setDateFrom}
+          onDateToChange={filter.setDateTo}
+          resultCount={filter.filteredData.length}
+          totalCount={filter.totalCount}
+          activeFilterCount={filter.activeFilterCount}
+          onClear={filter.clearAll}
+        />
         <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -37,12 +74,12 @@ export function SwapsTab() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center">
-                  <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                <TableCell colSpan={5}>
+                  <CardSpinner />
                 </TableCell>
               </TableRow>
-            ) : data?.length ? (
-              data.map((s) => (
+            ) : filter.pagedData.length ? (
+              filter.pagedData.map((s) => (
                 <TableRow key={s.id}>
                   <TableCell>
                     <span className="font-semibold">{formatCurrency(s.from_amount)}</span>{' '}
@@ -71,13 +108,22 @@ export function SwapsTab() {
             ) : (
               <TableRow>
                 <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                  No swaps yet.
+                  {filter.activeFilterCount > 0 ? 'No matching swaps.' : 'No swaps yet.'}
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
         </div>
+
+        <TablePagination
+          page={filter.page}
+          totalPages={filter.totalPages}
+          pageSize={filter.pageSize}
+          filteredCount={filter.filteredCount}
+          onPageChange={filter.setPage}
+          onPageSizeChange={filter.setPageSize}
+        />
       </CardContent>
     </Card>
   );

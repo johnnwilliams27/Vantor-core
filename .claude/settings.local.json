@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd:*)",
+      "Bash(echo not found:*)",
+      "Bash(export:*)",
+      "Bash(start:*)",
+      "Bash(find:*)",
+      "Bash(export PATH=\"/c/Program Files/nodejs:$PATH\" && cd /c/Users/John/crypto-treasury && npm run migrate supabase/migrations/0007_extend_erp_providers.sql 2>&1)",
+      "Bash(export PATH=\"/c/Program Files/nodejs:$PATH\" && cd /c/Users/John/crypto-treasury && npm run seed 2>&1)",
+      "Bash(ls:*)",
+      "Bash(grep:*)",
+      "Bash(head:*)",
+      "Bash(cat:*)",
+      "Bash(which node:*)",
+      "Bash(\"/c/Program Files/nodejs/node.exe\":*)",
+      "Bash(cd /c/Users/John/crypto-treasury && \"/c/Program Files/nodejs/npm.cmd\" run dev 2>&1)",
+      "Bash(cd /c/Users/John/crypto-treasury && supabase db push 2>&)",
+      "Bash(cd /c/Users/John/crypto-treasury && git push origin master 2>&1)"
+    ]
+  }
+}

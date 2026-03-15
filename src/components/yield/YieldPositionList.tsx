@@ -7,6 +7,7 @@ import { useYieldPositions, useRefreshPosition } from '@/hooks/useYield';
 import { useToast } from '@/components/ui/toast';
 import { YieldWithdrawForm } from './YieldWithdrawForm';
 import { useState } from 'react';
+import { CardSpinner } from '@/components/ui/spinner';
 
 const PROTOCOL_LABELS: Record<string, string> = {
   aave_v3: 'Aave V3',
@@ -51,7 +52,7 @@ export function YieldPositionList() {
   };
 
   if (isLoading) {
-    return <div className="text-sm text-muted-foreground py-8 text-center">Loading positions…</div>;
+    return <CardSpinner />;
   }
 
   if (!positions?.length) {

@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { CardSpinner } from '@/components/ui/spinner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -73,7 +74,7 @@ export function TreasuryRulesForm() {
   if (isLoading) {
     return (
       <Card>
-        <CardContent className="py-6 text-sm text-muted-foreground">Loading…</CardContent>
+        <CardContent><CardSpinner /></CardContent>
       </Card>
     );
   }

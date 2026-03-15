@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import type { YieldPosition, YieldTransaction } from '@/types/database';
 import type { YieldProtocolInfo, YieldRate } from '@/lib/yield/interface';
+import type { SlippageEstimate } from '@/lib/yield/slippage';
 
 // ---- Protocols with rates ----
 
@@ -138,6 +139,31 @@ export function useYieldWithdraw() {
       queryClient.invalidateQueries({ queryKey: ['yield-positions', session?.user?.id] });
       queryClient.invalidateQueries({ queryKey: ['yield-transactions', session?.user?.id] });
       queryClient.invalidateQueries({ queryKey: ['treasury-overview', session?.user?.id] });
+    },
+  });
+}
+
+// ---- Slippage check ----
+
+export function useSlippageCheck() {
+  return useMutation<SlippageEstimate, Error, {
+    protocol: string;
+    token: string;
+    chain: string;
+    amountUsd: number;
+  }>({
+    mutationFn: async (payload) => {
+      const res = await fetch('/api/yield/slippage-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error ?? 'Failed to check slippage');
+      }
+      const { data } = await res.json();
+      return data;
     },
   });
 }

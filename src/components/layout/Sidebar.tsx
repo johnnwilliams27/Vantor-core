@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   FileSearch,
   TrendingUp,
+  FileBarChart,
 } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import type { UserRole } from '@/types/database';
@@ -80,7 +81,8 @@ const NAV_GROUPS: NavGroup[] = [
     heading: 'Records',
     items: [
       { label: 'Transactions', href: '/transactions', icon: History },
-      { label: 'Audit Trail', href: '/audit', icon: Shield },
+      { label: 'Audit', href: '/audit', icon: Shield },
+      { label: 'Reporting', href: '/reporting', icon: FileBarChart, minRole: 'treasury_manager' },
     ],
   },
   {

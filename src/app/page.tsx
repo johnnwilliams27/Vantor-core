@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import {
   Shield,
   Brain,
@@ -54,64 +53,82 @@ function useInView(threshold = 0.15) {
 /* ------------------------------------------------------------------ */
 interface Node {
   x: number; y: number; vx: number; vy: number;
-  radius: number; label: string; icon: string; pulse: number;
+  radius: number; label: string; pulse: number;
+}
+interface Edge {
+  i: number; j: number; dist: number;
 }
 interface Particle {
-  fromIdx: number; toIdx: number; t: number; speed: number;
+  edgeIdx: number; t: number; speed: number; dir: 1 | -1;
 }
 
 function NetworkCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
   const nodesRef = useRef<Node[]>([]);
+  const edgesRef = useRef<Edge[]>([]);
   const particlesRef = useRef<Particle[]>([]);
   const mouseRef = useRef({ x: -1000, y: -1000 });
   const timeRef = useRef(0);
+  const waveOriginRef = useRef<{ x: number; y: number; t: number }[]>([]);
 
   const initNodes = useCallback((w: number, h: number) => {
     const labels = [
-      { label: 'ERP', icon: '\u{1F4CA}' },
-      { label: 'Wallet', icon: '\u{1F4B0}' },
-      { label: 'Bank', icon: '\u{1F3E6}' },
-      { label: 'Yield', icon: '\u{1F4C8}' },
-      { label: 'FX', icon: '\u{1F30D}' },
-      { label: 'Agent', icon: '\u{1F916}' },
-      { label: 'USDC', icon: '\u{1F4B5}' },
-      { label: 'USDT', icon: '\u{1F4B2}' },
-      { label: 'Audit', icon: '\u{1F50D}' },
-      { label: 'Compliance', icon: '\u{1F6E1}' },
-      { label: 'Treasury', icon: '\u{1F3DB}' },
-      { label: 'DeFi', icon: '\u{26D3}' },
+      'ERP', 'Wallet', 'Bank', 'Yield', 'FX', 'Agent',
+      'USDC', 'USDT', 'Audit', 'Compliance', 'Treasury', 'DeFi',
     ];
     const cx = w / 2;
     const cy = h / 2;
     const spread = Math.min(w, h) * 0.38;
-    nodesRef.current = labels.map((l, i) => {
+    nodesRef.current = labels.map((label, i) => {
       const angle = (i / labels.length) * Math.PI * 2 + Math.random() * 0.4;
-      const dist = spread * (0.5 + Math.random() * 0.5);
+      const dist = spread * (0.45 + Math.random() * 0.55);
       return {
         x: cx + Math.cos(angle) * dist,
         y: cy + Math.sin(angle) * dist,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: (Math.random() - 0.5) * 0.3,
+        vx: (Math.random() - 0.5) * 0.25,
+        vy: (Math.random() - 0.5) * 0.25,
         radius: 3 + Math.random() * 2,
-        label: l.label,
-        icon: l.icon,
+        label,
         pulse: Math.random() * Math.PI * 2,
       };
     });
-    // Spawn particles along edges
+
+    // Build mesh edges — connect each node to its K nearest neighbours
+    const nodes = nodesRef.current;
+    const edgeSet = new Set<string>();
+    const edges: Edge[] = [];
+    const K = 4;
+    for (let i = 0; i < nodes.length; i++) {
+      const dists = nodes.map((b, j) => ({
+        j,
+        d: Math.hypot(nodes[i].x - b.x, nodes[i].y - b.y),
+      })).filter(({ j }) => j !== i).sort((a, b) => a.d - b.d);
+      for (let k = 0; k < Math.min(K, dists.length); k++) {
+        const key = [Math.min(i, dists[k].j), Math.max(i, dists[k].j)].join('-');
+        if (!edgeSet.has(key)) {
+          edgeSet.add(key);
+          edges.push({ i, j: dists[k].j, dist: dists[k].d });
+        }
+      }
+    }
+    edgesRef.current = edges;
+
+    // Spawn particles on edges
     particlesRef.current = [];
-    for (let i = 0; i < 40; i++) {
-      const fromIdx = Math.floor(Math.random() * labels.length);
-      let toIdx = Math.floor(Math.random() * labels.length);
-      if (toIdx === fromIdx) toIdx = (toIdx + 1) % labels.length;
+    for (let p = 0; p < 50; p++) {
       particlesRef.current.push({
-        fromIdx, toIdx,
+        edgeIdx: Math.floor(Math.random() * edges.length),
         t: Math.random(),
-        speed: 0.002 + Math.random() * 0.004,
+        speed: 0.003 + Math.random() * 0.005,
+        dir: Math.random() > 0.5 ? 1 : -1,
       });
     }
+
+    // Seed initial wave origins
+    waveOriginRef.current = [
+      { x: cx, y: cy, t: 0 },
+    ];
   }, []);
 
   useEffect(() => {
@@ -146,99 +163,140 @@ function NetworkCanvas() {
       timeRef.current += 0.016;
       const t = timeRef.current;
       const nodes = nodesRef.current;
+      const edges = edgesRef.current;
       const particles = particlesRef.current;
       const mouse = mouseRef.current;
+      const waves = waveOriginRef.current;
 
-      // Update node positions (gentle drift)
+      // Spawn new wave pulses periodically from random nodes
+      if (Math.random() < 0.008 && nodes.length) {
+        const src = nodes[Math.floor(Math.random() * nodes.length)];
+        waves.push({ x: src.x, y: src.y, t });
+      }
+      // Remove old waves
+      while (waves.length > 0 && t - waves[0].t > 4) waves.shift();
+
+      // Wave intensity at a point: returns 0-1
+      const waveAt = (px: number, py: number): number => {
+        let intensity = 0;
+        for (const wave of waves) {
+          const age = t - wave.t;
+          const radius = age * 120; // expand at 120px/s
+          const d = Math.hypot(px - wave.x, py - wave.y);
+          const band = 60; // width of the wave ring
+          const distFromRing = Math.abs(d - radius);
+          if (distFromRing < band) {
+            const fade = 1 - age / 4; // fade over 4s
+            const ring = 1 - distFromRing / band;
+            intensity = Math.max(intensity, ring * fade);
+          }
+        }
+        return intensity;
+      };
+
+      // Update node positions
       for (const n of nodes) {
         n.x += n.vx;
         n.y += n.vy;
         n.pulse += 0.02;
-        // Soft boundary
         if (n.x < 60) n.vx += 0.02;
         if (n.x > w - 60) n.vx -= 0.02;
         if (n.y < 60) n.vy += 0.02;
         if (n.y > h - 60) n.vy -= 0.02;
-        // Mouse repulsion
         const dx = n.x - mouse.x;
         const dy = n.y - mouse.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 150 && dist > 0) {
-          const force = (150 - dist) * 0.0003;
+        const dist = Math.hypot(dx, dy);
+        if (dist < 120 && dist > 0) {
+          const force = (120 - dist) * 0.00008;
           n.vx += dx * force;
           n.vy += dy * force;
         }
-        // Damping
         n.vx *= 0.995;
         n.vy *= 0.995;
       }
 
-      // Draw connections
-      const maxDist = 280;
-      for (let i = 0; i < nodes.length; i++) {
-        for (let j = i + 1; j < nodes.length; j++) {
-          const a = nodes[i];
-          const b = nodes[j];
-          const dx = a.x - b.x;
-          const dy = a.y - b.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < maxDist) {
-            const alpha = (1 - dist / maxDist) * 0.15;
-            ctx.beginPath();
-            ctx.moveTo(a.x, a.y);
-            ctx.lineTo(b.x, b.y);
-            ctx.strokeStyle = `rgba(45, 212, 191, ${alpha})`;
-            ctx.lineWidth = 1;
-            ctx.stroke();
-          }
-        }
+      // Update edge distances
+      for (const e of edges) {
+        e.dist = Math.hypot(nodes[e.i].x - nodes[e.j].x, nodes[e.i].y - nodes[e.j].y);
       }
 
-      // Draw flowing particles
-      for (const p of particles) {
-        p.t += p.speed;
-        if (p.t > 1) {
-          p.t = 0;
-          p.fromIdx = Math.floor(Math.random() * nodes.length);
-          p.toIdx = Math.floor(Math.random() * nodes.length);
-          if (p.toIdx === p.fromIdx) p.toIdx = (p.toIdx + 1) % nodes.length;
+      // Draw mesh edges with wave-synchronised glow
+      for (const e of edges) {
+        const a = nodes[e.i];
+        const b = nodes[e.j];
+        const mx = (a.x + b.x) / 2;
+        const my = (a.y + b.y) / 2;
+        const wi = waveAt(mx, my);
+
+        // Soft outer glow — draws first so the crisp line sits on top
+        if (wi > 0.05) {
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.strokeStyle = `rgba(45, 212, 191, ${wi * 0.12})`;
+          ctx.lineWidth = 4 + wi * 6;
+          ctx.stroke();
         }
-        const a = nodes[p.fromIdx];
-        const b = nodes[p.toIdx];
-        if (!a || !b) continue;
+
+        // Crisp line — lights up with wave
+        const baseAlpha = 0.05 + wi * 0.35;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.strokeStyle = `rgba(45, 212, 191, ${baseAlpha})`;
+        ctx.lineWidth = 0.6 + wi * 1.4;
+        ctx.stroke();
+      }
+
+      // Draw flowing particles along edges
+      for (const p of particles) {
+        p.t += p.speed * p.dir;
+        if (p.t > 1 || p.t < 0) {
+          p.edgeIdx = Math.floor(Math.random() * edges.length);
+          p.t = p.dir > 0 ? 0 : 1;
+          p.dir = Math.random() > 0.5 ? 1 : -1;
+        }
+        const edge = edges[p.edgeIdx];
+        if (!edge) continue;
+        const a = nodes[edge.i];
+        const b = nodes[edge.j];
         const px = a.x + (b.x - a.x) * p.t;
         const py = a.y + (b.y - a.y) * p.t;
-        const alpha = Math.sin(p.t * Math.PI) * 0.7;
+        const wi = waveAt(px, py);
+        const alpha = Math.sin(p.t * Math.PI) * (0.5 + wi * 0.5);
+        const r = 1.5 + wi * 1.5;
         ctx.beginPath();
-        ctx.arc(px, py, 1.8, 0, Math.PI * 2);
+        ctx.arc(px, py, r, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(45, 212, 191, ${alpha})`;
         ctx.fill();
         // Glow
         ctx.beginPath();
-        ctx.arc(px, py, 4, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(45, 212, 191, ${alpha * 0.3})`;
+        ctx.arc(px, py, r + 3, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(45, 212, 191, ${alpha * 0.25})`;
         ctx.fill();
       }
 
       // Draw nodes
       for (const n of nodes) {
-        const pulseScale = 1 + Math.sin(n.pulse) * 0.15;
-        // Outer glow
-        const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, 24 * pulseScale);
-        grad.addColorStop(0, 'rgba(45, 212, 191, 0.12)');
+        const wi = waveAt(n.x, n.y);
+        const pulseScale = 1 + Math.sin(n.pulse) * 0.15 + wi * 0.3;
+        // Outer glow — brighter when wave hits
+        const glowR = (24 + wi * 16) * pulseScale;
+        const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, glowR);
+        grad.addColorStop(0, `rgba(45, 212, 191, ${0.1 + wi * 0.2})`);
         grad.addColorStop(1, 'rgba(45, 212, 191, 0)');
         ctx.beginPath();
-        ctx.arc(n.x, n.y, 24 * pulseScale, 0, Math.PI * 2);
+        ctx.arc(n.x, n.y, glowR, 0, Math.PI * 2);
         ctx.fillStyle = grad;
         ctx.fill();
         // Core dot
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.radius * pulseScale, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(45, 212, 191, 0.6)';
+        ctx.fillStyle = `rgba(45, 212, 191, ${0.5 + wi * 0.4})`;
         ctx.fill();
         // Label
-        ctx.font = '10px Inter, system-ui, sans-serif';
-        ctx.fillStyle = 'rgba(148, 163, 184, 0.5)';
+        ctx.font = '500 11px Inter, system-ui, sans-serif';
+        ctx.fillStyle = `rgba(178, 193, 214, ${0.65 + wi * 0.3})`;
         ctx.textAlign = 'center';
         ctx.fillText(n.label, n.x, n.y + 18);
       }
@@ -258,7 +316,7 @@ function NetworkCanvas() {
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0 pointer-events-none"
+      className="absolute inset-0 pointer-events-none opacity-90"
       aria-hidden="true"
     />
   );
@@ -281,7 +339,6 @@ function BlobBackground() {
 /*  Navbar                                                            */
 /* ------------------------------------------------------------------ */
 function Navbar() {
-  const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
@@ -324,8 +381,7 @@ function Navbar() {
       setLoginError('Invalid email or password');
       return;
     }
-    router.push('/dashboard');
-    router.refresh();
+    window.location.href = '/dashboard';
   };
 
   const navLinks = [
@@ -368,10 +424,9 @@ function Navbar() {
             </button>
 
             {/* Login dropdown */}
+            {loginOpen && (
             <div
-              className={`absolute right-0 mt-3 w-80 rounded-2xl bg-[#0a1628]/95 backdrop-blur-2xl border border-white/[0.08] shadow-[0_20px_60px_rgba(0,0,0,0.5)] overflow-hidden login-dropdown ${
-                loginOpen ? 'login-dropdown-open' : 'login-dropdown-closed'
-              }`}
+              className="absolute right-0 mt-3 w-80 rounded-2xl bg-[#0a1628]/95 backdrop-blur-2xl border border-white/[0.08] shadow-[0_20px_60px_rgba(0,0,0,0.5)] overflow-hidden login-dropdown login-dropdown-open"
             >
               <div className="bg-gradient-to-r from-teal-600/20 to-cyan-600/20 px-6 pt-5 pb-4 border-b border-white/[0.06]">
                 <p className="text-white font-semibold text-sm">Sign in to Vantor</p>
@@ -416,6 +471,7 @@ function Navbar() {
                 </button>
               </form>
             </div>
+            )}
           </div>
         </div>
 
@@ -536,9 +592,11 @@ function PartnerScroll() {
 /* ------------------------------------------------------------------ */
 function Hero() {
   return (
-    <section className="relative flex-1 flex items-center justify-center overflow-hidden">
+    <section className="relative flex-1 flex items-center justify-center overflow-hidden pt-10 sm:pt-0">
       <BlobBackground />
       <NetworkCanvas />
+      {/* Radial vignette to push animation behind hero text */}
+      <div className="absolute inset-0 z-[5] pointer-events-none" style={{ background: 'radial-gradient(ellipse 50% 40% at 50% 50%, rgba(6,13,31,0.25) 0%, rgba(6,13,31,0) 100%)' }} />
 
       <div className="relative z-10 max-w-5xl mx-auto text-center px-6">
         <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.08] landing-fade-in landing-delay-1">
@@ -579,7 +637,7 @@ function Hero() {
             ].map(({ label, icon: Icon }) => (
               <div
                 key={label}
-                className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.04] border border-white/[0.06] text-sm text-gray-400"
+                className="flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-white/[0.05] border border-white/[0.08] text-sm font-medium text-gray-300 tracking-wide"
               >
                 <Icon size={15} className="text-teal-400" />
                 {label}
@@ -593,7 +651,7 @@ function Hero() {
             ].map(({ label, icon: Icon }) => (
               <div
                 key={label}
-                className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.04] border border-white/[0.06] text-sm text-gray-400"
+                className="flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-white/[0.05] border border-white/[0.08] text-sm font-medium text-gray-300 tracking-wide"
               >
                 <Icon size={15} className="text-teal-400" />
                 {label}
@@ -1005,6 +1063,12 @@ function Footer() {
           <a href="#contact" className="text-gray-500 hover:text-gray-300 text-sm transition-colors">Contact</a>
           <Link href="/terms" className="text-gray-500 hover:text-gray-300 text-sm transition-colors">Terms</Link>
           <Link href="/privacy" className="text-gray-500 hover:text-gray-300 text-sm transition-colors">Privacy</Link>
+          <a href="https://www.linkedin.com/company/vantortreasury" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-gray-300 transition-colors" aria-label="LinkedIn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+          </a>
+          <a href="https://www.x.com/VantorTreasury" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-gray-300 transition-colors" aria-label="X">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
         </div>
       </div>
     </footer>
@@ -1019,8 +1083,8 @@ export default function LandingPage() {
     <div className="min-h-screen bg-[#060d1f] text-white overflow-x-hidden landing-page">
       <Navbar />
       <div className="flex flex-col min-h-screen">
-        {/* Spacer for fixed navbar (h-16 = 64px) */}
-        <div className="h-16 shrink-0" />
+        {/* Spacer for fixed navbar */}
+        <div className="h-20 sm:h-16 shrink-0" />
         <Hero />
         <PartnerScroll />
       </div>

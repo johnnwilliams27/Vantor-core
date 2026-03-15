@@ -1,7 +1,6 @@
 'use client';
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { AppShell } from '@/components/layout/AppShell';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -9,6 +8,7 @@ import {
   useFreezeEnterprise,
   useUnfreezeEnterprise,
 } from '@/hooks/useAdmin';
+import { Spinner } from '@/components/ui/spinner';
 import {
   ArrowLeft,
   Loader2,
@@ -95,34 +95,29 @@ export default function EnterpriseDetailPage() {
 
   if (isLoading) {
     return (
-      <AppShell title="Enterprise">
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      </AppShell>
+      <div className="flex items-center justify-center py-20">
+        <Spinner size="lg" />
+      </div>
     );
   }
 
   if (isError || !enterprise) {
     return (
-      <AppShell title="Enterprise">
-        <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <AlertCircle className="h-8 w-8 text-red-400" />
-          <p className="text-muted-foreground">Failed to load enterprise details.</p>
-          <Button variant="outline" onClick={() => router.push('/admin')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Admin
-          </Button>
-        </div>
-      </AppShell>
+      <div className="flex flex-col items-center justify-center py-20 gap-3">
+        <AlertCircle className="h-8 w-8 text-red-400" />
+        <p className="text-muted-foreground">Failed to load enterprise details.</p>
+        <Button variant="outline" onClick={() => router.push('/admin')}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Admin
+        </Button>
+      </div>
     );
   }
 
   const isFrozen = enterprise.status === 'frozen';
 
   return (
-    <AppShell title={enterprise.name}>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Back button */}
         <Button variant="ghost" size="sm" onClick={() => router.push('/admin')}>
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -296,7 +291,6 @@ export default function EnterpriseDetailPage() {
             )}
           </CardContent>
         </Card>
-      </div>
-    </AppShell>
+    </div>
   );
 }

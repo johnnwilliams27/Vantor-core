@@ -24,7 +24,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem storageKey="vantor-theme">
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem storageKey="vantor-theme">
       <SessionProvider>
         <QueryClientProvider client={queryClient}>
           <WagmiConfig>

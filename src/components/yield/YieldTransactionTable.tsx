@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { capitalize, formatDateTime } from '@/lib/utils';
 import { useYieldTransactions } from '@/hooks/useYield';
+import { CardSpinner } from '@/components/ui/spinner';
 
 const PROTOCOL_LABELS: Record<string, string> = {
   aave_v3: 'Aave V3',
@@ -32,7 +33,7 @@ export function YieldTransactionTable() {
   const { data: transactions, isLoading } = useYieldTransactions();
 
   if (isLoading) {
-    return <div className="text-sm text-muted-foreground py-8 text-center">Loading transactions…</div>;
+    return <CardSpinner />;
   }
 
   if (!transactions?.length) {

@@ -5,60 +5,37 @@ import { SanctionsScreeningPanel } from './SanctionsScreeningPanel';
 import { KytAlertsTable } from './KytAlertsTable';
 import { KytTransfersTable } from './KytTransfersTable';
 import { TravelRulePanel } from './TravelRulePanel';
-import { Button } from '@/components/ui/button';
-import { ShieldCheck, Eye, Plane } from 'lucide-react';
+import { TabNav } from '@/components/ui/tab-nav';
 
-type ActiveTab = 'sanctions' | 'kyt' | 'travel-rule';
+type Tab = 'overview' | 'sanctions' | 'kyt' | 'travel-rule';
+
+const TABS: { value: Tab; label: string }[] = [
+  { value: 'overview', label: 'Overview' },
+  { value: 'sanctions', label: 'Sanctions' },
+  { value: 'kyt', label: 'Transaction Monitoring' },
+  { value: 'travel-rule', label: 'Travel Rule' },
+];
 
 export function CompliancePageClient() {
-  const [activeTab, setActiveTab] = useState<ActiveTab>('sanctions');
+  const [tab, setTab] = useState<Tab>('overview');
 
   return (
     <div className="space-y-6">
-      <ComplianceOverviewCard />
-
-      {/* Tab switcher */}
-      <div className="flex items-center gap-2 border-b pb-2">
-        <Button
-          variant={activeTab === 'sanctions' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setActiveTab('sanctions')}
-          className="flex items-center gap-1.5"
-        >
-          <ShieldCheck className="h-3.5 w-3.5" />
-          Sanctions
-        </Button>
-        <Button
-          variant={activeTab === 'kyt' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setActiveTab('kyt')}
-          className="flex items-center gap-1.5"
-        >
-          <Eye className="h-3.5 w-3.5" />
-          Transaction Monitoring
-        </Button>
-        <Button
-          variant={activeTab === 'travel-rule' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setActiveTab('travel-rule')}
-          className="flex items-center gap-1.5"
-        >
-          <Plane className="h-3.5 w-3.5" />
-          Travel Rule
-        </Button>
-      </div>
+      <TabNav tabs={TABS} value={tab} onChange={setTab} />
 
       {/* Tab content */}
-      {activeTab === 'sanctions' && <SanctionsScreeningPanel />}
+      {tab === 'overview' && <ComplianceOverviewCard />}
 
-      {activeTab === 'kyt' && (
+      {tab === 'sanctions' && <SanctionsScreeningPanel />}
+
+      {tab === 'kyt' && (
         <div className="space-y-6">
           <KytAlertsTable />
           <KytTransfersTable />
         </div>
       )}
 
-      {activeTab === 'travel-rule' && <TravelRulePanel />}
+      {tab === 'travel-rule' && <TravelRulePanel />}
     </div>
   );
 }

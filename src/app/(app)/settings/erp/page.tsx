@@ -1,6 +1,5 @@
 'use client';
 import { useState } from 'react';
-import { AppShell } from '@/components/layout/AppShell';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -16,6 +15,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useERPStore } from '@/store/erpStore';
 import type { ErpConfiguration } from '@/types/database';
 import { Loader2, CheckCircle, XCircle, Settings2, Trash2, Pencil, Check, X } from 'lucide-react';
+import { CardSpinner } from '@/components/ui/spinner';
 
 const schema = z.object({
   provider: z.enum(['sap', 'oracle', 'xero', 'netsuite']),
@@ -187,8 +187,8 @@ export default function ERPSettingsPage() {
   };
 
   return (
-    <AppShell title="ERP Systems">
-      <div className="space-y-6">
+    <>
+    <div className="space-y-6">
         {/* Connect new ERP */}
         <Card>
           <CardHeader>
@@ -274,10 +274,16 @@ export default function ERPSettingsPage() {
         </Card>
 
         {/* Existing configs */}
-        {configs && configs.length > 0 && (
           <Card>
             <CardHeader><CardTitle>Linked ERP Systems</CardTitle></CardHeader>
             <CardContent>
+        {isLoading ? (
+              <CardSpinner />
+        ) : !configs?.length ? (
+              <div className="text-sm text-muted-foreground text-center py-6">
+                No ERP systems linked yet. Connect one above.
+              </div>
+        ) : (
               <div className="space-y-3">
                 {configs.map((cfg) => {
                   const isEditing = editingId === cfg.id;
@@ -365,9 +371,9 @@ export default function ERPSettingsPage() {
                   );
                 })}
               </div>
+        )}
             </CardContent>
           </Card>
-        )}
       </div>
 
       <ConfirmDialog
@@ -389,6 +395,6 @@ export default function ERPSettingsPage() {
         isPending={actionPending}
         onConfirm={handleDelete}
       />
-    </AppShell>
+    </>
   );
 }

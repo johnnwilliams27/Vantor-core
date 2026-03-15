@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
 import { useTreasuryRecommendations, useGenerateRecommendation } from '@/hooks/useTreasury';
+import { CardSpinner } from '@/components/ui/spinner';
 import { RecommendationCard } from './RecommendationCard';
 import { Sparkles, Loader2 } from 'lucide-react';
 
@@ -47,7 +48,7 @@ export function RecommendationList() {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="text-sm text-muted-foreground py-6 text-center">Loading…</div>
+          <CardSpinner />
         ) : !recommendations?.length ? (
           <div className="text-sm text-muted-foreground text-center py-8">
             No recommendations yet. Click <span className="font-medium text-foreground">Generate</span> to analyze your treasury.

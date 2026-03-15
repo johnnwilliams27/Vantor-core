@@ -167,7 +167,7 @@ export function AgentPanel() {
           {/* Header */}
           <div className="flex h-16 shrink-0 items-center justify-between border-b border-border px-4 dark:bg-gray-900">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#207679] text-white text-sm font-bold">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#19595b] text-white text-sm font-bold">
                 V
               </div>
               <div>

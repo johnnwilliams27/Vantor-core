@@ -13,6 +13,7 @@ import { useTreasuryOverview } from '@/hooks/useTreasury';
 import { Trash2, CheckCircle, Building2, Pencil, Check, X } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
 import type { BankAccount } from '@/types/database';
+import { CardSpinner } from '@/components/ui/spinner';
 
 async function fetchBankAccounts(): Promise<BankAccount[]> {
   const res = await fetch('/api/bank-accounts');
@@ -100,7 +101,7 @@ export function BankAccountsTab({ plaidConfigured = false }: { plaidConfigured?:
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-sm text-gray-400 py-4">Loading…</div>
+            <CardSpinner />
           ) : !accounts?.length ? (
             <div className="text-sm text-gray-400 text-center py-8">
               No bank accounts connected yet. Add one above.

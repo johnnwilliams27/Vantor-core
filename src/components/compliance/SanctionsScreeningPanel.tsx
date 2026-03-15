@@ -7,6 +7,7 @@ import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { capitalize } from '@/lib/utils';
 import { Search, ShieldCheck, ShieldAlert, AlertTriangle } from 'lucide-react';
+import { CardSpinner } from '@/components/ui/spinner';
 
 const RESULT_BADGE: Record<string, { label: string; className: string; icon: React.ComponentType<{ className?: string }> }> = {
   clear: { label: 'Clear', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400', icon: ShieldCheck },
@@ -77,7 +78,7 @@ export function SanctionsScreeningPanel() {
           <h3 className="text-sm font-semibold">Recent Screenings</h3>
         </div>
         {isLoading ? (
-          <div className="p-8 text-center text-sm text-muted-foreground">Loading...</div>
+          <CardSpinner />
         ) : !screenings?.length ? (
           <div className="p-8 text-center text-sm text-muted-foreground">No screenings yet</div>
         ) : (

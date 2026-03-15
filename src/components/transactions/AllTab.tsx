@@ -3,8 +3,13 @@ import { useQuery } from '@tanstack/react-query';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FilterBar } from '@/components/ui/filter-bar';
+import { TablePagination } from '@/components/ui/table-pagination';
+import { useTableFilter } from '@/hooks/useTableFilter';
 import { formatCurrency, formatDateTime, capitalize } from '@/lib/utils';
-import { Loader2 } from 'lucide-react';
+import { exportCsv, exportPdf } from '@/lib/export';
+import type { ExportColumn } from '@/lib/export';
+import { CardSpinner } from '@/components/ui/spinner';
 import type { Payment, Swap, FiatTransaction, Transaction, YieldTransaction } from '@/types/database';
 
 interface UnifiedRow {
@@ -90,11 +95,35 @@ function mapYield(txs: YieldTransaction[]): UnifiedRow[] {
 }
 
 const TYPE_BADGE: Record<UnifiedRow['type'], string> = {
-  payment: 'bg-[#207679]/10 text-[#195a5c] dark:bg-[#207679]/25 dark:text-teal-300',
+  payment: 'bg-[#19595b]/10 text-[#134849] dark:bg-[#19595b]/25 dark:text-teal-300',
   swap: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200',
   ramp: 'bg-amber-50 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
   onchain: 'bg-white border text-gray-600 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300',
   yield: 'bg-green-50 text-green-700 dark:bg-green-900/40 dark:text-green-300',
+};
+
+const ALL_EXPORT_COLUMNS: ExportColumn<UnifiedRow>[] = [
+  { header: 'Type', accessor: (r) => capitalize(r.type) },
+  { header: 'Description', accessor: (r) => r.description },
+  { header: 'Amount', accessor: (r) => formatCurrency(r.amount) },
+  { header: 'Token', accessor: (r) => r.token },
+  { header: 'Chain', accessor: (r) => r.chain ? capitalize(r.chain) : '' },
+  { header: 'Status', accessor: (r) => capitalize(r.status) },
+  { header: 'Date', accessor: (r) => formatDateTime(r.date) },
+];
+
+const ALL_FILTER_CONFIG = {
+  searchFields: [
+    'description' as const,
+    'token' as const,
+    'type' as const,
+  ],
+  dropdowns: [
+    { key: 'type', accessor: (item: UnifiedRow) => item.type },
+    { key: 'status', accessor: (item: UnifiedRow) => item.status },
+    { key: 'chain', accessor: (item: UnifiedRow) => item.chain ?? 'None' },
+  ],
+  dateField: (item: UnifiedRow) => item.date,
 };
 
 export function AllTab() {
@@ -128,10 +157,35 @@ export function AllTab() {
     staleTime: 30_000,
   });
 
+  const filter = useTableFilter(data, ALL_FILTER_CONFIG);
+
   return (
     <Card>
       <CardHeader><CardTitle>All Activity</CardTitle></CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        <FilterBar
+          search={filter.search}
+          onSearchChange={filter.setSearch}
+          searchPlaceholder="Search transactions..."
+          dropdowns={[
+            { key: 'type', label: 'Type', options: filter.dropdownOptions.type ?? [] },
+            { key: 'status', label: 'Status', options: filter.dropdownOptions.status ?? [] },
+            { key: 'chain', label: 'Chain', options: filter.dropdownOptions.chain ?? [] },
+          ]}
+          filters={filter.filters}
+          onFilterChange={filter.setFilter}
+          showDateRange
+          dateFrom={filter.dateFrom}
+          dateTo={filter.dateTo}
+          onDateFromChange={filter.setDateFrom}
+          onDateToChange={filter.setDateTo}
+          resultCount={filter.filteredData.length}
+          totalCount={filter.totalCount}
+          activeFilterCount={filter.activeFilterCount}
+          onClear={filter.clearAll}
+          onExportCsv={() => exportCsv('transactions', ALL_EXPORT_COLUMNS, filter.filteredData)}
+          onExportPdf={() => exportPdf('transactions', 'All Transactions', ALL_EXPORT_COLUMNS, filter.filteredData)}
+        />
         <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -148,12 +202,12 @@ export function AllTab() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center">
-                  <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                <TableCell colSpan={7}>
+                  <CardSpinner />
                 </TableCell>
               </TableRow>
-            ) : data?.length ? (
-              data.map((row) => (
+            ) : filter.pagedData.length ? (
+              filter.pagedData.map((row) => (
                 <TableRow key={row.id}>
                   <TableCell>
                     <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold border ${TYPE_BADGE[row.type]}`}>
@@ -187,13 +241,22 @@ export function AllTab() {
             ) : (
               <TableRow>
                 <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                  No activity yet.
+                  {filter.activeFilterCount > 0 ? 'No matching transactions.' : 'No activity yet.'}
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
         </div>
+
+        <TablePagination
+          page={filter.page}
+          totalPages={filter.totalPages}
+          pageSize={filter.pageSize}
+          filteredCount={filter.filteredCount}
+          onPageChange={filter.setPage}
+          onPageSizeChange={filter.setPageSize}
+        />
       </CardContent>
     </Card>
   );

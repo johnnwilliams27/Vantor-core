@@ -2,11 +2,15 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { CardSpinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { ArrowUpRight, ArrowLeft, Shield, Lock, Loader2, CheckCircle2 } from 'lucide-react';
-import { useYieldProtocols, useYieldDeposit } from '@/hooks/useYield';
+import { InfoTooltip } from '@/components/ui/info-tooltip';
+import { useYieldProtocols, useYieldDeposit, useSlippageCheck } from '@/hooks/useYield';
+import { SlippageWarning } from './SlippageWarning';
+import type { SlippageEstimate } from '@/lib/yield/slippage';
 import { useWallets } from '@/hooks/useWallets';
 import { useWalletTokenBalance } from '@/hooks/useBalances';
 import { BalanceHint } from '@/components/ui/balance-hint';
@@ -46,6 +50,19 @@ function formatAPY(value: number): string {
   return `${(value * 100).toFixed(2)}%`;
 }
 
+const RISK_FACTOR_TOOLTIPS: Record<keyof RiskFactors, string> = {
+  smartContract: 'Evaluates audit history and battle-testedness.\n1. Audited and battle-tested.\n2. Audited but newer.\n3. Unaudited or minimal review.',
+  counterparty: 'Measures centralization risk.\n1. Fully decentralized.\n2. Partial custodian or multisig.\n3. Centralized with single point of failure.',
+  liquidity: 'Assesses how easily you can enter/exit.\n1. Deep liquidity with instant withdrawal.\n2. Moderate with some delay.\n3. Thin liquidity or lock-up periods.',
+  regulatory: 'Considers compliance posture.\n1. Regulated and compliant.\n2. Partially regulated.\n3. Unregulated or in a legal gray area.',
+};
+
+const RISK_SCORE_TOOLTIPS: Record<number, string> = {
+  1: 'Low risk — the safest rating for this factor.',
+  2: 'Medium risk — acceptable but warrants monitoring.',
+  3: 'High risk — exercise caution and size positions conservatively.',
+};
+
 function RiskMeter({ factors }: { factors: RiskFactors }) {
   const avg = (factors.smartContract + factors.counterparty + factors.liquidity + factors.regulatory) / 4;
   const total = factors.smartContract + factors.counterparty + factors.liquidity + factors.regulatory;
@@ -71,7 +88,10 @@ function RiskMeter({ factors }: { factors: RiskFactors }) {
       <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
         {(Object.entries(factors) as [keyof RiskFactors, number][]).map(([key, score]) => (
           <div key={key} className="flex items-center justify-between gap-2">
-            <span className="text-xs text-muted-foreground">{RISK_FACTOR_LABELS[key]}</span>
+            <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+              {RISK_FACTOR_LABELS[key]}
+              <InfoTooltip content={RISK_FACTOR_TOOLTIPS[key]} />
+            </span>
             <div className="flex items-center gap-1.5">
               <div className="flex gap-0.5">
                 {[1, 2, 3].map((i) => (
@@ -105,17 +125,44 @@ function InlineDepositForm({
 }) {
   const { data: wallets, isLoading: walletsLoading } = useWallets();
   const deposit = useYieldDeposit();
+  const slippageCheck = useSlippageCheck();
   const { toast } = useToast();
   const [token, setToken] = useState<string>(protocol.supportedTokens[0] ?? 'USDC');
   const [amount, setAmount] = useState('');
   const [walletId, setWalletId] = useState('');
   const [success, setSuccess] = useState<{ amount: string; token: string; apy: string } | null>(null);
+  const [slippageEstimate, setSlippageEstimate] = useState<SlippageEstimate | null>(null);
 
   const chainWallets = wallets?.filter((w) => w.chain === protocol.chain) ?? [];
   const selectedWallet = chainWallets.find((w) => w.id === walletId);
   const selectedRate = protocol.rates.find((r) => r.token === token);
   const balance = useWalletTokenBalance(walletId || undefined, token || undefined);
   const exceeds = balance !== null && amount ? parseFloat(amount) > balance : false;
+
+  const executeDeposit = async () => {
+    if (!amount || !selectedWallet) return;
+    try {
+      await deposit.mutateAsync({
+        protocol: protocol.id,
+        token,
+        amount,
+        walletAddress: selectedWallet.address,
+        chain: protocol.chain,
+      });
+      setSlippageEstimate(null);
+      setSuccess({
+        amount,
+        token,
+        apy: selectedRate ? formatAPY(selectedRate.totalAPY) : '—',
+      });
+    } catch (err) {
+      toast({
+        title: 'Deposit failed',
+        description: (err as Error).message,
+        variant: 'destructive',
+      });
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,22 +172,25 @@ function InlineDepositForm({
       return;
     }
 
+    // Run slippage check first
     try {
-      await deposit.mutateAsync({
+      const estimate = await slippageCheck.mutateAsync({
         protocol: protocol.id,
         token,
-        amount,
-        walletAddress: selectedWallet.address,
         chain: protocol.chain,
+        amountUsd: parseFloat(amount), // stablecoins ≈ 1:1 USD
       });
-      setSuccess({
-        amount,
-        token,
-        apy: selectedRate ? formatAPY(selectedRate.totalAPY) : '—',
-      });
+
+      if (estimate.severity === 'green') {
+        // Low slippage — proceed immediately
+        await executeDeposit();
+      } else {
+        // Yellow or red — show warning for user acknowledgment
+        setSlippageEstimate(estimate);
+      }
     } catch (err) {
       toast({
-        title: 'Deposit failed',
+        title: 'Slippage check failed',
         description: (err as Error).message,
         variant: 'destructive',
       });
@@ -261,21 +311,38 @@ function InlineDepositForm({
             </div>
           )}
 
-          <Button
-            type="submit"
-            className="w-full"
-            size="sm"
-            disabled={deposit.isPending || !amount || !walletId || exceeds}
-          >
-            {deposit.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Processing…
-              </>
-            ) : (
-              `Deposit ${token}`
-            )}
-          </Button>
+          {/* Slippage warning */}
+          {slippageEstimate && (
+            <SlippageWarning
+              estimate={slippageEstimate}
+              onConfirm={executeDeposit}
+              onCancel={() => setSlippageEstimate(null)}
+              isExecuting={deposit.isPending}
+            />
+          )}
+
+          {!slippageEstimate && (
+            <Button
+              type="submit"
+              className="w-full"
+              size="sm"
+              disabled={deposit.isPending || slippageCheck.isPending || !amount || !walletId || exceeds}
+            >
+              {slippageCheck.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Checking liquidity…
+                </>
+              ) : deposit.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Processing…
+                </>
+              ) : (
+                `Deposit ${token}`
+              )}
+            </Button>
+          )}
         </form>
       </CardContent>
     </Card>
@@ -289,7 +356,7 @@ export function YieldRatesTable() {
   const [depositId, setDepositId] = useState<string | null>(null);
 
   if (isLoading) {
-    return <div className="text-sm text-muted-foreground py-8 text-center">Loading protocols…</div>;
+    return <CardSpinner />;
   }
 
   // Sort by best total APY (low → high)

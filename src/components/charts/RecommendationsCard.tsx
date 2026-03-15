@@ -17,6 +17,7 @@ import {
 } from '@/hooks/useTreasury';
 import { useSession } from 'next-auth/react';
 import { hasRole } from '@/lib/auth/rbac';
+import { CardSpinner } from '@/components/ui/spinner';
 import {
   BrainCircuit,
   ArrowUpFromLine,
@@ -170,7 +171,7 @@ function CompactRec({ rec }: { rec: AiRecommendation }) {
         {/* Expanded details */}
         {expanded && (
           <div className="mt-2 space-y-2 pl-6">
-            <blockquote className="border-l-2 border-[#207679] pl-3 text-xs text-muted-foreground italic">
+            <blockquote className="border-l-2 border-[#19595b] pl-3 text-xs text-muted-foreground italic">
               {rec.ai_reasoning}
             </blockquote>
             <div className="grid grid-cols-3 gap-2 text-xs bg-muted/40 rounded-md p-2">
@@ -253,10 +254,26 @@ function CompactRec({ rec }: { rec: AiRecommendation }) {
 }
 
 export function RecommendationsCard() {
-  const { data: recommendations } = useTreasuryRecommendations();
+  const { data: recommendations, isLoading } = useTreasuryRecommendations();
 
   // Show the most recent recommendations (up to 5)
   const recent = (recommendations ?? []).slice(0, 5);
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BrainCircuit className="h-5 w-5" />
+            AI Recommendations
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CardSpinner />
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!recent.length) {
     return (

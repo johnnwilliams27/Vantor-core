@@ -3,10 +3,36 @@ import { useQuery } from '@tanstack/react-query';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FilterBar } from '@/components/ui/filter-bar';
+import { TablePagination } from '@/components/ui/table-pagination';
+import { useTableFilter } from '@/hooks/useTableFilter';
 import { formatDateTime, capitalize } from '@/lib/utils';
+import { exportCsv, exportPdf } from '@/lib/export';
+import type { ExportColumn } from '@/lib/export';
 import type { AuditLog } from '@/types/database';
-import { Loader2, Shield } from 'lucide-react';
+import { Shield } from 'lucide-react';
+import { CardSpinner } from '@/components/ui/spinner';
 
+const AUDIT_EXPORT_COLUMNS: ExportColumn<AuditLog>[] = [
+  { header: 'Timestamp', accessor: (r) => formatDateTime(r.created_at), pdfWidth: '18%' },
+  { header: 'User', accessor: (r) => (r as any).user_profile?.email ?? r.user_id?.slice(0, 8) ?? 'System', pdfWidth: '20%' },
+  { header: 'Action', accessor: (r) => capitalize(r.action), pdfWidth: '18%' },
+  { header: 'Entity', accessor: (r) => r.entity_type ? `${r.entity_type} ${r.entity_id?.slice(0, 8)}` : '', pdfWidth: '18%' },
+  { header: 'Details', accessor: (r) => r.details ? JSON.stringify(r.details) : '', pdfWidth: '26%' },
+];
+
+const AUDIT_FILTER_CONFIG = {
+  searchFields: [
+    (item: AuditLog) => (item as any).user_profile?.email ?? '',
+    'action' as const,
+    (item: AuditLog) => item.entity_type ?? '',
+    (item: AuditLog) => JSON.stringify(item.details ?? ''),
+  ],
+  dropdowns: [
+    { key: 'action', accessor: (item: AuditLog) => item.action },
+  ],
+  dateField: (item: AuditLog) => item.created_at,
+};
 
 export function AuditTable() {
   const { data: result, isLoading } = useQuery<{ data: AuditLog[]; total: number }>({
@@ -20,18 +46,43 @@ export function AuditTable() {
   });
 
   const logs = result?.data ?? [];
+  const filter = useTableFilter(logs, AUDIT_FILTER_CONFIG);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Shield className="h-5 w-5 text-gray-500" />
-        <h2 className="text-lg font-semibold">Audit Trail</h2>
-        {result?.total !== undefined && (
-          <span className="text-sm text-gray-400">({result.total} entries)</span>
-        )}
-      </div>
-      <Card>
-        <CardContent className="p-0 overflow-x-auto">
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <Shield className="h-5 w-5 text-muted-foreground" />
+          <CardTitle>Audit</CardTitle>
+          {result?.total !== undefined && (
+            <span className="text-sm text-muted-foreground">({result.total} entries)</span>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+      <FilterBar
+        search={filter.search}
+        onSearchChange={filter.setSearch}
+        searchPlaceholder="Search audit logs..."
+        dropdowns={[
+          { key: 'action', label: 'Action', options: filter.dropdownOptions.action ?? [] },
+        ]}
+        filters={filter.filters}
+        onFilterChange={filter.setFilter}
+        showDateRange
+        dateFrom={filter.dateFrom}
+        dateTo={filter.dateTo}
+        onDateFromChange={filter.setDateFrom}
+        onDateToChange={filter.setDateTo}
+        resultCount={filter.filteredData.length}
+        totalCount={filter.totalCount}
+        activeFilterCount={filter.activeFilterCount}
+        onClear={filter.clearAll}
+        onExportCsv={() => exportCsv('audit-log', AUDIT_EXPORT_COLUMNS, filter.filteredData)}
+        onExportPdf={() => exportPdf('audit-log', 'Audit', AUDIT_EXPORT_COLUMNS, filter.filteredData, 'landscape')}
+      />
+
+      <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -45,12 +96,12 @@ export function AuditTable() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center">
-                    <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                  <TableCell colSpan={5}>
+                    <CardSpinner />
                   </TableCell>
                 </TableRow>
-              ) : logs.length ? (
-                logs.map((log) => (
+              ) : filter.pagedData.length ? (
+                filter.pagedData.map((log) => (
                   <TableRow key={log.id}>
                     <TableCell className="text-sm text-gray-500 whitespace-nowrap">
                       {formatDateTime(log.created_at)}
@@ -74,14 +125,23 @@ export function AuditTable() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center text-gray-400 py-8">
-                    No audit events yet.
+                    {filter.activeFilterCount > 0 ? 'No matching audit events.' : 'No audit events yet.'}
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
-    </div>
+      </div>
+
+      <TablePagination
+        page={filter.page}
+        totalPages={filter.totalPages}
+        pageSize={filter.pageSize}
+        filteredCount={filter.filteredCount}
+        onPageChange={filter.setPage}
+        onPageSizeChange={filter.setPageSize}
+      />
+      </CardContent>
+    </Card>
   );
 }

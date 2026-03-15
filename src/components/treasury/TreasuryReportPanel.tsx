@@ -11,8 +11,34 @@ import {
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { FilterBar } from '@/components/ui/filter-bar';
+import { TablePagination } from '@/components/ui/table-pagination';
+import { useTableFilter } from '@/hooks/useTableFilter';
 import { useTreasuryReport } from '@/hooks/useTreasury';
 import { FileBarChart, Download, Loader2 } from 'lucide-react';
+import type { AiRecommendation, FiatTransaction } from '@/types/database';
+
+const REC_FILTER_CONFIG = {
+  searchFields: [
+    'action' as const,
+    'ai_reasoning' as const,
+  ],
+  dropdowns: [
+    { key: 'status', accessor: (item: AiRecommendation) => item.status },
+    { key: 'action', accessor: (item: AiRecommendation) => item.action },
+  ],
+};
+
+const RAMP_REPORT_FILTER_CONFIG = {
+  searchFields: [
+    (item: FiatTransaction) => item.crypto_token ?? '',
+    (item: FiatTransaction) => item.provider ?? '',
+  ],
+  dropdowns: [
+    { key: 'direction', accessor: (item: FiatTransaction) => item.direction },
+    { key: 'status', accessor: (item: FiatTransaction) => item.status },
+  ],
+};
 
 const fmt = (n: number) =>
   new Intl.NumberFormat('en-US', {
@@ -39,6 +65,9 @@ export function TreasuryReportPanel() {
   const [activeTo, setActiveTo] = useState<string | undefined>();
 
   const { data: report, isLoading, isError } = useTreasuryReport(activeFrom, activeTo);
+
+  const recFilter = useTableFilter(report?.recommendationOutcomes, REC_FILTER_CONFIG);
+  const rampFilter = useTableFilter(report?.rampSummary, RAMP_REPORT_FILTER_CONFIG);
 
   const handleLoad = () => {
     setActiveFrom(from);
@@ -184,7 +213,22 @@ export function TreasuryReportPanel() {
                   AI Recommendation Outcomes ({report.recommendationOutcomes.length})
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-3">
+                <FilterBar
+                  search={recFilter.search}
+                  onSearchChange={recFilter.setSearch}
+                  searchPlaceholder="Search recommendations..."
+                  dropdowns={[
+                    { key: 'status', label: 'Status', options: recFilter.dropdownOptions.status ?? [] },
+                    { key: 'action', label: 'Action', options: recFilter.dropdownOptions.action ?? [] },
+                  ]}
+                  filters={recFilter.filters}
+                  onFilterChange={recFilter.setFilter}
+                  resultCount={recFilter.filteredData.length}
+                  totalCount={recFilter.totalCount}
+                  activeFilterCount={recFilter.activeFilterCount}
+                  onClear={recFilter.clearAll}
+                />
                 <div className="overflow-x-auto rounded-lg border">
                   <table className="w-full text-xs">
                     <thead>
@@ -197,7 +241,7 @@ export function TreasuryReportPanel() {
                       </tr>
                     </thead>
                     <tbody>
-                      {report.recommendationOutcomes.map((rec, i) => (
+                      {recFilter.pagedData.map((rec, i) => (
                         <tr
                           key={rec.id}
                           className={`border-b ${i % 2 === 0 ? '' : 'bg-muted/20'}`}
@@ -220,6 +264,15 @@ export function TreasuryReportPanel() {
                     </tbody>
                   </table>
                 </div>
+
+                <TablePagination
+                  page={recFilter.page}
+                  totalPages={recFilter.totalPages}
+                  pageSize={recFilter.pageSize}
+                  filteredCount={recFilter.filteredCount}
+                  onPageChange={recFilter.setPage}
+                  onPageSizeChange={recFilter.setPageSize}
+                />
               </CardContent>
             </Card>
           )}
@@ -232,7 +285,22 @@ export function TreasuryReportPanel() {
                   Ramp History ({report.rampSummary.length})
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-3">
+                <FilterBar
+                  search={rampFilter.search}
+                  onSearchChange={rampFilter.setSearch}
+                  searchPlaceholder="Search ramps..."
+                  dropdowns={[
+                    { key: 'direction', label: 'Direction', options: rampFilter.dropdownOptions.direction ?? [] },
+                    { key: 'status', label: 'Status', options: rampFilter.dropdownOptions.status ?? [] },
+                  ]}
+                  filters={rampFilter.filters}
+                  onFilterChange={rampFilter.setFilter}
+                  resultCount={rampFilter.filteredData.length}
+                  totalCount={rampFilter.totalCount}
+                  activeFilterCount={rampFilter.activeFilterCount}
+                  onClear={rampFilter.clearAll}
+                />
                 <div className="overflow-x-auto rounded-lg border">
                   <table className="w-full text-xs">
                     <thead>
@@ -247,7 +315,7 @@ export function TreasuryReportPanel() {
                       </tr>
                     </thead>
                     <tbody>
-                      {report.rampSummary.map((ramp, i) => (
+                      {rampFilter.pagedData.map((ramp, i) => (
                         <tr
                           key={ramp.id}
                           className={`border-b ${i % 2 === 0 ? '' : 'bg-muted/20'}`}
@@ -264,6 +332,15 @@ export function TreasuryReportPanel() {
                     </tbody>
                   </table>
                 </div>
+
+                <TablePagination
+                  page={rampFilter.page}
+                  totalPages={rampFilter.totalPages}
+                  pageSize={rampFilter.pageSize}
+                  filteredCount={rampFilter.filteredCount}
+                  onPageChange={rampFilter.setPage}
+                  onPageSizeChange={rampFilter.setPageSize}
+                />
               </CardContent>
             </Card>
           )}

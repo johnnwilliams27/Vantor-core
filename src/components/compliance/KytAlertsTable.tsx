@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/toast';
 import type { KytAlertStatus, KytAlertSeverity } from '@/types/database';
 import { capitalize } from '@/lib/utils';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { CardSpinner } from '@/components/ui/spinner';
 
 const SEVERITY_COLORS: Record<string, string> = {
   low: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
@@ -94,7 +95,7 @@ export function KytAlertsTable() {
 
       <div className="rounded-lg border bg-card">
         {isLoading ? (
-          <div className="p-8 text-center text-sm text-muted-foreground">Loading alerts...</div>
+          <CardSpinner />
         ) : !alerts?.length ? (
           <div className="p-8 text-center text-sm text-muted-foreground">No alerts found</div>
         ) : (

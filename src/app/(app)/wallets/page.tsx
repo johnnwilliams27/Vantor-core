@@ -1,6 +1,5 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { AppShell } from '@/components/layout/AppShell';
 import { EthWalletConnect } from '@/components/wallets/EthWalletConnect';
 import { SolWalletConnect } from '@/components/wallets/SolWalletConnect';
 import { useWallets, useUnlinkWallet } from '@/hooks/useWallets';
@@ -14,6 +13,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { truncateAddress, formatDate } from '@/lib/utils';
 import { Trash2, CheckCircle, Clock, Pencil, Check, X } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
+import { CardSpinner } from '@/components/ui/spinner';
 import { useQueryClient } from '@tanstack/react-query';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
@@ -93,7 +93,7 @@ function CryptoWalletsTab() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-sm text-muted-foreground">Loading…</div>
+            <CardSpinner />
           ) : wallets?.length ? (
             <div className="overflow-x-auto">
               <Table>
@@ -225,9 +225,7 @@ export default function WalletsPage() {
     <ConnectionProvider endpoint={process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? 'https://api.mainnet-beta.solana.com'}>
       <WalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>
-          <AppShell title="Wallets">
-            <CryptoWalletsTab />
-          </AppShell>
+          <CryptoWalletsTab />
         </WalletModalProvider>
       </WalletProvider>
     </ConnectionProvider>

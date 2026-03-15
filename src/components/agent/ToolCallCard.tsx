@@ -82,7 +82,7 @@ export function ToolCallCard({ toolCall }: { toolCall: ToolCallDisplay }) {
     <div className="flex items-start gap-2 my-2 px-3 py-2 rounded-lg bg-muted border border-border text-sm">
       <div className="mt-0.5 shrink-0">
         {toolCall.status === 'pending' && (
-          <Loader2 className="h-4 w-4 animate-spin text-[#207679] dark:text-teal-400" />
+          <Loader2 className="h-4 w-4 animate-spin text-[#19595b] dark:text-teal-400" />
         )}
         {toolCall.status === 'done' && (
           <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />

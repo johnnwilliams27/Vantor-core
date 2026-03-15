@@ -4,6 +4,7 @@ import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CardSpinner } from '@/components/ui/spinner';
 
 const COLORS: Record<string, string> = {
   USDC: '#3b82f6',
@@ -13,7 +14,7 @@ const COLORS: Record<string, string> = {
 };
 
 // Fiat accounts get assigned from this palette in order
-const FIAT_PALETTE = ['#207679', '#2d9ea2', '#3bc4c9', '#14b8a6', '#0d9488'];
+const FIAT_PALETTE = ['#19595b', '#2d9ea2', '#3bc4c9', '#14b8a6', '#0d9488'];
 
 function formatUsd(v: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -109,7 +110,18 @@ export function TokenDistribution() {
 
   const total = slices.reduce((s, d) => s + d.value, 0);
 
-  if (!slices.length && !isLoading) {
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader><CardTitle>Asset Distribution</CardTitle></CardHeader>
+        <CardContent>
+          <CardSpinner />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!slices.length) {
     return (
       <Card>
         <CardHeader><CardTitle>Asset Distribution</CardTitle></CardHeader>
@@ -133,13 +145,7 @@ export function TokenDistribution() {
         </div>
       </CardHeader>
       <CardContent className="pt-0">
-        {isLoading ? (
-          <div className="h-[250px] flex items-center justify-center">
-            <div className="h-5 w-5 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin" />
-          </div>
-        ) : (
-          <>
-            <ResponsiveContainer width="100%" height={250}>
+          <ResponsiveContainer width="100%" height={250}>
               <PieChart>
                 <Pie
                   data={slices}
@@ -169,8 +175,6 @@ export function TokenDistribution() {
                 </div>
               ))}
             </div>
-          </>
-        )}
       </CardContent>
     </Card>
   );

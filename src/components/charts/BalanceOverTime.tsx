@@ -1,17 +1,43 @@
 'use client';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
+import { useTreasuryOverview } from '@/hooks/useTreasury';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { CardSpinner } from '@/components/ui/spinner';
 
 interface DataPoint {
   date: string;
   fiat: number;
   stablecoin: number;
   total: number;
+}
+
+const RANGES = [
+  { key: '1d', label: '1D' },
+  { key: '7d', label: '7D' },
+  { key: '1m', label: '1M' },
+  { key: '3m', label: '3M' },
+  { key: '6m', label: '6M' },
+] as const;
+
+type RangeKey = (typeof RANGES)[number]['key'];
+
+function tickFormat(v: string, range: RangeKey): string {
+  try {
+    const d = new Date(v);
+    if (range === '1d') return format(d, 'HH:mm');
+    if (range === '7d') return format(d, 'EEE');
+    if (range === '1m') return format(d, 'MMM d');
+    return format(d, 'MMM d');
+  } catch {
+    return v;
+  }
 }
 
 function formatCompact(v: number): string {
@@ -41,7 +67,7 @@ function CustomTooltip({ active, payload, label }: any) {
       <div className="space-y-1">
         <div className="flex items-center justify-between gap-6">
           <div className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-[#207679]" />
+            <span className="h-2 w-2 rounded-full bg-[#19595b]" />
             <span className="text-xs text-muted-foreground">Stablecoin</span>
           </div>
           <span className="text-xs font-medium tabular-nums">{formatUsd(d.stablecoin)}</span>
@@ -64,11 +90,12 @@ function CustomTooltip({ active, payload, label }: any) {
 
 export function BalanceOverTime() {
   const { data: session } = useSession();
+  const [range, setRange] = useState<RangeKey>('3m');
 
   const { data: chartData, isLoading } = useQuery({
-    queryKey: ['balance-history'],
+    queryKey: ['balance-history', range],
     queryFn: async () => {
-      const res = await fetch('/api/balance-history');
+      const res = await fetch(`/api/balance-history?range=${range}`);
       if (!res.ok) throw new Error('Failed to fetch balance history');
       const json = await res.json();
       return json.data as DataPoint[];
@@ -77,9 +104,23 @@ export function BalanceOverTime() {
     staleTime: 60_000,
   });
 
-  const latestTotal = chartData?.length ? chartData[chartData.length - 1].total : null;
+  const { data: overview } = useTreasuryOverview();
+  const currentTotal = overview
+    ? (overview.totalBankBalanceUsd ?? 0) + (overview.totalCryptoBalanceUsd ?? 0)
+    : null;
 
-  if (!chartData?.length && !isLoading) {
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader><CardTitle>Treasury Over Time</CardTitle></CardHeader>
+        <CardContent>
+          <CardSpinner />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!chartData?.length) {
     return (
       <Card>
         <CardHeader><CardTitle>Treasury Over Time</CardTitle></CardHeader>
@@ -97,23 +138,34 @@ export function BalanceOverTime() {
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle>Treasury Over Time</CardTitle>
-          {latestTotal !== null && (
-            <span className="text-lg font-semibold tabular-nums">{formatUsd(latestTotal)}</span>
+          {currentTotal !== null && (
+            <span className="text-lg font-semibold tabular-nums">{formatUsd(currentTotal)}</span>
           )}
+        </div>
+        <div className="flex items-center gap-1 pt-1">
+          {RANGES.map((r) => (
+            <button
+              key={r.key}
+              onClick={() => setRange(r.key)}
+              className={cn(
+                'px-2.5 py-1 rounded-md text-xs font-medium transition-colors',
+                range === r.key
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-muted'
+              )}
+            >
+              {r.label}
+            </button>
+          ))}
         </div>
       </CardHeader>
       <CardContent className="pt-0">
-        {isLoading ? (
-          <div className="h-[250px] flex items-center justify-center">
-            <div className="h-5 w-5 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin" />
-          </div>
-        ) : (
           <ResponsiveContainer width="100%" height={250}>
-            <AreaChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+            <AreaChart data={chartData} margin={{ top: 4, right: 24, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="gradStable" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#207679" stopOpacity={0.3} />
-                  <stop offset="100%" stopColor="#207679" stopOpacity={0.02} />
+                  <stop offset="0%" stopColor="#19595b" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="#19595b" stopOpacity={0.02} />
                 </linearGradient>
                 <linearGradient id="gradFiat" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#60a5fa" stopOpacity={0.25} />
@@ -122,13 +174,12 @@ export function BalanceOverTime() {
               </defs>
               <XAxis
                 dataKey="date"
-                tickFormatter={(v) => { try { return format(new Date(v), 'MMM'); } catch { return v; } }}
+                tickFormatter={(v) => tickFormat(v, range)}
                 tick={{ fontSize: 11, fill: 'hsl(var(--foreground))' }}
                 axisLine={false}
                 tickLine={false}
                 dy={4}
-                interval="preserveStartEnd"
-                minTickGap={60}
+                interval={Math.max(Math.floor((chartData?.length ?? 1) / 6) - 1, 0)}
               />
               <YAxis
                 tickFormatter={formatCompact}
@@ -150,16 +201,15 @@ export function BalanceOverTime() {
                 type="monotone"
                 dataKey="stablecoin"
                 stackId="treasury"
-                stroke="#207679"
+                stroke="#19595b"
                 strokeWidth={1.5}
                 fill="url(#gradStable)"
               />
             </AreaChart>
           </ResponsiveContainer>
-        )}
         <div className="flex items-center justify-center gap-5 mt-3">
           <div className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-[#207679]" />
+            <span className="h-2 w-2 rounded-full bg-[#19595b]" />
             <span className="text-xs text-foreground">Stablecoin</span>
           </div>
           <div className="flex items-center gap-1.5">

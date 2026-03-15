@@ -5,9 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { ArrowLeft, Loader2 } from 'lucide-react';
-import { useYieldWithdraw } from '@/hooks/useYield';
+import { useYieldWithdraw, useSlippageCheck } from '@/hooks/useYield';
 import { useWallets } from '@/hooks/useWallets';
 import { useToast } from '@/components/ui/toast';
+import { SlippageWarning } from './SlippageWarning';
+import type { SlippageEstimate } from '@/lib/yield/slippage';
 import type { YieldPosition } from '@/types/database';
 
 const PROTOCOL_LABELS: Record<string, string> = {
@@ -24,30 +26,57 @@ interface Props {
 
 export function YieldWithdrawForm({ position, onBack }: Props) {
   const withdraw = useYieldWithdraw();
+  const slippageCheck = useSlippageCheck();
   const { data: wallets } = useWallets();
   const { toast } = useToast();
   const [amount, setAmount] = useState('');
   const [walletId, setWalletId] = useState('');
+  const [slippageEstimate, setSlippageEstimate] = useState<SlippageEstimate | null>(null);
 
   const maxAmount = parseFloat(position.deposited_amount);
   const chainWallets = wallets?.filter((w) => w.chain === position.chain) ?? [];
   const selectedWallet = chainWallets.find((w) => w.id === walletId);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const executeWithdraw = async () => {
     if (!amount || !selectedWallet) return;
-
     try {
       await withdraw.mutateAsync({
         positionId: position.id,
         amount,
         walletAddress: selectedWallet.address,
       });
+      setSlippageEstimate(null);
       toast({ title: 'Withdrawal successful', variant: 'success' });
       onBack();
     } catch (err) {
       toast({
         title: 'Withdrawal failed',
+        description: (err as Error).message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!amount || !selectedWallet) return;
+
+    try {
+      const estimate = await slippageCheck.mutateAsync({
+        protocol: position.protocol,
+        token: position.underlying_token,
+        chain: position.chain,
+        amountUsd: parseFloat(amount),
+      });
+
+      if (estimate.severity === 'green') {
+        await executeWithdraw();
+      } else {
+        setSlippageEstimate(estimate);
+      }
+    } catch (err) {
+      toast({
+        title: 'Slippage check failed',
         description: (err as Error).message,
         variant: 'destructive',
       });
@@ -126,20 +155,37 @@ export function YieldWithdrawForm({ position, onBack }: Props) {
             </div>
           </div>
 
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={withdraw.isPending || !amount || !walletId}
-          >
-            {withdraw.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Processing…
-              </>
-            ) : (
-              `Withdraw ${position.underlying_token}`
-            )}
-          </Button>
+          {/* Slippage warning */}
+          {slippageEstimate && (
+            <SlippageWarning
+              estimate={slippageEstimate}
+              onConfirm={executeWithdraw}
+              onCancel={() => setSlippageEstimate(null)}
+              isExecuting={withdraw.isPending}
+            />
+          )}
+
+          {!slippageEstimate && (
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={withdraw.isPending || slippageCheck.isPending || !amount || !walletId}
+            >
+              {slippageCheck.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Checking liquidity…
+                </>
+              ) : withdraw.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Processing…
+                </>
+              ) : (
+                `Withdraw ${position.underlying_token}`
+              )}
+            </Button>
+          )}
         </form>
       </CardContent>
     </Card>

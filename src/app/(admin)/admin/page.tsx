@@ -1,7 +1,6 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
-import { AppShell } from '@/components/layout/AppShell';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,6 +16,7 @@ import {
   Loader2,
   AlertCircle,
 } from 'lucide-react';
+import { CardSpinner } from '@/components/ui/spinner';
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
@@ -106,8 +106,7 @@ export default function AdminDashboardPage() {
   const [showCreate, setShowCreate] = useState(false);
 
   return (
-    <AppShell title="Admin Dashboard">
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* System Health Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card>
@@ -170,9 +169,7 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent>
             {enterprises.isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
+              <CardSpinner />
             ) : enterprises.isError ? (
               <p className="text-sm text-red-400 py-4">Failed to load enterprises.</p>
             ) : !enterprises.data?.length ? (
@@ -220,7 +217,6 @@ export default function AdminDashboardPage() {
             )}
           </CardContent>
         </Card>
-      </div>
-    </AppShell>
+    </div>
   );
 }

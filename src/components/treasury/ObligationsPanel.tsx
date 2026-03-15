@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { CardSpinner } from '@/components/ui/spinner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -111,9 +112,17 @@ export function ObligationsPanel() {
     }
   };
 
+  const isLoading = tab === 'manual' ? loadingManual : loadingErp;
+
   return (
     <>
       <Card className="h-full">
+        {isLoading ? (
+          <CardContent className="py-12">
+            <CardSpinner />
+          </CardContent>
+        ) : (
+        <>
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base">Upcoming Obligations</CardTitle>
@@ -131,7 +140,7 @@ export function ObligationsPanel() {
                 onClick={() => setTab(t)}
                 className={`px-3 py-1 text-xs rounded-full font-medium transition-colors ${
                   tab === t
-                    ? 'bg-[#207679] text-white'
+                    ? 'bg-[#19595b] text-white'
                     : 'bg-muted text-muted-foreground hover:bg-muted/80'
                 }`}
               >
@@ -144,9 +153,7 @@ export function ObligationsPanel() {
         <CardContent className="overflow-auto max-h-96">
           {tab === 'manual' && (
             <>
-              {loadingManual ? (
-                <div className="text-sm text-muted-foreground py-4">Loading…</div>
-              ) : !obligations?.length ? (
+              {!obligations?.length ? (
                 <div className="text-sm text-muted-foreground text-center py-8">
                   No manual obligations. Add payroll, rent, etc.
                 </div>
@@ -195,9 +202,7 @@ export function ObligationsPanel() {
 
           {tab === 'erp' && (
             <>
-              {loadingErp ? (
-                <div className="text-sm text-muted-foreground py-4">Loading…</div>
-              ) : !invoicesData?.length ? (
+              {!invoicesData?.length ? (
                 <div className="text-sm text-muted-foreground text-center py-8">
                   No unpaid or overdue ERP invoices in the system.
                 </div>
@@ -239,6 +244,8 @@ export function ObligationsPanel() {
             </>
           )}
         </CardContent>
+        </>
+        )}
       </Card>
 
       {/* Add Obligation Dialog */}

@@ -17,6 +17,12 @@ const depositSchema = z.object({
   walletAddress: z.string().min(1).max(100),
   chain: z.enum(['ethereum', 'solana']),
   vaultAddress: z.string().max(100).optional(),
+  slippage: z.object({
+    estimated_slippage_bps: z.number(),
+    pool_liquidity_usd: z.number(),
+    severity: z.enum(['green', 'yellow', 'red']),
+    user_acknowledged: z.boolean(),
+  }).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -37,7 +43,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid request', details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { protocol, token, amount, walletAddress, chain, vaultAddress } = parsed.data;
+  const { protocol, token, amount, walletAddress, chain, vaultAddress, slippage } = parsed.data;
   const supabase = createAdminClient();
 
   // Look up wallet
@@ -128,7 +134,17 @@ export async function POST(req: NextRequest) {
         tx_hash: result.txHash,
         status: 'completed',
         executed_at: new Date().toISOString(),
-        metadata: { providerRef: result.providerRef, yieldToken: result.yieldToken },
+        metadata: {
+          providerRef: result.providerRef,
+          yieldToken: result.yieldToken,
+          ...(slippage && {
+            estimated_slippage_bps: slippage.estimated_slippage_bps,
+            pool_liquidity_usd: slippage.pool_liquidity_usd,
+            slippage_severity: slippage.severity,
+            user_acknowledged_slippage: slippage.user_acknowledged,
+            transaction_size_usd: parseFloat(amount),
+          }),
+        },
       })
       .eq('id', tx.id);
 

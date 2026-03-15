@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
         .join('\n'),
       html: `
         <div style="font-family: sans-serif; max-width: 600px;">
-          <h2 style="color: #207679;">New Contact Form Submission</h2>
+          <h2 style="color: #19595b;">New Contact Form Submission</h2>
           <p><strong>Name:</strong> ${escapeHtml(name)}</p>
           <p><strong>Email:</strong> ${escapeHtml(email)}</p>
           ${company ? `<p><strong>Company:</strong> ${escapeHtml(company)}</p>` : ''}

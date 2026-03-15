@@ -10,19 +10,19 @@
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 182 58% 30%;
+    --primary: 182 58% 28%;
     --primary-foreground: 0 0% 100%;
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 182 58% 30%;
+    --accent: 182 58% 28%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 182 58% 30%;
+    --ring: 182 58% 28%;
     --radius: 0.5rem;
   }
 
@@ -33,7 +33,7 @@
     --card-foreground: 210 40% 98%;
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-    --primary: 182 50% 48%;
+    --primary: 182 58% 28%;
     --primary-foreground: 0 0% 100%;
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
@@ -45,7 +45,7 @@
     --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 182 50% 48%;
+    --ring: 182 58% 28%;
   }
 }
 
@@ -218,4 +218,17 @@
 @keyframes badgePulse {
   0%, 100% { box-shadow: 0 0 30px rgba(45, 212, 191, 0.1), inset 0 0 20px rgba(45, 212, 191, 0.05); }
   50%      { box-shadow: 0 0 40px rgba(45, 212, 191, 0.2), inset 0 0 25px rgba(45, 212, 191, 0.08); }
+}
+
+/* Spinner animations */
+@keyframes spinnerRotate {
+  to { transform: rotate(360deg); }
+}
+@keyframes spinnerPulse {
+  0%, 100% { transform: scale(1); opacity: 0.3; }
+  50%      { transform: scale(1.15); opacity: 0.6; }
+}
+@keyframes spinnerDotPulse {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50%      { transform: scale(1.6); opacity: 1; }
 }

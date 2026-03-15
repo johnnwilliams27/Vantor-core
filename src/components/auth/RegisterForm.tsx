@@ -67,7 +67,7 @@ export function RegisterForm() {
   return (
     <Card className="w-full max-w-sm shadow-lg border-gray-200">
       <CardContent className="p-0">
-        <div className="bg-[#207679] rounded-t-xl px-8 py-8 flex flex-col items-center">
+        <div className="bg-[#19595b] rounded-t-xl px-8 py-8 flex flex-col items-center">
           <Image
             src="/logo-dark.png"
             alt="Vantor"
@@ -112,7 +112,7 @@ export function RegisterForm() {
             )}
             <Button
               type="submit"
-              className="w-full bg-[#207679] hover:bg-[#195a5c] text-white"
+              className="w-full bg-[#19595b] hover:bg-[#134849] text-white"
               disabled={isSubmitting}
             >
               {isSubmitting ? (
@@ -125,7 +125,7 @@ export function RegisterForm() {
 
           <p className="mt-5 text-center text-sm text-gray-500">
             Already have an account?{' '}
-            <a href="/login" className="text-[#207679] hover:underline font-medium">Sign in</a>
+            <a href="/login" className="text-[#19595b] hover:underline font-medium">Sign in</a>
           </p>
         </div>
       </CardContent>

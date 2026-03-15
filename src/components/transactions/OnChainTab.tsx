@@ -3,9 +3,28 @@ import { useQuery } from '@tanstack/react-query';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FilterBar } from '@/components/ui/filter-bar';
+import { TablePagination } from '@/components/ui/table-pagination';
+import { useTableFilter } from '@/hooks/useTableFilter';
 import { formatCurrency, formatDateTime, truncateAddress, capitalize } from '@/lib/utils';
 import type { Transaction } from '@/types/database';
-import { Loader2, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { CardSpinner } from '@/components/ui/spinner';
+
+const ONCHAIN_FILTER_CONFIG = {
+  searchFields: [
+    'tx_hash' as const,
+    'from_address' as const,
+    'to_address' as const,
+    (item: Transaction) => item.token ?? '',
+  ],
+  dropdowns: [
+    { key: 'direction', accessor: (item: Transaction) => item.direction },
+    { key: 'chain', accessor: (item: Transaction) => item.chain },
+    { key: 'status', accessor: (item: Transaction) => item.status },
+  ],
+  dateField: (item: Transaction) => item.timestamp,
+};
 
 export function OnChainTab() {
   const { data, isLoading } = useQuery<Transaction[]>({
@@ -19,10 +38,33 @@ export function OnChainTab() {
     staleTime: 30_000,
   });
 
+  const filter = useTableFilter(data, ONCHAIN_FILTER_CONFIG);
+
   return (
     <Card>
       <CardHeader><CardTitle>On-Chain Transactions</CardTitle></CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        <FilterBar
+          search={filter.search}
+          onSearchChange={filter.setSearch}
+          searchPlaceholder="Search transactions..."
+          dropdowns={[
+            { key: 'direction', label: 'Direction', options: filter.dropdownOptions.direction ?? [] },
+            { key: 'chain', label: 'Chain', options: filter.dropdownOptions.chain ?? [] },
+            { key: 'status', label: 'Status', options: filter.dropdownOptions.status ?? [] },
+          ]}
+          filters={filter.filters}
+          onFilterChange={filter.setFilter}
+          showDateRange
+          dateFrom={filter.dateFrom}
+          dateTo={filter.dateTo}
+          onDateFromChange={filter.setDateFrom}
+          onDateToChange={filter.setDateTo}
+          resultCount={filter.filteredData.length}
+          totalCount={filter.totalCount}
+          activeFilterCount={filter.activeFilterCount}
+          onClear={filter.clearAll}
+        />
         <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -39,12 +81,12 @@ export function OnChainTab() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center">
-                  <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                <TableCell colSpan={7}>
+                  <CardSpinner />
                 </TableCell>
               </TableRow>
-            ) : data?.length ? (
-              data.map((tx) => (
+            ) : filter.pagedData.length ? (
+              filter.pagedData.map((tx) => (
                 <TableRow key={tx.id}>
                   <TableCell>
                     {tx.direction === 'inbound' ? (
@@ -77,13 +119,22 @@ export function OnChainTab() {
             ) : (
               <TableRow>
                 <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                  No transactions recorded yet.
+                  {filter.activeFilterCount > 0 ? 'No matching transactions.' : 'No transactions recorded yet.'}
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
         </div>
+
+        <TablePagination
+          page={filter.page}
+          totalPages={filter.totalPages}
+          pageSize={filter.pageSize}
+          filteredCount={filter.filteredCount}
+          onPageChange={filter.setPage}
+          onPageSizeChange={filter.setPageSize}
+        />
       </CardContent>
     </Card>
   );

@@ -1,6 +1,5 @@
 'use client';
 import { useState } from 'react';
-import { AppShell } from '@/components/layout/AppShell';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -121,8 +120,7 @@ export default function IntegrationsPage() {
   };
 
   return (
-    <AppShell title="External Integrations">
-      <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6 max-w-2xl">
         {/* Slack Integration Card */}
         <Card>
           <CardHeader>
@@ -278,6 +276,5 @@ export default function IntegrationsPage() {
           </CardContent>
         </Card>
       </div>
-    </AppShell>
   );
 }

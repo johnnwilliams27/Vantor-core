@@ -157,7 +157,7 @@ export function RecommendationCard({ rec }: Props) {
           </div>
 
           {/* AI Reasoning */}
-          <blockquote className="border-l-4 border-[#207679] pl-3 text-sm text-muted-foreground italic">
+          <blockquote className="border-l-4 border-[#19595b] pl-3 text-sm text-muted-foreground italic">
             {rec.ai_reasoning}
           </blockquote>
 

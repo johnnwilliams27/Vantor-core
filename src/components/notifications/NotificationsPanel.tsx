@@ -2,7 +2,8 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
-import { Bell, Loader2, CheckCheck } from 'lucide-react';
+import { Bell, CheckCheck } from 'lucide-react';
+import { CardSpinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import type { AuditLog } from '@/types/database';
 
@@ -94,7 +95,7 @@ export function NotificationsPanel() {
         className={cn(
           'relative p-2 rounded-lg transition-colors',
           open
-            ? 'bg-[#207679]/10 text-[#207679] dark:bg-teal-500/20 dark:text-teal-300'
+            ? 'bg-[#19595b]/10 text-[#19595b] dark:bg-teal-500/20 dark:text-teal-300'
             : 'hover:bg-black/5 dark:hover:bg-white/10 text-muted-foreground'
         )}
         aria-label="Open notifications"
@@ -126,9 +127,7 @@ export function NotificationsPanel() {
 
           <div className="max-h-96 overflow-y-auto divide-y divide-border/40">
             {isLoading ? (
-              <div className="flex items-center justify-center py-10">
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-              </div>
+              <CardSpinner />
             ) : logs.length === 0 ? (
               <p className="py-10 text-center text-sm text-muted-foreground">No activity yet.</p>
             ) : (
@@ -142,7 +141,7 @@ export function NotificationsPanel() {
                     key={log.id}
                     className={cn(
                       'flex items-start gap-3 px-4 py-3 transition-colors',
-                      isUnread ? 'bg-[#207679]/5' : 'hover:bg-black/[0.03]'
+                      isUnread ? 'bg-[#19595b]/5' : 'hover:bg-black/[0.03]'
                     )}
                   >
                     <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', ACTION_DOT[log.action] ?? 'bg-muted-foreground')} />

@@ -1,5 +1,6 @@
 'use client';
 import { signOut, useSession } from 'next-auth/react';
+import { usePathname } from 'next/navigation';
 import { Bot, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -8,18 +9,39 @@ import { SettingsMenu } from './SettingsMenu';
 import { TestModeToggle } from './TestModeToggle';
 import { NotificationsPanel } from '@/components/notifications/NotificationsPanel';
 
+const PAGE_TITLES: Record<string, string> = {
+  '/dashboard': 'Dashboard',
+  '/treasury': 'Treasury AI',
+  '/compliance': 'Compliance',
+  '/yield': 'Yield',
+  '/wallets': 'Wallets',
+  '/bank-accounts': 'Bank Accounts',
+  '/settings/erp': 'ERP Systems',
+  '/invoices': 'Invoices',
+  '/payments': 'Payments',
+  '/swaps': 'Swaps',
+  '/ramps': 'Ramps',
+  '/transactions': 'Transactions',
+  '/audit': 'Audit',
+  '/settings/accounts': 'Account Management',
+  '/settings/integrations': 'External Integrations',
+  '/admin': 'Admin Dashboard',
+};
+
 const ROLE_COLORS: Record<string, string> = {
   app_admin: 'bg-amber-500/10 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
-  treasury_manager: 'bg-[#207679]/10 text-[#195a5c] dark:bg-teal-500/15 dark:text-teal-300',
-  accountant: 'bg-[#207679]/10 text-[#207679] dark:bg-teal-500/15 dark:text-teal-300',
+  treasury_manager: 'bg-[#19595b]/10 text-[#134849] dark:bg-teal-500/15 dark:text-teal-300',
+  accountant: 'bg-[#19595b]/10 text-[#19595b] dark:bg-teal-500/15 dark:text-teal-300',
   auditor: 'bg-black/5 text-muted-foreground dark:bg-white/10 dark:text-muted-foreground',
 };
 
-export function Topbar({ title }: { title?: string }) {
+export function Topbar() {
   const { data: session } = useSession();
+  const pathname = usePathname();
   const isAppAdmin = !!session?.user?.is_app_admin;
   const role = isAppAdmin ? 'app_admin' : (session?.user?.role ?? 'auditor');
   const { agentPanelOpen, toggleAgentPanel } = useAppStore();
+  const title = PAGE_TITLES[pathname] ?? PAGE_TITLES[Object.keys(PAGE_TITLES).find(k => pathname.startsWith(k)) ?? ''];
 
   return (
     <header className="relative z-10 flex h-16 items-center justify-between glass-strong border-b border-border/60 px-6 shrink-0">
@@ -39,7 +61,7 @@ export function Topbar({ title }: { title?: string }) {
           className={cn(
             'relative p-2 rounded-lg transition-colors',
             agentPanelOpen
-              ? 'bg-[#207679]/10 text-[#207679] dark:bg-teal-500/20 dark:text-teal-300'
+              ? 'bg-[#19595b]/10 text-[#19595b] dark:bg-teal-500/20 dark:text-teal-300'
               : 'hover:bg-black/5 dark:hover:bg-white/10 text-muted-foreground'
           )}
           title="Toggle Vantor AI"
@@ -51,7 +73,7 @@ export function Topbar({ title }: { title?: string }) {
         <NotificationsPanel />
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center justify-center h-8 w-8 rounded-full bg-[#207679] text-white text-xs font-semibold">
+          <div className="flex items-center justify-center h-8 w-8 rounded-full bg-[#19595b] text-white text-xs font-semibold">
             {session?.user?.name?.charAt(0).toUpperCase() ?? 'U'}
           </div>
           {session?.user?.email && (

@@ -3,6 +3,7 @@ import { useKytTransfers } from '@/hooks/useCompliance';
 import { Badge } from '@/components/ui/badge';
 import { capitalize } from '@/lib/utils';
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { CardSpinner } from '@/components/ui/spinner';
 
 function riskColor(score: number | null): string {
   if (score === null) return 'text-muted-foreground';
@@ -20,7 +21,7 @@ export function KytTransfersTable() {
         <h3 className="text-sm font-semibold">Monitored Transfers</h3>
       </div>
       {isLoading ? (
-        <div className="p-8 text-center text-sm text-muted-foreground">Loading...</div>
+        <CardSpinner />
       ) : !transfers?.length ? (
         <div className="p-8 text-center text-sm text-muted-foreground">No KYT transfers recorded yet</div>
       ) : (

@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { AppShell } from '@/components/layout/AppShell';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -24,7 +23,7 @@ interface TeamMember {
 }
 
 const INITIAL_USERS: TeamMember[] = [
-  { id: '1', name: 'Sarah Chen',      email: 'sarah.chen@vantor.io',  role: 'treasury_manager', initials: 'SC', color: 'bg-[#207679]',  lastActive: '2 minutes ago'  },
+  { id: '1', name: 'Sarah Chen',      email: 'sarah.chen@vantor.io',  role: 'treasury_manager', initials: 'SC', color: 'bg-[#19595b]',  lastActive: '2 minutes ago'  },
   { id: '2', name: 'Jordan Lee',      email: 'jordan.lee@vantor.io',  role: 'treasury_manager', initials: 'JL', color: 'bg-emerald-600', lastActive: '1 hour ago'      },
   { id: '3', name: 'Marcus Johnson',  email: 'marcus.j@vantor.io',    role: 'accountant',        initials: 'MJ', color: 'bg-blue-500',   lastActive: 'Yesterday'       },
   { id: '4', name: 'Emily Rodriguez', email: 'emily.r@vantor.io',     role: 'accountant',        initials: 'ER', color: 'bg-violet-500', lastActive: '3 days ago'      },
@@ -47,7 +46,7 @@ const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
 };
 
 const ROLE_BADGE: Record<UserRole, string> = {
-  treasury_manager: 'bg-[#207679]/10 text-[#195a5c] dark:bg-teal-500/20 dark:text-teal-300',
+  treasury_manager: 'bg-[#19595b]/10 text-[#134849] dark:bg-teal-500/20 dark:text-teal-300',
   accountant:       'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
   auditor:          'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
 };
@@ -105,7 +104,7 @@ function RolePicker({ value, onChange }: { value: UserRole; onChange: (r: UserRo
               className={cn(
                 'flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left transition-colors',
                 value === role
-                  ? 'bg-[#207679]/8 dark:bg-teal-500/10'
+                  ? 'bg-[#19595b]/8 dark:bg-teal-500/10'
                   : 'hover:bg-muted/60'
               )}
             >
@@ -118,7 +117,7 @@ function RolePicker({ value, onChange }: { value: UserRole; onChange: (r: UserRo
                 <p className="text-xs text-muted-foreground leading-snug">{ROLE_DESCRIPTIONS[role]}</p>
               </div>
               {value === role && (
-                <Check className="h-4 w-4 shrink-0 mt-0.5 text-[#207679] dark:text-teal-400" />
+                <Check className="h-4 w-4 shrink-0 mt-0.5 text-[#19595b] dark:text-teal-400" />
               )}
             </button>
           ))}
@@ -193,15 +192,14 @@ export default function AccountManagementPage() {
   };
 
   return (
-    <AppShell title="Account Management">
-      <div className="space-y-6">
+    <div className="space-y-6">
 
         {/* Organization Info */}
         {enterpriseName && (
           <Card>
             <CardContent className="flex items-center gap-4 py-5">
-              <div className="flex items-center justify-center h-12 w-12 rounded-xl bg-[#207679]/10 dark:bg-teal-500/15">
-                <Building2 className="h-6 w-6 text-[#207679] dark:text-teal-400" />
+              <div className="flex items-center justify-center h-12 w-12 rounded-xl bg-[#19595b]/10 dark:bg-teal-500/15">
+                <Building2 className="h-6 w-6 text-[#19595b] dark:text-teal-400" />
               </div>
               <div className="flex-1">
                 <h2 className="text-lg font-semibold">{enterpriseName}</h2>
@@ -295,15 +293,15 @@ export default function AccountManagementPage() {
                       className={cn(
                         'flex items-start gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors',
                         inviteRole === role
-                          ? 'border-[#207679]/40 bg-[#207679]/5 dark:border-teal-500/40 dark:bg-teal-500/10'
+                          ? 'border-[#19595b]/40 bg-[#19595b]/5 dark:border-teal-500/40 dark:bg-teal-500/10'
                           : 'border-border hover:bg-muted/50'
                       )}
                     >
                       <div className={cn(
                         'mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center',
-                        inviteRole === role ? 'border-[#207679] dark:border-teal-400' : 'border-muted-foreground/40'
+                        inviteRole === role ? 'border-[#19595b] dark:border-teal-400' : 'border-muted-foreground/40'
                       )}>
-                        {inviteRole === role && <div className="h-2 w-2 rounded-full bg-[#207679] dark:bg-teal-400" />}
+                        {inviteRole === role && <div className="h-2 w-2 rounded-full bg-[#19595b] dark:bg-teal-400" />}
                       </div>
                       <div>
                         <div className={cn('text-xs font-medium rounded-full inline-flex px-2 py-0.5 mb-0.5', ROLE_BADGE[role])}>
@@ -398,7 +396,7 @@ export default function AccountManagementPage() {
                     {ROLES.map((role) => (
                       <td key={role} className="px-4 py-3 text-center">
                         {cap[role] ? (
-                          <CheckCircle2 className="h-4 w-4 text-[#207679] dark:text-teal-400 mx-auto" />
+                          <CheckCircle2 className="h-4 w-4 text-[#19595b] dark:text-teal-400 mx-auto" />
                         ) : (
                           <XCircle className="h-4 w-4 text-gray-300 dark:text-gray-600 mx-auto" />
                         )}
@@ -412,6 +410,5 @@ export default function AccountManagementPage() {
         </Card>
 
       </div>
-    </AppShell>
   );
 }

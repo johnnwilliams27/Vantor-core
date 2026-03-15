@@ -5,12 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatCurrency, truncateAddress } from '@/lib/utils';
-import { RefreshCw, Loader2 } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
+import { CardSpinner } from '@/components/ui/spinner';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 
 const TOKEN_COLORS: Record<string, string> = {
-  USDC: 'bg-[#207679]/5 border-[#207679]/20',
+  USDC: 'bg-[#19595b]/5 border-[#19595b]/20',
   USDT: 'bg-green-50 border-green-200',
   PYUSD: 'bg-purple-50 border-purple-200',
 };
@@ -27,11 +28,7 @@ export function BalanceSummary() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-32">
-        <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
-      </div>
-    );
+    return <CardSpinner />;
   }
 
   // Group by token
