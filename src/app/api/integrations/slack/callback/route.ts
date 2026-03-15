@@ -31,19 +31,45 @@ export async function POST(req: NextRequest) {
   }
 
   const teamId = payload.team?.id;
+  const channelId = payload.container?.channel_id ?? payload.actions?.[0]?.value;
   const supabase = createAdminClient();
 
-  // Look up integration by team_id to get signing secret
-  const { data: integration } = await supabase
-    .from('slack_integrations')
-    .select('id, user_id, enterprise_id, channel_id, credentials')
-    .eq('team_id', teamId)
-    .eq('is_active', true)
-    .maybeSingle();
+  // Look up integration — try team_id first, then fall back to channel_id
+  let integration: { id: string; user_id: string; enterprise_id: string; channel_id: string; credentials: string } | null = null;
+
+  if (teamId) {
+    const { data } = await supabase
+      .from('slack_integrations')
+      .select('id, user_id, enterprise_id, channel_id, credentials')
+      .eq('team_id', teamId)
+      .eq('is_active', true)
+      .maybeSingle();
+    integration = data;
+  }
+
+  if (!integration && channelId) {
+    const { data } = await supabase
+      .from('slack_integrations')
+      .select('id, user_id, enterprise_id, channel_id, credentials')
+      .eq('channel_id', channelId)
+      .eq('is_active', true)
+      .maybeSingle();
+    integration = data;
+  }
 
   if (!integration) {
-    // If no team_id match, fall back to finding the integration for validation
-    return NextResponse.json({ error: 'Unknown workspace' }, { status: 401 });
+    // Last resort: find any active integration (single-tenant deployments)
+    const { data } = await supabase
+      .from('slack_integrations')
+      .select('id, user_id, enterprise_id, channel_id, credentials')
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle();
+    integration = data;
+  }
+
+  if (!integration) {
+    return NextResponse.json({ error: 'No active Slack integration found' }, { status: 401 });
   }
 
   // Verify signature

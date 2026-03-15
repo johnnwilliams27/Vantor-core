@@ -71,6 +71,23 @@ async function slackPost(token: string, endpoint: string, body: Record<string, u
   return res.json() as Promise<{ ok: boolean; error?: string; ts?: string; channel?: string }>;
 }
 
+// ---- Channel Join ----
+
+/**
+ * Attempt to join a public channel. Required before posting — the bot
+ * cannot post to channels it hasn't joined. For private channels, the
+ * bot must be manually invited via /invite @BotName.
+ */
+async function ensureChannelJoined(botToken: string, channelId: string): Promise<void> {
+  const result = await slackPost(botToken, 'conversations.join', { channel: channelId });
+  // Ignore errors — the bot may already be in the channel, or it may be
+  // a private channel (method_not_supported_for_channel_type) which
+  // requires manual invite.
+  if (!result.ok && result.error !== 'already_in_channel' && result.error !== 'method_not_supported_for_channel_type') {
+    console.warn(`[Slack] conversations.join warning: ${result.error}`);
+  }
+}
+
 // ---- Block Kit Messages ----
 
 export async function postRecommendationToSlack(
@@ -94,6 +111,8 @@ export async function postRecommendationToSlack(
   const reasoningSnippet = rec.aiReasoning.length > 200
     ? rec.aiReasoning.slice(0, 197) + '...'
     : rec.aiReasoning;
+
+  await ensureChannelJoined(botToken, channelId);
 
   const result = await slackPost(botToken, 'chat.postMessage', {
     channel: channelId,
@@ -204,6 +223,7 @@ export async function postEphemeralConfirmation(
 }
 
 export async function postTestMessage(botToken: string, channelId: string): Promise<{ ok: boolean; error?: string }> {
+  await ensureChannelJoined(botToken, channelId);
   return slackPost(botToken, 'chat.postMessage', {
     channel: channelId,
     text: '✅ Vantor Treasury: Slack integration connected successfully! You will receive treasury recommendations here.',

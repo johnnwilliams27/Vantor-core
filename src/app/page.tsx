@@ -316,7 +316,7 @@ function NetworkCanvas() {
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0 pointer-events-none opacity-90"
+      className="absolute inset-0 -top-20 pointer-events-none opacity-90"
       aria-hidden="true"
     />
   );
@@ -592,7 +592,7 @@ function PartnerScroll() {
 /* ------------------------------------------------------------------ */
 function Hero() {
   return (
-    <section className="relative flex-1 flex items-center justify-center overflow-hidden pt-10 sm:pt-0">
+    <section className="relative flex-1 flex items-center justify-center overflow-hidden pt-24 sm:pt-0">
       <BlobBackground />
       <NetworkCanvas />
       {/* Radial vignette to push animation behind hero text */}

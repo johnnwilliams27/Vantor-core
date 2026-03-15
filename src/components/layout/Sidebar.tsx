@@ -109,12 +109,17 @@ export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const { resolvedTheme } = useTheme();
-  const { sidebarOpen, toggleSidebar } = useAppStore();
+  const { sidebarOpen, toggleSidebar, mobileSidebarOpen, setMobileSidebarOpen } = useAppStore();
   const logoSrc = '/logo-dark.png';
   const userRole = session?.user?.role ?? 'auditor';
   const isAppAdmin = !!(session?.user as Record<string, unknown>)?.is_app_admin;
   const enterpriseId = session?.user?.enterprise_id;
   const [enterpriseName, setEnterpriseName] = useState<string | null>(null);
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    setMobileSidebarOpen(false);
+  }, [pathname, setMobileSidebarOpen]);
 
   useEffect(() => {
     if (!enterpriseId) return;
@@ -127,10 +132,22 @@ export function Sidebar() {
   const navGroups = isAppAdmin ? ADMIN_NAV_GROUPS : NAV_GROUPS;
 
   return (
+    <>
+    {/* Mobile overlay backdrop */}
+    {mobileSidebarOpen && (
+      <div
+        className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden"
+        onClick={() => setMobileSidebarOpen(false)}
+      />
+    )}
     <aside
       className={cn(
         'flex flex-col bg-gray-900 text-white transition-all duration-300 shrink-0',
-        sidebarOpen ? 'w-56' : 'w-16'
+        // Desktop: static sidebar
+        'hidden lg:flex',
+        sidebarOpen ? 'w-56' : 'w-16',
+        // Mobile: fixed overlay
+        mobileSidebarOpen && '!fixed inset-y-0 left-0 z-50 !flex w-56',
       )}
     >
       {/* Logo */}
@@ -206,9 +223,12 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Toggle */}
+      {/* Toggle — on mobile closes overlay, on desktop collapses sidebar */}
       <button
-        onClick={toggleSidebar}
+        onClick={() => {
+          if (mobileSidebarOpen) setMobileSidebarOpen(false);
+          else toggleSidebar();
+        }}
         className="flex items-center justify-center h-10 border-t border-white/10 hover:bg-white/10 transition-colors"
       >
         {sidebarOpen ? (
@@ -218,5 +238,6 @@ export function Sidebar() {
         )}
       </button>
     </aside>
+    </>
   );
 }

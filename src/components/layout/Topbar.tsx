@@ -1,7 +1,7 @@
 'use client';
 import { signOut, useSession } from 'next-auth/react';
 import { usePathname } from 'next/navigation';
-import { Bot, LogOut } from 'lucide-react';
+import { Bot, LogOut, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/appStore';
@@ -40,19 +40,28 @@ export function Topbar() {
   const pathname = usePathname();
   const isAppAdmin = !!session?.user?.is_app_admin;
   const role = isAppAdmin ? 'app_admin' : (session?.user?.role ?? 'auditor');
-  const { agentPanelOpen, toggleAgentPanel } = useAppStore();
+  const { agentPanelOpen, toggleAgentPanel, toggleMobileSidebar } = useAppStore();
   const title = PAGE_TITLES[pathname] ?? PAGE_TITLES[Object.keys(PAGE_TITLES).find(k => pathname.startsWith(k)) ?? ''];
 
   return (
-    <header className="relative z-10 flex h-16 items-center justify-between glass-strong border-b border-border/60 px-6 shrink-0">
-      <div>
+    <header className="relative z-10 flex h-16 items-center justify-between glass-strong border-b border-border/60 px-4 sm:px-6 shrink-0">
+      <div className="flex items-center gap-3">
+        <button
+          onClick={toggleMobileSidebar}
+          className="lg:hidden p-1.5 rounded-md hover:bg-muted transition-colors"
+          aria-label="Open menu"
+        >
+          <Menu className="h-5 w-5 text-muted-foreground" />
+        </button>
         {title && <h1 className="text-lg font-semibold text-foreground">{title}</h1>}
       </div>
 
-      <div className="flex items-center gap-4">
-        {!isAppAdmin && <TestModeToggle />}
+      <div className="flex items-center gap-2 sm:gap-4">
+        <span className="hidden sm:inline-flex">
+          {!isAppAdmin && <TestModeToggle />}
+        </span>
 
-        <span className={cn('text-xs font-medium px-2.5 py-1 rounded-full', ROLE_COLORS[role] ?? ROLE_COLORS.auditor)}>
+        <span className={cn('hidden sm:inline-flex text-xs font-medium px-2.5 py-1 rounded-full', ROLE_COLORS[role] ?? ROLE_COLORS.auditor)}>
           {role.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
         </span>
 

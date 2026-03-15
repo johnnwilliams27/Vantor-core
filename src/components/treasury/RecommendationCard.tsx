@@ -161,11 +161,10 @@ export function RecommendationCard({ rec }: Props) {
             {rec.ai_reasoning}
           </blockquote>
 
-          {/* Model + stablecoin info */}
+          {/* Stablecoin info */}
           <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-            <span>Model: {rec.ai_model}</span>
             {rec.stablecoin_token && (
-              <span>Token: {rec.stablecoin_token} on {rec.stablecoin_chain}</span>
+              <span>Token: {rec.stablecoin_token} on {rec.stablecoin_chain ? rec.stablecoin_chain.charAt(0).toUpperCase() + rec.stablecoin_chain.slice(1) : ''}</span>
             )}
             {rec.bank_account && (
               <span>
