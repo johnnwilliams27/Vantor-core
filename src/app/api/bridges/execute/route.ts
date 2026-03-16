@@ -3,8 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/nextauth.config';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
-import { getBridgeAdapter } from '@/lib/bridges/factory';
-import { getBridgeProviderForToken } from '@/lib/bridges/interface';
+import { getBankingAdapter } from '@/lib/banking/factory';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { updateWalletBalance } from '@/lib/balances/update-after-movement';
 import { z } from 'zod';
@@ -69,11 +68,10 @@ export async function POST(req: NextRequest) {
 
   if (!toWallet) return NextResponse.json({ error: 'Destination wallet not found' }, { status: 404 });
 
-  const provider = getBridgeProviderForToken(token as any);
-  const adapter = getBridgeAdapter(provider);
+  const adapter = getBankingAdapter();
 
   try {
-    const result = await adapter.execute({
+    const result = await adapter.executeBridge({
       token: token as any,
       amount,
       fromChain: fromChain as any,
@@ -99,7 +97,7 @@ export async function POST(req: NextRequest) {
         bridge_fee: fee,
         from_chain: fromChain,
         to_chain: toChain,
-        provider,
+        provider: 'bridge',
         tx_hash: result.txHash,
         status: result.status === 'completed' ? 'completed' : 'pending',
         slippage_bps: slippageBps ?? null,
@@ -143,7 +141,7 @@ export async function POST(req: NextRequest) {
         amount,
         fromChain,
         toChain,
-        provider,
+        provider: 'bridge',
         txHash: result.txHash,
         estimatedArrivalMinutes: result.estimatedArrivalMinutes,
       },

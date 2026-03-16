@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/nextauth.config';
 import { requireRole } from '@/lib/auth/rbac';
-import { getBridgeAdapter } from '@/lib/bridges/factory';
-import { getBridgeProviderForToken } from '@/lib/bridges/interface';
+import { getBankingAdapter } from '@/lib/banking/factory';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
 import { z } from 'zod';
@@ -36,11 +35,10 @@ export async function POST(req: NextRequest) {
   }
 
   const { token, amount, fromChain, toChain, walletAddress } = parsed.data;
-  const provider = getBridgeProviderForToken(token as any);
-  const adapter = getBridgeAdapter(provider);
 
   try {
-    const quote = await adapter.getQuote({
+    const adapter = getBankingAdapter();
+    const quote = await adapter.getBridgeQuote({
       token: token as any,
       amount,
       fromChain: fromChain as any,
@@ -52,7 +50,7 @@ export async function POST(req: NextRequest) {
       userId: session.user.id,
       action: 'swap_quote',
       entityType: 'bridge',
-      details: { token, amount, fromChain, toChain, provider, bridgeFee: quote.bridgeFee },
+      details: { token, amount, fromChain, toChain, provider: 'bridge' },
     });
 
     return NextResponse.json({ data: quote });

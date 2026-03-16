@@ -18,7 +18,7 @@ import { useSlippageCheck } from '@/hooks/useYield';
 import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, ArrowRightLeft, ArrowRight, Clock } from 'lucide-react';
 import type { SlippageEstimate } from '@/lib/yield/slippage';
-import type { BridgeQuoteResponse } from '@/lib/bridges/interface';
+import type { BridgeQuote } from '@/lib/banking/interface';
 
 const schema = z.object({
   fromWalletId: z.string().uuid('Select a source wallet'),
@@ -31,14 +31,14 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 const CHAIN_LABELS: Record<string, string> = { ethereum: 'Ethereum', solana: 'Solana' };
-const PROVIDER_LABELS: Record<string, string> = { cctp: 'Circle CCTP', layerzero: 'LayerZero OFT' };
+const PROVIDER_LABELS: Record<string, string> = { bridge: 'Bridge.xyz', cctp: 'Circle CCTP', layerzero: 'LayerZero' };
 
 export function ChainSwapForm() {
   const { data: wallets } = useWallets();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const slippageCheck = useSlippageCheck();
-  const [quote, setQuote] = useState<BridgeQuoteResponse | null>(null);
+  const [quote, setQuote] = useState<BridgeQuote | null>(null);
   const [quoting, setQuoting] = useState(false);
   const [executing, setExecuting] = useState(false);
   const [slippageEstimate, setSlippageEstimate] = useState<SlippageEstimate | null>(null);
@@ -86,7 +86,7 @@ export function ChainSwapForm() {
     setSlippageEstimate(null);
   }, [token, amount, fromWalletId, toWalletId]);
 
-  const providerLabel = token === 'USDC' ? 'Circle CCTP' : 'LayerZero OFT';
+  const providerLabel = 'Bridge.xyz';
 
   const getQuote = async () => {
     if (exceeds) {
@@ -209,7 +209,7 @@ export function ChainSwapForm() {
         <CardTitle className="flex items-center gap-2">
           <ArrowRightLeft className="h-5 w-5" />
           Chain Bridge
-          <InfoTooltip content="Transfer the same token between chains. USDC uses Circle CCTP for native cross-chain transfers. USDT and PYUSD use LayerZero OFT." />
+          <InfoTooltip content="Transfer the same token between chains via Bridge.xyz. Bridge handles protocol selection internally — CCTP for USDC, liquidity network for other tokens." />
         </CardTitle>
       </CardHeader>
       <CardContent>

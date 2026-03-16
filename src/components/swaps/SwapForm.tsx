@@ -72,7 +72,7 @@ export function SwapForm() {
   }, [fromToken]);
   const selectedWallet = wallets?.find((w) => w.id === selectedWalletId);
   const selectedChain = selectedWallet?.chain;
-  const dexLabel = selectedChain === 'ethereum' ? '1inch Fusion' : selectedChain === 'solana' ? 'Jupiter' : null;
+  const dexLabel = selectedChain ? 'Bridge.xyz' : null;
   const balance = useWalletTokenBalance(selectedWalletId, fromToken);
   const exceeds = balance !== null && amount ? parseFloat(amount) > balance : false;
 
@@ -186,7 +186,7 @@ export function SwapForm() {
             </Select>
             {errors.walletId && <p className="text-sm text-red-500">{errors.walletId.message}</p>}
             {dexLabel && (
-              <p className="text-xs text-muted-foreground">DEX: {dexLabel}</p>
+              <p className="text-xs text-muted-foreground">Provider: {dexLabel}</p>
             )}
           </div>
 

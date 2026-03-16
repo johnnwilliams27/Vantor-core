@@ -2,12 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/nextauth.config';
 import { requireRole } from '@/lib/auth/rbac';
-import { getJupiterQuote } from '@/lib/swaps/jupiter';
-import { getOneInchQuote } from '@/lib/swaps/oneinch';
+import { getBankingAdapter } from '@/lib/banking/factory';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
 import { z } from 'zod';
-import type { TokenSymbol } from '@/types/database';
 
 const schema = z.object({
   chain: z.enum(['ethereum', 'solana']),
@@ -36,22 +34,25 @@ export async function POST(req: NextRequest) {
 
   const { chain, fromToken, toToken, amount, slippageBps, walletAddress } = parsed.data;
 
-  let quote;
   try {
-    if (chain === 'solana') {
-      quote = await getJupiterQuote(fromToken as TokenSymbol, toToken as TokenSymbol, amount, slippageBps);
-    } else {
-      quote = await getOneInchQuote(fromToken as TokenSymbol, toToken as TokenSymbol, amount, walletAddress, slippageBps);
-    }
+    const adapter = getBankingAdapter();
+    const quote = await adapter.getSwapQuote({
+      chain: chain as any,
+      fromToken: fromToken as any,
+      toToken: toToken as any,
+      amount,
+      slippageBps,
+      walletAddress,
+    });
+
+    await writeAuditLog({
+      userId: session.user.id,
+      action: 'swap_quote',
+      details: { chain, fromToken, toToken, amount, provider: 'bridge' },
+    });
+
+    return NextResponse.json({ data: quote });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 502 });
   }
-
-  await writeAuditLog({
-    userId: session.user.id,
-    action: 'swap_quote',
-    details: { chain, fromToken, toToken, amount },
-  });
-
-  return NextResponse.json({ data: quote });
 }

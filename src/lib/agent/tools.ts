@@ -479,13 +479,13 @@ const executeRamp: AgentTool = {
 
 const getSwapQuote: AgentTool = {
   name: 'get_swap_quote',
-  description: 'Get a DEX swap quote for exchanging one token for another.',
+  description: 'Get a swap quote for exchanging one stablecoin for another via Bridge.xyz.',
   input_schema: {
     type: 'object',
     properties: {
       chain: { type: 'string', enum: ['ethereum', 'solana'], description: 'Blockchain network' },
-      fromToken: { type: 'string', description: 'Token to sell (e.g. USDC)' },
-      toToken: { type: 'string', description: 'Token to buy (e.g. USDT)' },
+      fromToken: { type: 'string', enum: ['USDC', 'USDT', 'PYUSD'], description: 'Token to sell' },
+      toToken: { type: 'string', enum: ['USDC', 'USDT', 'PYUSD'], description: 'Token to buy' },
       amount: { type: 'string', description: 'Amount of fromToken to sell' },
       walletAddress: { type: 'string', description: 'Wallet address executing the swap' },
     },
@@ -493,29 +493,20 @@ const getSwapQuote: AgentTool = {
   },
   minRole: 'treasury_manager',
   async handler(input, _ctx) {
-    const chain = input.chain as string;
-    if (chain === 'solana') {
-      const { getJupiterQuote } = await import('@/lib/swaps/jupiter');
-      return await getJupiterQuote(
-        input.fromToken as any,
-        input.toToken as any,
-        input.amount as string
-      );
-    } else {
-      const { getOneInchQuote } = await import('@/lib/swaps/oneinch');
-      return await getOneInchQuote(
-        input.fromToken as any,
-        input.toToken as any,
-        input.amount as string,
-        input.walletAddress as string
-      );
-    }
+    const adapter = getBankingAdapter();
+    return await adapter.getSwapQuote({
+      chain: input.chain as any,
+      fromToken: input.fromToken as any,
+      toToken: input.toToken as any,
+      amount: input.amount as string,
+      walletAddress: input.walletAddress as string,
+    });
   },
 };
 
 const executeSwap: AgentTool = {
   name: 'execute_swap',
-  description: 'Execute a DEX token swap. Always confirm with the user before calling this tool.',
+  description: 'Execute a token swap via Bridge.xyz. Always confirm with the user before calling this tool.',
   input_schema: {
     type: 'object',
     properties: {
@@ -525,52 +516,45 @@ const executeSwap: AgentTool = {
       amount: { type: 'string', description: 'Amount to sell' },
       walletId: { type: 'string', description: 'Wallet UUID' },
       walletAddress: { type: 'string', description: 'Wallet address' },
-      quoteId: { type: 'string', description: 'Optional quote ID from get_swap_quote' },
     },
     required: ['chain', 'fromToken', 'toToken', 'amount', 'walletId', 'walletAddress'],
   },
   minRole: 'treasury_manager',
   async handler(input, ctx) {
-    const chain = input.chain as string;
-    let result: unknown;
-    if (chain === 'solana') {
-      // Get a fresh quote first to get quoteData for execution
-      const { getJupiterQuote, executeJupiterSwap } = await import('@/lib/swaps/jupiter');
-      const quote = await getJupiterQuote(
-        input.fromToken as any,
-        input.toToken as any,
-        input.amount as string
-      );
-      result = await executeJupiterSwap(
-        (quote as any).quoteData as Record<string, unknown>,
-        input.walletAddress as string
-      );
-    } else {
-      const { getOneInchQuote, executeOneInchSwap } = await import('@/lib/swaps/oneinch');
-      const quote = await getOneInchQuote(
-        input.fromToken as any,
-        input.toToken as any,
-        input.amount as string,
-        input.walletAddress as string
-      );
-      result = await executeOneInchSwap(
-        (quote as any).quoteData as Record<string, unknown>,
-        input.walletAddress as string
-      );
-    }
+    const adapter = getBankingAdapter();
+    const quote = await adapter.getSwapQuote({
+      chain: input.chain as any,
+      fromToken: input.fromToken as any,
+      toToken: input.toToken as any,
+      amount: input.amount as string,
+      walletAddress: input.walletAddress as string,
+    });
+
+    const result = await adapter.executeSwap({
+      chain: input.chain as any,
+      fromToken: input.fromToken as any,
+      toToken: input.toToken as any,
+      fromAmount: quote.fromAmount,
+      toAmount: quote.toAmount,
+      walletAddress: input.walletAddress as string,
+      quoteData: quote.quoteData,
+    });
 
     // Record swap in DB
     await ctx.supabase.from('swaps').insert({
       user_id: ctx.userId,
+      enterprise_id: ctx.enterpriseId,
       wallet_id: input.walletId as string,
       chain: input.chain as string,
       from_token: input.fromToken as string,
       to_token: input.toToken as string,
-      from_amount: input.amount as string,
+      from_amount: quote.fromAmount,
+      to_amount: quote.toAmount,
       status: 'completed',
+      quote_data: { provider: 'bridge' },
     });
 
-    await writeAuditLog({ userId: ctx.userId, action: 'swap_execute', entityType: 'swap', entityId: input.walletId as string, details: { chain, fromToken: input.fromToken, toToken: input.toToken, amount: input.amount } });
+    await writeAuditLog({ userId: ctx.userId, action: 'swap_execute', entityType: 'swap', entityId: input.walletId as string, details: { chain: input.chain, fromToken: input.fromToken, toToken: input.toToken, amount: input.amount, provider: 'bridge' } });
     return result;
   },
 };
