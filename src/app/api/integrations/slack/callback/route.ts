@@ -8,6 +8,7 @@ import {
   postEphemeralConfirmation,
 } from '@/lib/integrations/slack';
 import { getBankingAdapter } from '@/lib/banking/factory';
+import { updateBalancesAfterRamp } from '@/lib/balances/update-after-movement';
 
 // No session auth — authenticated via Slack HMAC signature verification
 
@@ -224,6 +225,16 @@ export async function POST(req: NextRequest) {
           updated_at: new Date().toISOString(),
         })
         .eq('id', recId);
+
+      // Update balances (mock fallback — real balances sync from bank/chain)
+      await updateBalancesAfterRamp({
+        direction: rec.action as 'onramp' | 'offramp',
+        walletId: rec.wallet_id,
+        bankAccountId: rec.bank_account_id,
+        token: rec.stablecoin_token ?? 'USDC',
+        cryptoAmount: parseFloat(rec.recommended_amount_usd),
+        fiatAmount: parseFloat(rec.recommended_amount_usd),
+      });
 
       await writeAuditLog({
         userId: ownerId,

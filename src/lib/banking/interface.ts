@@ -12,6 +12,10 @@ export interface RampQuote {
   fiatAmount: number;
   exchangeRate: number;
   feeAmount: number;
+  /** Fiat currency code (USD, EUR, GBP) */
+  fiatCurrency?: string;
+  /** FX rate applied (undefined if USD) */
+  fxRate?: number;
   /** ISO timestamp */
   expiresAt: string;
 }

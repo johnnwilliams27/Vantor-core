@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { requireClearScreening } from '@/lib/compliance/screening';
 import { getComplianceAdapter } from '@/lib/compliance/factory';
+import { updateBalancesAfterPayment } from '@/lib/balances/update-after-movement';
 import type { Payment } from '@/types/database';
 
 /**
@@ -70,6 +71,15 @@ export async function executePayment(payment: Payment): Promise<{
           updated_at: new Date().toISOString(),
         })
         .eq('id', payment.invoice_id);
+    }
+
+    // Update sender wallet balance (mock fallback — real balances sync from chain)
+    if (payment.from_wallet_id) {
+      await updateBalancesAfterPayment({
+        walletId: payment.from_wallet_id,
+        token: payment.token,
+        amount: Number(payment.amount),
+      });
     }
 
     await writeAuditLog({

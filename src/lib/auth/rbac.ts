@@ -4,6 +4,7 @@ import type { UserRole } from '@/types/database';
 export const ROLE_ROUTES: Record<string, UserRole> = {
   '/payments': 'treasury_manager',
   '/swaps': 'treasury_manager',
+  '/bridges': 'treasury_manager',
   '/ramps': 'treasury_manager',
   '/treasury': 'treasury_manager',
   '/yield': 'treasury_manager',
@@ -27,6 +28,7 @@ const APP_ADMIN_ALLOWED_PATHS = [
 const APP_ADMIN_BLOCKED_PATHS = [
   '/payments',
   '/swaps',
+  '/bridges',
   '/ramps',
   '/treasury',
   '/yield',

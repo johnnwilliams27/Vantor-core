@@ -30,7 +30,7 @@ export function RecommendationList() {
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
         <CardTitle className="flex items-center gap-2">
           <Sparkles className="h-4 w-4" />
-          AI Recommendations
+          Vantor AI Recommendations
         </CardTitle>
         <Button
           size="sm"
@@ -54,7 +54,7 @@ export function RecommendationList() {
             No recommendations yet. Click <span className="font-medium text-foreground">Generate</span> to analyze your treasury.
           </div>
         ) : (
-          <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+          <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/30">
             {recommendations.map((rec) => (
               <RecommendationCard key={rec.id} rec={rec} />
             ))}

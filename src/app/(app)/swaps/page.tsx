@@ -151,11 +151,9 @@ function SwapHistory() {
 
 export default function SwapsPage() {
   return (
-    <>
-      <div className="space-y-6">
-        <SwapForm />
-        <SwapHistory />
-      </div>
-    </>
+    <div className="space-y-6">
+      <SwapForm />
+      <SwapHistory />
+    </div>
   );
 }

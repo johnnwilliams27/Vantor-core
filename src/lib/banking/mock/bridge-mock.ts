@@ -2,11 +2,15 @@
  * Bridge (Stripe) mock adapter.
  * Shaped after Bridge's real API: POST /v0/transfers
  * https://apidocs.bridge.xyz
+ *
+ * Supports multi-currency off-ramps (USD, EUR, GBP).
+ * For non-USD currencies, applies FX conversion on top of the stablecoin rate.
  */
 import type { IBankingAdapter, RampQuoteParams, RampQuote, RampExecuteParams, RampResult } from '../interface';
+import { getFxRate, type FiatCurrency } from '@/lib/fx/rates';
 
-const RATE = 0.9985;   // $0.9985 per stablecoin token
-const FEE_PCT = 0.0015; // 0.15%
+const STABLECOIN_RATE = 0.9985; // $0.9985 USD per stablecoin token
+const FEE_PCT = 0.0015;         // 0.15% fee
 
 export class BridgeMockAdapter implements IBankingAdapter {
   async getRampQuote(params: RampQuoteParams): Promise<RampQuote> {
@@ -17,28 +21,36 @@ export class BridgeMockAdapter implements IBankingAdapter {
       throw new Error(`Unsupported token: ${params.cryptoToken}`);
     }
 
+    const fiatCurrency = (params.fiatCurrency ?? 'USD') as FiatCurrency;
+    // FX rate: USD → target fiat currency
+    const fxRate = getFxRate('USD', fiatCurrency);
+    // Effective rate: stablecoin → target fiat
+    const effectiveRate = STABLECOIN_RATE * fxRate;
+
     let cryptoAmount: number;
     let fiatAmount: number;
 
     if (params.direction === 'offramp') {
       // Selling crypto → fiat
-      cryptoAmount = params.cryptoAmount ?? (params.fiatAmount! / RATE);
-      fiatAmount = params.fiatAmount ?? (cryptoAmount * RATE);
+      cryptoAmount = params.cryptoAmount ?? (params.fiatAmount! / effectiveRate);
+      fiatAmount = params.fiatAmount ?? (cryptoAmount * effectiveRate);
     } else {
       // Buying crypto with fiat (onramp)
-      fiatAmount = params.fiatAmount ?? (params.cryptoAmount! * RATE);
-      cryptoAmount = params.cryptoAmount ?? (fiatAmount / RATE);
+      fiatAmount = params.fiatAmount ?? (params.cryptoAmount! * effectiveRate);
+      cryptoAmount = params.cryptoAmount ?? (fiatAmount / effectiveRate);
     }
 
     const feeAmount = parseFloat((fiatAmount * FEE_PCT).toFixed(2));
 
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5 min
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
     return {
       cryptoAmount: parseFloat(cryptoAmount.toFixed(6)),
       fiatAmount: parseFloat(fiatAmount.toFixed(2)),
-      exchangeRate: RATE,
+      exchangeRate: parseFloat(effectiveRate.toFixed(6)),
       feeAmount,
+      fiatCurrency,
+      fxRate: fxRate !== 1 ? parseFloat(fxRate.toFixed(6)) : undefined,
       expiresAt,
     };
   }
@@ -46,7 +58,6 @@ export class BridgeMockAdapter implements IBankingAdapter {
   async executeRamp(params: RampExecuteParams): Promise<RampResult> {
     await delay(400);
 
-    // Mock Bridge transfer response shape
     const bridgeTransferId = `brg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
     const source = params.direction === 'offramp'
@@ -54,10 +65,9 @@ export class BridgeMockAdapter implements IBankingAdapter {
       : { currency: params.fiatCurrency, payment_rail: 'ach' };
 
     const destination = params.direction === 'offramp'
-      ? { currency: params.fiatCurrency, payment_rail: 'ach', bank_account: params.bankAccountRef }
+      ? { currency: params.fiatCurrency, payment_rail: params.fiatCurrency === 'USD' ? 'ach' : 'sepa', bank_account: params.bankAccountRef }
       : { currency: params.cryptoToken, payment_rail: 'ethereum' };
 
-    // Simulate Bridge transfer shape
     const _bridgeResponse = {
       id: bridgeTransferId,
       status: 'payment_submitted',

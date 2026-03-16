@@ -15,6 +15,9 @@ import { BalanceHint } from '@/components/ui/balance-hint';
 import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, ArrowLeftRight, ArrowRight } from 'lucide-react';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
+import { SlippageWarning } from '@/components/yield/SlippageWarning';
+import { useSlippageCheck } from '@/hooks/useYield';
+import type { SlippageEstimate } from '@/lib/yield/slippage';
 import type { SwapQuoteResponse } from '@/types/api';
 
 const schema = z.object({
@@ -34,9 +37,11 @@ export function SwapForm() {
   const { data: wallets } = useWallets();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const slippageCheck = useSlippageCheck();
   const [quote, setQuote] = useState<SwapQuoteResponse | null>(null);
   const [quoting, setQuoting] = useState(false);
   const [executing, setExecuting] = useState(false);
+  const [slippageEstimate, setSlippageEstimate] = useState<SlippageEstimate | null>(null);
 
   const {
     register,
@@ -126,11 +131,33 @@ export function SwapForm() {
       if (!res.ok) throw new Error(json.error);
       toast({ title: 'Swap recorded', description: `${quote.fromAmount} ${data.fromToken} → ${quote.toAmount} ${data.toToken}`, variant: 'success' });
       setQuote(null);
+      setSlippageEstimate(null);
       queryClient.invalidateQueries({ queryKey: ['balances'] });
     } catch (err) {
       toast({ title: 'Swap failed', description: (err as Error).message, variant: 'destructive' });
     } finally {
       setExecuting(false);
+    }
+  };
+
+  const handleExecuteWithSlippageCheck = async () => {
+    if (!quote || !selectedWallet) return;
+    try {
+      const estimate = await slippageCheck.mutateAsync({
+        protocol: 'aave_v3', // Use deep-liquidity protocol as proxy
+        token: fromToken,
+        chain: selectedWallet.chain,
+        amountUsd: parseFloat(quote.fromAmount),
+      });
+
+      if (estimate.severity === 'green') {
+        await executeSwap();
+      } else {
+        setSlippageEstimate(estimate);
+      }
+    } catch {
+      // If slippage check fails, proceed without it
+      await executeSwap();
     }
   };
 
@@ -233,9 +260,31 @@ export function SwapForm() {
                 <span className="text-orange-600">{quote.priceImpact}%</span>
               </div>
             )}
-            <Button className="w-full mt-2" onClick={executeSwap} disabled={executing}>
-              {executing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Executing…</> : 'Execute Swap'}
-            </Button>
+            {/* Slippage warning */}
+            {slippageEstimate && (
+              <SlippageWarning
+                estimate={slippageEstimate}
+                onConfirm={executeSwap}
+                onCancel={() => setSlippageEstimate(null)}
+                isExecuting={executing}
+              />
+            )}
+
+            {!slippageEstimate && (
+              <Button
+                className="w-full mt-2"
+                onClick={handleExecuteWithSlippageCheck}
+                disabled={executing || slippageCheck.isPending}
+              >
+                {slippageCheck.isPending ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Checking liquidity…</>
+                ) : executing ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Executing…</>
+                ) : (
+                  'Execute Swap'
+                )}
+              </Button>
+            )}
           </div>
         )}
       </CardContent>

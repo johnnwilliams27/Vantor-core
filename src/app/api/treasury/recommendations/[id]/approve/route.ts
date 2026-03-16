@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { getBankingAdapter } from '@/lib/banking/factory';
+import { updateBalancesAfterRamp } from '@/lib/balances/update-after-movement';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 export async function POST(
@@ -107,6 +108,16 @@ export async function POST(
         updated_at: new Date().toISOString(),
       })
       .eq('id', params.id);
+
+    // Update balances (mock fallback — real balances sync from bank/chain)
+    await updateBalancesAfterRamp({
+      direction: rec.action as 'onramp' | 'offramp',
+      walletId: rec.wallet_id,
+      bankAccountId: rec.bank_account_id,
+      token: rec.stablecoin_token ?? 'USDC',
+      cryptoAmount: parseFloat(rec.recommended_amount_usd),
+      fiatAmount: parseFloat(rec.recommended_amount_usd),
+    });
 
     await writeAuditLog({
       userId: session.user.id,

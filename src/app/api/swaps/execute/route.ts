@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth/nextauth.config';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
+import { updateBalancesAfterSwap } from '@/lib/balances/update-after-movement';
 import { z } from 'zod';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
@@ -65,6 +66,15 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Update wallet balances (mock fallback — real balances sync from chain)
+  await updateBalancesAfterSwap({
+    walletId: parsed.data.walletId,
+    fromToken: parsed.data.fromToken,
+    toToken: parsed.data.toToken,
+    fromAmount: parseFloat(parsed.data.fromAmount),
+    toAmount: parseFloat(parsed.data.toAmount),
+  });
 
   await writeAuditLog({
     userId: session.user.id,

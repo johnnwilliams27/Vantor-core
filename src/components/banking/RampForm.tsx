@@ -21,6 +21,8 @@ interface RampQuote {
   fiatAmount: number;
   exchangeRate: number;
   feeAmount: number;
+  fiatCurrency?: string;
+  fxRate?: number;
   expiresAt: string;
 }
 
@@ -29,6 +31,7 @@ const schema = z.object({
   bankAccountId: z.string().uuid('Select a bank account'),
   walletId: z.string().uuid('Select a wallet'),
   cryptoToken: z.enum(['USDC', 'USDT', 'PYUSD']),
+  fiatCurrency: z.enum(['USD', 'EUR', 'GBP']),
   amount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Enter a valid amount'),
   amountType: z.enum(['crypto', 'fiat']),
 });
@@ -62,6 +65,7 @@ export function RampForm() {
     defaultValues: {
       direction: 'offramp',
       cryptoToken: 'USDC',
+      fiatCurrency: 'USD',
       amountType: 'crypto',
     },
   });
@@ -70,6 +74,7 @@ export function RampForm() {
   const selectedWalletId = watch('walletId');
   const selectedBankId = watch('bankAccountId');
   const cryptoToken = watch('cryptoToken');
+  const fiatCurrency = watch('fiatCurrency');
   const amountType = watch('amountType');
   const amount = watch('amount');
   const selectedWallet = wallets?.find((w) => w.id === selectedWalletId);
@@ -84,6 +89,16 @@ export function RampForm() {
   }, [balances, selectedWalletId, cryptoToken]);
 
   const selectedBank = bankAccounts?.find((a) => a.id === selectedBankId);
+
+  // Auto-set fiat currency from bank account
+  useEffect(() => {
+    if (selectedBank?.balance_currency) {
+      const bankCurrency = selectedBank.balance_currency as 'USD' | 'EUR' | 'GBP';
+      if (['USD', 'EUR', 'GBP'].includes(bankCurrency)) {
+        setValue('fiatCurrency', bankCurrency);
+      }
+    }
+  }, [selectedBankId, selectedBank, setValue]);
   const bankBalance = selectedBank?.current_balance ? parseFloat(selectedBank.current_balance) : null;
 
   // Determine if amount exceeds source balance
@@ -111,7 +126,7 @@ export function RampForm() {
       const payload: Record<string, unknown> = {
         direction: data.direction,
         cryptoToken: data.cryptoToken,
-        fiatCurrency: 'USD',
+        fiatCurrency: data.fiatCurrency,
       };
       if (data.amountType === 'crypto') {
         payload.cryptoAmount = parseFloat(data.amount);
@@ -148,7 +163,7 @@ export function RampForm() {
           cryptoToken: data.cryptoToken,
           cryptoAmount: quote.cryptoAmount,
           fiatAmount: quote.fiatAmount,
-          fiatCurrency: 'USD',
+          fiatCurrency: data.fiatCurrency,
           exchangeRate: quote.exchangeRate,
           feeAmount: quote.feeAmount,
         }),
@@ -156,9 +171,10 @@ export function RampForm() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
 
+      const currSym = { USD: '$', EUR: '€', GBP: '£' }[data.fiatCurrency] ?? data.fiatCurrency;
       const desc = data.direction === 'offramp'
-        ? `${quote.cryptoAmount.toLocaleString()} ${data.cryptoToken} → $${quote.fiatAmount.toLocaleString()}`
-        : `$${quote.fiatAmount.toLocaleString()} → ${quote.cryptoAmount} ${data.cryptoToken}`;
+        ? `${quote.cryptoAmount.toLocaleString()} ${data.cryptoToken} → ${currSym}${quote.fiatAmount.toLocaleString()}`
+        : `${currSym}${quote.fiatAmount.toLocaleString()} → ${quote.cryptoAmount} ${data.cryptoToken}`;
 
       toast({ title: `${data.direction === 'offramp' ? 'Off-ramp' : 'On-ramp'} executed`, description: desc, variant: 'success' });
       setQuote(null);
@@ -285,12 +301,19 @@ export function RampForm() {
               </Select>
             </div>
             <div className="col-span-2 space-y-2">
-              <Label>Amount</Label>
+              <div className="flex items-center gap-2">
+                <Label>Amount</Label>
+                <Select {...register('fiatCurrency')} className="w-20 h-7 text-xs">
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                  <option value="GBP">GBP</option>
+                </Select>
+              </div>
               <div className="flex gap-2">
                 <Input placeholder="1000.00" {...register('amount')} />
                 <Select {...register('amountType')} className="w-28">
                   <option value="crypto">Crypto</option>
-                  <option value="fiat">USD</option>
+                  <option value="fiat">{fiatCurrency}</option>
                 </Select>
               </div>
               {isOfframp && amountType === 'crypto' && cryptoBalance !== null && (
@@ -318,34 +341,42 @@ export function RampForm() {
         </form>
 
         {/* Quote */}
-        {quote && (
-          <div className="mt-4 p-4 rounded-lg bg-[#19595b]/5 border border-[#19595b]/20 space-y-2">
-            <div className="text-sm font-semibold text-[#134849]">Quote</div>
+        {quote && (() => {
+          const sym = { USD: '$', EUR: '€', GBP: '£' }[fiatCurrency] ?? fiatCurrency;
+          return (
+          <div className="mt-4 p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-2">
+            <div className="text-sm font-semibold">Quote</div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">{isOfframp ? 'You send' : 'You pay'}</span>
+              <span className="text-muted-foreground">{isOfframp ? 'You send' : 'You pay'}</span>
               <span className="font-mono font-semibold">
                 {isOfframp
                   ? `${quote.cryptoAmount.toLocaleString()} ${getValues('cryptoToken')}`
-                  : `$${quote.fiatAmount.toLocaleString()}`}
+                  : `${sym}${quote.fiatAmount.toLocaleString()}`}
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">You receive</span>
-              <span className="font-mono font-semibold text-green-700">
+              <span className="text-muted-foreground">You receive</span>
+              <span className="font-mono font-semibold text-green-600">
                 {isOfframp
-                  ? `$${quote.fiatAmount.toLocaleString()}`
+                  ? `${sym}${quote.fiatAmount.toLocaleString()}`
                   : `${quote.cryptoAmount.toLocaleString()} ${getValues('cryptoToken')}`}
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Rate</span>
-              <span className="font-mono text-gray-700">${quote.exchangeRate.toFixed(4)} per token</span>
+              <span className="text-muted-foreground">Rate</span>
+              <span className="font-mono">{sym}{quote.exchangeRate.toFixed(4)} per token</span>
             </div>
+            {quote.fxRate && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">FX Rate (USD → {fiatCurrency})</span>
+                <span className="font-mono">{quote.fxRate.toFixed(4)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Fee</span>
-              <span className="font-mono text-gray-700">${quote.feeAmount.toFixed(2)}</span>
+              <span className="text-muted-foreground">Fee</span>
+              <span className="font-mono">{sym}{quote.feeAmount.toFixed(2)}</span>
             </div>
-            <div className="text-xs text-gray-400">
+            <div className="text-xs text-muted-foreground">
               Quote expires {new Date(quote.expiresAt).toLocaleTimeString()}
             </div>
             <Button className="w-full mt-2" onClick={executeRamp} disabled={executing}>
@@ -354,7 +385,8 @@ export function RampForm() {
                 : `Execute ${isOfframp ? 'Off-ramp' : 'On-ramp'}`}
             </Button>
           </div>
-        )}
+          );
+        })()}
       </CardContent>
     </Card>
   );

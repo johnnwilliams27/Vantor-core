@@ -632,6 +632,106 @@ const rejectRecommendation: AgentTool = {
 // Tool registry
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Yield tools
+// ---------------------------------------------------------------------------
+
+const getYieldPositions: AgentTool = {
+  name: 'get_yield_positions',
+  description: 'List all active DeFi yield positions with current values, APY, and accrued yield.',
+  input_schema: { type: 'object', properties: {} },
+  minRole: 'auditor',
+  async handler(_input, ctx) {
+    const { data } = await ctx.supabase
+      .from('yield_positions')
+      .select('*')
+      .eq('user_id', ctx.userId)
+      .eq('enterprise_id', ctx.enterpriseId)
+      .eq('is_active', true)
+      .order('current_value_usd', { ascending: false });
+    return data ?? [];
+  },
+};
+
+const yieldDeposit: AgentTool = {
+  name: 'yield_deposit',
+  description: 'Deposit stablecoins into a DeFi yield protocol (Aave, Morpho, Kamino, etc.). Always confirm with the user before calling this tool.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      protocol: { type: 'string', description: 'Protocol ID (aave_v3, morpho, kamino, ondo, etc.)' },
+      token: { type: 'string', enum: ['USDC', 'USDT', 'PYUSD'], description: 'Stablecoin to deposit' },
+      amount: { type: 'string', description: 'Amount to deposit' },
+      walletAddress: { type: 'string', description: 'Wallet address' },
+      chain: { type: 'string', enum: ['ethereum', 'solana'], description: 'Blockchain' },
+    },
+    required: ['protocol', 'token', 'amount', 'walletAddress', 'chain'],
+  },
+  minRole: 'treasury_manager',
+  async handler(input, ctx) {
+    const res = await fetch(`${process.env.NEXTAUTH_URL ?? 'http://localhost:3000'}/api/yield/deposit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-agent-user-id': ctx.userId, 'x-agent-enterprise-id': ctx.enterpriseId ?? '' },
+      body: JSON.stringify(input),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error ?? 'Yield deposit failed');
+    return json.data;
+  },
+};
+
+const yieldWithdraw: AgentTool = {
+  name: 'yield_withdraw',
+  description: 'Withdraw stablecoins from a DeFi yield position. Always confirm with the user before calling this tool.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      positionId: { type: 'string', description: 'Yield position UUID' },
+      amount: { type: 'string', description: 'Amount to withdraw' },
+      walletAddress: { type: 'string', description: 'Wallet address to receive funds' },
+    },
+    required: ['positionId', 'amount', 'walletAddress'],
+  },
+  minRole: 'treasury_manager',
+  async handler(input, ctx) {
+    const res = await fetch(`${process.env.NEXTAUTH_URL ?? 'http://localhost:3000'}/api/yield/withdraw`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-agent-user-id': ctx.userId, 'x-agent-enterprise-id': ctx.enterpriseId ?? '' },
+      body: JSON.stringify(input),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error ?? 'Yield withdrawal failed');
+    return json.data;
+  },
+};
+
+const withdrawAndOfframp: AgentTool = {
+  name: 'withdraw_and_offramp',
+  description: 'Withdraw from a yield position AND off-ramp to fiat (USD, EUR, or GBP) in a single operation. Use this when the user needs to convert yield earnings to fiat. Always confirm with the user before calling.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      positionId: { type: 'string', description: 'Yield position UUID' },
+      amount: { type: 'string', description: 'Amount to withdraw and off-ramp' },
+      walletAddress: { type: 'string', description: 'Wallet address' },
+      bankAccountId: { type: 'string', description: 'Destination bank account UUID' },
+      fiatCurrency: { type: 'string', enum: ['USD', 'EUR', 'GBP'], description: 'Target fiat currency' },
+    },
+    required: ['positionId', 'amount', 'walletAddress', 'bankAccountId', 'fiatCurrency'],
+  },
+  minRole: 'treasury_manager',
+  async handler(input, ctx) {
+    const res = await fetch(`${process.env.NEXTAUTH_URL ?? 'http://localhost:3000'}/api/treasury/withdraw-and-offramp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-agent-user-id': ctx.userId, 'x-agent-enterprise-id': ctx.enterpriseId ?? '' },
+      body: JSON.stringify(input),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error ?? 'Withdraw and off-ramp failed');
+    return json.data;
+  },
+};
+
 const ALL_TOOLS: AgentTool[] = [
   // Read-only (all roles)
   getTreasuryOverview,
@@ -655,6 +755,11 @@ const ALL_TOOLS: AgentTool[] = [
   executeSwap,
   approveRecommendation,
   rejectRecommendation,
+  // Yield tools
+  getYieldPositions,
+  yieldDeposit,
+  yieldWithdraw,
+  withdrawAndOfframp,
 ];
 
 /** Return Anthropic tool definitions filtered by role */

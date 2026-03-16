@@ -202,6 +202,32 @@ export interface Swap {
   created_at: string;
 }
 
+export type BridgeProvider = 'cctp' | 'layerzero';
+
+export interface BridgeTransfer {
+  id: string;
+  user_id: string;
+  enterprise_id: string | null;
+  from_wallet_id: string | null;
+  to_wallet_id: string | null;
+  token: TokenSymbol;
+  amount: string;
+  received_amount: string | null;
+  bridge_fee: string;
+  from_chain: ChainType;
+  to_chain: ChainType;
+  provider: BridgeProvider;
+  tx_hash: string | null;
+  status: PaymentStatus;
+  slippage_bps: number | null;
+  estimated_arrival_minutes: number | null;
+  error_message: string | null;
+  metadata: Record<string, unknown>;
+  executed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface GlPosting {
   id: string;
   user_id: string;

@@ -22,8 +22,8 @@ async function fetchBankAccounts(): Promise<BankAccount[]> {
   return json.data;
 }
 
-function formatUsd(n: number) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(n);
+function formatCurrencyAmount(n: number, currency = 'USD') {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 2 }).format(n);
 }
 
 export function BankAccountsTab({ plaidConfigured = false }: { plaidConfigured?: boolean }) {
@@ -187,11 +187,16 @@ export function BankAccountsTab({ plaidConfigured = false }: { plaidConfigured?:
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          {balanceInfo != null ? (
-                            <span className="text-sm font-semibold tabular-nums">{formatUsd(balanceInfo.currentBalanceUsd)}</span>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
+                          {(() => {
+                            const cur = account.currency ?? account.balance_currency ?? 'USD';
+                            if (balanceInfo != null) {
+                              return <span className="text-sm font-semibold tabular-nums">{formatCurrencyAmount(balanceInfo.currentBalanceUsd, cur)}</span>;
+                            }
+                            if (account.current_balance) {
+                              return <span className="text-sm font-semibold tabular-nums">{formatCurrencyAmount(parseFloat(account.current_balance), cur)}</span>;
+                            }
+                            return <span className="text-muted-foreground">—</span>;
+                          })()}
                         </TableCell>
                         <TableCell>
                           <Button

@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { getBankingAdapter } from '@/lib/banking/factory';
 import { writeAuditLog } from '@/lib/audit/logger';
+import { updateBalancesAfterRamp } from '@/lib/balances/update-after-movement';
 import { z } from 'zod';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
@@ -80,6 +81,25 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    // Update balances (mock fallback — real balances sync from bank/chain)
+    // Find the user's first active wallet to update crypto balance
+    const { data: userWallet } = await supabase
+      .from('wallets')
+      .select('id')
+      .eq('user_id', session.user.id)
+      .eq('enterprise_id', enterpriseId)
+      .limit(1)
+      .maybeSingle();
+
+    await updateBalancesAfterRamp({
+      direction: parsed.data.direction,
+      walletId: userWallet?.id,
+      bankAccountId: parsed.data.bankAccountId,
+      token: parsed.data.cryptoToken,
+      cryptoAmount: parsed.data.cryptoAmount,
+      fiatAmount: parsed.data.fiatAmount,
+    });
 
     await writeAuditLog({
       userId: session.user.id,

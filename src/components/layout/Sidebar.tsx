@@ -26,6 +26,7 @@ import {
   FileSearch,
   TrendingUp,
   FileBarChart,
+  GitBranchPlus,
 } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import type { UserRole } from '@/types/database';
@@ -71,15 +72,16 @@ const NAV_GROUPS: NavGroup[] = [
   {
     heading: 'Operations',
     items: [
-      { label: 'Invoices', href: '/invoices', icon: FileText, minRole: 'accountant' },
       { label: 'Payments', href: '/payments', icon: Send, minRole: 'treasury_manager' },
       { label: 'Swaps', href: '/swaps', icon: ArrowLeftRight, minRole: 'treasury_manager' },
+      { label: 'Bridges', href: '/bridges', icon: GitBranchPlus, minRole: 'treasury_manager' },
       { label: 'Ramps', href: '/ramps', icon: Banknote, minRole: 'treasury_manager' },
     ],
   },
   {
     heading: 'Records',
     items: [
+      { label: 'Invoices', href: '/invoices', icon: FileText, minRole: 'accountant' },
       { label: 'Transactions', href: '/transactions', icon: History },
       { label: 'Audit', href: '/audit', icon: Shield },
       { label: 'Reporting', href: '/reporting', icon: FileBarChart, minRole: 'treasury_manager' },
