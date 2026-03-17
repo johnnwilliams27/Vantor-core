@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CardSpinner } from '@/components/ui/spinner';
@@ -22,6 +23,19 @@ import type { YieldProtocolWithRates } from '@/hooks/useYield';
 const CHAIN_LABELS: Record<string, string> = {
   ethereum: 'Ethereum',
   solana: 'Solana',
+};
+
+const PROTOCOL_LOGOS: Record<string, string> = {
+  aave_v3: '/partners/Aave_idWRQ7YLO7_0.svg',
+  morpho: '/partners/morpho-white.svg',
+  morpho_steakhouse: '/partners/morpho-white.svg',
+  kamino: '/partners/kamino-logo.svg',
+  kamino_multiply: '/partners/kamino-logo.svg',
+  ondo: '/partners/Ondo_Logo_0.svg',
+  sky: '/partners/sky_logo.png',
+  ethena: '/partners/ethena_logo.png',
+  maple: '/partners/maple_logo.svg',
+  drift: '/partners/drift_logo.svg',
 };
 
 const RISK_COLORS: Record<string, string> = {
@@ -381,20 +395,25 @@ export function YieldRatesTable() {
 
         return (
           <Card key={p.id} className="relative overflow-hidden">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">{p.name}</CardTitle>
-                <div className="flex items-center gap-2">
-                  <Badge variant={p.chain === 'ethereum' ? 'ethereum' : 'solana'}>{CHAIN_LABELS[p.chain] ?? p.chain}</Badge>
-                  <Badge className={RISK_COLORS[p.riskLevel]}>
-                    <Shield className="h-3 w-3 mr-1" />
-                    {capitalize(p.riskLevel)} Risk
-                  </Badge>
-                </div>
+            <div className="flex items-center justify-between px-5 pt-5 pb-3">
+              {PROTOCOL_LOGOS[p.id] ? (
+                <Image src={PROTOCOL_LOGOS[p.id]} alt={p.name} width={64} height={38} className="h-[38px] w-auto object-contain" unoptimized />
+              ) : (
+                <span className="text-2xl font-bold text-muted-foreground">{p.name}</span>
+              )}
+              <div className="flex flex-col items-end gap-1.5 shrink-0">
+                <Badge variant={p.chain === 'ethereum' ? 'ethereum' : 'solana'}>{CHAIN_LABELS[p.chain] ?? p.chain}</Badge>
+                <Badge className={RISK_COLORS[p.riskLevel]}>
+                  <Shield className="h-3 w-3 mr-1" />
+                  {capitalize(p.riskLevel)} Risk
+                </Badge>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground">{p.description}</p>
+            </div>
+            <div className="px-5 pb-2 border-b border-border/50">
+              <CardTitle className="text-base">{p.name}</CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">{p.description}</p>
+            </div>
+            <CardContent className="space-y-3 pt-2">
 
               {p.riskFactors && (
                 <div className="border rounded-md p-3 bg-muted/30">
