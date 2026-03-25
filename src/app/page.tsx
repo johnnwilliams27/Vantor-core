@@ -1037,7 +1037,7 @@ function ContactForm() {
               </p>
             )}
             {status === 'error' && (
-              <p className="text-red-400 text-sm">Something went wrong. Please email john@vantor.xyz directly.</p>
+              <p className="text-red-400 text-sm">Something went wrong. Please email contact@vantor.xyz directly.</p>
             )}
           </form>
         </div>

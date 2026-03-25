@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/api/rate-limit';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
@@ -37,24 +39,14 @@ export async function POST(req: NextRequest) {
       return rateLimitResponse();
     }
 
-    if (process.env.SMTP_USE_MOCK === 'true') {
-      console.log('[MOCK SMTP] Would send contact email:', { name, email, company, message: message.slice(0, 100) });
+    if (process.env.RESEND_USE_MOCK === 'true') {
+      console.log('[MOCK RESEND] Would send contact email:', { name, email, company, message: message.slice(0, 100) });
       return NextResponse.json({ success: true });
     }
 
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: Number(process.env.SMTP_PORT) || 587,
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER || 'john@vantor.xyz',
-        pass: process.env.SMTP_PASS,
-      },
-    });
-
-    await transporter.sendMail({
-      from: `"Vantor Contact Form" <${process.env.SMTP_USER || 'john@vantor.xyz'}>`,
-      to: 'john@vantor.xyz',
+    await resend.emails.send({
+      from: 'Vantor Contact Form <contact@vantor.xyz>',
+      to: 'contact@vantor.xyz',
       replyTo: email,
       subject: `Vantor Inquiry from ${name}${company ? ` (${company})` : ''}`,
       text: [
