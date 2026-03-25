@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   title: 'Vantor – Agentic Stablecoin Treasury Management',
   description:
     'Connect ERP systems with digital asset wallets and bank accounts for agentic treasury management. AI-powered yield optimization, compliance, and cash flow forecasting.',
-  metadataBase: new URL('https://www.vantor.xyz'),
+  metadataBase: new URL('https://vantor.xyz'),
   openGraph: {
     title: 'Vantor – Agentic Stablecoin Treasury Management',
     description:

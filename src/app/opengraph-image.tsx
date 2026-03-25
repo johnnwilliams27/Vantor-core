@@ -37,7 +37,7 @@ export default async function Image() {
         {/* Logo */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="https://www.vantor.xyz/logo-dark.png"
+          src="https://vantor.xyz/logo-dark.png"
           alt=""
           width={360}
           height={120}

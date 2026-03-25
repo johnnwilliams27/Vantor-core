@@ -1,5 +1,5 @@
 const INDEXNOW_KEY = 'fd7aacb7bd3aa0aa479fa2785e2bda0a';
-const SITE_HOST = 'www.vantor.xyz';
+const SITE_HOST = 'vantor.xyz';
 const KEY_LOCATION = `https://${SITE_HOST}/${INDEXNOW_KEY}.txt`;
 
 /** Public pages that should be indexed */

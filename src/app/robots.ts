@@ -9,6 +9,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ['/dashboard', '/wallets', '/payments', '/swaps', '/invoices', '/transactions', '/treasury', '/compliance', '/yield', '/ramps', '/bank-accounts', '/audit', '/admin', '/setup', '/login', '/register', '/api/'],
       },
     ],
-    sitemap: 'https://www.vantor.xyz/sitemap.xml',
+    sitemap: 'https://vantor.xyz/sitemap.xml',
   };
 }
