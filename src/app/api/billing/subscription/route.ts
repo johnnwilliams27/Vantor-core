@@ -94,17 +94,13 @@ export async function POST(req: NextRequest) {
     const currentItem = stripeSubscription.items.data[0];
 
     // Find the price for the target tier
-    const prices = await stripe.prices.list({
-      product: process.env[`STRIPE_PRODUCT_${targetTier.toUpperCase()}`],
-      active: true,
-    });
-
-    if (!prices.data[0]) {
-      return NextResponse.json({ error: 'Stripe price not found for tier' }, { status: 500 });
+    const priceId = process.env[`STRIPE_PRICE_${targetTier.toUpperCase()}`];
+    if (!priceId) {
+      return NextResponse.json({ error: 'Price not configured' }, { status: 500 });
     }
 
     await stripe.subscriptions.update(sub.stripe_subscription_id, {
-      items: [{ id: currentItem.id, price: prices.data[0].id }],
+      items: [{ id: currentItem.id, price: priceId }],
       proration_behavior: 'create_prorations',
     });
   }
@@ -163,7 +159,7 @@ export async function PATCH(req: NextRequest) {
     await stripe.subscriptionSchedules.update(schedule.id, {
       phases: [
         {
-          items: [{ price: stripeSubscription.items.data[0].price as string, quantity: 1 }],
+          items: [{ price: stripeSubscription.items.data[0].price.id, quantity: 1 }],
           start_date: stripeSubscription.current_period_start,
           end_date: stripeSubscription.current_period_end,
         },

@@ -64,6 +64,9 @@ export async function POST(req: NextRequest) {
       case 'payment_method.detached':
         await handlePaymentMethodDetached(event.data.object as Stripe.PaymentMethod);
         break;
+      case 'checkout.session.completed':
+        await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+        break;
     }
   } catch (err) {
     console.error(`Error handling ${event.type}:`, err);
@@ -308,6 +311,30 @@ async function handlePaymentMethodAttached(pm: Stripe.PaymentMethod) {
     card_exp_year: pm.card.exp_year,
     is_default: true,
   });
+}
+
+async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+  if (!session.subscription || !session.metadata?.enterprise_id) return;
+  const supabaseAdmin = createAdminClient();
+
+  const subscriptionId = typeof session.subscription === 'string'
+    ? session.subscription
+    : session.subscription.id;
+  const customerId = typeof session.customer === 'string'
+    ? session.customer
+    : session.customer?.id;
+
+  // Update the subscription record with Stripe IDs
+  await supabaseAdmin
+    .from('subscriptions')
+    .update({
+      stripe_subscription_id: subscriptionId,
+      stripe_customer_id: customerId || undefined,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('enterprise_id', session.metadata.enterprise_id);
+
+  // The subscription.created webhook will handle the tier update
 }
 
 async function handlePaymentMethodDetached(pm: Stripe.PaymentMethod) {

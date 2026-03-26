@@ -29,11 +29,11 @@ export async function getTotalLiveAssets(enterpriseId: string): Promise<number> 
   // Sum bank account balances
   const { data: bankAccounts } = await supabase
     .from('bank_accounts')
-    .select('balance')
+    .select('current_balance')
     .eq('enterprise_id', enterpriseId);
 
   const bankTotal = (bankAccounts || []).reduce(
-    (sum, ba) => sum + (Number(ba.balance) || 0),
+    (sum, ba) => sum + (Number(ba.current_balance) || 0),
     0
   );
 
