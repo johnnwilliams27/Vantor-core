@@ -41,6 +41,33 @@ export const authOptions: NextAuthOptions = {
           enterpriseName = ent?.name ?? null;
         }
 
+        let subscriptionTier = 'lite';
+        let kycStatus = 'none';
+        let kybStatus = 'none';
+
+        if (profile?.enterprise_id) {
+          const { data: subscription } = await supabase
+            .from('subscriptions')
+            .select('tier')
+            .eq('enterprise_id', profile.enterprise_id)
+            .single();
+          subscriptionTier = subscription?.tier || 'lite';
+
+          const { data: kyb } = await supabase
+            .from('kyb_verifications')
+            .select('status')
+            .eq('enterprise_id', profile.enterprise_id)
+            .single();
+          kybStatus = kyb?.status || 'none';
+        }
+
+        const { data: kyc } = await supabase
+          .from('kyc_verifications')
+          .select('status')
+          .eq('user_id', data.user.id)
+          .single();
+        kycStatus = kyc?.status || 'none';
+
         return {
           id: data.user.id,
           email: data.user.email!,
@@ -50,6 +77,9 @@ export const authOptions: NextAuthOptions = {
           enterprise_id: profile?.enterprise_id ?? null,
           enterprise_name: enterpriseName,
           is_app_admin: profile?.is_app_admin ?? false,
+          subscription_tier: subscriptionTier,
+          kyc_status: kycStatus,
+          kyb_status: kybStatus,
         };
       },
     }),
@@ -67,6 +97,9 @@ export const authOptions: NextAuthOptions = {
           (user as { enterprise_name?: string | null }).enterprise_name ?? null;
         token.is_app_admin =
           (user as { is_app_admin?: boolean }).is_app_admin ?? false;
+        token.subscription_tier = (user as any).subscription_tier ?? 'lite';
+        token.kyc_status = (user as any).kyc_status ?? 'none';
+        token.kyb_status = (user as any).kyb_status ?? 'none';
       }
       // Re-fetch from DB whenever the session is explicitly updated
       // (e.g. after completing onboarding)
@@ -92,6 +125,32 @@ export const authOptions: NextAuthOptions = {
           } else {
             token.enterprise_name = null;
           }
+
+          if (profile.enterprise_id) {
+            const { data: sub } = await supabase
+              .from('subscriptions')
+              .select('tier')
+              .eq('enterprise_id', profile.enterprise_id)
+              .single();
+            token.subscription_tier = sub?.tier || 'lite';
+
+            const { data: kyb } = await supabase
+              .from('kyb_verifications')
+              .select('status')
+              .eq('enterprise_id', profile.enterprise_id)
+              .single();
+            token.kyb_status = kyb?.status || 'none';
+          } else {
+            token.subscription_tier = 'lite';
+            token.kyb_status = 'none';
+          }
+
+          const { data: kyc } = await supabase
+            .from('kyc_verifications')
+            .select('status')
+            .eq('user_id', token.id)
+            .single();
+          token.kyc_status = kyc?.status || 'none';
         }
       }
       return token;
@@ -104,6 +163,9 @@ export const authOptions: NextAuthOptions = {
         session.user.enterprise_id = token.enterprise_id as string | null;
         session.user.enterprise_name = token.enterprise_name as string | null;
         session.user.is_app_admin = token.is_app_admin as boolean;
+        session.user.subscription_tier = token.subscription_tier as string;
+        session.user.kyc_status = token.kyc_status as string;
+        session.user.kyb_status = token.kyb_status as string;
       }
       return session;
     },
@@ -122,6 +184,9 @@ declare module 'next-auth' {
       enterprise_id: string | null;
       enterprise_name: string | null;
       is_app_admin: boolean;
+      subscription_tier: string;
+      kyc_status: string;
+      kyb_status: string;
     };
   }
 }
@@ -134,5 +199,8 @@ declare module 'next-auth/jwt' {
     enterprise_id: string | null;
     enterprise_name: string | null;
     is_app_admin: boolean;
+    subscription_tier: string;
+    kyc_status: string;
+    kyb_status: string;
   }
 }
