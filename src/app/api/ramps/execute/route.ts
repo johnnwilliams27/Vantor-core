@@ -8,6 +8,8 @@ import { writeAuditLog } from '@/lib/audit/logger';
 import { updateBalancesAfterRamp } from '@/lib/balances/update-after-movement';
 import { z } from 'zod';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
+import { isTestMode } from '@/lib/test-mode/helpers';
+import { recordUsageFee } from '@/lib/billing/usage';
 
 const schema = z.object({
   direction: z.enum(['onramp', 'offramp']),
@@ -81,6 +83,15 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    if (!isTestMode()) {
+      await recordUsageFee({
+        enterpriseId,
+        transactionType: 'ramp',
+        transactionId: fiatTx.id,
+        notionalAmountUsd: parsed.data.fiatAmount,
+      });
+    }
 
     // Update balances (mock fallback — real balances sync from bank/chain)
     // Find the user's first active wallet to update crypto balance

@@ -22,6 +22,7 @@ export interface RampQuote {
   fxRate?: number;
   /** ISO timestamp */
   expiresAt: string;
+  vantor_fee?: number;
 }
 
 export interface RampExecuteParams {
@@ -63,6 +64,7 @@ export interface SwapQuote {
   priceImpact?: string;
   feeAmount?: string;
   quoteData: Record<string, unknown>;
+  vantor_fee?: number;
 }
 
 export interface SwapExecuteParams {
@@ -101,6 +103,7 @@ export interface BridgeQuote {
   estimatedTimeMinutes: number;
   provider: string;
   quoteData: Record<string, unknown>;
+  vantor_fee?: number;
 }
 
 export interface BridgeExecuteParams {
