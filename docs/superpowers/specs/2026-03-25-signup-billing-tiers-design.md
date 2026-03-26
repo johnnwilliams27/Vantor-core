@@ -12,6 +12,11 @@ Implement a complete signup, subscription billing, and account tier system for V
 
 **Architecture approach:** Hybrid — Stripe manages subscriptions and payments, the app owns feature gating logic. A `subscription_tier` enum on the enterprise table drives all gating decisions, kept in sync by Stripe webhooks.
 
+**Key design decisions:**
+- `subscriptions.tier` is the source of truth; `enterprises.subscription_tier` is a denormalized cache for fast gating. Webhook handlers update both in a single DB transaction.
+- All webhook endpoints (Stripe, Persona) verify signatures using raw request bodies and reject unverified payloads.
+- Webhook handlers are idempotent — processed event IDs are stored and deduplicated.
+
 ---
 
 ## 1. Tier Definitions & Feature Gating
@@ -119,7 +124,18 @@ Tier is read from `subscription_tier` on the enterprise record, cached in the se
 | `notional_amount` | numeric | base transaction amount in USD |
 | `fee_rate` | numeric | 0.001 (0.1%) |
 | `fee_amount` | numeric | calculated fee |
-| `billing_period` | text | e.g., "2026-03" |
+| `billing_period` | date | 1st of billing month, e.g., 2026-03-01 |
+| `created_at` | timestamptz | |
+
+#### `webhook_events`
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | uuid PK | |
+| `source` | text | stripe, persona |
+| `event_id` | text unique | external event ID for deduplication |
+| `event_type` | text | e.g., invoice.paid, inquiry.completed |
+| `processed_at` | timestamptz | |
 | `created_at` | timestamptz | |
 
 #### `invitations`
@@ -129,6 +145,7 @@ Tier is read from `subscription_tier` on the enterprise record, cached in the se
 | `id` | uuid PK | |
 | `email` | text | invitee email |
 | `invited_by` | uuid FK → user_profiles | must be is_app_admin |
+| `inviter_email` | text | denormalized for audit trail |
 | `token` | text unique | signup link token |
 | `status` | text | pending, accepted, expired |
 | `expires_at` | timestamptz | 7 days from creation |
@@ -160,7 +177,8 @@ Tier is read from `subscription_tier` on the enterprise record, cached in the se
 
 ### Modifications to Existing Tables
 
-- `enterprises`: add `subscription_tier` enum column (default `lite`) — fast gating cache, kept in sync by Stripe webhooks
+- `enterprises`: add `subscription_tier` enum column (default `lite`) — denormalized cache for fast gating. Source of truth is `subscriptions.tier`. Webhook handlers update both in a single DB transaction. A reconciliation check on login verifies these stay in sync.
+- `enterprises`: deprecate existing `kyc_status` column — replaced by `kyb_verifications` table. Migration sets existing `kyc_status` values to null and adds a comment marking it deprecated. New code reads from `kyb_verifications` only.
 
 ---
 
@@ -170,10 +188,16 @@ Tier is read from `subscription_tier` on the enterprise record, cached in the se
 
 1. User clicks "Get Started" → `/register`
 2. User provides: full name, email, password, company name
-3. Account created → enterprise created → `subscription_tier` set to `lite`
-4. Seed data auto-provisioned in test mode
-5. User lands on dashboard in test mode
-6. Prominent upgrade CTA in sidebar and dashboard
+3. Registration API (`POST /api/auth/register`) now performs:
+   a. Creates Supabase auth user (existing)
+   b. Creates enterprise row with `name` = company name, `subscription_tier` = `lite`
+   c. Creates test enterprise (linked via `test_enterprise_id`) for test mode
+   d. Creates `subscriptions` row with `tier: 'lite'`, no Stripe IDs
+   e. Sets `user_profiles.enterprise_id` to the new enterprise
+   f. Sets `user_profiles.role` to `treasury_manager` (first user is the admin)
+   g. Calls `seedTestEnterprise(testEnterpriseId)` to provision seed data
+4. User lands on dashboard in test mode
+5. Prominent upgrade CTA in sidebar and dashboard
 
 ### Flow B: Admin Invite
 
@@ -182,9 +206,10 @@ Tier is read from `subscription_tier` on the enterprise record, cached in the se
 3. Invitation record created with unique token (expires 7 days)
 4. Branded light-theme email sent via Resend (Vantor logo, teal accents, light background)
 5. Link: `/register?invite={token}` — pre-fills email, skips tier selection
-6. User provides: full name, password (email pre-filled, company name)
-7. Account created at Lite tier → same seed data → lands on dashboard
-8. Upgrade CTA available when ready
+6. User provides: full name, password, company name (email pre-filled)
+7. Registration creates a new enterprise at Lite tier for the invited user (same flow as self-serve — each invite creates an independent enterprise)
+8. Same seed data provisioning → lands on dashboard
+9. Upgrade CTA available when ready
 
 ### Upgrade Flow (Lite → Paid Tier)
 
@@ -242,13 +267,14 @@ Quote screens show line-item breakdown:
 - **Total cost**
 - **Net amount received**
 
-Example (on-ramp):
+Fees are deducted from the received amount (subtractive model):
+
+Example (on-ramp, $10,000 USD → USDC):
 ```
-Amount:           $10,000.00
-MoonPay fee:         $15.00  (0.15%)
-Vantor fee:          $10.00  (0.10%)
-Total cost:      $10,025.00
-You receive:    ~9,975 USDC
+You pay:            $10,000.00
+MoonPay fee:           -$15.00  (0.15%)
+Vantor fee:            -$10.00  (0.10%)
+You receive:      ~9,975 USDC
 ```
 
 ### Fee Recording
@@ -351,8 +377,16 @@ Layout:
 
 ### Usage Fee Reporting to Stripe
 
-- Transaction fees summed and added as invoice line items before finalization (via `invoice.created` webhook)
-- Or reported as metered usage via `stripe.subscriptionItems.createUsageRecord()`
+Uses the `invoice.created` webhook approach:
+
+1. Stripe fires `invoice.created` webhook before finalization
+2. Webhook handler sets `auto_advance: false` on the invoice to prevent premature finalization
+3. Handler queries `usage_fees` where `billing_period` matches and `created_at` < billing cutoff (1st of month, 00:00 UTC)
+4. Aggregates fees by type (ramps, swaps, bridges) and adds as invoice line items via `stripe.invoiceItems.create()`
+5. Finalizes the invoice via `stripe.invoices.finalizeInvoice()`
+6. Any transactions completed after the cutoff roll into the next billing period
+
+This avoids the complexity of metered billing and gives full control over line item presentation.
 
 ### Pro-Rata on Upgrade
 
@@ -362,11 +396,16 @@ Layout:
 ### Downgrade
 
 - Takes effect at end of current billing period (`proration_behavior: 'none'`)
-- Validated that connected live assets < target tier's cap before allowing
+- Pre-conditions before allowing downgrade:
+  1. Connected live assets must be below target tier's asset cap
+  2. Live ERP count must be within target tier's allowance (1 included + paid add-ons). If user has extra ERPs, they must remove them or accept continued add-on billing.
+  3. **Downgrade to Lite:** live data (wallets, bank accounts, live ERPs) is preserved but becomes inaccessible — user is locked to test mode only. If they re-upgrade, live data becomes accessible again. No data is deleted.
 
 ---
 
 ## 8. Seed Data Provisioning
+
+> **Note:** This replaces the existing seed data in `src/lib/test-mode/helpers.ts` which creates smaller balances (~$160K wallets, ~$870K bank accounts). The new seed function provisions the full $5M as specified below.
 
 Triggered on every new enterprise creation (all tiers).
 
@@ -438,7 +477,15 @@ When a paid-tier user adds a 2nd+ live ERP:
 - `kyc_status` — enforce KYC gate without extra DB calls
 - `kyb_status` — enterprise-level, for upgrade flow checks
 
-Refreshed via NextAuth JWT callback when Stripe/Persona webhooks update the DB.
+### JWT Refresh Strategy
+
+Stripe/Persona webhooks update the DB server-side but cannot push JWT refreshes to the client. To keep the JWT in sync:
+
+1. **During upgrade/KYC flows:** After the user completes a KYB/KYC/payment step in the UI, the client immediately calls `useSession().update()` to trigger the NextAuth JWT callback, which re-reads from DB.
+2. **On login:** JWT callback always reads fresh `subscription_tier`, `kyc_status`, and `kyb_status` from DB.
+3. **Reconciliation on API calls:** Server-side API middleware checks `enterprises.subscription_tier` against the JWT value on each request. If they differ, the response includes a `x-session-stale: true` header, and the client auto-refreshes the session.
+
+This avoids polling while ensuring the JWT stays reasonably fresh.
 
 ---
 
@@ -449,6 +496,8 @@ Refreshed via NextAuth JWT callback when Stripe/Persona webhooks update the DB.
 - **Purpose:** Subscription billing, credit card management, invoicing, pro-rata, dunning
 - **NPM package:** `stripe` (to be added)
 - **Webhook endpoint:** POST `/api/webhooks/stripe`
+- **Signature verification:** All webhooks verified via `stripe.webhooks.constructEvent()` using the webhook signing secret. Route must read raw body via `req.text()` before JSON parsing.
+- **Idempotency:** Event IDs stored in `webhook_events` table; duplicate events are skipped.
 - **Key events:** `invoice.paid`, `invoice.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `payment_method.attached`, `payment_method.detached`
 - **Products:** One product per tier (Starter, Growth, Scale) with fixed prices. Enterprise product with per-customer ad-hoc prices. ERP add-on product at $1,500/mo.
 
@@ -457,6 +506,8 @@ Refreshed via NextAuth JWT callback when Stripe/Persona webhooks update the DB.
 - **Purpose:** KYC (individual identity verification) and KYB (business verification with FinCEN BOI)
 - **NPM package:** `persona` (to be added, or use REST API directly)
 - **Webhook endpoint:** POST `/api/webhooks/persona`
+- **Signature verification:** Persona webhooks verified via HMAC signature in the `Persona-Signature` header using the webhook secret.
+- **Idempotency:** Event IDs stored in `webhook_events` table; duplicate events are skipped.
 - **Flows:** Hosted Inquiry embedded in modal for KYC, hosted KYB flow for business verification
 
 ### Resend (Existing)
@@ -500,3 +551,17 @@ persona                 # Persona SDK (or direct REST API)
 | `/api/admin/invitations` | POST | Send invite (is_app_admin only) |
 | `/api/admin/invitations` | GET | List invitations |
 | `/api/admin/enterprise/[id]/plan` | PATCH | Set enterprise custom price (is_app_admin) |
+
+### Rate Limiting
+
+Apply rate limiting (using existing `src/lib/api/rate-limit.ts`) to public-facing endpoints:
+- `/api/auth/register` — prevent signup abuse
+- `/register?invite={token}` — prevent invitation token brute-force
+- `/api/webhooks/*` — basic protection (signatures are primary defense)
+
+### Security Notes
+
+- Enterprise tier "Contact Us" flow opens a pre-filled contact form (mailto or embedded form to existing `/api/contact` endpoint) — no self-serve checkout for Enterprise.
+- All billing API routes require `treasury_manager` role check.
+- Admin routes (`/api/admin/*`) require `is_app_admin` check.
+- Stripe webhook routes must skip CSRF/auth middleware but enforce signature verification.
