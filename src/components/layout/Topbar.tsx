@@ -8,6 +8,8 @@ import { useAppStore } from '@/store/appStore';
 import { SettingsMenu } from './SettingsMenu';
 import { TestModeToggle } from './TestModeToggle';
 import { NotificationsPanel } from '@/components/notifications/NotificationsPanel';
+import { AssetCapBanner } from '@/components/billing/AssetCapBanner';
+import { PastDueBanner } from '@/components/billing/PastDueBanner';
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
@@ -25,6 +27,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/transactions': 'Transactions',
   '/audit': 'Audit',
   '/settings/accounts': 'Account Management',
+  '/settings/billing': 'Billing',
   '/settings/integrations': 'External Integrations',
   '/admin': 'Admin Dashboard',
 };
@@ -45,7 +48,10 @@ export function Topbar() {
   const title = PAGE_TITLES[pathname] ?? PAGE_TITLES[Object.keys(PAGE_TITLES).find(k => pathname.startsWith(k)) ?? ''];
 
   return (
-    <header className="relative z-10 flex h-16 items-center justify-between glass-strong border-b border-border/60 px-4 sm:px-6 shrink-0">
+    <div className="shrink-0">
+      <AssetCapBanner />
+      <PastDueBanner />
+    <header className="relative z-10 flex h-16 items-center justify-between glass-strong border-b border-border/60 px-4 sm:px-6">
       <div className="flex items-center gap-3">
         <button
           onClick={toggleMobileSidebar}
@@ -105,5 +111,6 @@ export function Topbar() {
         </Button>
       </div>
     </header>
+    </div>
   );
 }

@@ -27,6 +27,7 @@ import {
   TrendingUp,
   FileBarChart,
   GitBranchPlus,
+  CreditCard,
 } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import type { UserRole } from '@/types/database';
@@ -91,6 +92,7 @@ const NAV_GROUPS: NavGroup[] = [
     heading: 'Settings',
     items: [
       { label: 'Account Management', href: '/settings/accounts', icon: Users, minRole: 'treasury_manager' },
+      { label: 'Billing', href: '/settings/billing', icon: CreditCard, minRole: 'treasury_manager' },
       { label: 'External Integrations', href: '/settings/integrations', icon: Plug, minRole: 'treasury_manager' },
     ],
   },
@@ -224,6 +226,16 @@ export function Sidebar() {
           );
         })}
       </nav>
+
+      {/* Upgrade CTA for Lite users */}
+      {sidebarOpen && session?.user?.subscription_tier === 'lite' && (
+        <Link
+          href="/settings/billing"
+          className="mx-3 mb-3 px-4 py-2.5 rounded-lg bg-gradient-to-r from-primary to-primary/80 text-white text-sm font-medium text-center shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] hover:opacity-90 transition-opacity"
+        >
+          Upgrade to unlock live mode
+        </Link>
+      )}
 
       {/* Toggle — on mobile closes overlay, on desktop collapses sidebar */}
       <button
