@@ -1,0 +1,179 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/nextauth.config';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { stripe } from '@/lib/billing/stripe';
+import { TIERS, TierSlug, isUpgrade, isDowngrade } from '@/lib/billing/tiers';
+import { canDowngrade } from '@/lib/billing/gate';
+
+// GET — current subscription
+export async function GET() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.enterprise_id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const supabaseAdmin = createAdminClient();
+
+  const { data: sub } = await supabaseAdmin
+    .from('subscriptions')
+    .select('*')
+    .eq('enterprise_id', session.user.enterprise_id)
+    .single();
+
+  if (!sub) {
+    return NextResponse.json({ error: 'No subscription found' }, { status: 404 });
+  }
+
+  const tier = TIERS[sub.tier as TierSlug];
+
+  return NextResponse.json({
+    ...sub,
+    tierDetails: tier,
+  });
+}
+
+// POST — upgrade subscription
+export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.enterprise_id || session.user.role !== 'treasury_manager') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  }
+
+  const { targetTier } = await req.json();
+  const currentTier = session.user.subscription_tier as TierSlug;
+
+  if (!TIERS[targetTier as TierSlug]) {
+    return NextResponse.json({ error: 'Invalid tier' }, { status: 400 });
+  }
+
+  if (targetTier === 'enterprise') {
+    return NextResponse.json({ error: 'Contact us for Enterprise pricing' }, { status: 400 });
+  }
+
+  if (!isUpgrade(currentTier, targetTier)) {
+    return NextResponse.json({ error: 'Can only upgrade to a higher tier via POST' }, { status: 400 });
+  }
+
+  const supabaseAdmin = createAdminClient();
+
+  // Verify KYB + KYC completed
+  const { data: kyb } = await supabaseAdmin
+    .from('kyb_verifications')
+    .select('status')
+    .eq('enterprise_id', session.user.enterprise_id)
+    .single();
+
+  if (kyb?.status !== 'completed') {
+    return NextResponse.json({ error: 'KYB verification required before upgrading' }, { status: 400 });
+  }
+
+  const { data: kyc } = await supabaseAdmin
+    .from('kyc_verifications')
+    .select('status')
+    .eq('user_id', session.user.id)
+    .single();
+
+  if (kyc?.status !== 'completed') {
+    return NextResponse.json({ error: 'KYC verification required before upgrading' }, { status: 400 });
+  }
+
+  const { data: sub } = await supabaseAdmin
+    .from('subscriptions')
+    .select('*')
+    .eq('enterprise_id', session.user.enterprise_id)
+    .single();
+
+  if (!sub) {
+    return NextResponse.json({ error: 'No subscription found' }, { status: 404 });
+  }
+
+  if (sub.stripe_subscription_id) {
+    // Existing Stripe subscription — upgrade in place
+    const stripeSubscription = await stripe.subscriptions.retrieve(sub.stripe_subscription_id);
+    const currentItem = stripeSubscription.items.data[0];
+
+    // Find the price for the target tier
+    const prices = await stripe.prices.list({
+      product: process.env[`STRIPE_PRODUCT_${targetTier.toUpperCase()}`],
+      active: true,
+    });
+
+    if (!prices.data[0]) {
+      return NextResponse.json({ error: 'Stripe price not found for tier' }, { status: 500 });
+    }
+
+    await stripe.subscriptions.update(sub.stripe_subscription_id, {
+      items: [{ id: currentItem.id, price: prices.data[0].id }],
+      proration_behavior: 'create_prorations',
+    });
+  }
+  // If no Stripe subscription yet (Lite -> paid), it's created via checkout route
+
+  return NextResponse.json({ success: true });
+}
+
+// PATCH — downgrade subscription
+export async function PATCH(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.enterprise_id || session.user.role !== 'treasury_manager') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  }
+
+  const { targetTier } = await req.json();
+  const currentTier = session.user.subscription_tier as TierSlug;
+
+  if (!isDowngrade(currentTier, targetTier)) {
+    return NextResponse.json({ error: 'Can only downgrade to a lower tier via PATCH' }, { status: 400 });
+  }
+
+  // Check if downgrade is allowed
+  const check = await canDowngrade(session.user.enterprise_id, targetTier);
+  if (!check.allowed) {
+    return NextResponse.json({ error: check.reason }, { status: 400 });
+  }
+
+  const supabaseAdmin = createAdminClient();
+
+  const { data: sub } = await supabaseAdmin
+    .from('subscriptions')
+    .select('stripe_subscription_id')
+    .eq('enterprise_id', session.user.enterprise_id)
+    .single();
+
+  if (targetTier === 'lite' && sub?.stripe_subscription_id) {
+    // Cancel at period end
+    await stripe.subscriptions.update(sub.stripe_subscription_id, {
+      cancel_at_period_end: true,
+    });
+  } else if (sub?.stripe_subscription_id) {
+    // Downgrade to lower paid tier — schedule change at period end using Stripe subscription schedules
+    const stripeSubscription = await stripe.subscriptions.retrieve(sub.stripe_subscription_id);
+
+    const priceId = process.env[`STRIPE_PRICE_${targetTier.toUpperCase()}`];
+    if (!priceId) {
+      return NextResponse.json({ error: 'Price not configured' }, { status: 500 });
+    }
+
+    // Create a subscription schedule that transitions at period end
+    const schedule = await stripe.subscriptionSchedules.create({
+      from_subscription: sub.stripe_subscription_id,
+    });
+
+    await stripe.subscriptionSchedules.update(schedule.id, {
+      phases: [
+        {
+          items: [{ price: stripeSubscription.items.data[0].price as string, quantity: 1 }],
+          start_date: stripeSubscription.current_period_start,
+          end_date: stripeSubscription.current_period_end,
+        },
+        {
+          items: [{ price: priceId, quantity: 1 }],
+          start_date: stripeSubscription.current_period_end,
+        },
+      ],
+    });
+  }
+
+  return NextResponse.json({ success: true, effective: 'end_of_period' });
+}
