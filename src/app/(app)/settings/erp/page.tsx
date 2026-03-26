@@ -13,6 +13,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useToast } from '@/components/ui/toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useERPStore } from '@/store/erpStore';
+import { useAppStore } from '@/store/appStore';
 import type { ErpConfiguration } from '@/types/database';
 import { Loader2, CheckCircle, XCircle, Settings2, Trash2, Pencil, Check, X } from 'lucide-react';
 import { CardSpinner } from '@/components/ui/spinner';
@@ -34,6 +35,7 @@ export default function ERPSettingsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { setErpConfigs, setActiveConfigId } = useERPStore();
+  const { testMode } = useAppStore();
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [testing, setTesting] = useState(false);
   const [deactivateTarget, setDeactivateTarget] = useState<{ id: string; label: string } | null>(null);
@@ -42,6 +44,8 @@ export default function ERPSettingsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [savingNickname, setSavingNickname] = useState(false);
+  const [showErpAddonConfirm, setShowErpAddonConfirm] = useState(false);
+  const [pendingErpData, setPendingErpData] = useState<any>(null);
 
   const { data: configs, isLoading } = useQuery<ErpConfiguration[]>({
     queryKey: ['erp-configs'],
@@ -158,7 +162,7 @@ export default function ERPSettingsPage() {
     }
   };
 
-  const onSubmit = async (data: FormData) => {
+  const doCreateErp = async (data: FormData) => {
     try {
       const res = await fetch('/api/erp/connect', {
         method: 'POST',
@@ -184,6 +188,16 @@ export default function ERPSettingsPage() {
     } catch (err) {
       toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
     }
+  };
+
+  const onSubmit = async (data: FormData) => {
+    const liveErps = configs?.filter((c) => c.is_active) ?? [];
+    if (!testMode && liveErps.length >= 1) {
+      setPendingErpData(data);
+      setShowErpAddonConfirm(true);
+      return;
+    }
+    await doCreateErp(data);
   };
 
   return (
@@ -395,6 +409,39 @@ export default function ERPSettingsPage() {
         isPending={actionPending}
         onConfirm={handleDelete}
       />
+
+      {showErpAddonConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-md mx-4 p-6 space-y-4">
+            <h2 className="text-lg font-semibold">Additional ERP Add-On</h2>
+            <p className="text-sm text-muted-foreground">
+              Adding an additional ERP integration costs <span className="text-foreground font-medium">$1,500/month</span>. This will be added to your next bill, pro-rated for the remaining days this month.
+            </p>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowErpAddonConfirm(false);
+                  setPendingErpData(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={async () => {
+                  setShowErpAddonConfirm(false);
+                  if (pendingErpData) {
+                    await doCreateErp(pendingErpData);
+                    setPendingErpData(null);
+                  }
+                }}
+              >
+                Agree &amp; Add
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
