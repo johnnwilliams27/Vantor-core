@@ -30,6 +30,7 @@ export interface SwapQuoteResponse {
   slippageBps: number;
   estimatedGas?: string;
   priceImpact?: string;
+  vantor_fee?: number;
   quoteData: Record<string, unknown>;
 }
 
