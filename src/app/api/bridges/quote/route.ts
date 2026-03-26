@@ -5,6 +5,8 @@ import { requireRole } from '@/lib/auth/rbac';
 import { getBankingAdapter } from '@/lib/banking/factory';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
+import { isTestMode } from '@/lib/test-mode/helpers';
+import { calculateVantorFee } from '@/lib/billing/usage';
 import { z } from 'zod';
 
 const schema = z.object({
@@ -46,6 +48,9 @@ export async function POST(req: NextRequest) {
       walletAddress,
     });
 
+    const testMode = isTestMode();
+    const vantorFee = testMode ? 0 : calculateVantorFee(parseFloat(quote.fromAmount));
+
     await writeAuditLog({
       userId: session.user.id,
       action: 'swap_quote',
@@ -53,7 +58,7 @@ export async function POST(req: NextRequest) {
       details: { token, amount, fromChain, toChain, provider: 'bridge' },
     });
 
-    return NextResponse.json({ data: quote });
+    return NextResponse.json({ data: { ...quote, vantor_fee: vantorFee } });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 500 });
   }
