@@ -93,13 +93,23 @@ export async function ensureTestEnterprise(
 }
 
 /**
- * Seeds a test enterprise with demo data for all modules.
+ * Seeds a test enterprise with demo data. Can be called during registration
+ * when we already have the test enterprise ID and a user.
  */
+export async function seedTestEnterprise(
+  testEnterpriseId: string,
+  sourceEnterpriseId: string,
+  adminClient?: ReturnType<typeof createAdminClient>
+): Promise<void> {
+  await seedTestData(testEnterpriseId, sourceEnterpriseId, adminClient);
+}
+
 async function seedTestData(
   testEnterpriseId: string,
-  sourceEnterpriseId: string
+  sourceEnterpriseId: string,
+  adminClient?: ReturnType<typeof createAdminClient>
 ): Promise<void> {
-  const supabase = createAdminClient();
+  const supabase = adminClient || createAdminClient();
 
   // Get users from the real enterprise to associate test data with
   const { data: users } = await supabase
@@ -131,6 +141,14 @@ async function seedTestData(
       label: 'Test Solana Wallet',
       verified_at: now,
     },
+    {
+      user_id: userId,
+      enterprise_id: testEnterpriseId,
+      chain: 'ethereum',
+      address: '0xTEST2222222222222222222222222222222222bb',
+      label: 'Test Ethereum Wallet 2',
+      verified_at: now,
+    },
   ];
   const { data: wallets } = await supabase
     .from('wallets')
@@ -142,11 +160,11 @@ async function seedTestData(
     {
       user_id: userId,
       enterprise_id: testEnterpriseId,
-      institution_name: 'Test National Bank',
+      institution_name: 'Test Bank of America',
       account_name: 'Test Operating Account',
       account_type: 'checking',
       last4: '9999',
-      current_balance: '250000.00',
+      current_balance: '1500000.00',
       balance_currency: 'USD',
       balance_as_of: now,
       is_active: true,
@@ -154,24 +172,24 @@ async function seedTestData(
     {
       user_id: userId,
       enterprise_id: testEnterpriseId,
-      institution_name: 'Test Savings Corp',
-      account_name: 'Test Reserve Account',
-      account_type: 'savings',
+      institution_name: 'Test Barclays UK',
+      account_name: 'Test GBP Account',
+      account_type: 'checking',
       last4: '8888',
       current_balance: '500000.00',
-      balance_currency: 'USD',
+      balance_currency: 'GBP',
       balance_as_of: now,
       is_active: true,
     },
     {
       user_id: userId,
       enterprise_id: testEnterpriseId,
-      institution_name: 'Test Credit Union',
-      account_name: 'Test Payroll Account',
+      institution_name: 'Test Deutsche Bank',
+      account_name: 'Test EUR Account',
       account_type: 'checking',
       last4: '7777',
-      current_balance: '120000.00',
-      balance_currency: 'USD',
+      current_balance: '500000.00',
+      balance_currency: 'EUR',
       balance_as_of: now,
       is_active: true,
     },
@@ -179,20 +197,25 @@ async function seedTestData(
   await supabase.from('bank_accounts').insert(testBankAccounts);
 
   // 3. Seed test wallet balances
-  const ethWallet = wallets?.find((w) => w.chain === 'ethereum');
+  const ethWallets = wallets?.filter((w) => w.chain === 'ethereum') ?? [];
+  const ethWallet = ethWallets[0];
+  const ethWallet2 = ethWallets[1];
   const solWallet = wallets?.find((w) => w.chain === 'solana');
 
   const testBalances = [];
   if (ethWallet) {
     testBalances.push(
-      { wallet_id: ethWallet.id, enterprise_id: testEnterpriseId, token: 'USDC', chain: 'ethereum', balance: '75000.00', usd_value: '75000.00' },
-      { wallet_id: ethWallet.id, enterprise_id: testEnterpriseId, token: 'USDT', chain: 'ethereum', balance: '25000.00', usd_value: '25000.00' },
-      { wallet_id: ethWallet.id, enterprise_id: testEnterpriseId, token: 'PYUSD', chain: 'ethereum', balance: '10000.00', usd_value: '10000.00' },
+      { wallet_id: ethWallet.id, enterprise_id: testEnterpriseId, token: 'USDC', chain: 'ethereum', balance: '1500000.00', usd_value: '1500000.00' },
     );
   }
   if (solWallet) {
     testBalances.push(
-      { wallet_id: solWallet.id, enterprise_id: testEnterpriseId, token: 'USDC', chain: 'solana', balance: '50000.00', usd_value: '50000.00' },
+      { wallet_id: solWallet.id, enterprise_id: testEnterpriseId, token: 'USDT', chain: 'solana', balance: '500000.00', usd_value: '500000.00' },
+    );
+  }
+  if (ethWallet2) {
+    testBalances.push(
+      { wallet_id: ethWallet2.id, enterprise_id: testEnterpriseId, token: 'PYUSD', chain: 'ethereum', balance: '500000.00', usd_value: '500000.00' },
     );
   }
   if (testBalances.length) {
@@ -215,16 +238,16 @@ async function seedTestData(
     const variance = () => 1 + (Math.sin(daysAgo * 0.3) * 0.06) + ((180 - daysAgo) * 0.001);
 
     if (ethWallet) {
-      const usdcBal = (65000 * variance()).toFixed(2);
+      const usdcBal = (1300000 * variance()).toFixed(2);
       snapshots.push({ wallet_id: ethWallet.id, enterprise_id: testEnterpriseId, token: 'USDC', balance: usdcBal, usd_value: usdcBal, snapped_at: snapDate });
-      const usdtBal = (22000 * variance()).toFixed(2);
-      snapshots.push({ wallet_id: ethWallet.id, enterprise_id: testEnterpriseId, token: 'USDT', balance: usdtBal, usd_value: usdtBal, snapped_at: snapDate });
-      const pyusdBal = (8000 * variance()).toFixed(2);
-      snapshots.push({ wallet_id: ethWallet.id, enterprise_id: testEnterpriseId, token: 'PYUSD', balance: pyusdBal, usd_value: pyusdBal, snapped_at: snapDate });
     }
     if (solWallet) {
-      const solUsdcBal = (42000 * variance()).toFixed(2);
-      snapshots.push({ wallet_id: solWallet.id, enterprise_id: testEnterpriseId, token: 'USDC', balance: solUsdcBal, usd_value: solUsdcBal, snapped_at: snapDate });
+      const usdtBal = (430000 * variance()).toFixed(2);
+      snapshots.push({ wallet_id: solWallet.id, enterprise_id: testEnterpriseId, token: 'USDT', balance: usdtBal, usd_value: usdtBal, snapped_at: snapDate });
+    }
+    if (ethWallet2) {
+      const pyusdBal = (430000 * variance()).toFixed(2);
+      snapshots.push({ wallet_id: ethWallet2.id, enterprise_id: testEnterpriseId, token: 'PYUSD', balance: pyusdBal, usd_value: pyusdBal, snapped_at: snapDate });
     }
   }
 
@@ -232,7 +255,7 @@ async function seedTestData(
     await supabase.from('balance_snapshots').insert(snapshots);
   }
 
-  // 4. Seed test ERP configuration (mock provider)
+  // 4. Seed test ERP configurations
   const erpCredentials = Buffer.from(JSON.stringify({
     apiKey: 'test-erp-key-000',
     baseUrl: 'https://test-erp.example.com',
@@ -243,14 +266,27 @@ async function seedTestData(
     .insert({
       user_id: userId,
       enterprise_id: testEnterpriseId,
-      provider: 'quickbooks',
-      label: 'Test QuickBooks',
+      provider: 'sap',
+      label: 'Test SAP S/4HANA',
       credentials: erpCredentials,
       is_active: true,
       last_synced: now,
     })
     .select('id')
     .single();
+
+  // Second ERP
+  await supabase
+    .from('erp_configurations')
+    .insert({
+      user_id: userId,
+      enterprise_id: testEnterpriseId,
+      provider: 'netsuite',
+      label: 'Test Oracle NetSuite',
+      credentials: erpCredentials,
+      is_active: true,
+      last_synced: now,
+    });
 
   // 5. Seed test ERP vendors
   if (erpConfig) {

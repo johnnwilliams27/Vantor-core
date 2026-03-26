@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -13,6 +13,7 @@ import { Loader2 } from 'lucide-react';
 
 const registerSchema = z.object({
   fullName: z.string().min(2, 'Name must be at least 2 characters'),
+  companyName: z.string().min(1, 'Company name is required'),
   email: z.string().email('Invalid email'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
@@ -25,13 +26,21 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 
 export function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const inviteToken = searchParams.get('invite');
+  const inviteEmail = searchParams.get('email');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<RegisterFormData>({ resolver: zodResolver(registerSchema) });
+  } = useForm<RegisterFormData>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      email: inviteEmail ?? '',
+    },
+  });
 
   const onSubmit = async (data: RegisterFormData) => {
     setError(null);
@@ -42,6 +51,8 @@ export function RegisterForm() {
         email: data.email,
         password: data.password,
         fullName: data.fullName,
+        companyName: data.companyName,
+        ...(inviteToken ? { inviteToken } : {}),
       }),
     });
     const json = await res.json();
@@ -93,8 +104,20 @@ export function RegisterForm() {
               {errors.fullName && <p className="text-xs text-red-500">{errors.fullName.message}</p>}
             </div>
             <div className="space-y-1.5">
+              <Label htmlFor="companyName">Company name</Label>
+              <Input id="companyName" placeholder="Acme Corp" {...register('companyName')} />
+              {errors.companyName && <p className="text-xs text-red-500">{errors.companyName.message}</p>}
+            </div>
+            <div className="space-y-1.5">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="you@company.com" {...register('email')} />
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@company.com"
+                {...register('email')}
+                readOnly={!!inviteEmail}
+                className={inviteEmail ? 'bg-gray-100 cursor-not-allowed' : ''}
+              />
               {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
             </div>
             <div className="space-y-1.5">
