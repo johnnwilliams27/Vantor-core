@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { seedTestEnterprise } from '@/lib/test-mode/helpers';
+import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/api/rate-limit';
 
 const schema = z.object({
   email: z.string().email().max(254),
@@ -12,6 +13,11 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req.headers);
+  if (!checkRateLimit('register', ip, 5, 3600_000)) {
+    return rateLimitResponse();
+  }
+
   try {
     const body = await req.json();
     const parsed = schema.safeParse(body);
