@@ -21,6 +21,7 @@ interface RampQuote {
   fiatAmount: number;
   exchangeRate: number;
   feeAmount: number;
+  vantor_fee?: number;
   fiatCurrency?: string;
   fxRate?: number;
   expiresAt: string;
@@ -376,6 +377,18 @@ export function RampForm() {
               <span className="text-muted-foreground">Fee</span>
               <span className="font-mono">{sym}{quote.feeAmount.toFixed(2)}</span>
             </div>
+            {quote.vantor_fee != null && quote.vantor_fee > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Vantor fee (0.1%)</span>
+                <span className="font-mono">{sym}{Number(quote.vantor_fee).toFixed(2)}</span>
+              </div>
+            )}
+            {quote.vantor_fee != null && quote.vantor_fee > 0 && (
+              <div className="flex justify-between text-sm font-medium border-t border-border/50 pt-1 mt-1">
+                <span>Total fees</span>
+                <span className="font-mono">{sym}{(quote.feeAmount + Number(quote.vantor_fee)).toFixed(2)}</span>
+              </div>
+            )}
             <div className="text-xs text-muted-foreground">
               Quote expires {new Date(quote.expiresAt).toLocaleTimeString()}
             </div>
