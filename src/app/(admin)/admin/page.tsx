@@ -17,6 +17,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { CardSpinner } from '@/components/ui/spinner';
+import { InviteUserForm } from '@/components/admin/InviteUserForm';
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
@@ -149,6 +150,19 @@ export default function AdminDashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Invite Users */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Invite Users</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              Send an invitation email with a secure signup link. Invitations expire after 7 days.
+            </p>
+            <InviteUserForm />
+          </CardContent>
+        </Card>
 
         {/* Create Enterprise */}
         {showCreate ? (
