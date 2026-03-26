@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { useTestMode } from '@/hooks/useTestMode';
 import { useToast } from '@/components/ui/toast';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -7,10 +8,37 @@ import { FlaskConical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function TestModeToggle() {
+  const { data: session } = useSession();
   const { testMode, toggleTestMode } = useTestMode();
   const { toast } = useToast();
   const [showConfirm, setShowConfirm] = useState(false);
   const [isPending, setIsPending] = useState(false);
+
+  const tier = session?.user?.subscription_tier;
+
+  // Lite tier: always in test mode, cannot switch to live
+  if (tier === 'lite') {
+    return (
+      <div className="relative group">
+        <button
+          disabled
+          className={cn(
+            'flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all border opacity-50 cursor-not-allowed',
+            'bg-amber-500/10 text-amber-700 border-amber-300 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30'
+          )}
+        >
+          <FlaskConical className="h-3.5 w-3.5" />
+          <span>Test</span>
+          <div className="relative w-7 h-4 rounded-full transition-colors bg-amber-500">
+            <div className="absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform translate-x-3.5" />
+          </div>
+        </button>
+        <div className="absolute hidden group-hover:block top-full mt-1 right-0 bg-popover border border-border rounded-lg px-3 py-2 text-xs text-muted-foreground shadow-lg whitespace-nowrap z-50">
+          Upgrade to a paid plan to access live mode
+        </div>
+      </div>
+    );
+  }
 
   const handleToggleClick = () => {
     setShowConfirm(true);
