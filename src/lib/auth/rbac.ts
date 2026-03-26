@@ -9,11 +9,15 @@ export const ROLE_ROUTES: Record<string, UserRole> = {
   '/treasury': 'treasury_manager',
   '/yield': 'treasury_manager',
   '/reporting': 'treasury_manager',
+  '/settings/billing': 'treasury_manager',  // Must be before /settings
   '/compliance': 'accountant',
   '/settings': 'accountant',
   '/invoices': 'accountant',
   '/wallets': 'accountant',
   '/bank-accounts': 'accountant',
+  '/api/billing': 'treasury_manager',
+  '/api/kyb': 'treasury_manager',
+  '/api/kyc': 'auditor',
 };
 
 /** Routes app admins can access */
