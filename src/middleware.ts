@@ -48,16 +48,11 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/admin', req.url));
   }
 
-  // Onboarding redirect — skip for app admins (they don't need onboarding)
-  const justCompleted = req.cookies.get('onboarding_complete')?.value === '1';
-  if (
-    !isAppAdmin &&
-    !token.onboarding_done &&
-    !justCompleted &&
-    !pathname.startsWith('/setup') &&
-    !pathname.startsWith('/api/')
-  ) {
-    return NextResponse.redirect(new URL('/setup', req.url));
+  // Onboarding: no longer redirect to /setup — the wizard renders as a modal overlay
+  // on top of the dashboard via AppShell when onboarding_done is false.
+  // Redirect old /setup URL to dashboard so the overlay shows there.
+  if (!isAppAdmin && pathname.startsWith('/setup')) {
+    return NextResponse.redirect(new URL('/dashboard', req.url));
   }
 
   // RBAC check
