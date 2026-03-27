@@ -18,6 +18,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom';
+import { SolflareWalletAdapter } from '@solana/wallet-adapter-solflare';
+import { LedgerWalletAdapter } from '@solana/wallet-adapter-ledger';
 import '@solana/wallet-adapter-react-ui/styles.css';
 
 function formatUsd(n: number) {
@@ -219,7 +221,11 @@ function CryptoWalletsTab() {
 }
 
 export default function WalletsPage() {
-  const wallets = useMemo(() => [new PhantomWalletAdapter()], []);
+  const wallets = useMemo(() => [
+    new PhantomWalletAdapter(),
+    new SolflareWalletAdapter(),
+    new LedgerWalletAdapter(),
+  ], []);
 
   return (
     <ConnectionProvider endpoint={process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? 'https://api.mainnet-beta.solana.com'}>
