@@ -31,7 +31,7 @@ const schema = z.object({
   direction: z.enum(['onramp', 'offramp']),
   bankAccountId: z.string().uuid('Select a bank account'),
   walletId: z.string().uuid('Select a wallet'),
-  cryptoToken: z.enum(['USDC', 'USDT', 'PYUSD']),
+  cryptoToken: z.enum(['USDC', 'USDT']),
   fiatCurrency: z.enum(['USD', 'EUR', 'GBP']),
   amount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Enter a valid amount'),
   amountType: z.enum(['crypto', 'fiat']),
@@ -298,7 +298,6 @@ export function RampForm() {
               <Select {...register('cryptoToken')}>
                 <option value="USDC">USDC</option>
                 <option value="USDT">USDT</option>
-                <option value="PYUSD">PYUSD</option>
               </Select>
             </div>
             <div className="col-span-2 space-y-2">

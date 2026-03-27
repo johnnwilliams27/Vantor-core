@@ -11,7 +11,7 @@ import { z } from 'zod';
 
 const schema = z.object({
   direction: z.enum(['onramp', 'offramp']),
-  cryptoToken: z.enum(['USDC', 'USDT', 'PYUSD']),
+  cryptoToken: z.enum(['USDC', 'USDT']),
   fiatCurrency: z.string().default('USD'),
   cryptoAmount: z.number().positive().optional(),
   fiatAmount: z.number().positive().optional(),

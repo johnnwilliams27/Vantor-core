@@ -418,7 +418,6 @@ Triggered on every new enterprise creation (all tiers).
 | Bank Account | EUR Checking — "Test Deutsche Bank" | €500,000 |
 | Wallet | Ethereum — USDC | $1,500,000 |
 | Wallet | Solana — USDT | $500,000 |
-| Wallet | Ethereum — PYUSD | $500,000 |
 
 ### Test ERP Integrations (2)
 

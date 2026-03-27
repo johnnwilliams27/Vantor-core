@@ -61,15 +61,6 @@ export async function POST(_req: NextRequest) {
       created_at: new Date(now - 8 * day).toISOString(),
     },
     {
-      token: 'PYUSD', amount: 75000, received_amount: 74998, bridge_fee: 2.00,
-      from_chain: 'ethereum', to_chain: 'solana', provider: 'layerzero',
-      from_wallet_id: ethWallet?.id ?? null, to_wallet_id: solWallet?.id ?? null,
-      status: 'pending', slippage_bps: 4, estimated_arrival_minutes: 10,
-      tx_hash: `0xlz${Math.random().toString(36).slice(2, 14)}`,
-      executed_at: new Date(now - 1 * day).toISOString(),
-      created_at: new Date(now - 1 * day).toISOString(),
-    },
-    {
       token: 'USDC', amount: 1000000, received_amount: 1000000, bridge_fee: 0,
       from_chain: 'ethereum', to_chain: 'solana', provider: 'cctp',
       from_wallet_id: ethWallet?.id ?? null, to_wallet_id: solWallet?.id ?? null,

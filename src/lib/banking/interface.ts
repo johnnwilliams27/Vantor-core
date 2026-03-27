@@ -4,7 +4,7 @@ import type { ChainType, TokenSymbol } from '@/types/database';
 
 export interface RampQuoteParams {
   direction: 'onramp' | 'offramp';
-  cryptoToken: 'USDC' | 'USDT' | 'PYUSD';
+  cryptoToken: 'USDC' | 'USDT';
   fiatCurrency: string;
   /** Provide one of the two amounts; the adapter derives the other */
   cryptoAmount?: number;

@@ -13,7 +13,7 @@ const createSchema = z.object({
   invoiceNumber: z.string().min(1).max(100),
   description: z.string().max(2000).optional(),
   amount: z.string().max(50),
-  token: z.enum(['USDC', 'USDT', 'PYUSD']),
+  token: z.enum(['USDC', 'USDT']),
   chain: z.enum(['ethereum', 'solana']),
   dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   vendorId: z.string().uuid().optional(),

@@ -340,7 +340,7 @@ const createPayment: AgentTool = {
       fromWalletId: { type: 'string', description: 'Source wallet UUID' },
       toAddress: { type: 'string', description: 'Destination wallet address' },
       chain: { type: 'string', enum: ['ethereum', 'solana'], description: 'Blockchain network' },
-      token: { type: 'string', enum: ['USDC', 'USDT', 'PYUSD'], description: 'Stablecoin token' },
+      token: { type: 'string', enum: ['USDC', 'USDT'], description: 'Stablecoin token' },
       amount: { type: 'string', description: 'Amount to send as a string number' },
       memo: { type: 'string', description: 'Optional payment memo' },
       invoiceId: { type: 'string', description: 'Optional linked invoice UUID' },
@@ -383,7 +383,7 @@ const schedulePayment: AgentTool = {
       fromWalletId: { type: 'string', description: 'Source wallet UUID' },
       toAddress: { type: 'string', description: 'Destination wallet address' },
       chain: { type: 'string', enum: ['ethereum', 'solana'], description: 'Blockchain network' },
-      token: { type: 'string', enum: ['USDC', 'USDT', 'PYUSD'], description: 'Stablecoin token' },
+      token: { type: 'string', enum: ['USDC', 'USDT'], description: 'Stablecoin token' },
       amount: { type: 'string', description: 'Amount to send' },
       scheduledFor: { type: 'string', description: 'ISO timestamp for when to send the payment' },
       memo: { type: 'string', description: 'Optional memo' },
@@ -420,7 +420,7 @@ const getRampQuote: AgentTool = {
     type: 'object',
     properties: {
       direction: { type: 'string', enum: ['onramp', 'offramp'], description: 'Direction: onramp = fiat→crypto, offramp = crypto→fiat' },
-      cryptoToken: { type: 'string', enum: ['USDC', 'USDT', 'PYUSD'], description: 'Stablecoin token' },
+      cryptoToken: { type: 'string', enum: ['USDC', 'USDT'], description: 'Stablecoin token' },
       fiatCurrency: { type: 'string', description: 'Fiat currency code (e.g. USD, EUR)' },
       cryptoAmount: { type: 'number', description: 'Amount in crypto (provide either this or fiatAmount)' },
       fiatAmount: { type: 'number', description: 'Amount in fiat (provide either this or cryptoAmount)' },
@@ -432,7 +432,7 @@ const getRampQuote: AgentTool = {
     const adapter = getBankingAdapter();
     const quote = await adapter.getRampQuote({
       direction: input.direction as 'onramp' | 'offramp',
-      cryptoToken: input.cryptoToken as 'USDC' | 'USDT' | 'PYUSD',
+      cryptoToken: input.cryptoToken as 'USDC' | 'USDT',
       fiatCurrency: input.fiatCurrency as string,
       cryptoAmount: input.cryptoAmount as number | undefined,
       fiatAmount: input.fiatAmount as number | undefined,
@@ -448,7 +448,7 @@ const executeRamp: AgentTool = {
     type: 'object',
     properties: {
       direction: { type: 'string', enum: ['onramp', 'offramp'] },
-      cryptoToken: { type: 'string', description: 'Stablecoin token (USDC, USDT, PYUSD)' },
+      cryptoToken: { type: 'string', description: 'Stablecoin token (USDC, USDT)' },
       cryptoAmount: { type: 'number', description: 'Crypto amount from quote' },
       fiatAmount: { type: 'number', description: 'Fiat amount from quote' },
       fiatCurrency: { type: 'string', description: 'Fiat currency code' },
@@ -484,8 +484,8 @@ const getSwapQuote: AgentTool = {
     type: 'object',
     properties: {
       chain: { type: 'string', enum: ['ethereum', 'solana'], description: 'Blockchain network' },
-      fromToken: { type: 'string', enum: ['USDC', 'USDT', 'PYUSD'], description: 'Token to sell' },
-      toToken: { type: 'string', enum: ['USDC', 'USDT', 'PYUSD'], description: 'Token to buy' },
+      fromToken: { type: 'string', enum: ['USDC', 'USDT'], description: 'Token to sell' },
+      toToken: { type: 'string', enum: ['USDC', 'USDT'], description: 'Token to buy' },
       amount: { type: 'string', description: 'Amount of fromToken to sell' },
       walletAddress: { type: 'string', description: 'Wallet address executing the swap' },
     },
@@ -644,7 +644,7 @@ const yieldDeposit: AgentTool = {
     type: 'object',
     properties: {
       protocol: { type: 'string', description: 'Protocol ID (aave_v3, morpho, kamino, ondo, etc.)' },
-      token: { type: 'string', enum: ['USDC', 'USDT', 'PYUSD'], description: 'Stablecoin to deposit' },
+      token: { type: 'string', enum: ['USDC', 'USDT'], description: 'Stablecoin to deposit' },
       amount: { type: 'string', description: 'Amount to deposit' },
       walletAddress: { type: 'string', description: 'Wallet address' },
       chain: { type: 'string', enum: ['ethereum', 'solana'], description: 'Blockchain' },

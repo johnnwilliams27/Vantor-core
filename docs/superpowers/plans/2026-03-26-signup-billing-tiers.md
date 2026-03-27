@@ -684,7 +684,7 @@ git commit -m "feat: add subscription_tier, kyc_status, kyb_status to NextAuth J
 Modify `src/lib/test-mode/helpers.ts` — update the `seedTestData()` function (lines 98-392). Change the seed amounts and accounts to match:
 
 - Bank accounts: USD $1,500,000 ("Test Bank of America"), GBP £500,000 ("Test Barclays UK"), EUR €500,000 ("Test Deutsche Bank")
-- Wallets: ETH USDC $1,500,000, SOL USDT $500,000, ETH PYUSD $500,000
+- Wallets: ETH USDC $1,500,000, SOL USDT $500,000
 - ERP: "Test SAP S/4HANA" + "Test Oracle NetSuite" (2 integrations)
 
 Export a new `seedTestEnterprise()` function that accepts an optional `supabaseAdmin` client parameter (so registration can call it with the service role client):

@@ -23,14 +23,13 @@ const ERC20_ABI = [
 const TOKEN_DECIMALS: Record<TokenSymbol, number> = {
   USDC: 6,
   USDT: 6,
-  PYUSD: 6,
 };
 
 export async function fetchEthereumBalances(
   address: string
 ): Promise<TokenBalance[]> {
   const client = getEthereumClient();
-  const tokens: TokenSymbol[] = ['USDC', 'USDT', 'PYUSD'];
+  const tokens: TokenSymbol[] = ['USDC', 'USDT'];
 
   const results = await Promise.allSettled(
     tokens.map(async (token) => {

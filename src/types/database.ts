@@ -14,7 +14,7 @@ export interface Enterprise {
   updated_at: string;
 }
 export type ChainType = 'ethereum' | 'solana';
-export type TokenSymbol = 'USDC' | 'USDT' | 'PYUSD';
+export type TokenSymbol = 'USDC' | 'USDT';
 export type PaymentStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
 export type InvoiceStatus = 'unpaid' | 'paid' | 'partially_paid' | 'overdue' | 'cancelled';
 export type ErpProvider = 'sap' | 'oracle' | 'xero' | 'netsuite';
@@ -462,7 +462,6 @@ export interface TravelRuleTransfer {
 export interface StablecoinPrices {
   USDC: number;
   USDT: number;
-  PYUSD: number;
 }
 
 export interface ForecastDataPoint {

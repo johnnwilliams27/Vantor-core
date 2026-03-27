@@ -259,7 +259,6 @@ export function useRejectRecommendation() {
 export interface StablecoinPricesResponse {
   USDC: number;
   USDT: number;
-  PYUSD: number;
   fetchedAt: string;
   source: 'mock' | 'coingecko';
 }

@@ -5,7 +5,6 @@ const MOCK_MODE = process.env.COINGECKO_USE_MOCK !== 'false';
 const MOCK_PRICES: StablecoinPrices = {
   USDC: 1.0,
   USDT: 1.0,
-  PYUSD: 1.0,
 };
 
 export type OraclePriceSource = 'mock' | 'coingecko';
@@ -28,7 +27,7 @@ export async function getStablecoinPrices(): Promise<OraclePricesResult> {
 
   try {
     const res = await fetch(
-      'https://api.coingecko.com/api/v3/simple/price?ids=usd-coin,tether,paypal-usd&vs_currencies=usd',
+      'https://api.coingecko.com/api/v3/simple/price?ids=usd-coin,tether&vs_currencies=usd',
       { next: { revalidate: 300 } }
     );
 
@@ -42,7 +41,6 @@ export async function getStablecoinPrices(): Promise<OraclePricesResult> {
     const prices: StablecoinPrices = {
       USDC: json['usd-coin']?.usd ?? 1.0,
       USDT: json['tether']?.usd ?? 1.0,
-      PYUSD: json['paypal-usd']?.usd ?? 1.0,
     };
 
     return { prices, source: 'coingecko' };

@@ -14,7 +14,7 @@ import { recordUsageFee } from '@/lib/billing/usage';
 const schema = z.object({
   fromWalletId: z.string().uuid(),
   toWalletId: z.string().uuid(),
-  token: z.enum(['USDC', 'USDT', 'PYUSD']),
+  token: z.enum(['USDC', 'USDT']),
   amount: z.string().min(1).refine((v) => parseFloat(v) > 0, 'Must be positive'),
   fromChain: z.enum(['ethereum', 'solana']),
   toChain: z.enum(['ethereum', 'solana']),

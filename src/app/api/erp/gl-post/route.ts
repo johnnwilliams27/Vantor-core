@@ -14,7 +14,7 @@ const schema = z.object({
   invoiceId: z.string().uuid().optional(),
   paymentId: z.string().uuid().optional(),
   amount: z.string(),
-  token: z.enum(['USDC', 'USDT', 'PYUSD']),
+  token: z.enum(['USDC', 'USDT']),
   glAccount: z.string().min(1).max(100),
   memo: z.string().max(2000).optional(),
 });

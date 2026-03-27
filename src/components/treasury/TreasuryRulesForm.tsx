@@ -23,7 +23,7 @@ const ruleSchema = z.object({
 
 type RuleForm = z.infer<typeof ruleSchema>;
 
-const STABLECOINS = ['USDC', 'USDT', 'PYUSD'];
+const STABLECOINS = ['USDC', 'USDT'];
 const CHAINS = ['ethereum', 'solana'];
 
 export function TreasuryRulesForm() {

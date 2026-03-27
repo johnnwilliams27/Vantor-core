@@ -20,7 +20,6 @@ import bs58 from 'bs58';
 const TOKEN_DECIMALS: Record<TokenSymbol, number> = {
   USDC: 6,
   USDT: 6,
-  PYUSD: 6,
 };
 
 export async function transferSolanaToken(

@@ -13,8 +13,8 @@ import { recordUsageFee } from '@/lib/billing/usage';
 const schema = z.object({
   walletId: z.string().uuid(),
   chain: z.enum(['ethereum', 'solana']),
-  fromToken: z.enum(['USDC', 'USDT', 'PYUSD']),
-  toToken: z.enum(['USDC', 'USDT', 'PYUSD']),
+  fromToken: z.enum(['USDC', 'USDT']),
+  toToken: z.enum(['USDC', 'USDT']),
   fromAmount: z.string(),
   toAmount: z.string(),
   quoteData: z.record(z.unknown()).refine((obj) => JSON.stringify(obj).length <= 10000, 'quoteData too large'),
