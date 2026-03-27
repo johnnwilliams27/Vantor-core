@@ -31,6 +31,11 @@ export const authOptions: NextAuthOptions = {
           .eq('id', data.user.id)
           .single();
 
+        // Block login if email not verified
+        if (profile && !profile.email_verified) {
+          return null;
+        }
+
         let enterpriseName: string | null = null;
         if (profile?.enterprise_id) {
           const { data: ent } = await supabase
