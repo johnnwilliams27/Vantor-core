@@ -68,7 +68,7 @@ export function LoginForm() {
             unoptimized
           />
           <p className="text-white text-sm mt-3 text-center tracking-wide font-semibold">
-            Agentic Stablecoin Treasury Management
+            Put Your Idle Treasury to Work
           </p>
         </div>
 

@@ -9,14 +9,16 @@ import { verifyEmailHtml } from '@/lib/email/templates/verify-email';
 
 const schema = z.object({
   email: z.string().email().max(254),
-  password: z.string().min(8).max(128),
+  password: z.string().min(8).max(128)
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
   fullName: z.string().min(2).max(100),
   companyName: z.string().min(1).max(200),
   inviteToken: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
-  const ip = getClientIp(req.headers);
+  const ip = getClientIp(req);
   if (!checkRateLimit('register', ip, 5, 3600_000)) {
     return rateLimitResponse();
   }
@@ -51,15 +53,17 @@ export async function POST(req: NextRequest) {
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
       password,
-      email_confirm: false,
+      email_confirm: true,
       user_metadata: { full_name: fullName },
     });
 
     if (authError) {
+      process.stdout.write('[register] auth error: ' + authError.message + '\n');
       return NextResponse.json({ error: authError.message }, { status: authError.status ?? 400 });
     }
 
     const userId = authData.user.id;
+    process.stdout.write('[register] user created: ' + userId + '\n');
 
     // Create enterprise
     const { data: enterprise, error: entError } = await supabase
@@ -68,7 +72,11 @@ export async function POST(req: NextRequest) {
       .select('id')
       .single();
 
-    if (entError) throw entError;
+    if (entError) {
+      process.stdout.write('[register] enterprise error: ' + JSON.stringify(entError) + '\n');
+      throw entError;
+    }
+    process.stdout.write('[register] enterprise created: ' + enterprise.id + '\n');
 
     // Create test enterprise
     const { data: testEnterprise } = await supabase
@@ -129,8 +137,8 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ message: 'Account created. Please check your email to verify your account.' }, { status: 201 });
-  } catch (err) {
-    console.error('[register]', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  } catch (err: any) {
+    process.stdout.write('[register] ERROR: ' + JSON.stringify({ message: err?.message, code: err?.code, details: err?.details, hint: err?.hint }) + '\n');
+    return NextResponse.json({ error: err?.message || 'Internal server error' }, { status: 500 });
   }
 }

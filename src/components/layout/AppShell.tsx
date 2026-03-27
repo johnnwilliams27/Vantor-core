@@ -8,6 +8,7 @@ import { Topbar } from './Topbar';
 import { TestModeBanner } from './TestModeBanner';
 import { NavigationProgress } from './NavigationProgress';
 import { AgentPanel } from '@/components/agent/AgentPanel';
+import { OnboardingWizard } from '@/components/setup/OnboardingWizard';
 import { isPaidTier } from '@/lib/billing/tiers';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -40,6 +41,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
       <AgentPanel />
+      {session?.user && !session.user.onboarding_done && !session.user.is_app_admin && (
+        <OnboardingWizard />
+      )}
     </div>
   );
 }
