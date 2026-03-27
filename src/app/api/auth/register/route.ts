@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import crypto from 'crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { seedTestEnterprise } from '@/lib/test-mode/helpers';
 import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/api/rate-limit';
+import { sendEmail } from '@/lib/email/send';
+import { verifyEmailHtml } from '@/lib/email/templates/verify-email';
 
 const schema = z.object({
   email: z.string().email().max(254),
@@ -48,7 +51,7 @@ export async function POST(req: NextRequest) {
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
       password,
-      email_confirm: true,
+      email_confirm: false,
       user_metadata: { full_name: fullName },
     });
 
@@ -95,6 +98,10 @@ export async function POST(req: NextRequest) {
       status: 'active',
     });
 
+    // Generate email verification token
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
     // Update user profile
     await supabase
       .from('user_profiles')
@@ -102,6 +109,9 @@ export async function POST(req: NextRequest) {
         full_name: fullName,
         enterprise_id: enterprise.id,
         role: 'treasury_manager',
+        email_verified: false,
+        email_verification_token: verificationToken,
+        email_verification_expires_at: verificationExpires.toISOString(),
       })
       .eq('id', userId);
 
@@ -110,7 +120,15 @@ export async function POST(req: NextRequest) {
       await seedTestEnterprise(testEnterprise.id, enterprise.id, supabase);
     }
 
-    return NextResponse.json({ message: 'Account created' }, { status: 201 });
+    // Send verification email
+    const verifyUrl = `${process.env.NEXTAUTH_URL}/api/auth/verify-email?token=${verificationToken}`;
+    await sendEmail({
+      to: email,
+      subject: 'Verify your email — Vantor',
+      html: verifyEmailHtml({ fullName, verifyUrl }),
+    });
+
+    return NextResponse.json({ message: 'Account created. Please check your email to verify your account.' }, { status: 201 });
   } catch (err) {
     console.error('[register]', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

@@ -61,24 +61,24 @@ export function RegisterForm() {
       return;
     }
     setSuccess(true);
-    setTimeout(() => router.push('/login'), 2000);
+    setTimeout(() => router.push('/verify-email?status=pending'), 2000);
   };
 
   if (success) {
     return (
-      <Card className="w-full max-w-sm shadow-lg border-gray-200">
+      <Card className="w-full max-w-md w-full shadow-lg border-white/10 bg-white/[0.03] backdrop-blur-sm">
         <CardContent className="p-8 text-center">
-          <div className="text-green-600 font-semibold mb-2">Account created!</div>
-          <p className="text-gray-500 text-sm">Redirecting to login…</p>
+          <div className="text-teal-400 font-semibold mb-2">Account created!</div>
+          <p className="text-gray-400 text-sm">Check your email to verify your account.</p>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="w-full max-w-sm shadow-lg border-gray-200">
+    <Card className="w-full max-w-md w-full shadow-lg border-white/10 bg-white/[0.03] backdrop-blur-sm">
       <CardContent className="p-0">
-        <div className="bg-[#19595b] rounded-t-xl px-8 py-8 flex flex-col items-center">
+        <div className="bg-[#19595b] rounded-t-xl px-8 py-6 flex flex-col items-center">
           <Image
             src="/logo-dark.png"
             alt="Vantor"
@@ -88,14 +88,13 @@ export function RegisterForm() {
             priority
             unoptimized
           />
-          <p className="text-white/70 text-sm mt-3 text-center tracking-wide font-semibold">
-            Agentic Stablecoin Treasury Management
+          <p className="text-white text-base mt-2 text-center font-semibold">
+            Put Your Idle Treasury to Work
           </p>
         </div>
 
-        <div className="px-8 py-7">
-          <h2 className="text-lg font-semibold text-gray-900 text-center mb-1">Create account</h2>
-          <p className="text-sm text-gray-500 text-center mb-5">Register for treasury platform access</p>
+        <div className="px-8 py-6">
+          <h2 className="text-lg font-semibold text-white text-center mb-4">Create account</h2>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-1.5">
@@ -146,9 +145,9 @@ export function RegisterForm() {
             </Button>
           </form>
 
-          <p className="mt-5 text-center text-sm text-gray-500">
+          <p className="mt-5 text-center text-sm text-gray-400">
             Already have an account?{' '}
-            <a href="/login" className="text-[#19595b] hover:underline font-medium">Sign in</a>
+            <a href="/login" className="text-teal-400 hover:text-teal-300 font-medium">Sign in</a>
           </p>
         </div>
       </CardContent>

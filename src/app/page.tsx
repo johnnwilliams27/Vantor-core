@@ -378,6 +378,17 @@ function Navbar() {
     });
     setLoginLoading(false);
     if (result?.error) {
+      const email = fd.get('email') as string;
+      const checkRes = await fetch('/api/auth/check-verified', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const checkData = await checkRes.json();
+      if (!checkData.verified) {
+        setLoginError('Please verify your email before signing in. Check your inbox.');
+        return;
+      }
       setLoginError('Invalid email or password');
       return;
     }
@@ -469,6 +480,10 @@ function Navbar() {
                     'Sign in'
                   )}
                 </button>
+                <p className="text-center text-xs text-gray-500 mt-3">
+                  Don&apos;t have an account?{' '}
+                  <Link href="/register" className="text-teal-400 hover:text-teal-300 font-medium">Sign up free</Link>
+                </p>
               </form>
             </div>
             )}
@@ -612,13 +627,13 @@ function Hero() {
         </p>
 
         <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 landing-fade-in landing-delay-3">
-          <a
-            href="#contact"
+          <Link
+            href="/register"
             className="group px-8 py-3.5 rounded-full text-base font-semibold bg-gradient-to-r from-teal-500 to-cyan-400 text-white hover:shadow-[0_0_32px_rgba(45,212,191,0.4)] transition-all duration-500"
           >
-            Get in Touch
+            Get Started Free
             <ArrowRight size={16} className="inline ml-2 group-hover:translate-x-1 transition-transform" />
-          </a>
+          </Link>
           <a
             href="#features"
             className="px-8 py-3.5 rounded-full text-base font-medium text-gray-300 border border-white/10 hover:border-white/25 hover:bg-white/5 transition-all duration-300"
@@ -712,7 +727,7 @@ function Features() {
     {
       icon: Wallet,
       title: 'Multi-Chain Wallets',
-      desc: 'Institutional-grade wallet onboarding across Ethereum and Solana. Support for USDC, USDT, and PYUSD with real-time balance monitoring and transaction tracking.',
+      desc: 'Institutional-grade wallet onboarding across Ethereum and Solana. Support for USDC and USDT with real-time balance monitoring and transaction tracking.',
     },
     {
       icon: Landmark,
@@ -726,8 +741,8 @@ function Features() {
     },
     {
       icon: Globe,
-      title: 'FX Hedging',
-      desc: 'Complex cross-currency hedging strategies for multi-currency treasuries. Automated monitoring of FX exposure with intelligent rebalancing recommendations.',
+      title: 'FX Enablement',
+      desc: 'Support for on/off ramps between multiple currencies. Automated FX to ensure you always have the right currency mix available.',
     },
     {
       icon: BarChart3,

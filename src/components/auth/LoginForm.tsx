@@ -36,6 +36,17 @@ export function LoginForm() {
       redirect: false,
     });
     if (result?.error) {
+      // Check if the user exists but hasn't verified their email
+      const checkRes = await fetch('/api/auth/check-verified', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: data.email }),
+      });
+      const checkData = await checkRes.json();
+      if (!checkData.verified) {
+        setError('Please verify your email before signing in. Check your inbox for the verification link.');
+        return;
+      }
       setError('Invalid email or password');
       return;
     }
