@@ -8,7 +8,6 @@ import { CardSpinner } from '@/components/ui/spinner';
 const TOKEN_COLORS: Record<string, string> = {
   USDC: 'bg-blue-100 text-blue-800',
   USDT: 'bg-green-100 text-green-800',
-  PYUSD: 'bg-purple-100 text-purple-800',
 };
 
 function formatCurrency(value: number, currency: string = 'USD'): string {

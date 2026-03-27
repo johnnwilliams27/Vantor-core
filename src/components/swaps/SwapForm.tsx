@@ -22,8 +22,8 @@ import type { SwapQuoteResponse } from '@/types/api';
 
 const schema = z.object({
   walletId: z.string().uuid('Select a wallet'),
-  fromToken: z.enum(['USDC', 'USDT', 'PYUSD']),
-  toToken: z.enum(['USDC', 'USDT', 'PYUSD']),
+  fromToken: z.enum(['USDC', 'USDT']),
+  toToken: z.enum(['USDC', 'USDT']),
   amount: z.string().regex(/^\d+(\.\d{1,6})?$/, 'Enter a valid amount'),
   slippageBps: z.string().optional(),
 }).refine((d) => d.fromToken !== d.toToken, {
@@ -60,7 +60,7 @@ export function SwapForm() {
   const toToken = watch('toToken');
   const amount = watch('amount');
 
-  const TOKENS = ['USDC', 'USDT', 'PYUSD'] as const;
+  const TOKENS = ['USDC', 'USDT'] as const;
   const toTokenOptions = TOKENS.filter((t) => t !== fromToken);
 
   // Auto-switch toToken if it matches fromToken
@@ -196,7 +196,6 @@ export function SwapForm() {
               <Select {...register('fromToken')}>
                 <option value="USDC">USDC</option>
                 <option value="USDT">USDT</option>
-                <option value="PYUSD">PYUSD</option>
               </Select>
             </div>
             <div className="flex justify-center pb-2">

@@ -12,7 +12,7 @@ import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 const depositSchema = z.object({
   protocol: z.enum(['aave_v3', 'morpho', 'morpho_steakhouse', 'kamino', 'kamino_multiply', 'ondo', 'sky', 'ethena', 'maple', 'drift']),
-  token: z.enum(['USDC', 'USDT', 'PYUSD']),
+  token: z.enum(['USDC', 'USDT']),
   amount: z.string().min(1).refine((v) => parseFloat(v) > 0, 'Amount must be positive'),
   walletAddress: z.string().min(1).max(100),
   chain: z.enum(['ethereum', 'solana']),

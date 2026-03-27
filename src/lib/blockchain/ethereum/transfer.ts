@@ -26,7 +26,6 @@ const ERC20_TRANSFER_ABI = [
 const TOKEN_DECIMALS: Record<TokenSymbol, number> = {
   USDC: 6,
   USDT: 6,
-  PYUSD: 6,
 };
 
 export async function transferEthereumToken(

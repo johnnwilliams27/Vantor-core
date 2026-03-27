@@ -123,7 +123,7 @@ export class BridgeMockAdapter implements IBankingAdapter {
 
     const amount = parseFloat(params.amount);
     // Bridge.xyz handles protocol selection internally
-    // USDC → CCTP under the hood, USDT/PYUSD → their liquidity network
+    // USDC → CCTP under the hood, USDT → their liquidity network
     const isUsdc = params.token === 'USDC';
     const fee = isUsdc ? 0 : 1.50; // CCTP is fee-free, others have relay fees
     const toAmount = Math.max(0, amount - fee);

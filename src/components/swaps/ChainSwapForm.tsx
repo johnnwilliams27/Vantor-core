@@ -23,7 +23,7 @@ import type { BridgeQuote } from '@/lib/banking/interface';
 const schema = z.object({
   fromWalletId: z.string().uuid('Select a source wallet'),
   toWalletId: z.string().uuid('Select a destination wallet'),
-  token: z.enum(['USDC', 'USDT', 'PYUSD']),
+  token: z.enum(['USDC', 'USDT']),
   amount: z.string().regex(/^\d+(\.\d{1,6})?$/, 'Enter a valid amount'),
   slippageBps: z.string().optional(),
 });
@@ -219,7 +219,6 @@ export function ChainSwapForm() {
             <Select {...register('token')}>
               <option value="USDC">USDC (via CCTP)</option>
               <option value="USDT">USDT (via LayerZero)</option>
-              <option value="PYUSD">PYUSD (via LayerZero)</option>
             </Select>
           </div>
 

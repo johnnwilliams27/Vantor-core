@@ -13,7 +13,6 @@ import { useSession } from 'next-auth/react';
 const TOKEN_COLORS: Record<string, string> = {
   USDC: 'bg-[#19595b]/5 border-[#19595b]/20',
   USDT: 'bg-green-50 border-green-200',
-  PYUSD: 'bg-purple-50 border-purple-200',
 };
 
 export function BalanceSummary() {

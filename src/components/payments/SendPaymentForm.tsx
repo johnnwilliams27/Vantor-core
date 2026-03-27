@@ -18,7 +18,7 @@ import type { ErpConfiguration } from '@/types/database';
 const schema = z.object({
   fromWalletId: z.string().uuid('Select a wallet'),
   toAddress: z.string().min(10, 'Enter a valid address'),
-  token: z.enum(['USDC', 'USDT', 'PYUSD']),
+  token: z.enum(['USDC', 'USDT']),
   amount: z.string().regex(/^\d+(\.\d{1,6})?$/, 'Enter a valid amount'),
   memo: z.string().optional(),
   erpConfigId: z.string().optional(),
@@ -111,7 +111,6 @@ export function SendPaymentForm() {
             <Select {...register('token')}>
               <option value="USDC">USDC</option>
               <option value="USDT">USDT</option>
-              <option value="PYUSD">PYUSD</option>
             </Select>
           </div>
 

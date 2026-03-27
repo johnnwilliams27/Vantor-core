@@ -141,14 +141,6 @@ async function seedTestData(
       label: 'Test Solana Wallet',
       verified_at: now,
     },
-    {
-      user_id: userId,
-      enterprise_id: testEnterpriseId,
-      chain: 'ethereum',
-      address: '0xTEST2222222222222222222222222222222222bb',
-      label: 'Test Ethereum Wallet 2',
-      verified_at: now,
-    },
   ];
   const { data: wallets } = await supabase
     .from('wallets')
@@ -164,6 +156,7 @@ async function seedTestData(
       account_name: 'Test Operating Account',
       account_type: 'checking',
       last4: '9999',
+      currency: 'USD',
       current_balance: '1500000.00',
       balance_currency: 'USD',
       balance_as_of: now,
@@ -176,6 +169,7 @@ async function seedTestData(
       account_name: 'Test GBP Account',
       account_type: 'checking',
       last4: '8888',
+      currency: 'GBP',
       current_balance: '500000.00',
       balance_currency: 'GBP',
       balance_as_of: now,
@@ -188,6 +182,7 @@ async function seedTestData(
       account_name: 'Test EUR Account',
       account_type: 'checking',
       last4: '7777',
+      currency: 'EUR',
       current_balance: '500000.00',
       balance_currency: 'EUR',
       balance_as_of: now,
@@ -197,25 +192,18 @@ async function seedTestData(
   await supabase.from('bank_accounts').insert(testBankAccounts);
 
   // 3. Seed test wallet balances
-  const ethWallets = wallets?.filter((w) => w.chain === 'ethereum') ?? [];
-  const ethWallet = ethWallets[0];
-  const ethWallet2 = ethWallets[1];
+  const ethWallet = wallets?.find((w) => w.chain === 'ethereum');
   const solWallet = wallets?.find((w) => w.chain === 'solana');
 
   const testBalances = [];
   if (ethWallet) {
     testBalances.push(
-      { wallet_id: ethWallet.id, enterprise_id: testEnterpriseId, token: 'USDC', chain: 'ethereum', balance: '1500000.00', usd_value: '1500000.00' },
+      { wallet_id: ethWallet.id, enterprise_id: testEnterpriseId, token: 'USDC', balance: '1500000.00', usd_value: '1500000.00' },
     );
   }
   if (solWallet) {
     testBalances.push(
-      { wallet_id: solWallet.id, enterprise_id: testEnterpriseId, token: 'USDT', chain: 'solana', balance: '500000.00', usd_value: '500000.00' },
-    );
-  }
-  if (ethWallet2) {
-    testBalances.push(
-      { wallet_id: ethWallet2.id, enterprise_id: testEnterpriseId, token: 'PYUSD', chain: 'ethereum', balance: '500000.00', usd_value: '500000.00' },
+      { wallet_id: solWallet.id, enterprise_id: testEnterpriseId, token: 'USDT', balance: '500000.00', usd_value: '500000.00' },
     );
   }
   if (testBalances.length) {
@@ -244,10 +232,6 @@ async function seedTestData(
     if (solWallet) {
       const usdtBal = (430000 * variance()).toFixed(2);
       snapshots.push({ wallet_id: solWallet.id, enterprise_id: testEnterpriseId, token: 'USDT', balance: usdtBal, usd_value: usdtBal, snapped_at: snapDate });
-    }
-    if (ethWallet2) {
-      const pyusdBal = (430000 * variance()).toFixed(2);
-      snapshots.push({ wallet_id: ethWallet2.id, enterprise_id: testEnterpriseId, token: 'PYUSD', balance: pyusdBal, usd_value: pyusdBal, snapped_at: snapDate });
     }
   }
 

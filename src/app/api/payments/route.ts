@@ -16,7 +16,7 @@ const schema = z.object({
   fromWalletId: z.string().uuid(),
   toAddress: z.string().min(32).max(100),
   chain: z.enum(['ethereum', 'solana']),
-  token: z.enum(['USDC', 'USDT', 'PYUSD']),
+  token: z.enum(['USDC', 'USDT']),
   amount: z.string().max(50),
   memo: z.string().max(2000).optional(),
   invoiceId: z.string().uuid().optional(),

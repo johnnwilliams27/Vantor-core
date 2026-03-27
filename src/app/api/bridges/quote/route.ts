@@ -10,7 +10,7 @@ import { calculateVantorFee } from '@/lib/billing/usage';
 import { z } from 'zod';
 
 const schema = z.object({
-  token: z.enum(['USDC', 'USDT', 'PYUSD']),
+  token: z.enum(['USDC', 'USDT']),
   amount: z.string().min(1).max(50).refine((v) => parseFloat(v) > 0, 'Must be positive'),
   fromChain: z.enum(['ethereum', 'solana']),
   toChain: z.enum(['ethereum', 'solana']),

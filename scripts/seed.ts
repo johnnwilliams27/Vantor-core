@@ -220,11 +220,11 @@ async function main() {
 
   // Current balances (USD ≈ token 1:1 for stablecoins)
   const currentBalances: Record<string, Record<string, number>> = {
-    [ethMain.id]: { USDC: 850_000, USDT: 150_000, PYUSD: 50_000 },
+    [ethMain.id]: { USDC: 850_000, USDT: 150_000 },
     [ethOps.id]:  { USDC: 125_000, USDT: 25_000 },
-    [ethRes.id]:  { USDC: 500_000, PYUSD: 100_000 },
+    [ethRes.id]:  { USDC: 500_000 },
     [solMain.id]: { USDC: 275_000 },
-    [solPay.id]:  { USDT: 50_000, PYUSD: 25_000 },
+    [solPay.id]:  { USDT: 50_000 },
   };
 
   // ════════════════════════════════════════════════════════
@@ -462,7 +462,7 @@ async function main() {
   // ════════════════════════════════════════════════════════
   console.log('\n📄 Seeding invoices...');
 
-  const tokens = ['USDC', 'USDT', 'PYUSD'] as const;
+  const tokens = ['USDC', 'USDT'] as const;
   const chains = ['ethereum', 'solana'] as const;
   const invoiceRows: object[] = [];
 
@@ -476,10 +476,10 @@ async function main() {
     { vendor: 'Vertex Analytics',      erp: 'oracle',   amount: 67_200,  token: 'USDT', chain: 'ethereum', daysBack: 47 },
     { vendor: 'DataBridge Systems',    erp: 'oracle',   amount: 33_800,  token: 'USDC', chain: 'solana',   daysBack: 40 },
     { vendor: 'Apex Software',         erp: 'xero',     amount: 55_000,  token: 'USDC', chain: 'ethereum', daysBack: 35 },
-    { vendor: 'Meridian Consulting',   erp: 'xero',     amount: 78_000,  token: 'PYUSD',chain: 'ethereum', daysBack: 28 },
+    { vendor: 'Meridian Consulting',   erp: 'xero',     amount: 78_000,  token: 'USDC', chain: 'ethereum', daysBack: 28 },
     { vendor: 'Stratford Technologies',erp: 'netsuite', amount: 112_000, token: 'USDC', chain: 'ethereum', daysBack: 21 },
     { vendor: 'Atlas Infrastructure',  erp: 'netsuite', amount: 44_500,  token: 'USDT', chain: 'ethereum', daysBack: 14 },
-    { vendor: 'Horizon Cloud',         erp: 'netsuite', amount: 29_900,  token: 'PYUSD',chain: 'ethereum', daysBack: 7  },
+    { vendor: 'Horizon Cloud',         erp: 'netsuite', amount: 29_900,  token: 'USDT', chain: 'ethereum', daysBack: 7  },
   ];
 
   let invNum = 1000;
@@ -578,7 +578,7 @@ async function main() {
       const isOutbound = Math.random() > 0.3; // 70% outbound (payments to vendors)
       const wallet = pick([ethMain, ethOps, ethRes, solMain, solPay]);
       const isEth = wallet.chain === 'ethereum';
-      const token = pick(isEth ? ['USDC', 'USDT', 'PYUSD'] : ['USDC', 'USDT']) as 'USDC' | 'USDT' | 'PYUSD';
+      const token = pick(isEth ? ['USDC', 'USDT'] : ['USDC', 'USDT']) as 'USDC' | 'USDT';
       const amount = isOutbound ? rand(5_000, 150_000) : rand(50_000, 500_000);
       const dayTs = daysAgo(daysBack);
       dayTs.setHours(randInt(8, 18), randInt(0, 59));
@@ -646,7 +646,7 @@ async function main() {
       from_wallet_id: wallet.id,
       to_address: isEth ? '0x' + Math.random().toString(16).slice(2).padEnd(40, '0').slice(0, 40) : 'AdHocSolanaAddr11111111111111111111111111111',
       chain: wallet.chain,
-      token: pick(isEth ? ['USDC', 'USDT', 'PYUSD'] : ['USDC', 'USDT']) as string,
+      token: pick(isEth ? ['USDC', 'USDT'] : ['USDC', 'USDT']) as string,
       amount: fmt2(rand(3_000, 80_000)),
       status: 'completed',
       executed_at: ts(execAt),
@@ -681,8 +681,7 @@ async function main() {
   console.log('\n🔄 Seeding swaps...');
 
   const swapPairs: [string, string][] = [
-    ['USDC', 'USDT'], ['USDT', 'USDC'], ['USDC', 'PYUSD'],
-    ['PYUSD', 'USDC'], ['USDT', 'PYUSD'], ['PYUSD', 'USDT'],
+    ['USDC', 'USDT'], ['USDT', 'USDC'],
   ];
   const swapStatuses: string[] = ['completed', 'completed', 'completed', 'completed', 'pending', 'failed'];
   const allWallets = [ethMain, ethOps, ethRes, solMain, solPay];

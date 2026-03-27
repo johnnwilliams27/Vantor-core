@@ -5,7 +5,7 @@
 -- ---------- Enums ----------
 CREATE TYPE user_role AS ENUM ('treasury_manager', 'accountant', 'auditor');
 CREATE TYPE chain_type AS ENUM ('ethereum', 'solana');
-CREATE TYPE token_symbol AS ENUM ('USDC', 'USDT', 'PYUSD');
+CREATE TYPE token_symbol AS ENUM ('USDC', 'USDT', 'PYUSD');  -- NOTE: PYUSD removed in 0017_remove_pyusd.sql
 CREATE TYPE payment_status AS ENUM ('pending', 'processing', 'completed', 'failed', 'cancelled');
 CREATE TYPE invoice_status AS ENUM ('unpaid', 'paid', 'partially_paid', 'overdue', 'cancelled');
 CREATE TYPE erp_provider AS ENUM ('sap', 'oracle');

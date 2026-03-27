@@ -159,4 +159,3 @@ src/
 |---|---|---|
 | USDC | 0xA0b86991... | EPjFWdd5... |
 | USDT | 0xdAC17F95... | Es9vMFrz... |
-|  | 0x6c3ea903... | 2b1kV6Dk... |

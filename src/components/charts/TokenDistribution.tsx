@@ -9,7 +9,6 @@ import { CardSpinner } from '@/components/ui/spinner';
 const COLORS: Record<string, string> = {
   USDC: '#3b82f6',
   USDT: '#22c55e',
-  PYUSD: '#a855f7',
   DAI: '#f59e0b',
 };
 

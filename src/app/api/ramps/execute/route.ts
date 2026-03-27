@@ -14,7 +14,7 @@ import { recordUsageFee } from '@/lib/billing/usage';
 const schema = z.object({
   direction: z.enum(['onramp', 'offramp']),
   bankAccountId: z.string().uuid(),
-  cryptoToken: z.enum(['USDC', 'USDT', 'PYUSD']),
+  cryptoToken: z.enum(['USDC', 'USDT']),
   cryptoAmount: z.number().positive(),
   fiatAmount: z.number().positive(),
   fiatCurrency: z.string().default('USD'),

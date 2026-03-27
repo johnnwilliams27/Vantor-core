@@ -9,7 +9,6 @@ import Big from 'big.js';
 const TOKEN_DECIMALS: Record<TokenSymbol, number> = {
   USDC: 6,
   USDT: 6,
-  PYUSD: 6,
 };
 
 export async function fetchSolanaBalances(
@@ -17,7 +16,7 @@ export async function fetchSolanaBalances(
 ): Promise<TokenBalance[]> {
   const connection = getSolanaConnection();
   const ownerPubkey = new PublicKey(address);
-  const tokens: TokenSymbol[] = ['USDC', 'USDT', 'PYUSD'];
+  const tokens: TokenSymbol[] = ['USDC', 'USDT'];
 
   const results = await Promise.allSettled(
     tokens.map(async (token) => {
