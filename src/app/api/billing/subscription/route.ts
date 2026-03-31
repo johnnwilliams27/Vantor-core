@@ -143,18 +143,45 @@ export async function PATCH(req: NextRequest) {
       cancel_at_period_end: true,
     });
   } else if (sub?.stripe_subscription_id) {
-    // Downgrade to lower paid tier — update subscription price immediately
+    // Downgrade to lower paid tier — schedule change at next billing cycle
     const stripeSubscription = await stripe.subscriptions.retrieve(sub.stripe_subscription_id);
-    const currentItem = stripeSubscription.items.data[0];
 
     const priceId = process.env[`STRIPE_PRICE_${targetTier.toUpperCase()}`];
     if (!priceId) {
       return NextResponse.json({ error: 'Price not configured' }, { status: 500 });
     }
 
-    await stripe.subscriptions.update(sub.stripe_subscription_id, {
-      items: [{ id: currentItem.id, price: priceId }],
-      proration_behavior: 'create_prorations',
+    // Release any existing schedule before creating a new one
+    if (stripeSubscription.schedule) {
+      const schedId = typeof stripeSubscription.schedule === 'string'
+        ? stripeSubscription.schedule
+        : stripeSubscription.schedule.id;
+      try {
+        await stripe.subscriptionSchedules.release(schedId);
+      } catch {
+        // Schedule may already be released or completed
+      }
+    }
+
+    // Create schedule from the current subscription
+    const schedule = await stripe.subscriptionSchedules.create({
+      from_subscription: sub.stripe_subscription_id,
+    });
+
+    // Use billing_cycle_anchor as the transition point (next billing date)
+    const billingAnchor = stripeSubscription.billing_cycle_anchor;
+
+    await stripe.subscriptionSchedules.update(schedule.id, {
+      phases: [
+        {
+          items: [{ price: stripeSubscription.items.data[0].price.id, quantity: 1 }],
+          end_date: billingAnchor,
+        },
+        {
+          items: [{ price: priceId, quantity: 1 }],
+          start_date: billingAnchor,
+        },
+      ],
     });
   }
 
