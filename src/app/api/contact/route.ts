@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/api/rate-limit';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY);
+}
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
@@ -44,7 +46,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
-    await resend.emails.send({
+    await getResend().emails.send({
       from: 'Vantor Contact Form <contact@vantor.xyz>',
       to: 'contact@vantor.xyz',
       replyTo: email,
