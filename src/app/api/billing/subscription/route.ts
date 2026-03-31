@@ -163,26 +163,33 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    // Create schedule from the current subscription
-    const schedule = await stripe.subscriptionSchedules.create({
-      from_subscription: sub.stripe_subscription_id,
-    });
+    try {
+      // Create schedule from the current subscription
+      const schedule = await stripe.subscriptionSchedules.create({
+        from_subscription: sub.stripe_subscription_id,
+      });
 
-    // Use billing_cycle_anchor as the transition point (next billing date)
-    const billingAnchor = stripeSubscription.billing_cycle_anchor;
+      // Use subscription start_date and billing_cycle_anchor for phase boundaries
+      const subStart = (stripeSubscription as any).start_date as number;
+      const billingAnchor = stripeSubscription.billing_cycle_anchor;
 
-    await stripe.subscriptionSchedules.update(schedule.id, {
-      phases: [
-        {
-          items: [{ price: stripeSubscription.items.data[0].price.id, quantity: 1 }],
-          end_date: billingAnchor,
-        },
-        {
-          items: [{ price: priceId, quantity: 1 }],
-          start_date: billingAnchor,
-        },
-      ],
-    });
+      await stripe.subscriptionSchedules.update(schedule.id, {
+        phases: [
+          {
+            items: [{ price: stripeSubscription.items.data[0].price.id, quantity: 1 }],
+            start_date: subStart,
+            end_date: billingAnchor,
+          },
+          {
+            items: [{ price: priceId, quantity: 1 }],
+            start_date: billingAnchor,
+          },
+        ],
+      });
+    } catch (err: any) {
+      console.error('[downgrade] Stripe schedule error:', err.message);
+      return NextResponse.json({ error: `Stripe error: ${err.message}` }, { status: 500 });
+    }
   }
 
   // Update tier in our DB immediately (don't wait for webhook)

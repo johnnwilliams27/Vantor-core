@@ -43,11 +43,10 @@ export function useTestMode() {
 
     setTestMode(enabled);
 
-    // Clear ALL cached queries to prevent stale cross-mode data
+    // Clear ALL cached queries and refetch active ones to prevent stale cross-mode data
     queryClient.clear();
-
-    // Re-fetch test mode status
-    queryClient.invalidateQueries({ queryKey: ['test-mode-status'] });
+    await queryClient.invalidateQueries();
+    await queryClient.refetchQueries();
   };
 
   return { testMode, toggleTestMode };
