@@ -137,41 +137,45 @@ export async function PATCH(req: NextRequest) {
     .eq('enterprise_id', session.user.enterprise_id)
     .single();
 
-  if (targetTier === 'lite' && sub?.stripe_subscription_id) {
-    // Cancel at period end
+  if (!sub?.stripe_subscription_id) {
+    return NextResponse.json({ error: 'No active subscription' }, { status: 400 });
+  }
+
+  const stripeSubscription = await stripe.subscriptions.retrieve(sub.stripe_subscription_id);
+
+  // Release any existing schedule first (required before any modification)
+  if (stripeSubscription.schedule) {
+    const schedId = typeof stripeSubscription.schedule === 'string'
+      ? stripeSubscription.schedule
+      : stripeSubscription.schedule.id;
+    try {
+      await stripe.subscriptionSchedules.release(schedId);
+    } catch {
+      // Schedule may already be released or completed
+    }
+  }
+
+  const billingAnchor = stripeSubscription.billing_cycle_anchor;
+  const effectiveDate = new Date(billingAnchor * 1000).toISOString();
+
+  if (targetTier === 'lite') {
+    // Cancel at period end (billing anchor)
     await stripe.subscriptions.update(sub.stripe_subscription_id, {
       cancel_at_period_end: true,
     });
-  } else if (sub?.stripe_subscription_id) {
-    // Downgrade to lower paid tier — schedule change at next billing cycle
-    const stripeSubscription = await stripe.subscriptions.retrieve(sub.stripe_subscription_id);
-
+  } else {
+    // Downgrade to lower paid tier — schedule change at billing anchor
     const priceId = process.env[`STRIPE_PRICE_${targetTier.toUpperCase()}`];
     if (!priceId) {
       return NextResponse.json({ error: 'Price not configured' }, { status: 500 });
     }
 
-    // Release any existing schedule before creating a new one
-    if (stripeSubscription.schedule) {
-      const schedId = typeof stripeSubscription.schedule === 'string'
-        ? stripeSubscription.schedule
-        : stripeSubscription.schedule.id;
-      try {
-        await stripe.subscriptionSchedules.release(schedId);
-      } catch {
-        // Schedule may already be released or completed
-      }
-    }
-
     try {
-      // Create schedule from the current subscription
       const schedule = await stripe.subscriptionSchedules.create({
         from_subscription: sub.stripe_subscription_id,
       });
 
-      // Use subscription start_date and billing_cycle_anchor for phase boundaries
       const subStart = (stripeSubscription as any).start_date as number;
-      const billingAnchor = stripeSubscription.billing_cycle_anchor;
 
       await stripe.subscriptionSchedules.update(schedule.id, {
         phases: [
@@ -192,23 +196,8 @@ export async function PATCH(req: NextRequest) {
     }
   }
 
-  // Update tier in our DB immediately (don't wait for webhook)
-  const { data: subRecord } = await supabaseAdmin
-    .from('subscriptions')
-    .select('id')
-    .eq('enterprise_id', session.user.enterprise_id)
-    .single();
-
-  if (subRecord) {
-    await supabaseAdmin.rpc('update_subscription_tier', {
-      p_sub_id: subRecord.id,
-      p_enterprise_id: session.user.enterprise_id,
-      p_tier: targetTier,
-      p_status: targetTier === 'lite' ? 'canceling' : 'active',
-      p_period_start: null,
-      p_period_end: null,
-    });
-  }
-
-  return NextResponse.json({ success: true, effective: 'end_of_period' });
+  // Do NOT update the tier in DB immediately — the actual change happens at billing anchor.
+  // The webhook (subscription.updated or subscription.deleted) will handle the tier update.
+  // Just return the effective date so the UI can show it.
+  return NextResponse.json({ success: true, effective: 'end_of_period', effectiveDate });
 }

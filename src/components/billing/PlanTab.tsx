@@ -46,6 +46,8 @@ export function PlanTab() {
     }
   };
 
+  const [downgradeBanner, setDowngradeBanner] = useState<string | null>(null);
+
   const handleDowngradeConfirm = async () => {
     if (!downgradeTier) return;
     const res = await fetch('/api/billing/subscription', {
@@ -54,17 +56,33 @@ export function PlanTab() {
       body: JSON.stringify({ targetTier: downgradeTier }),
     });
 
+    const data = await res.json().catch(() => ({}));
+
     if (res.ok) {
-      await updateSession();
       setDowngradeTier(null);
+      const targetName = TIERS[downgradeTier]?.name || downgradeTier;
+      if (data.effectiveDate) {
+        const date = new Date(data.effectiveDate).toLocaleDateString('en-US', {
+          month: 'long', day: 'numeric', year: 'numeric',
+        });
+        setDowngradeBanner(`Downgrade to ${targetName} scheduled for ${date}.`);
+      } else {
+        setDowngradeBanner(`Downgrade to ${targetName} scheduled for end of billing period.`);
+      }
     } else {
-      const data = await res.json().catch(() => ({}));
       alert(data.error || 'Downgrade failed');
     }
   };
 
   return (
     <div className="space-y-6">
+      {/* Downgrade scheduled banner */}
+      {downgradeBanner && (
+        <div className="rounded-lg px-4 py-3 text-sm font-medium bg-amber-500/10 border border-amber-500/30 text-amber-400 animate-[fadeSlideUp_0.3s_ease-out]">
+          {downgradeBanner}
+        </div>
+      )}
+
       {/* Current plan summary */}
       <div className="rounded-xl border border-border p-6 bg-card">
         <div className="flex items-center justify-between">
