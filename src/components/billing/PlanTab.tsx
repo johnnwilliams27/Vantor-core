@@ -6,12 +6,14 @@ import { ArrowRight } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { TierComparisonGrid } from './TierComparisonGrid';
 import { UpgradeFlow } from './UpgradeFlow';
+import { DowngradeConfirmModal } from './DowngradeConfirmModal';
 import { TierSlug, TIERS, isUpgrade as isUpgradeFn } from '@/lib/billing/tiers';
 
 export function PlanTab() {
   const { data: session, update: updateSession } = useSession();
   const tier = (session?.user?.subscription_tier || 'lite') as TierSlug;
   const [upgradeTier, setUpgradeTier] = useState<TierSlug | null>(null);
+  const [downgradeTier, setDowngradeTier] = useState<TierSlug | null>(null);
 
   const kybDone = session?.user?.kyb_status === 'completed';
   const kycDone = session?.user?.kyc_status === 'completed';
@@ -40,19 +42,24 @@ export function PlanTab() {
     if (isUpgradeFn(tier, targetTier)) {
       setUpgradeTier(targetTier);
     } else {
-      // Downgrade via PATCH
-      const res = await fetch('/api/billing/subscription', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetTier }),
-      });
+      setDowngradeTier(targetTier);
+    }
+  };
 
-      if (res.ok) {
-        await updateSession();
-      } else {
-        const data = await res.json();
-        alert(data.error || 'Downgrade failed');
-      }
+  const handleDowngradeConfirm = async () => {
+    if (!downgradeTier) return;
+    const res = await fetch('/api/billing/subscription', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetTier: downgradeTier }),
+    });
+
+    if (res.ok) {
+      await updateSession();
+      setDowngradeTier(null);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Downgrade failed');
     }
   };
 
@@ -121,6 +128,16 @@ export function PlanTab() {
         <UpgradeFlow
           targetTier={upgradeTier}
           onCancel={() => setUpgradeTier(null)}
+        />
+      )}
+
+      {/* Downgrade confirm modal */}
+      {downgradeTier && (
+        <DowngradeConfirmModal
+          currentTier={tier}
+          targetTier={downgradeTier}
+          onConfirm={handleDowngradeConfirm}
+          onCancel={() => setDowngradeTier(null)}
         />
       )}
     </div>
