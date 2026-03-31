@@ -1,0 +1,61 @@
+import { createAdminClient } from '@/lib/supabase/admin';
+import type { SeedContext } from './helpers';
+import { seedWallets } from './wallets';
+import { seedBanking } from './banking';
+import { seedErp } from './erp';
+import { seedTransactions } from './transactions';
+import { seedSwaps } from './swaps';
+import { seedBridges } from './bridges';
+import { seedTreasury } from './treasury';
+import { seedYield } from './yield';
+import { seedCompliance } from './compliance';
+import { seedAudit } from './audit';
+
+/**
+ * Seeds a test enterprise with comprehensive demo data across all domains.
+ * Called during enterprise creation for Lite tier test mode.
+ */
+export async function seedAll(
+  testEnterpriseId: string,
+  sourceEnterpriseId: string,
+  adminClient?: ReturnType<typeof createAdminClient>
+): Promise<void> {
+  const supabase = adminClient || createAdminClient();
+
+  const { data: users } = await supabase
+    .from('user_profiles')
+    .select('id')
+    .eq('enterprise_id', sourceEnterpriseId)
+    .limit(1);
+
+  const userId = users?.[0]?.id;
+  if (!userId) return;
+
+  const ctx: SeedContext = { supabase, enterpriseId: testEnterpriseId, userId };
+
+  // Phase 1: No dependencies
+  const [walletIds, bankIds, erpIds] = await Promise.all([
+    seedWallets(ctx),
+    seedBanking(ctx),
+    seedErp(ctx),
+  ]);
+
+  // Phase 2: Depend on wallets/erp
+  const [txIds] = await Promise.all([
+    seedTransactions(ctx, walletIds, erpIds.invoiceIds),
+    seedSwaps(ctx, walletIds),
+    seedBridges(ctx, walletIds),
+  ]);
+
+  // Phase 3: Depend on wallets
+  await Promise.all([
+    seedTreasury(ctx),
+    seedYield(ctx, walletIds),
+  ]);
+
+  // Phase 4: Depend on wallets + transactions
+  await seedCompliance(ctx, walletIds, txIds);
+
+  // Phase 5: Depend on everything
+  await seedAudit(ctx);
+}
