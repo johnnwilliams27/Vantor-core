@@ -5,6 +5,7 @@ import type { TransactionIds } from './transactions';
 
 export async function seedCompliance(ctx: SeedContext, walletIds: WalletIds, txIds: TransactionIds): Promise<void> {
   const { supabase, enterpriseId, userId } = ctx;
+  if (!walletIds.ethWallets.length || !walletIds.solWallets.length) return;
 
   // Sanctions screenings
   const allAddresses = [

@@ -10,7 +10,7 @@ import { NavigationProgress } from './NavigationProgress';
 import { AgentPanel } from '@/components/agent/AgentPanel';
 import { OnboardingWizard } from '@/components/setup/OnboardingWizard';
 import { useTestMode } from '@/hooks/useTestMode';
-import { isPaidTier } from '@/lib/billing/tiers';
+import { isPaidTier, TierSlug } from '@/lib/billing/tiers';
 import { PersonaKycFlow } from '@/components/kyc/PersonaKycFlow';
 import { Shield } from 'lucide-react';
 
@@ -82,7 +82,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [switchingTestMode, setSwitchingTestMode] = useState(false);
   useEffect(() => {
     if (!session?.user || switchingTestMode) return;
-    const tier = session.user.subscription_tier;
+    const tier = session.user.subscription_tier as TierSlug;
     if (!isPaidTier(tier) && testMode === false) {
       setSwitchingTestMode(true);
       toggleTestMode(true).then(() => {
@@ -103,7 +103,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   const needsKyc = session?.user &&
-    isPaidTier(session.user.subscription_tier) &&
+    isPaidTier(session.user.subscription_tier as TierSlug) &&
     session.user.kyc_status !== 'completed' &&
     !session.user.is_app_admin;
 
