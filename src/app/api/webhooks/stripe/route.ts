@@ -325,6 +325,12 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     ? session.customer
     : session.customer?.id;
 
+  const { data: sub } = await supabaseAdmin
+    .from('subscriptions')
+    .select('id')
+    .eq('enterprise_id', session.metadata.enterprise_id)
+    .single();
+
   // Update the subscription record with Stripe IDs
   await supabaseAdmin
     .from('subscriptions')
@@ -334,6 +340,19 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       updated_at: new Date().toISOString(),
     })
     .eq('enterprise_id', session.metadata.enterprise_id);
+
+  // Update tier immediately from checkout metadata instead of waiting for subscription.created webhook
+  const targetTier = session.metadata.target_tier;
+  if (targetTier && sub) {
+    await supabaseAdmin.rpc('update_subscription_tier', {
+      p_sub_id: sub.id,
+      p_enterprise_id: session.metadata.enterprise_id,
+      p_tier: targetTier,
+      p_status: 'active',
+      p_period_start: null,
+      p_period_end: null,
+    });
+  }
 
   // Wipe test enterprise demo data on Lite → paid upgrade
   const { data: enterprise } = await supabaseAdmin
@@ -345,8 +364,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   if (enterprise?.test_enterprise_id) {
     await wipeTestEnterprise(enterprise.test_enterprise_id, supabaseAdmin);
   }
-
-  // The subscription.created webhook will handle the tier update
 }
 
 async function handlePaymentMethodDetached(pm: Stripe.PaymentMethod) {
