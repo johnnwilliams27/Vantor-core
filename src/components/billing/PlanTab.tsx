@@ -1,13 +1,32 @@
 'use client';
 
+import { useState } from 'react';
 import { useSession } from 'next-auth/react';
+import { ArrowRight } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { TierComparisonGrid } from './TierComparisonGrid';
-import { TierSlug, TIERS, isUpgrade } from '@/lib/billing/tiers';
+import { UpgradeFlow } from './UpgradeFlow';
+import { TierSlug, TIERS, isUpgrade as isUpgradeFn } from '@/lib/billing/tiers';
 
 export function PlanTab() {
   const { data: session, update: updateSession } = useSession();
   const tier = (session?.user?.subscription_tier || 'lite') as TierSlug;
+  const [upgradeTier, setUpgradeTier] = useState<TierSlug | null>(null);
+
+  const kybDone = session?.user?.kyb_status === 'completed';
+  const kycDone = session?.user?.kyc_status === 'completed';
+  const isLite = tier === 'lite';
+  const showResumeBanner = isLite && (kybDone || kycDone);
+
+  let resumeMessage = '';
+  let resumeCta = '';
+  if (kybDone && kycDone) {
+    resumeMessage = 'Verification complete — finish your upgrade';
+    resumeCta = 'Complete Upgrade';
+  } else if (kybDone) {
+    resumeMessage = 'Business verification complete — continue with identity verification';
+    resumeCta = 'Continue Upgrade';
+  }
 
   const { data: assetCap } = useQuery({
     queryKey: ['asset-cap'],
@@ -18,9 +37,8 @@ export function PlanTab() {
   const handleSelectTier = async (targetTier: TierSlug) => {
     if (targetTier === tier) return;
 
-    if (isUpgrade(tier, targetTier)) {
-      // Redirect to upgrade flow (KYB -> KYC -> Checkout)
-      window.location.href = `/settings/billing?upgrade=${targetTier}`;
+    if (isUpgradeFn(tier, targetTier)) {
+      setUpgradeTier(targetTier);
     } else {
       // Downgrade via PATCH
       const res = await fetch('/api/billing/subscription', {
@@ -77,8 +95,34 @@ export function PlanTab() {
         )}
       </div>
 
+      {/* Resume upgrade banner */}
+      {showResumeBanner && (
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <ArrowRight className="w-4 h-4 text-primary" />
+            </div>
+            <p className="text-sm text-foreground">{resumeMessage}</p>
+          </div>
+          <button
+            onClick={() => setUpgradeTier('starter')}
+            className="px-4 py-2 rounded-lg bg-[#19595b] hover:bg-[#134849] text-white text-sm font-medium transition-colors flex-shrink-0"
+          >
+            {resumeCta}
+          </button>
+        </div>
+      )}
+
       {/* Tier comparison */}
       <TierComparisonGrid currentTier={tier} onSelectTier={handleSelectTier} />
+
+      {/* Upgrade flow modal */}
+      {upgradeTier && (
+        <UpgradeFlow
+          targetTier={upgradeTier}
+          onCancel={() => setUpgradeTier(null)}
+        />
+      )}
     </div>
   );
 }
