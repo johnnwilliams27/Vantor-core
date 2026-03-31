@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/nextauth.config';
 import { stripe } from '@/lib/billing/stripe';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { wipeTestEnterprise } from '@/lib/test-mode/seed/wipe';
 
 /**
  * POST /api/billing/sync
@@ -96,6 +97,20 @@ export async function POST() {
     return NextResponse.json({ synced: false, error: rpcError.message }, { status: 500 });
   }
   console.log('[sync] SUCCESS: tier updated to', tier);
+
+  // Wipe test enterprise demo data when upgrading from lite to a paid tier
+  if (sub.tier === 'lite' && tier !== 'lite') {
+    const { data: enterprise } = await supabaseAdmin
+      .from('enterprises')
+      .select('test_enterprise_id')
+      .eq('id', session.user.enterprise_id)
+      .single();
+
+    if (enterprise?.test_enterprise_id) {
+      console.log('[sync] Wiping test enterprise:', enterprise.test_enterprise_id);
+      await wipeTestEnterprise(enterprise.test_enterprise_id, supabaseAdmin);
+    }
+  }
 
   // Also store the Stripe subscription ID if missing
   if (stripeSub && !sub.stripe_subscription_id) {
