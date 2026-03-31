@@ -1,6 +1,10 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let _resend: Resend;
+function getResend() {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY);
+  return _resend;
+}
 const USE_MOCK = process.env.RESEND_USE_MOCK === 'true';
 
 export async function sendEmail(params: {
@@ -14,7 +18,7 @@ export async function sendEmail(params: {
     return { id: 'mock-' + Date.now() };
   }
 
-  const result = await resend.emails.send({
+  const result = await getResend().emails.send({
     from: 'Vantor <billing@vantor.xyz>',
     to: params.to,
     subject: params.subject,
