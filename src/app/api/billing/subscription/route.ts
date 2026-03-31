@@ -141,6 +141,20 @@ export async function POST(req: NextRequest) {
     const stripeSubscription = await stripe.subscriptions.retrieve(sub.stripe_subscription_id);
     const currentItem = stripeSubscription.items.data[0];
 
+    // Clear any pending downgrade before upgrading
+    if (stripeSubscription.cancel_at_period_end) {
+      await stripe.subscriptions.update(sub.stripe_subscription_id, {
+        cancel_at_period_end: false,
+      });
+    }
+    if (stripeSubscription.schedule) {
+      const schedId = typeof stripeSubscription.schedule === 'string'
+        ? stripeSubscription.schedule : stripeSubscription.schedule.id;
+      try {
+        await stripe.subscriptionSchedules.release(schedId);
+      } catch { /* already released */ }
+    }
+
     // Find the price for the target tier
     const priceId = process.env[`STRIPE_PRICE_${targetTier.toUpperCase()}`];
     if (!priceId) {
