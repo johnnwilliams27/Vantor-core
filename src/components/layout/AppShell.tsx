@@ -12,6 +12,7 @@ import { OnboardingWizard } from '@/components/setup/OnboardingWizard';
 import { useTestMode } from '@/hooks/useTestMode';
 import { isPaidTier, TierSlug } from '@/lib/billing/tiers';
 import { PersonaKycFlow } from '@/components/kyc/PersonaKycFlow';
+import { PaymentFailedGate } from '@/components/billing/PaymentFailedGate';
 import { Shield } from 'lucide-react';
 
 function KycRequiredModal() {
@@ -123,6 +124,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <OnboardingWizard />
       )}
       {needsKyc && <KycRequiredModal />}
+      <PaymentFailedGate />
     </div>
   );
 }
