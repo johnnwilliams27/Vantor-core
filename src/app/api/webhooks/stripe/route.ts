@@ -134,14 +134,26 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   });
 }
 
+/** Extract subscription ID from invoice — SDK v21 moved it to parent.subscription_details */
+function getInvoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
+  // SDK v21+: nested under parent.subscription_details
+  const parentSub = (invoice as any).parent?.subscription_details?.subscription;
+  if (parentSub) return typeof parentSub === 'string' ? parentSub : parentSub.id;
+  // Fallback for older SDK versions
+  const legacy = (invoice as any).subscription;
+  if (legacy) return typeof legacy === 'string' ? legacy : legacy.id;
+  return null;
+}
+
 async function handleInvoiceCreated(invoice: Stripe.Invoice) {
-  if (!invoice.subscription) return;
+  const subscriptionId = getInvoiceSubscriptionId(invoice);
+  if (!subscriptionId) return;
   const supabaseAdmin = createAdminClient();
 
   const { data: sub } = await supabaseAdmin
     .from('subscriptions')
     .select('enterprise_id')
-    .eq('stripe_subscription_id', invoice.subscription)
+    .eq('stripe_subscription_id', subscriptionId)
     .single();
 
   if (!sub) return;
@@ -186,14 +198,15 @@ async function handleInvoiceCreated(invoice: Stripe.Invoice) {
 }
 
 async function handleInvoicePaid(invoice: Stripe.Invoice) {
-  if (!invoice.subscription) return;
+  const subscriptionId = getInvoiceSubscriptionId(invoice);
+  if (!subscriptionId) return;
 
   const supabaseAdmin = createAdminClient();
 
   const { data: sub } = await supabaseAdmin
     .from('subscriptions')
     .select('enterprise_id, tier, custom_price')
-    .eq('stripe_subscription_id', invoice.subscription)
+    .eq('stripe_subscription_id', subscriptionId)
     .single();
 
   if (!sub) return;
