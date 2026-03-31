@@ -1,60 +1,125 @@
 'use client';
 
 import { TIERS, TIER_ORDER, TierSlug } from '@/lib/billing/tiers';
-import { Check, X } from 'lucide-react';
+import { Check, X, Sparkles, Zap, TrendingUp, Rocket, Building2, ArrowRight, MessageSquare } from 'lucide-react';
+
+const TIER_CONFIG: Record<TierSlug, {
+  icon: typeof Sparkles;
+  gradient: string;
+  iconBg: string;
+  popular?: boolean;
+}> = {
+  lite: {
+    icon: Sparkles,
+    gradient: 'from-slate-500/20 to-slate-600/10',
+    iconBg: 'bg-slate-500/10 text-slate-400',
+  },
+  starter: {
+    icon: Zap,
+    gradient: 'from-blue-500/20 to-blue-600/10',
+    iconBg: 'bg-blue-500/10 text-blue-400',
+  },
+  growth: {
+    icon: TrendingUp,
+    gradient: 'from-teal-500/20 to-cyan-500/10',
+    iconBg: 'bg-teal-500/10 text-teal-400',
+    popular: true,
+  },
+  scale: {
+    icon: Rocket,
+    gradient: 'from-purple-500/20 to-purple-600/10',
+    iconBg: 'bg-purple-500/10 text-purple-400',
+  },
+  enterprise: {
+    icon: Building2,
+    gradient: 'from-amber-500/20 to-orange-500/10',
+    iconBg: 'bg-amber-500/10 text-amber-400',
+  },
+};
 
 interface TierComparisonGridProps {
   currentTier: TierSlug;
   onSelectTier: (tier: TierSlug) => void;
+  pendingDowngradeTier?: TierSlug;
 }
 
-export function TierComparisonGrid({ currentTier, onSelectTier }: TierComparisonGridProps) {
+export function TierComparisonGrid({ currentTier, onSelectTier, pendingDowngradeTier }: TierComparisonGridProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
       {TIER_ORDER.map((slug) => {
         const tier = TIERS[slug];
+        const config = TIER_CONFIG[slug];
+        const Icon = config.icon;
         const isCurrent = slug === currentTier;
+        const isUpgrade = TIER_ORDER.indexOf(slug) > TIER_ORDER.indexOf(currentTier);
 
         return (
           <div
             key={slug}
-            className={`rounded-xl border p-5 flex flex-col ${
+            className={`relative rounded-xl border p-4 flex flex-col transition-all duration-200 ${
               isCurrent
-                ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
-                : 'border-border hover:border-primary/40 transition-colors'
+                ? 'border-primary ring-2 ring-primary/20 bg-primary/5'
+                : 'border-border hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5'
             }`}
           >
-            <h3 className="font-semibold text-lg">{tier.name}</h3>
-            <p className="text-2xl font-bold mt-2">{tier.displayPrice}</p>
+            {/* Popular badge */}
+            {config.popular && !isCurrent && (
+              <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-teal-500 to-cyan-400 text-white text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
+                Popular
+              </div>
+            )}
 
-            <ul className="mt-4 space-y-2 flex-1 text-sm">
+            {/* Icon + gradient header */}
+            <div className={`rounded-lg bg-gradient-to-br ${config.gradient} p-3 mb-3 flex items-center justify-center`}>
+              <div className={`w-9 h-9 rounded-lg ${config.iconBg} flex items-center justify-center`}>
+                <Icon className="w-4.5 h-4.5" />
+              </div>
+            </div>
+
+            <h3 className="font-semibold text-base">{tier.name}</h3>
+            <p className="text-xl font-bold mt-1">{tier.displayPrice}</p>
+
+            <ul className="mt-3 space-y-1.5 flex-1 text-xs">
               <FeatureRow enabled={true} label="Test mode" />
               <FeatureRow enabled={tier.liveMode} label="Live mode" />
               <FeatureRow
                 enabled={true}
-                label={tier.assetCapUsd ? `$${(tier.assetCapUsd / 1_000_000).toFixed(0)}M asset cap` : 'Unlimited assets'}
+                label={tier.assetCapUsd ? `$${(tier.assetCapUsd / 1_000_000).toFixed(0)}M cap` : 'Unlimited'}
               />
-              <FeatureRow enabled={tier.liveMode} label={`${tier.includedErps} live ERP${tier.includedErps !== 1 ? 's' : ''} included`} />
+              <FeatureRow enabled={tier.liveMode} label={`${tier.includedErps} live ERP`} />
             </ul>
 
-            <div className="mt-4">
+            <div className="mt-3">
               {isCurrent ? (
-                <div className="text-center text-sm font-medium text-primary py-2">
+                <div className="text-center text-xs font-semibold text-primary py-2 px-3 rounded-lg bg-primary/10 border border-primary/20">
                   Current Plan
                 </div>
               ) : slug === 'enterprise' ? (
                 <a
                   href="mailto:sales@vantor.xyz?subject=Enterprise%20Plan%20Inquiry"
-                  className="block text-center py-2 px-4 rounded-lg border border-primary text-primary hover:bg-primary/5 text-sm font-medium transition-colors"
+                  className="flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-lg border border-amber-500/30 bg-amber-500/5 text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/50 text-xs font-semibold transition-all duration-200"
                 >
-                  Contact Us
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  Contact Sales
                 </a>
+              ) : isUpgrade ? (
+                <button
+                  onClick={() => onSelectTier(slug)}
+                  className="flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 text-white text-xs font-semibold shadow-[0_0_12px_rgba(45,212,191,0.2)] hover:shadow-[0_0_20px_rgba(45,212,191,0.35)] transition-all duration-200"
+                >
+                  Upgrade
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              ) : pendingDowngradeTier ? (
+                <div className="text-center text-xs text-muted-foreground/50 py-2 px-3 rounded-lg border border-border/50 bg-muted/30">
+                  {slug === pendingDowngradeTier ? 'Downgrade pending' : 'Downgrade'}
+                </div>
               ) : (
                 <button
                   onClick={() => onSelectTier(slug)}
-                  className="w-full py-2 px-4 rounded-lg bg-gradient-to-r from-primary to-primary/80 text-white text-sm font-medium shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] hover:opacity-90 transition-opacity"
+                  className="w-full py-2 px-3 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-border/80 text-xs font-medium transition-all duration-200"
                 >
-                  {TIER_ORDER.indexOf(slug) > TIER_ORDER.indexOf(currentTier) ? 'Upgrade' : 'Downgrade'}
+                  Downgrade
                 </button>
               )}
             </div>
@@ -67,13 +132,13 @@ export function TierComparisonGrid({ currentTier, onSelectTier }: TierComparison
 
 function FeatureRow({ enabled, label }: { enabled: boolean; label: string }) {
   return (
-    <li className="flex items-center gap-2">
+    <li className="flex items-center gap-1.5">
       {enabled ? (
-        <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+        <Check className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
       ) : (
-        <X className="w-4 h-4 text-muted-foreground/40 flex-shrink-0" />
+        <X className="w-3.5 h-3.5 text-muted-foreground/30 flex-shrink-0" />
       )}
-      <span className={enabled ? '' : 'text-muted-foreground/60'}>{label}</span>
+      <span className={enabled ? 'text-foreground' : 'text-muted-foreground/50'}>{label}</span>
     </li>
   );
 }

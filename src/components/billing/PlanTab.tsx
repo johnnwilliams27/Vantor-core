@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { ArrowRight } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { ArrowRight, Clock, X } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { TierComparisonGrid } from './TierComparisonGrid';
 import { UpgradeFlow } from './UpgradeFlow';
 import { DowngradeConfirmModal } from './DowngradeConfirmModal';
@@ -11,9 +11,11 @@ import { TierSlug, TIERS, isUpgrade as isUpgradeFn } from '@/lib/billing/tiers';
 
 export function PlanTab() {
   const { data: session, update: updateSession } = useSession();
+  const queryClient = useQueryClient();
   const tier = (session?.user?.subscription_tier || 'lite') as TierSlug;
   const [upgradeTier, setUpgradeTier] = useState<TierSlug | null>(null);
   const [downgradeTier, setDowngradeTier] = useState<TierSlug | null>(null);
+  const [cancelingDowngrade, setCancelingDowngrade] = useState(false);
 
   const kybDone = session?.user?.kyb_status === 'completed';
   const kycDone = session?.user?.kyc_status === 'completed';
@@ -36,8 +38,32 @@ export function PlanTab() {
     enabled: TIERS[tier].liveMode,
   });
 
+  // Fetch subscription details including pending downgrade
+  const { data: subscriptionData } = useQuery({
+    queryKey: ['subscription-details'],
+    queryFn: () => fetch('/api/billing/subscription').then(r => r.json()),
+    enabled: !isLite,
+  });
+
+  const pendingDowngrade = subscriptionData?.pendingDowngrade as {
+    targetTier: string;
+    effectiveDate: string;
+  } | null;
+
+  const pendingDowngradeName = pendingDowngrade
+    ? TIERS[pendingDowngrade.targetTier as TierSlug]?.name || pendingDowngrade.targetTier
+    : null;
+
+  const pendingDowngradeDate = pendingDowngrade?.effectiveDate
+    ? new Date(pendingDowngrade.effectiveDate).toLocaleDateString('en-US', {
+        month: 'long', day: 'numeric', year: 'numeric',
+      })
+    : null;
+
   const handleSelectTier = async (targetTier: TierSlug) => {
     if (targetTier === tier) return;
+    // Block downgrade selection if one is already pending
+    if (pendingDowngrade && !isUpgradeFn(tier, targetTier)) return;
 
     if (isUpgradeFn(tier, targetTier)) {
       setUpgradeTier(targetTier);
@@ -60,6 +86,8 @@ export function PlanTab() {
 
     if (res.ok) {
       setDowngradeTier(null);
+      // Refetch subscription to pick up pendingDowngrade
+      queryClient.invalidateQueries({ queryKey: ['subscription-details'] });
       const targetName = TIERS[downgradeTier]?.name || downgradeTier;
       if (data.effectiveDate) {
         const date = new Date(data.effectiveDate).toLocaleDateString('en-US', {
@@ -74,10 +102,53 @@ export function PlanTab() {
     }
   };
 
+  const handleCancelDowngrade = async () => {
+    setCancelingDowngrade(true);
+    try {
+      const res = await fetch('/api/billing/subscription', { method: 'DELETE' });
+      if (res.ok) {
+        queryClient.invalidateQueries({ queryKey: ['subscription-details'] });
+        setDowngradeBanner(null);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'Failed to cancel downgrade');
+      }
+    } finally {
+      setCancelingDowngrade(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      {/* Downgrade scheduled banner */}
-      {downgradeBanner && (
+      {/* Pending downgrade banner */}
+      {pendingDowngrade && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
+              <Clock className="w-4 h-4 text-amber-400" />
+            </div>
+            <div>
+              <p className="text-sm text-foreground">
+                Downgrade to <span className="font-medium">{pendingDowngradeName}</span> scheduled
+                {pendingDowngradeDate && <> for <span className="font-medium">{pendingDowngradeDate}</span></>}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                You&apos;ll keep {TIERS[tier].name} features until then
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleCancelDowngrade}
+            disabled={cancelingDowngrade}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 transition-colors flex-shrink-0 disabled:opacity-50"
+          >
+            {cancelingDowngrade ? 'Canceling...' : 'Cancel Downgrade'}
+          </button>
+        </div>
+      )}
+
+      {/* One-time downgrade scheduled banner (shown right after scheduling) */}
+      {downgradeBanner && !pendingDowngrade && (
         <div className="rounded-lg px-4 py-3 text-sm font-medium bg-amber-500/10 border border-amber-500/30 text-amber-400 animate-[fadeSlideUp_0.3s_ease-out]">
           {downgradeBanner}
         </div>
@@ -139,7 +210,11 @@ export function PlanTab() {
       )}
 
       {/* Tier comparison */}
-      <TierComparisonGrid currentTier={tier} onSelectTier={handleSelectTier} />
+      <TierComparisonGrid
+        currentTier={tier}
+        onSelectTier={handleSelectTier}
+        pendingDowngradeTier={pendingDowngrade?.targetTier as TierSlug | undefined}
+      />
 
       {/* Upgrade flow modal */}
       {upgradeTier && (
