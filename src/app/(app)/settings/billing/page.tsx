@@ -56,13 +56,11 @@ export default function BillingSettingsPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ enabled: false }),
         }))
+        .then(() => updateSession())
         .then(() => {
-          // Full reload to ensure session JWT, test mode state, and all components pick up the new tier
-          window.location.href = '/settings/billing?upgraded=done';
+          setBanner({ type: 'success', message: 'Upgrade successful! Your new plan is now active.' });
+          router.replace('/settings/billing');
         });
-    } else if (searchParams.get('upgraded') === 'done') {
-      setBanner({ type: 'success', message: 'Upgrade successful! Your new plan is now active.' });
-      router.replace('/settings/billing');
     } else if (upgrade === 'cancelled') {
       setBanner({ type: 'cancelled', message: 'Upgrade cancelled. You can try again anytime.' });
       router.replace('/settings/billing');
