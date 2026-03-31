@@ -92,14 +92,24 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
   const product = await stripe.products.retrieve(item.price.product as string);
   const tier = product.metadata.tier as string || 'lite';
 
+  // Build period dates safely
+  let periodStart: string | null = null;
+  let periodEnd: string | null = null;
+  try {
+    const startVal = (subscription as any).current_period_start;
+    const endVal = (subscription as any).current_period_end;
+    if (typeof startVal === 'number') periodStart = new Date(startVal * 1000).toISOString();
+    if (typeof endVal === 'number') periodEnd = new Date(endVal * 1000).toISOString();
+  } catch { /* proceed without period dates */ }
+
   // Update BOTH tables atomically via Postgres RPC function
   await supabaseAdmin.rpc('update_subscription_tier', {
     p_sub_id: sub.id,
     p_enterprise_id: sub.enterprise_id,
     p_tier: tier,
     p_status: subscription.status,
-    p_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-    p_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+    p_period_start: periodStart,
+    p_period_end: periodEnd,
   });
 }
 

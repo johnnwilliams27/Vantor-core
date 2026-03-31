@@ -23,7 +23,10 @@ export async function POST() {
     .eq('enterprise_id', session.user.enterprise_id)
     .single();
 
+  console.log('[sync] enterprise_id:', session.user.enterprise_id, 'sub:', sub?.id, 'stripe_customer:', sub?.stripe_customer_id, 'current_tier:', sub?.tier);
+
   if (!sub?.stripe_customer_id) {
+    console.log('[sync] FAIL: no stripe_customer_id on subscription');
     return NextResponse.json({ error: 'No Stripe customer' }, { status: 400 });
   }
 
@@ -62,15 +65,37 @@ export async function POST() {
     }
   }
 
+  console.log('[sync] resolved tier:', tier, 'from:', stripeSub ? 'stripe_sub' : 'checkout_session');
+
+  // Build period dates safely — Stripe API may return these differently across versions
+  let periodStart: string | null = null;
+  let periodEnd: string | null = null;
+  if (stripeSub) {
+    try {
+      const startVal = (stripeSub as any).current_period_start;
+      const endVal = (stripeSub as any).current_period_end;
+      if (typeof startVal === 'number') periodStart = new Date(startVal * 1000).toISOString();
+      if (typeof endVal === 'number') periodEnd = new Date(endVal * 1000).toISOString();
+    } catch {
+      // Period dates not critical — proceed without them
+    }
+  }
+
   // Update our DB atomically
-  await supabaseAdmin.rpc('update_subscription_tier', {
+  const { error: rpcError } = await supabaseAdmin.rpc('update_subscription_tier', {
     p_sub_id: sub.id,
     p_enterprise_id: session.user.enterprise_id,
     p_tier: tier,
     p_status: stripeSub?.status || 'active',
-    p_period_start: stripeSub ? new Date(stripeSub.current_period_start * 1000).toISOString() : null,
-    p_period_end: stripeSub ? new Date(stripeSub.current_period_end * 1000).toISOString() : null,
+    p_period_start: periodStart,
+    p_period_end: periodEnd,
   });
+
+  if (rpcError) {
+    console.log('[sync] RPC ERROR:', rpcError);
+    return NextResponse.json({ synced: false, error: rpcError.message }, { status: 500 });
+  }
+  console.log('[sync] SUCCESS: tier updated to', tier);
 
   // Also store the Stripe subscription ID if missing
   if (stripeSub && !sub.stripe_subscription_id) {
