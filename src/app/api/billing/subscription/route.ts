@@ -143,31 +143,36 @@ export async function PATCH(req: NextRequest) {
       cancel_at_period_end: true,
     });
   } else if (sub?.stripe_subscription_id) {
-    // Downgrade to lower paid tier — schedule change at period end using Stripe subscription schedules
+    // Downgrade to lower paid tier — update subscription price immediately
     const stripeSubscription = await stripe.subscriptions.retrieve(sub.stripe_subscription_id);
+    const currentItem = stripeSubscription.items.data[0];
 
     const priceId = process.env[`STRIPE_PRICE_${targetTier.toUpperCase()}`];
     if (!priceId) {
       return NextResponse.json({ error: 'Price not configured' }, { status: 500 });
     }
 
-    // Create a subscription schedule that transitions at period end
-    const schedule = await stripe.subscriptionSchedules.create({
-      from_subscription: sub.stripe_subscription_id,
+    await stripe.subscriptions.update(sub.stripe_subscription_id, {
+      items: [{ id: currentItem.id, price: priceId }],
+      proration_behavior: 'create_prorations',
     });
+  }
 
-    await stripe.subscriptionSchedules.update(schedule.id, {
-      phases: [
-        {
-          items: [{ price: stripeSubscription.items.data[0].price.id, quantity: 1 }],
-          start_date: stripeSubscription.current_period_start,
-          end_date: stripeSubscription.current_period_end,
-        },
-        {
-          items: [{ price: priceId, quantity: 1 }],
-          start_date: stripeSubscription.current_period_end,
-        },
-      ],
+  // Update tier in our DB immediately (don't wait for webhook)
+  const { data: subRecord } = await supabaseAdmin
+    .from('subscriptions')
+    .select('id')
+    .eq('enterprise_id', session.user.enterprise_id)
+    .single();
+
+  if (subRecord) {
+    await supabaseAdmin.rpc('update_subscription_tier', {
+      p_sub_id: subRecord.id,
+      p_enterprise_id: session.user.enterprise_id,
+      p_tier: targetTier,
+      p_status: targetTier === 'lite' ? 'canceling' : 'active',
+      p_period_start: null,
+      p_period_end: null,
     });
   }
 
