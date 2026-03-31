@@ -5,6 +5,7 @@ import { generateInvoicePdf } from '@/lib/billing/invoice-pdf';
 import { sendEmail } from '@/lib/email/send';
 import { monthlyBillEmailHtml } from '@/lib/email/templates/monthly-bill';
 import { TIERS, TierSlug } from '@/lib/billing/tiers';
+import { wipeTestEnterprise } from '@/lib/test-mode/seed/wipe';
 import type Stripe from 'stripe';
 
 export async function POST(req: NextRequest) {
@@ -333,6 +334,17 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       updated_at: new Date().toISOString(),
     })
     .eq('enterprise_id', session.metadata.enterprise_id);
+
+  // Wipe test enterprise demo data on Lite → paid upgrade
+  const { data: enterprise } = await supabaseAdmin
+    .from('enterprises')
+    .select('test_enterprise_id')
+    .eq('id', session.metadata.enterprise_id)
+    .single();
+
+  if (enterprise?.test_enterprise_id) {
+    await wipeTestEnterprise(enterprise.test_enterprise_id, supabaseAdmin);
+  }
 
   // The subscription.created webhook will handle the tier update
 }
