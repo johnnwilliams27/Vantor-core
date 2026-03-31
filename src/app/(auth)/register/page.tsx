@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { RegisterForm } from '@/components/auth/RegisterForm';
 import { RegisterValueProps } from '@/components/auth/RegisterValueProps';
 
@@ -8,7 +9,7 @@ export default function RegisterPage() {
     <div className="flex min-h-screen bg-[#060d1f] overflow-auto">
       {/* Left — Sign up form */}
       <div className="w-full lg:w-1/2 flex items-start lg:items-center justify-center px-6 py-10 overflow-y-auto">
-        <RegisterForm />
+        <Suspense><RegisterForm /></Suspense>
       </div>
 
       {/* Right — Value prop cards */}
