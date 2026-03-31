@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
 
   const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
+  if (!enterpriseId) return NextResponse.json({ error: 'No enterprise' }, { status: 400 });
 
   const body = await req.json();
   const parsed = schema.safeParse(body);
