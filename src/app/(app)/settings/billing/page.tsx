@@ -31,11 +31,22 @@ export default function BillingSettingsPage() {
       // Sync subscription from Stripe (fallback when webhook hasn't fired yet)
       // Retry sync up to 3 times with delay — Stripe subscription may take a moment to provision
       const syncWithRetry = async (attempts = 3): Promise<void> => {
-        const res = await fetch('/api/billing/sync', { method: 'POST' });
-        const data = await res.json();
-        if (!data.synced && attempts > 1) {
-          await new Promise(r => setTimeout(r, 2000));
-          return syncWithRetry(attempts - 1);
+        try {
+          const res = await fetch('/api/billing/sync', { method: 'POST' });
+          if (!res.ok && attempts > 1) {
+            await new Promise(r => setTimeout(r, 2000));
+            return syncWithRetry(attempts - 1);
+          }
+          const data = await res.json().catch(() => ({}));
+          if (!data.synced && attempts > 1) {
+            await new Promise(r => setTimeout(r, 2000));
+            return syncWithRetry(attempts - 1);
+          }
+        } catch {
+          if (attempts > 1) {
+            await new Promise(r => setTimeout(r, 2000));
+            return syncWithRetry(attempts - 1);
+          }
         }
       };
 
