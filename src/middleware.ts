@@ -8,6 +8,18 @@ const PUBLIC_PATHS = ['/login', '/register', '/api/auth', '/api/contact', '/api/
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // IP allowlist — only enforced when ALLOWED_IPS is set (dev environment)
+  const allowedIps = process.env.ALLOWED_IPS;
+  if (allowedIps) {
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+      || req.headers.get('x-real-ip')
+      || '';
+    const ipList = allowedIps.split(',').map(ip => ip.trim());
+    if (!ipList.includes(clientIp)) {
+      return new NextResponse('Forbidden', { status: 403 });
+    }
+  }
+
   // Allow landing page (root)
   if (pathname === '/') {
     return NextResponse.next();
@@ -18,8 +30,11 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Allow cron with secret token
+  // Allow cron with secret token (disabled unless ENABLE_CRONS is set)
   if (pathname.startsWith('/api/cron')) {
+    if (process.env.ENABLE_CRONS !== 'true') {
+      return NextResponse.json({ skipped: true, reason: 'Crons disabled in this environment' });
+    }
     const authHeader = req.headers.get('authorization');
     const expected = `Bearer ${process.env.CRON_SECRET}`;
     if (authHeader !== expected) {
