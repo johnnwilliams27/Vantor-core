@@ -1,6 +1,7 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useCallback } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { CheckCircle2, XCircle, Clock, Mail } from 'lucide-react';
@@ -45,10 +46,50 @@ const statusConfig = {
 };
 
 export default function VerifyEmailPage() {
+  return (
+    <Suspense>
+      <VerifyEmailContent />
+    </Suspense>
+  );
+}
+
+function VerifyEmailContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const status = (searchParams.get('status') || 'pending') as keyof typeof statusConfig;
+  const email = searchParams.get('email');
   const config = statusConfig[status] || statusConfig.pending;
   const Icon = config.icon;
+
+  // Poll for email verification when in pending state
+  const checkVerification = useCallback(async () => {
+    if (!email) return false;
+    try {
+      const res = await fetch('/api/auth/check-verified', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      return data.verified === true;
+    } catch {
+      return false;
+    }
+  }, [email]);
+
+  useEffect(() => {
+    if (status !== 'pending' || !email) return;
+
+    const interval = setInterval(async () => {
+      const verified = await checkVerification();
+      if (verified) {
+        clearInterval(interval);
+        router.replace('/verify-email?status=success');
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [status, email, checkVerification, router]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#060d1f] px-4">
@@ -78,6 +119,12 @@ export default function VerifyEmailPage() {
               >
                 Sign in
               </Link>
+            )}
+
+            {status === 'pending' && email && (
+              <p className="text-xs text-gray-500 mt-4 animate-pulse">
+                This page will update automatically once verified.
+              </p>
             )}
 
             {status === 'expired' && (

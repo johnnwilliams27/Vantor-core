@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { TabNav } from '@/components/ui/tab-nav';
 import { PlanTab } from '@/components/billing/PlanTab';
@@ -21,6 +21,14 @@ const TABS = [
 ];
 
 export default function BillingSettingsPage() {
+  return (
+    <Suspense>
+      <BillingSettingsContent />
+    </Suspense>
+  );
+}
+
+function BillingSettingsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { update: updateSession } = useSession();
