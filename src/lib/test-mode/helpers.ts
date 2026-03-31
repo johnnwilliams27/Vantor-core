@@ -71,7 +71,13 @@ export async function ensureTestEnterprise(
     .update({ test_enterprise_id: testEnt.id })
     .eq('id', realEnterpriseId);
 
-  await seedAll(testEnt.id, realEnterpriseId);
+  // Seed test data — if this fails, the enterprise still exists but will be empty.
+  // Registration/toggle can still proceed; user gets an empty test mode rather than a broken signup.
+  try {
+    await seedAll(testEnt.id, realEnterpriseId);
+  } catch (err) {
+    console.error('Failed to seed test enterprise data:', err);
+  }
 
   return testEnt.id;
 }
