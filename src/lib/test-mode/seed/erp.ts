@@ -1,5 +1,5 @@
 // src/lib/test-mode/seed/erp.ts
-import { SeedContext, daysAgo, dateDaysAgo, dateDaysFromNow, rand, pick, ethHash } from './helpers';
+import { SeedContext, daysAgo, dateDaysAgo, dateDaysFromNow, rand, pick } from './helpers';
 
 const VENDORS = [
   { extId: 'v-001', name: 'Acme Corporation', email: 'billing@acme.example.com', wallet: '0xTESTvendor1111111111111111111111111111', chain: 'ethereum' },
