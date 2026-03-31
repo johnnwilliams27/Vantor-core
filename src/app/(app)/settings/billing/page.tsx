@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
 import { TabNav } from '@/components/ui/tab-nav';
 import { PlanTab } from '@/components/billing/PlanTab';
 import { UsageTab } from '@/components/billing/UsageTab';
 import { InvoicesTab } from '@/components/billing/InvoicesTab';
 import { PaymentMethodTab } from '@/components/billing/PaymentMethodTab';
+import { ActivatingPlanModal } from '@/components/billing/ActivatingPlanModal';
 import { useSession } from 'next-auth/react';
 import { useTestMode } from '@/hooks/useTestMode';
 
@@ -27,46 +27,61 @@ export default function BillingSettingsPage() {
   const { toggleTestMode } = useTestMode();
   const [activeTab, setActiveTab] = useState<BillingTab>('plan');
   const [banner, setBanner] = useState<{ type: 'success' | 'cancelled'; message: string } | null>(null);
-  const [syncing, setSyncing] = useState(false);
+  const [activatingStatus, setActivatingStatus] = useState<'syncing' | 'done' | 'error' | null>(null);
 
   useEffect(() => {
     const upgrade = searchParams.get('upgrade');
-    if (upgrade === 'success' && !syncing) {
-      setSyncing(true);
+    if (upgrade === 'success' && !activatingStatus) {
+      setActivatingStatus('syncing');
+      router.replace('/settings/billing');
 
-      const syncWithRetry = async (attempts = 3): Promise<void> => {
+      const syncWithRetry = async (attempts = 3): Promise<boolean> => {
         try {
           const res = await fetch('/api/billing/sync', { method: 'POST' });
-          if (!res.ok && attempts > 1) {
-            await new Promise(r => setTimeout(r, 2000));
-            return syncWithRetry(attempts - 1);
-          }
           const data = await res.json().catch(() => ({}));
-          if (!data.synced && attempts > 1) {
+          if (data.synced) return true;
+          if (attempts > 1) {
             await new Promise(r => setTimeout(r, 2000));
             return syncWithRetry(attempts - 1);
           }
+          return false;
         } catch {
           if (attempts > 1) {
             await new Promise(r => setTimeout(r, 2000));
             return syncWithRetry(attempts - 1);
           }
+          return false;
         }
       };
 
       (async () => {
-        await syncWithRetry();
-        await toggleTestMode(false);
-        await updateSession();
-        setBanner({ type: 'success', message: 'Upgrade successful! Your new plan is now active.' });
-        setSyncing(false);
-        router.replace('/settings/billing');
+        try {
+          const synced = await syncWithRetry();
+          if (!synced) {
+            setActivatingStatus('error');
+            return;
+          }
+          // Disable test mode — use direct fetch to avoid slow refetchQueries blocking
+          await fetch('/api/test-mode/toggle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled: false }),
+          });
+          await updateSession();
+          setActivatingStatus('done');
+          setTimeout(() => {
+            setActivatingStatus(null);
+            setBanner({ type: 'success', message: 'Upgrade successful! Your new plan is now active.' });
+          }, 1500);
+        } catch {
+          setActivatingStatus('error');
+        }
       })();
     } else if (upgrade === 'cancelled') {
       setBanner({ type: 'cancelled', message: 'Upgrade cancelled. You can try again anytime.' });
       router.replace('/settings/billing');
     }
-  }, [searchParams, router, updateSession, syncing]);
+  }, [searchParams, router, updateSession, activatingStatus]);
 
   // Auto-dismiss banner
   useEffect(() => {
@@ -85,12 +100,7 @@ export default function BillingSettingsPage() {
         </p>
       </div>
 
-      {syncing && (
-        <div className="flex items-center gap-3 rounded-lg px-4 py-3 bg-primary/10 border border-primary/30 text-primary text-sm font-medium">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          Activating your new plan...
-        </div>
-      )}
+      {activatingStatus && <ActivatingPlanModal status={activatingStatus} />}
 
       {banner && (
         <div
