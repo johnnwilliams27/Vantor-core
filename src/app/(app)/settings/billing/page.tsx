@@ -9,6 +9,7 @@ import { UsageTab } from '@/components/billing/UsageTab';
 import { InvoicesTab } from '@/components/billing/InvoicesTab';
 import { PaymentMethodTab } from '@/components/billing/PaymentMethodTab';
 import { useSession } from 'next-auth/react';
+import { useTestMode } from '@/hooks/useTestMode';
 
 type BillingTab = 'plan' | 'usage' | 'invoices' | 'payment';
 
@@ -23,6 +24,7 @@ export default function BillingSettingsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { update: updateSession } = useSession();
+  const { toggleTestMode } = useTestMode();
   const [activeTab, setActiveTab] = useState<BillingTab>('plan');
   const [banner, setBanner] = useState<{ type: 'success' | 'cancelled'; message: string } | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -54,11 +56,7 @@ export default function BillingSettingsPage() {
 
       (async () => {
         await syncWithRetry();
-        await fetch('/api/test-mode/toggle', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ enabled: false }),
-        });
+        await toggleTestMode(false);
         await updateSession();
         setBanner({ type: 'success', message: 'Upgrade successful! Your new plan is now active.' });
         setSyncing(false);
