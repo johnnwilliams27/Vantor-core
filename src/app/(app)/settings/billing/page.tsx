@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 import { TabNav } from '@/components/ui/tab-nav';
 import { PlanTab } from '@/components/billing/PlanTab';
 import { UsageTab } from '@/components/billing/UsageTab';
@@ -24,12 +25,13 @@ export default function BillingSettingsPage() {
   const { update: updateSession } = useSession();
   const [activeTab, setActiveTab] = useState<BillingTab>('plan');
   const [banner, setBanner] = useState<{ type: 'success' | 'cancelled'; message: string } | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     const upgrade = searchParams.get('upgrade');
-    if (upgrade === 'success') {
-      // Sync subscription from Stripe (fallback when webhook hasn't fired yet)
-      // Retry sync up to 3 times with delay — Stripe subscription may take a moment to provision
+    if (upgrade === 'success' && !syncing) {
+      setSyncing(true);
+
       const syncWithRetry = async (attempts = 3): Promise<void> => {
         try {
           const res = await fetch('/api/billing/sync', { method: 'POST' });
@@ -50,22 +52,23 @@ export default function BillingSettingsPage() {
         }
       };
 
-      syncWithRetry()
-        .then(() => fetch('/api/test-mode/toggle', {
+      (async () => {
+        await syncWithRetry();
+        await fetch('/api/test-mode/toggle', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ enabled: false }),
-        }))
-        .then(() => updateSession())
-        .then(() => {
-          setBanner({ type: 'success', message: 'Upgrade successful! Your new plan is now active.' });
-          router.replace('/settings/billing');
         });
+        await updateSession();
+        setBanner({ type: 'success', message: 'Upgrade successful! Your new plan is now active.' });
+        setSyncing(false);
+        router.replace('/settings/billing');
+      })();
     } else if (upgrade === 'cancelled') {
       setBanner({ type: 'cancelled', message: 'Upgrade cancelled. You can try again anytime.' });
       router.replace('/settings/billing');
     }
-  }, [searchParams, router, updateSession]);
+  }, [searchParams, router, updateSession, syncing]);
 
   // Auto-dismiss banner
   useEffect(() => {
@@ -83,6 +86,13 @@ export default function BillingSettingsPage() {
           Manage your subscription, view usage, and update payment details.
         </p>
       </div>
+
+      {syncing && (
+        <div className="flex items-center gap-3 rounded-lg px-4 py-3 bg-primary/10 border border-primary/30 text-primary text-sm font-medium">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          Activating your new plan...
+        </div>
+      )}
 
       {banner && (
         <div
