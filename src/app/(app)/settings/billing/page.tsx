@@ -29,8 +29,17 @@ export default function BillingSettingsPage() {
     const upgrade = searchParams.get('upgrade');
     if (upgrade === 'success') {
       // Sync subscription from Stripe (fallback when webhook hasn't fired yet)
-      // Then switch to live mode so user sees their live (empty) dashboard
-      fetch('/api/billing/sync', { method: 'POST' })
+      // Retry sync up to 3 times with delay — Stripe subscription may take a moment to provision
+      const syncWithRetry = async (attempts = 3): Promise<void> => {
+        const res = await fetch('/api/billing/sync', { method: 'POST' });
+        const data = await res.json();
+        if (!data.synced && attempts > 1) {
+          await new Promise(r => setTimeout(r, 2000));
+          return syncWithRetry(attempts - 1);
+        }
+      };
+
+      syncWithRetry()
         .then(() => fetch('/api/test-mode/toggle', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
