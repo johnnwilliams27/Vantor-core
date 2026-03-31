@@ -4,6 +4,7 @@ import type { WalletIds } from './wallets';
 
 export async function seedSwaps(ctx: SeedContext, walletIds: WalletIds): Promise<void> {
   const { supabase, enterpriseId, userId } = ctx;
+  if (!walletIds.ethWallets.length || !walletIds.solWallets.length) return;
 
   const swapRows: any[] = [];
   for (let i = 0; i < 10; i++) {

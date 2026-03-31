@@ -30,6 +30,9 @@ export function PlanTab() {
   } else if (kybDone) {
     resumeMessage = 'Business verification complete — continue with identity verification';
     resumeCta = 'Continue Upgrade';
+  } else if (kycDone) {
+    resumeMessage = 'Identity verification complete — continue with business verification';
+    resumeCta = 'Continue Upgrade';
   }
 
   const { data: assetCap } = useQuery({

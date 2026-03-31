@@ -9,6 +9,9 @@ export interface TransactionIds {
 
 export async function seedTransactions(ctx: SeedContext, walletIds: WalletIds, invoiceIds: string[]): Promise<TransactionIds> {
   const { supabase, enterpriseId, userId } = ctx;
+  if (!walletIds.ethWallets.length || !walletIds.solWallets.length) {
+    return { transactionIds: [], paymentIds: [] };
+  }
 
   // Generate ~35 on-chain transactions over 90 days
   const txnRows: any[] = [];
