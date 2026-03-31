@@ -103,12 +103,14 @@ export const authOptions: NextAuthOptions = {
         token.is_app_admin =
           (user as { is_app_admin?: boolean }).is_app_admin ?? false;
         token.subscription_tier = (user as any).subscription_tier ?? 'lite';
+        token.subscription_status = (user as any).subscription_status ?? 'active';
         token.kyc_status = (user as any).kyc_status ?? 'none';
         token.kyb_status = (user as any).kyb_status ?? 'none';
       }
       // Re-fetch from DB whenever the session is explicitly updated
       // (e.g. after completing onboarding)
-      if (trigger === 'update' && token.id) {
+      if ((trigger === 'update' || trigger === 'signIn') && token.id) {
+        process.stdout.write('[jwt] refreshing token for trigger=' + trigger + ' user=' + token.id + '\n');
         const supabase = createAdminClient();
         const { data: profile } = await supabase
           .from('user_profiles')
@@ -134,10 +136,11 @@ export const authOptions: NextAuthOptions = {
           if (profile.enterprise_id) {
             const { data: sub } = await supabase
               .from('subscriptions')
-              .select('tier')
+              .select('tier, status')
               .eq('enterprise_id', profile.enterprise_id)
               .single();
             token.subscription_tier = sub?.tier || 'lite';
+            token.subscription_status = sub?.status || 'active';
 
             const { data: kyb } = await supabase
               .from('kyb_verifications')
@@ -147,6 +150,7 @@ export const authOptions: NextAuthOptions = {
             token.kyb_status = kyb?.status || 'none';
           } else {
             token.subscription_tier = 'lite';
+            token.subscription_status = 'active';
             token.kyb_status = 'none';
           }
 
@@ -169,6 +173,7 @@ export const authOptions: NextAuthOptions = {
         session.user.enterprise_name = token.enterprise_name as string | null;
         session.user.is_app_admin = token.is_app_admin as boolean;
         session.user.subscription_tier = token.subscription_tier as string;
+        session.user.subscription_status = token.subscription_status as string;
         session.user.kyc_status = token.kyc_status as string;
         session.user.kyb_status = token.kyb_status as string;
       }
@@ -190,6 +195,7 @@ declare module 'next-auth' {
       enterprise_name: string | null;
       is_app_admin: boolean;
       subscription_tier: string;
+      subscription_status: string;
       kyc_status: string;
       kyb_status: string;
     };
@@ -205,6 +211,7 @@ declare module 'next-auth/jwt' {
     enterprise_name: string | null;
     is_app_admin: boolean;
     subscription_tier: string;
+    subscription_status: string;
     kyc_status: string;
     kyb_status: string;
   }
