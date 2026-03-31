@@ -27,9 +27,57 @@ export async function GET() {
 
   const tier = TIERS[sub.tier as TierSlug];
 
+  // Check Stripe for pending downgrade (schedule or cancel_at_period_end)
+  let pendingDowngrade: { targetTier: string; effectiveDate: string } | null = null;
+
+  if (sub.stripe_subscription_id) {
+    try {
+      const stripeSub = await stripe.subscriptions.retrieve(sub.stripe_subscription_id);
+
+      if (stripeSub.cancel_at_period_end) {
+        // Downgrade to Lite (cancellation)
+        const anchor = stripeSub.billing_cycle_anchor;
+        pendingDowngrade = {
+          targetTier: 'lite',
+          effectiveDate: new Date(anchor * 1000).toISOString(),
+        };
+      } else if (stripeSub.schedule) {
+        // Downgrade to a lower paid tier (schedule)
+        const schedId = typeof stripeSub.schedule === 'string'
+          ? stripeSub.schedule : stripeSub.schedule.id;
+        const schedule = await stripe.subscriptionSchedules.retrieve(schedId);
+
+        if (schedule.status === 'active' && schedule.phases.length > 1) {
+          const nextPhase = schedule.phases[1];
+          const nextPriceId = nextPhase.items[0]?.price;
+
+          // Resolve tier from price ID
+          let nextTier = 'unknown';
+          for (const slug of ['starter', 'growth', 'scale', 'enterprise'] as const) {
+            if (process.env[`STRIPE_PRICE_${slug.toUpperCase()}`] === nextPriceId) {
+              nextTier = slug;
+              break;
+            }
+          }
+
+          // Only show as pending downgrade if next tier is lower
+          if (isDowngrade(sub.tier as TierSlug, nextTier as TierSlug)) {
+            pendingDowngrade = {
+              targetTier: nextTier,
+              effectiveDate: new Date(nextPhase.start_date * 1000).toISOString(),
+            };
+          }
+        }
+      }
+    } catch {
+      // Stripe lookup failed — proceed without pending info
+    }
+  }
+
   return NextResponse.json({
     ...sub,
     tierDetails: tier,
+    pendingDowngrade,
   });
 }
 
@@ -200,4 +248,44 @@ export async function PATCH(req: NextRequest) {
   // The webhook (subscription.updated or subscription.deleted) will handle the tier update.
   // Just return the effective date so the UI can show it.
   return NextResponse.json({ success: true, effective: 'end_of_period', effectiveDate });
+}
+
+// DELETE — cancel a pending downgrade
+export async function DELETE() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.enterprise_id || session.user.role !== 'treasury_manager') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  }
+
+  const supabaseAdmin = createAdminClient();
+
+  const { data: sub } = await supabaseAdmin
+    .from('subscriptions')
+    .select('stripe_subscription_id')
+    .eq('enterprise_id', session.user.enterprise_id)
+    .single();
+
+  if (!sub?.stripe_subscription_id) {
+    return NextResponse.json({ error: 'No active subscription' }, { status: 400 });
+  }
+
+  const stripeSub = await stripe.subscriptions.retrieve(sub.stripe_subscription_id);
+
+  // Cancel pending Lite downgrade (undo cancel_at_period_end)
+  if (stripeSub.cancel_at_period_end) {
+    await stripe.subscriptions.update(sub.stripe_subscription_id, {
+      cancel_at_period_end: false,
+    });
+    return NextResponse.json({ success: true });
+  }
+
+  // Cancel pending paid-tier downgrade (release schedule)
+  if (stripeSub.schedule) {
+    const schedId = typeof stripeSub.schedule === 'string'
+      ? stripeSub.schedule : stripeSub.schedule.id;
+    await stripe.subscriptionSchedules.release(schedId);
+    return NextResponse.json({ success: true });
+  }
+
+  return NextResponse.json({ error: 'No pending downgrade to cancel' }, { status: 400 });
 }
