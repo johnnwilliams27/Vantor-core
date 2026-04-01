@@ -35,7 +35,8 @@ export function UpgradeFlow({ targetTier, onCancel }: UpgradeFlowProps) {
   const [mounted, setMounted] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
 
-  // Skip KYB if template is not configured
+  // KYB requires a Persona template — skip if not configured or already completed
+  // PERSONA_KYB_TEMPLATE_ID is set server-side; expose via a public flag
   const kybConfigured = !!process.env.NEXT_PUBLIC_PERSONA_KYB_ENABLED;
   const kybDone = session?.user?.kyb_status === 'completed';
   const kycDone = session?.user?.kyc_status === 'completed';

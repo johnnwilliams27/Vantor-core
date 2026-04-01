@@ -37,6 +37,7 @@ export function PersonaKycFlow({ onComplete, onError }: PersonaKycFlowProps) {
         sessionToken: data.sessionToken,
         environment: process.env.NEXT_PUBLIC_PERSONA_ENVIRONMENT || 'sandbox',
         onComplete: async () => {
+          await fetch('/api/kyc/complete', { method: 'POST' });
           await updateSession();
           onComplete();
         },
