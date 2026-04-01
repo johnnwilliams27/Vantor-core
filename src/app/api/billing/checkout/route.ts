@@ -19,24 +19,28 @@ export async function POST(req: NextRequest) {
 
   const supabaseAdmin = createAdminClient();
 
-  // Verify KYB + KYC
-  const { data: kyb } = await supabaseAdmin
-    .from('kyb_verifications')
-    .select('status')
-    .eq('enterprise_id', session.user.enterprise_id)
-    .single();
+  // Verify KYB + KYC (skip KYB if not configured)
+  if (process.env.PERSONA_KYB_TEMPLATE_ID) {
+    const { data: kyb } = await supabaseAdmin
+      .from('kyb_verifications')
+      .select('status')
+      .eq('enterprise_id', session.user.enterprise_id)
+      .single();
 
-  if (kyb?.status !== 'completed') {
-    return NextResponse.json({ error: 'KYB required' }, { status: 400 });
+    if (kyb?.status !== 'completed') {
+      return NextResponse.json({ error: 'KYB required' }, { status: 400 });
+    }
   }
 
   const { data: kyc } = await supabaseAdmin
     .from('kyc_verifications')
-    .select('status')
+    .select('status, persona_inquiry_id')
     .eq('user_id', session.user.id)
     .single();
 
-  if (kyc?.status !== 'completed') {
+  // Allow checkout if KYC is completed OR if an inquiry was started
+  // (webhook may not have fired yet — Persona confirms async)
+  if (!kyc?.persona_inquiry_id) {
     return NextResponse.json({ error: 'KYC required' }, { status: 400 });
   }
 

@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
+import { Spinner } from '@/components/ui/spinner';
 
 interface PersonaKycFlowProps {
   onComplete: () => void;
@@ -10,12 +11,13 @@ interface PersonaKycFlowProps {
 
 export function PersonaKycFlow({ onComplete, onError }: PersonaKycFlowProps) {
   const { update: updateSession } = useSession();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [started, setStarted] = useState(false);
 
   const startInquiry = useCallback(async () => {
     setError(null);
+    setLoading(true);
     try {
       const res = await fetch('/api/kyc/start', { method: 'POST' });
       const data = await res.json();
@@ -27,53 +29,68 @@ export function PersonaKycFlow({ onComplete, onError }: PersonaKycFlowProps) {
       }
 
       if (!data.inquiryId) {
-        throw new Error('Failed to start KYC');
+        throw new Error(data.error || 'Failed to start KYC');
       }
 
-      // Load Persona embedded flow
       // @ts-ignore — Persona SDK loaded via script tag
       const client = new window.Persona.Client({
         inquiryId: data.inquiryId,
         sessionToken: data.sessionToken,
         environment: process.env.NEXT_PUBLIC_PERSONA_ENVIRONMENT || 'sandbox',
         onComplete: async () => {
+          // Mark KYC as completed in our DB directly (don't wait for webhook)
           await fetch('/api/kyc/complete', { method: 'POST' });
-          await updateSession();
           onComplete();
+        },
+        onCancel: () => {
+          setStarted(false);
+          setLoading(false);
         },
         onError: (err: any) => {
           setError(err.message || 'Verification failed');
+          setStarted(false);
+          setLoading(false);
           onError?.(err.message);
         },
       });
 
       client.open();
+      setStarted(true);
       setLoading(false);
     } catch (err: any) {
       setError(err.message || 'Failed to start verification');
+      setLoading(false);
       onError?.(err.message);
     }
   }, [onComplete, onError, updateSession]);
 
-  useEffect(() => {
-    // Load Persona SDK script
+  const loadAndStart = useCallback(() => {
+    // @ts-ignore
+    if (window.Persona) {
+      startInquiry();
+      return;
+    }
+
+    setLoading(true);
+    const existing = document.querySelector('script[src*="persona"]');
+    if (existing) {
+      startInquiry();
+      return;
+    }
+
     const script = document.createElement('script');
     script.src = 'https://cdn.withpersona.com/dist/persona-v5.0.0.js';
     script.onload = () => startInquiry();
     document.body.appendChild(script);
-
-    return () => {
-      document.body.removeChild(script);
-    };
   }, [startInquiry]);
 
   if (error) {
     return (
-      <div className="text-center py-8">
-        <p className="text-red-500 mb-4">{error}</p>
+      <div className="text-center py-6">
+        <p className="text-red-400 text-sm mb-4">{error}</p>
         <button
-          onClick={startInquiry}
-          className="px-4 py-2 rounded-lg bg-primary text-white text-sm"
+          onClick={loadAndStart}
+          className="px-4 py-2 rounded-lg bg-[#19595b] hover:bg-[#134849] text-white text-sm transition-colors"
         >
           Retry
         </button>
@@ -82,8 +99,34 @@ export function PersonaKycFlow({ onComplete, onError }: PersonaKycFlowProps) {
   }
 
   if (loading) {
-    return <div className="text-center py-8 text-muted-foreground">Loading verification...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 py-8">
+        <Spinner size="sm" />
+        <p className="text-muted-foreground text-sm">Starting verification...</p>
+      </div>
+    );
   }
 
-  return <div ref={containerRef} />;
+  if (started) {
+    return (
+      <div className="text-center py-8 text-muted-foreground text-sm">
+        <p>Complete the verification in the Persona window.</p>
+        <p className="text-xs mt-2 text-muted-foreground/60">If the window didn&apos;t open, check your popup blocker.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="text-center py-6">
+      <p className="text-sm text-muted-foreground mb-4">
+        We need to verify your identity before upgrading. This takes about 2 minutes.
+      </p>
+      <button
+        onClick={loadAndStart}
+        className="px-6 py-2.5 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 text-white text-sm font-semibold shadow-[0_0_12px_rgba(45,212,191,0.2)] hover:shadow-[0_0_20px_rgba(45,212,191,0.35)] transition-all"
+      >
+        Begin Verification
+      </button>
+    </div>
+  );
 }

@@ -38,7 +38,7 @@ export async function POST() {
         attributes: {
           'inquiry-template-id': PERSONA_KYB_TEMPLATE_ID,
           'reference-id': session.user.enterprise_id,
-          'environment-id': process.env.PERSONA_ENVIRONMENT_ID,
+          ...(process.env.PERSONA_ENVIRONMENT_ID ? { 'environment-id': process.env.PERSONA_ENVIRONMENT_ID } : {}),
         },
       },
     }),

@@ -15,7 +15,7 @@ const features = [
   {
     icon: FileText,
     title: 'ERP Integration',
-    desc: 'Connect QuickBooks, Xero, NetSuite, or SAP. Sync invoices and cash positions in real-time.',
+    desc: 'Connect QuickBooks, Xero, NetSuite, or SAP. Sync invoices, vendors, and obligations automatically.',
   },
   {
     icon: Wallet,

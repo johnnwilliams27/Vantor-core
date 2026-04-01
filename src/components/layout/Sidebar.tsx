@@ -231,10 +231,10 @@ export function Sidebar() {
       {sidebarOpen && session?.user?.subscription_tier === 'lite' && (
         <Link
           href="/settings/billing"
-          className="relative mx-3 mb-3 px-4 py-2.5 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 text-white text-sm font-semibold text-center shadow-[0_0_12px_rgba(45,212,191,0.2)] hover:shadow-[0_0_20px_rgba(45,212,191,0.35)] transition-all overflow-hidden"
+          className="group mx-3 mb-3 px-4 py-3 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-400 text-white text-sm font-semibold text-center shadow-[0_0_20px_rgba(45,212,191,0.25)] hover:shadow-[0_0_30px_rgba(45,212,191,0.45)] transition-all duration-300 flex items-center justify-center gap-2"
         >
-          <span className="relative z-10">Upgrade to unlock live mode</span>
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-[shimmer_3s_ease-in-out_infinite]" />
+          <span>Upgrade to Unlock Live Mode</span>
+          <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
         </Link>
       )}
 

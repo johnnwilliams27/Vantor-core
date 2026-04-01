@@ -74,7 +74,7 @@ export function RegisterForm() {
       return;
     }
     setSuccess(true);
-    setTimeout(() => router.push('/verify-email?status=pending'), 2000);
+    setTimeout(() => router.push(`/verify-email?status=pending&email=${encodeURIComponent(data.email)}`), 2000);
   };
 
   if (success) {

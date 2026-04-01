@@ -42,31 +42,33 @@ export function UnifiedBalanceCard() {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
         {/* Fiat Holdings */}
-        <Card>
+        <Card className="flex flex-col">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Building2 className="h-5 w-5 text-gray-500" />
               Fiat Holdings
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex-1 flex flex-col">
             {isLoading ? (
               <CardSpinner />
             ) : !Object.keys(fiatByCurrency).length ? (
               <div className="text-sm text-muted-foreground py-4">No bank accounts connected.</div>
             ) : (
-              <div className="space-y-4">
-                {Object.entries(fiatByCurrency).map(([currency, total]) => (
-                  <div key={currency} className="flex items-center justify-between">
-                    <Badge variant={(currency.toLowerCase() as 'usd' | 'eur' | 'gbp') ?? 'default'}>
-                      {currency}
-                    </Badge>
-                    <span className="text-sm font-semibold tabular-nums">{formatCurrency(total, currency)}</span>
-                  </div>
-                ))}
-                <div className="border-t pt-3 flex justify-between items-center text-lg font-semibold">
+              <div className="flex-1 flex flex-col">
+                <div className="space-y-4 flex-1">
+                  {Object.entries(fiatByCurrency).map(([currency, total]) => (
+                    <div key={currency} className="flex items-center justify-between">
+                      <Badge variant={(currency.toLowerCase() as 'usd' | 'eur' | 'gbp') ?? 'default'}>
+                        {currency}
+                      </Badge>
+                      <span className="text-sm font-semibold tabular-nums">{formatCurrency(total, currency)}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="border-t pt-3 mt-4 flex justify-between items-center text-lg font-semibold">
                   <span>Total Fiat</span>
                   <span className="tabular-nums">{formatUsdEquiv(overview?.totalBankBalanceUsd ?? 0)}</span>
                 </div>
@@ -76,29 +78,31 @@ export function UnifiedBalanceCard() {
         </Card>
 
         {/* Stablecoin Holdings */}
-        <Card>
+        <Card className="flex flex-col">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Coins className="h-5 w-5 text-gray-500" />
               Stablecoin Holdings
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex-1 flex flex-col">
             {isLoading ? (
               <CardSpinner />
             ) : !Object.keys(cryptoByToken).length ? (
               <div className="text-sm text-muted-foreground py-4">No stablecoin positions found.</div>
             ) : (
-              <div className="space-y-4">
-                {Object.entries(cryptoByToken).map(([token, usdValue]) => (
-                  <div key={token} className="flex items-center justify-between">
-                    <Badge className={TOKEN_COLORS[token] ?? 'bg-gray-100 text-gray-800'}>
-                      {token}
-                    </Badge>
-                    <span className="text-sm font-semibold tabular-nums">{formatCurrency(usdValue)}</span>
-                  </div>
-                ))}
-                <div className="border-t pt-3 flex justify-between items-center text-lg font-semibold">
+              <div className="flex-1 flex flex-col">
+                <div className="space-y-4 flex-1">
+                  {Object.entries(cryptoByToken).map(([token, usdValue]) => (
+                    <div key={token} className="flex items-center justify-between">
+                      <Badge className={TOKEN_COLORS[token] ?? 'bg-gray-100 text-gray-800'}>
+                        {token}
+                      </Badge>
+                      <span className="text-sm font-semibold tabular-nums">{formatCurrency(usdValue)}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="border-t pt-3 mt-4 flex justify-between items-center text-lg font-semibold">
                   <span>Total Crypto</span>
                   <span className="tabular-nums">{formatUsdEquiv(overview?.totalCryptoBalanceUsd ?? 0)}</span>
                 </div>

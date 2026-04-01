@@ -32,7 +32,7 @@ const STEPS = [
   {
     id: 'erp',
     title: 'ERP Integration',
-    description: 'Connect your ERP system to sync invoices and vendors automatically.',
+    description: 'Connect your ERP system to sync invoices, vendors, and obligations automatically.',
     icon: Settings2,
   },
   {

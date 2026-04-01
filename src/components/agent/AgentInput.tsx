@@ -18,7 +18,7 @@ export function AgentInput({ onSend, isStreaming, value, onChange }: AgentInputP
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = 'auto';
-    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+    el.style.height = `${Math.min(el.scrollHeight, 100)}px`;
   }, [value]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -46,7 +46,7 @@ export function AgentInput({ onSend, isStreaming, value, onChange }: AgentInputP
           rows={1}
           placeholder="Ask Vantor anything… (Shift+↵ for new line)"
           className={cn(
-            'flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none min-h-[24px] max-h-[160px] leading-6',
+            'flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none min-h-[20px] max-h-[100px] leading-5',
             isStreaming && 'opacity-60'
           )}
         />
