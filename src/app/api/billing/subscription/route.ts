@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/nextauth.config';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { stripe } from '@/lib/billing/stripe';
-import { TIERS, TierSlug, isUpgrade, isDowngrade } from '@/lib/billing/tiers';
+import { TIERS, TierSlug, isUpgrade, isDowngrade, isPaidTier } from '@/lib/billing/tiers';
 import { canDowngrade } from '@/lib/billing/gate';
 
 // GET — current subscription

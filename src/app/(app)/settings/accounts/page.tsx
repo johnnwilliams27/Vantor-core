@@ -23,14 +23,6 @@ interface TeamMember {
   kycStatus: string;
 }
 
-const INITIAL_USERS: TeamMember[] = [
-  { id: '1', name: 'Sarah Chen',      email: 'sarah.chen@vantor.io',  role: 'treasury_manager', initials: 'SC', color: 'bg-[#19595b]',  lastActive: '2 minutes ago'  },
-  { id: '2', name: 'Jordan Lee',      email: 'jordan.lee@vantor.io',  role: 'treasury_manager', initials: 'JL', color: 'bg-emerald-600', lastActive: '1 hour ago'      },
-  { id: '3', name: 'Marcus Johnson',  email: 'marcus.j@vantor.io',    role: 'accountant',        initials: 'MJ', color: 'bg-blue-500',   lastActive: 'Yesterday'       },
-  { id: '4', name: 'Emily Rodriguez', email: 'emily.r@vantor.io',     role: 'accountant',        initials: 'ER', color: 'bg-violet-500', lastActive: '3 days ago'      },
-  { id: '5', name: 'David Kim',       email: 'david.kim@vantor.io',   role: 'auditor',           initials: 'DK', color: 'bg-amber-500',  lastActive: '2 weeks ago'     },
-  { id: '6', name: 'Alex Thompson',   email: 'alex.t@vantor.io',      role: 'auditor',           initials: 'AT', color: 'bg-rose-400',   lastActive: 'Mar 1, 2026'     },
-];
 
 const ROLES: UserRole[] = ['auditor', 'accountant', 'treasury_manager'];
 
@@ -209,7 +201,7 @@ export default function AccountManagementPage() {
     const color = colors[users.length % colors.length];
     setUsers((prev) => [
       ...prev,
-      { id: String(Date.now()), name: inviteName.trim(), email: inviteEmail.trim(), role: inviteRole, initials, color, lastActive: 'Just now' },
+      { id: String(Date.now()), name: inviteName.trim(), email: inviteEmail.trim(), role: inviteRole, initials, color, kycStatus: 'not_started' },
     ]);
     toast({ title: 'Invitation sent', description: `${inviteName.trim()} has been invited as a${inviteRole === 'auditor' ? 'n' : ''} ${ROLE_LABELS[inviteRole]}.`, variant: 'success' });
     setInviteName('');
