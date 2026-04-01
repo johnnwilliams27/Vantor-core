@@ -105,25 +105,28 @@ export async function POST(req: NextRequest) {
 
   const supabaseAdmin = createAdminClient();
 
-  // Verify KYB + KYC completed
-  const { data: kyb } = await supabaseAdmin
-    .from('kyb_verifications')
-    .select('status')
-    .eq('enterprise_id', session.user.enterprise_id)
-    .single();
+  // Verify KYB + KYC — only required for Lite → paid upgrades.
+  // Paid-to-paid upgrades skip this since verification was done on initial upgrade.
+  if (!isPaidTier(currentTier)) {
+    const { data: kyb } = await supabaseAdmin
+      .from('kyb_verifications')
+      .select('status')
+      .eq('enterprise_id', session.user.enterprise_id)
+      .single();
 
-  if (kyb?.status !== 'completed') {
-    return NextResponse.json({ error: 'KYB verification required before upgrading' }, { status: 400 });
-  }
+    if (kyb?.status !== 'completed') {
+      return NextResponse.json({ error: 'KYB verification required before upgrading' }, { status: 400 });
+    }
 
-  const { data: kyc } = await supabaseAdmin
-    .from('kyc_verifications')
-    .select('status')
-    .eq('user_id', session.user.id)
-    .single();
+    const { data: kyc } = await supabaseAdmin
+      .from('kyc_verifications')
+      .select('status')
+      .eq('user_id', session.user.id)
+      .single();
 
-  if (kyc?.status !== 'completed') {
-    return NextResponse.json({ error: 'KYC verification required before upgrading' }, { status: 400 });
+    if (kyc?.status !== 'completed') {
+      return NextResponse.json({ error: 'KYC verification required before upgrading' }, { status: 400 });
+    }
   }
 
   const { data: sub } = await supabaseAdmin
