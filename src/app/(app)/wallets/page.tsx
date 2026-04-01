@@ -227,13 +227,18 @@ export default function WalletsPage() {
     new LedgerWalletAdapter(),
   ], []);
 
+  // Solana wallet adapter types are incompatible with React 18 — cast to suppress
+  const SolConnectionProvider = ConnectionProvider as any;
+  const SolWalletProvider = WalletProvider as any;
+  const SolWalletModalProvider = WalletModalProvider as any;
+
   return (
-    <ConnectionProvider endpoint={process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? 'https://api.mainnet-beta.solana.com'}>
-      <WalletProvider wallets={wallets} autoConnect>
-        <WalletModalProvider>
+    <SolConnectionProvider endpoint={process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? 'https://api.mainnet-beta.solana.com'}>
+      <SolWalletProvider wallets={wallets} autoConnect>
+        <SolWalletModalProvider>
           <CryptoWalletsTab />
-        </WalletModalProvider>
-      </WalletProvider>
-    </ConnectionProvider>
+        </SolWalletModalProvider>
+      </SolWalletProvider>
+    </SolConnectionProvider>
   );
 }
