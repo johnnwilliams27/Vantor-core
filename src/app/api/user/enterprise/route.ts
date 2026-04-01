@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/nextauth.config';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { isTestMode, getEffectiveEnterpriseId } from '@/lib/test-mode/helpers';
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -10,13 +11,25 @@ export async function GET() {
   }
 
   const supabase = createAdminClient();
+  const effectiveEnterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
+
   const { data } = await supabase
     .from('enterprises')
-    .select('name')
-    .eq('id', session.user.enterprise_id)
+    .select('name, is_test_enterprise')
+    .eq('id', effectiveEnterpriseId)
     .single();
 
-  // Fetch team members with KYC status
+  // In Lite test mode, return demo team members
+  const inTestMode = isTestMode();
+  const isLite = session.user.subscription_tier === 'lite';
+  if (inTestMode && isLite && data?.is_test_enterprise) {
+    return NextResponse.json({
+      name: data.name?.replace(' [TEST]', '') ?? null,
+      team: DEMO_TEAM,
+    });
+  }
+
+  // Fetch real team members with KYC status
   const { data: members } = await supabase
     .from('user_profiles')
     .select('id, email, full_name, role, created_at')
@@ -41,5 +54,14 @@ export async function GET() {
     createdAt: m.created_at,
   }));
 
-  return NextResponse.json({ name: data?.name ?? null, team });
+  return NextResponse.json({ name: data?.name?.replace(' [TEST]', '') ?? null, team });
 }
+
+const DEMO_TEAM = [
+  { id: 'demo-1', name: 'Sarah Chen',      email: 'sarah.chen@company.io',  role: 'treasury_manager', kycStatus: 'completed' },
+  { id: 'demo-2', name: 'Jordan Lee',      email: 'jordan.lee@company.io',  role: 'treasury_manager', kycStatus: 'completed' },
+  { id: 'demo-3', name: 'Marcus Johnson',  email: 'marcus.j@company.io',    role: 'accountant',       kycStatus: 'completed' },
+  { id: 'demo-4', name: 'Emily Rodriguez', email: 'emily.r@company.io',     role: 'accountant',       kycStatus: 'pending'   },
+  { id: 'demo-5', name: 'David Kim',       email: 'david.kim@company.io',   role: 'auditor',          kycStatus: 'not_started' },
+  { id: 'demo-6', name: 'Alex Thompson',   email: 'alex.t@company.io',      role: 'auditor',          kycStatus: 'completed' },
+];
