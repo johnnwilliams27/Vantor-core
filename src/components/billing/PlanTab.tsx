@@ -166,9 +166,13 @@ export function PlanTab() {
             <p className="text-sm text-muted-foreground">{TIERS[tier].displayPrice}</p>
           </div>
           {tier === 'lite' && (
-            <div className="bg-primary/10 text-primary px-4 py-2 rounded-lg text-sm font-medium">
-              Upgrade to unlock live mode
-            </div>
+            <button
+              onClick={() => setUpgradeTier('starter')}
+              className="relative px-5 py-2.5 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 text-white text-sm font-semibold shadow-[0_0_12px_rgba(45,212,191,0.2)] hover:shadow-[0_0_20px_rgba(45,212,191,0.35)] transition-all overflow-hidden"
+            >
+              <span className="relative z-10">Upgrade to unlock live mode</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-[shimmer_3s_ease-in-out_infinite]" />
+            </button>
           )}
         </div>
 
