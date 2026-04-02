@@ -19,6 +19,11 @@ import { ArrowRight } from 'lucide-react';
 import { useScheduledOperations, useCancelScheduledOperation } from '@/hooks/useScheduledOperations';
 import type { BridgeParams } from '@/types/scheduled-operations';
 
+function walletDisplayName(wallet?: { label?: string | null; address: string } | null): string {
+  if (!wallet) return '—';
+  return wallet.label || `${wallet.address.slice(0, 6)}…${wallet.address.slice(-4)}`;
+}
+
 const PROVIDER_LABELS: Record<string, string> = {
   cctp: 'Circle CCTP',
   layerzero: 'LayerZero',
@@ -42,6 +47,8 @@ interface UnifiedBridgeRow {
   received_amount: string | null;
   from_chain: string;
   to_chain: string;
+  fromWalletLabel: string;
+  toWalletLabel: string;
   status: string;
   created_at: string;
   scheduled_for: string | null;
@@ -88,6 +95,8 @@ export function BridgeHistory() {
       received_amount: b.received_amount ?? null,
       from_chain: b.from_chain,
       to_chain: b.to_chain,
+      fromWalletLabel: walletDisplayName(b.from_wallet),
+      toWalletLabel: walletDisplayName(b.to_wallet),
       status: b.status,
       created_at: b.created_at,
       scheduled_for: null,
@@ -97,6 +106,9 @@ export function BridgeHistory() {
       .filter((op) => op.status !== 'completed') // completed ones will show as bridge_transfers
       .map((op): UnifiedBridgeRow => {
         const p = op.params as BridgeParams;
+        const truncated = p.walletAddress
+          ? `${p.walletAddress.slice(0, 6)}…${p.walletAddress.slice(-4)}`
+          : '—';
         return {
           id: `sched-${op.id}`,
           token: p.token,
@@ -104,6 +116,8 @@ export function BridgeHistory() {
           received_amount: null,
           from_chain: p.fromChain,
           to_chain: p.toChain,
+          fromWalletLabel: truncated,
+          toWalletLabel: truncated,
           status: op.status === 'awaiting_authorization' ? 'awaiting approval' : op.status,
           created_at: op.created_at,
           scheduled_for: op.scheduled_for,
@@ -171,6 +185,8 @@ export function BridgeHistory() {
               <TableRow>
                 <TableHead>Token</TableHead>
                 <TableHead>Amount</TableHead>
+                <TableHead>From Wallet</TableHead>
+                <TableHead>To Wallet</TableHead>
                 <TableHead>Route</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Scheduled</TableHead>
@@ -184,6 +200,8 @@ export function BridgeHistory() {
                   <TableRow key={b.id}>
                     <TableCell><Badge variant="outline">{b.token}</Badge></TableCell>
                     <TableCell className="font-semibold">{formatCurrency(b.amount)}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{b.fromWalletLabel}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{b.toWalletLabel}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1.5 text-sm">
                         <Badge variant={b.from_chain === 'ethereum' ? 'ethereum' : 'solana'}>{capitalize(b.from_chain)}</Badge>
@@ -222,7 +240,7 @@ export function BridgeHistory() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                     {filter.activeFilterCount > 0 ? 'No matching bridges.' : 'No bridge transfers yet.'}
                   </TableCell>
                 </TableRow>
