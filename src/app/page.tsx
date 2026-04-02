@@ -642,8 +642,8 @@ function Hero() {
           </a>
         </div>
 
-        {/* Floating metric pills */}
-        <div className="mt-16 flex flex-col items-center gap-4 landing-fade-in landing-delay-4">
+        {/* Floating metric pills — hide before hero top-padding compresses */}
+        <div className="mt-16 hidden sm:flex flex-col items-center gap-4 landing-fade-in landing-delay-4">
           <div className="flex flex-wrap items-center justify-center gap-6">
             {[
               { label: 'Multi-Chain Stablecoin Support', icon: Globe },
