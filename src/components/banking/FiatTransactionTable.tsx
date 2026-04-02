@@ -16,7 +16,13 @@ import type { FiatTransaction } from '@/types/database';
 import { ArrowDownLeft, ArrowUpRight, History } from 'lucide-react';
 import { CardSpinner } from '@/components/ui/spinner';
 import { useScheduledOperations, useCancelScheduledOperation } from '@/hooks/useScheduledOperations';
+import { useWallets } from '@/hooks/useWallets';
 import type { RampParams } from '@/types/scheduled-operations';
+
+function walletDisplayName(wallet?: { label?: string | null; address: string } | null): string {
+  if (!wallet) return '—';
+  return wallet.label || `${wallet.address.slice(0, 6)}…${wallet.address.slice(-4)}`;
+}
 
 async function fetchFiatTransactions(): Promise<FiatTransaction[]> {
   const res = await fetch('/api/ramps');
@@ -35,6 +41,7 @@ interface UnifiedRampRow {
   exchange_rate?: string | null;
   fee_amount?: string | null;
   bank_account?: FiatTransaction['bank_account'];
+  walletLabel: string;
   status: string;
   created_at: string;
   scheduled_for: string | null;
@@ -78,6 +85,7 @@ const RAMP_EXPORT_COLUMNS: ExportColumn<UnifiedRampRow>[] = [
   { header: 'Fiat Currency', accessor: (r) => r.fiat_currency },
   { header: 'Rate', accessor: (r) => r.exchange_rate ? parseFloat(r.exchange_rate).toFixed(4) : '' },
   { header: 'Fee', accessor: (r) => r.fee_amount ? parseFloat(r.fee_amount).toLocaleString() : '' },
+  { header: 'Wallet', accessor: (r) => r.walletLabel },
   { header: 'Bank', accessor: (r) => r.bank_account?.institution_name ?? '' },
   { header: 'Status', accessor: (r) => capitalize(r.status) },
   { header: 'Scheduled', accessor: (r) => r.scheduled_for ? formatDateTime(r.scheduled_for) : '' },
@@ -103,6 +111,8 @@ export function FiatTransactionTable() {
   const cancelOp = useCancelScheduledOperation();
   const [confirmCancelOp, setConfirmCancelOp] = useState<UnifiedRampRow | null>(null);
 
+  const { data: wallets } = useWallets();
+
   const { data: txs, isLoading: txsLoading } = useQuery({
     queryKey: ['fiat-transactions'],
     queryFn: fetchFiatTransactions,
@@ -122,6 +132,7 @@ export function FiatTransactionTable() {
       exchange_rate: tx.exchange_rate,
       fee_amount: tx.fee_amount,
       bank_account: tx.bank_account,
+      walletLabel: walletDisplayName(wallets?.[0]),
       status: tx.status,
       created_at: tx.created_at,
       scheduled_for: null,
@@ -131,6 +142,9 @@ export function FiatTransactionTable() {
       .filter((op) => op.status !== 'completed') // completed ones will show as fiat transactions
       .map((op): UnifiedRampRow => {
         const p = op.params as RampParams;
+        const matchedWallet = p.walletId
+          ? wallets?.find((w) => w.id === p.walletId)
+          : wallets?.[0];
         return {
           id: `sched-${op.id}`,
           direction: p.direction,
@@ -141,6 +155,7 @@ export function FiatTransactionTable() {
           exchange_rate: null,
           fee_amount: null,
           bank_account: undefined,
+          walletLabel: walletDisplayName(matchedWallet),
           status: op.status === 'awaiting_authorization' ? 'awaiting approval' : op.status,
           created_at: op.created_at,
           scheduled_for: op.scheduled_for,
@@ -218,6 +233,7 @@ export function FiatTransactionTable() {
                   <th className="text-right py-2 pr-4">Fiat</th>
                   <th className="text-right py-2 pr-4">Rate</th>
                   <th className="text-right py-2 pr-4">Fee</th>
+                  <th className="text-left py-2 pr-4">Wallet</th>
                   <th className="text-left py-2 pr-4">Bank</th>
                   <th className="text-left py-2 pr-4">Status</th>
                   <th className="text-left py-2 pr-4">Scheduled</th>
@@ -244,6 +260,9 @@ export function FiatTransactionTable() {
                       {row.fee_amount
                         ? parseFloat(row.fee_amount).toLocaleString(undefined, { style: 'currency', currency: row.fiat_currency })
                         : '—'}
+                    </td>
+                    <td className="py-2 pr-4 text-gray-600 font-mono text-xs">
+                      {row.walletLabel}
                     </td>
                     <td className="py-2 pr-4 text-gray-600">
                       {row.bank_account
