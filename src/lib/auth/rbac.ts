@@ -2,7 +2,7 @@ import type { UserRole } from '@/types/database';
 
 /** Routes that require minimum role level (enterprise users) */
 export const ROLE_ROUTES: Record<string, UserRole> = {
-  '/payments': 'treasury_manager',
+  '/transfers': 'treasury_manager',
   '/swaps': 'treasury_manager',
   '/bridges': 'treasury_manager',
   '/ramps': 'treasury_manager',
@@ -30,7 +30,7 @@ const APP_ADMIN_ALLOWED_PATHS = [
 
 /** Routes app admins are explicitly blocked from */
 const APP_ADMIN_BLOCKED_PATHS = [
-  '/payments',
+  '/transfers',
   '/swaps',
   '/bridges',
   '/ramps',
@@ -43,7 +43,7 @@ const APP_ADMIN_BLOCKED_PATHS = [
   '/transactions',
   '/settings/erp',
   '/dashboard',
-  '/api/payments',
+  '/api/transfers',
   '/api/swaps',
   '/api/ramps',
   '/api/treasury',

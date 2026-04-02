@@ -20,7 +20,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/bank-accounts': 'Bank Accounts',
   '/settings/erp': 'ERP Systems',
   '/invoices': 'Invoices',
-  '/payments': 'Payments',
+  '/transfers': 'Transfers',
   '/swaps': 'Swaps',
   '/bridges': 'Bridges',
   '/ramps': 'Ramps',
