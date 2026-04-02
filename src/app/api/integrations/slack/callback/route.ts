@@ -334,16 +334,45 @@ export async function POST(req: NextRequest) {
 
     try {
       const adapter = getBankingAdapter();
-      const freshQuote = await adapter.getQuote({
-        direction: op.params?.direction as 'onramp' | 'offramp' ?? 'onramp',
-        cryptoToken: op.params?.cryptoToken as string ?? 'USDC',
-        fiatCurrency: op.params?.fiatCurrency as string ?? 'USD',
-        amount: op.params?.amount as number ?? 0,
-      });
-      currentRate = freshQuote?.exchangeRate ?? null;
-      originalRate = (op.initial_quote as Record<string, unknown>)?.exchangeRate as number ?? null;
-      if (currentRate != null && originalRate != null && originalRate !== 0) {
-        freshDeviationBps = Math.round(Math.abs((currentRate - originalRate) / originalRate) * 10000);
+      const { extractRate, calculateDeviationBps } = await import('@/lib/scheduled-operations/tolerances');
+      let freshQuote: Record<string, unknown> | null = null;
+      const params = op.params as Record<string, unknown>;
+
+      switch (op.type) {
+        case 'swap':
+          freshQuote = await adapter.getSwapQuote({
+            chain: params.chain as any,
+            fromToken: params.fromToken as any,
+            toToken: params.toToken as any,
+            amount: params.amount as string,
+            walletAddress: params.walletAddress as string,
+          }) as unknown as Record<string, unknown>;
+          break;
+        case 'bridge':
+          freshQuote = await adapter.getBridgeQuote({
+            token: params.token as any,
+            amount: params.amount as string,
+            fromChain: params.fromChain as any,
+            toChain: params.toChain as any,
+            walletAddress: params.walletAddress as string,
+          }) as unknown as Record<string, unknown>;
+          break;
+        case 'ramp':
+          freshQuote = await adapter.getRampQuote({
+            direction: params.direction as 'onramp' | 'offramp',
+            cryptoToken: params.cryptoToken as 'USDC' | 'USDT',
+            fiatCurrency: params.fiatCurrency as string ?? 'USD',
+            cryptoAmount: params.cryptoAmount as number,
+          }) as unknown as Record<string, unknown>;
+          break;
+      }
+
+      if (freshQuote) {
+        currentRate = extractRate(op.type, freshQuote);
+        originalRate = extractRate(op.type, op.initial_quote as Record<string, unknown>);
+        if (originalRate !== 0) {
+          freshDeviationBps = calculateDeviationBps(originalRate, currentRate);
+        }
       }
     } catch {
       // Non-fatal — show what we have
