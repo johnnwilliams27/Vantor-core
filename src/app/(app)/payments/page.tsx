@@ -35,7 +35,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 function getPaymentStatus(p: FiatPayment): string {
   if (p.scheduled_for && !p.executed_at) return 'Scheduled';
-  if (p.status === 'pending' && p.executed_at) return 'Pending Settlement';
+  if (p.status === 'pending' && p.executed_at) return 'Pending';
   return capitalize(p.status);
 }
 
