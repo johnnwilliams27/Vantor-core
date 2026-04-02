@@ -11,8 +11,10 @@ import { useToast } from '@/components/ui/toast';
 import { useWallets } from '@/hooks/useWallets';
 import { useWalletTokenBalance } from '@/hooks/useBalances';
 import { BalanceHint } from '@/components/ui/balance-hint';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Send } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
+import { Loader2, Calendar } from 'lucide-react';
+import { DateTimePicker } from '@/components/ui/datetime-picker';
 import type { ErpConfiguration } from '@/types/database';
 
 const schema = z.object({
@@ -20,13 +22,14 @@ const schema = z.object({
   toAddress: z.string().min(10, 'Enter a valid address'),
   token: z.enum(['USDC', 'USDT']),
   amount: z.string().regex(/^\d+(\.\d{1,6})?$/, 'Enter a valid amount'),
+  scheduledFor: z.string().min(1, 'Select a date/time'),
   memo: z.string().optional(),
   erpConfigId: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
 
-export function SendPaymentForm() {
+export function ScheduleTransferForm() {
   const { data: wallets } = useWallets();
   const { data: erpConfigs } = useQuery<ErpConfiguration[]>({
     queryKey: ['erp-configs'],
@@ -64,19 +67,22 @@ export function SendPaymentForm() {
     const wallet = wallets?.find((w) => w.id === data.fromWalletId);
     if (!wallet) return;
     try {
-      const res = await fetch('/api/payments', {
+      const res = await fetch('/api/transfers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...data, chain: wallet.chain }),
+        body: JSON.stringify({
+          ...data,
+          chain: wallet.chain,
+          scheduledFor: new Date(data.scheduledFor).toISOString(),
+        }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
-      toast({ title: 'Payment sent', description: `TX: ${json.data?.tx_hash?.slice(0, 12)}…`, variant: 'success' });
+      toast({ title: 'Transfer scheduled', description: `Scheduled for ${data.scheduledFor}`, variant: 'success' });
+      queryClient.invalidateQueries({ queryKey: ['transfers'] });
       reset();
-      queryClient.invalidateQueries({ queryKey: ['payments-volume'] });
-      queryClient.invalidateQueries({ queryKey: ['balances'] });
     } catch (err) {
-      toast({ title: 'Payment failed', description: (err as Error).message, variant: 'destructive' });
+      toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
     }
   };
 
@@ -84,8 +90,8 @@ export function SendPaymentForm() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Send className="h-5 w-5" />
-          Send Payment
+          <Calendar className="h-5 w-5" />
+          Schedule Transfer
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -120,16 +126,26 @@ export function SendPaymentForm() {
             {errors.toAddress && <p className="text-sm text-red-500">{errors.toAddress.message}</p>}
           </div>
 
-          <div className="space-y-2">
-            <Label>Amount</Label>
-            <Input placeholder="100.00" {...register('amount')} />
-            <BalanceHint
-              balance={balance}
-              token={selectedToken ?? 'USDC'}
-              currentAmount={amount}
-              onMax={(max) => setValue('amount', max)}
-            />
-            {errors.amount && <p className="text-sm text-red-500">{errors.amount.message}</p>}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Amount</Label>
+              <Input placeholder="100.00" {...register('amount')} />
+              <BalanceHint
+                balance={balance}
+                token={selectedToken ?? 'USDC'}
+                currentAmount={amount}
+                onMax={(max) => setValue('amount', max)}
+              />
+              {errors.amount && <p className="text-sm text-red-500">{errors.amount.message}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label>Schedule For</Label>
+              <DateTimePicker
+                value={watch('scheduledFor') ?? ''}
+                onChange={(v) => setValue('scheduledFor', v, { shouldValidate: true })}
+              />
+              {errors.scheduledFor && <p className="text-sm text-red-500">{errors.scheduledFor.message}</p>}
+            </div>
           </div>
 
           {erpConfigs && erpConfigs.length > 0 && (
@@ -148,14 +164,14 @@ export function SendPaymentForm() {
 
           <div className="space-y-2">
             <Label>Memo (optional)</Label>
-            <Input placeholder="Payment reference…" {...register('memo')} />
+            <Input placeholder="Transfer reference…" {...register('memo')} />
           </div>
 
-          <Button type="submit" className="w-full" disabled={isSubmitting || exceeds}>
+          <Button type="submit" className="w-full" disabled={isSubmitting || exceeds || !selectedWalletId || !watch('toAddress') || !amount || !watch('scheduledFor')}>
             {isSubmitting ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sending…</>
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Scheduling…</>
             ) : (
-              'Send Payment'
+              'Schedule Transfer'
             )}
           </Button>
         </form>

@@ -12,7 +12,7 @@ import { useWallets } from '@/hooks/useWallets';
 import { useWalletTokenBalance } from '@/hooks/useBalances';
 import { BalanceHint } from '@/components/ui/balance-hint';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Calendar } from 'lucide-react';
+import { Loader2, Send } from 'lucide-react';
 import type { ErpConfiguration } from '@/types/database';
 
 const schema = z.object({
@@ -20,14 +20,13 @@ const schema = z.object({
   toAddress: z.string().min(10, 'Enter a valid address'),
   token: z.enum(['USDC', 'USDT']),
   amount: z.string().regex(/^\d+(\.\d{1,6})?$/, 'Enter a valid amount'),
-  scheduledFor: z.string().min(1, 'Select a date/time'),
   memo: z.string().optional(),
   erpConfigId: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
 
-export function SchedulePaymentForm() {
+export function SendTransferForm() {
   const { data: wallets } = useWallets();
   const { data: erpConfigs } = useQuery<ErpConfiguration[]>({
     queryKey: ['erp-configs'],
@@ -65,21 +64,20 @@ export function SchedulePaymentForm() {
     const wallet = wallets?.find((w) => w.id === data.fromWalletId);
     if (!wallet) return;
     try {
-      const res = await fetch('/api/payments', {
+      const res = await fetch('/api/transfers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...data,
-          chain: wallet.chain,
-          scheduledFor: new Date(data.scheduledFor).toISOString(),
-        }),
+        body: JSON.stringify({ ...data, chain: wallet.chain }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
-      toast({ title: 'Payment scheduled', description: `Scheduled for ${data.scheduledFor}`, variant: 'success' });
+      toast({ title: 'Transfer sent', description: `TX: ${json.data?.tx_hash?.slice(0, 12)}…`, variant: 'success' });
       reset();
+      queryClient.invalidateQueries({ queryKey: ['transfers'] });
+      queryClient.invalidateQueries({ queryKey: ['transfers-volume'] });
+      queryClient.invalidateQueries({ queryKey: ['balances'] });
     } catch (err) {
-      toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
+      toast({ title: 'Transfer failed', description: (err as Error).message, variant: 'destructive' });
     }
   };
 
@@ -87,8 +85,8 @@ export function SchedulePaymentForm() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Calendar className="h-5 w-5" />
-          Schedule Payment
+          <Send className="h-5 w-5" />
+          Send Transfer
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -123,23 +121,16 @@ export function SchedulePaymentForm() {
             {errors.toAddress && <p className="text-sm text-red-500">{errors.toAddress.message}</p>}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Amount</Label>
-              <Input placeholder="100.00" {...register('amount')} />
-              <BalanceHint
-                balance={balance}
-                token={selectedToken ?? 'USDC'}
-                currentAmount={amount}
-                onMax={(max) => setValue('amount', max)}
-              />
-              {errors.amount && <p className="text-sm text-red-500">{errors.amount.message}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label>Schedule For</Label>
-              <Input type="datetime-local" {...register('scheduledFor')} />
-              {errors.scheduledFor && <p className="text-sm text-red-500">{errors.scheduledFor.message}</p>}
-            </div>
+          <div className="space-y-2">
+            <Label>Amount</Label>
+            <Input placeholder="100.00" {...register('amount')} />
+            <BalanceHint
+              balance={balance}
+              token={selectedToken ?? 'USDC'}
+              currentAmount={amount}
+              onMax={(max) => setValue('amount', max)}
+            />
+            {errors.amount && <p className="text-sm text-red-500">{errors.amount.message}</p>}
           </div>
 
           {erpConfigs && erpConfigs.length > 0 && (
@@ -158,14 +149,14 @@ export function SchedulePaymentForm() {
 
           <div className="space-y-2">
             <Label>Memo (optional)</Label>
-            <Input placeholder="Payment reference…" {...register('memo')} />
+            <Input placeholder="Transfer reference…" {...register('memo')} />
           </div>
 
-          <Button type="submit" className="w-full" disabled={isSubmitting || exceeds}>
+          <Button type="submit" className="w-full" disabled={isSubmitting || exceeds || !selectedWalletId || !watch('toAddress') || !amount}>
             {isSubmitting ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Scheduling…</>
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sending…</>
             ) : (
-              'Schedule Payment'
+              'Send Transfer'
             )}
           </Button>
         </form>
