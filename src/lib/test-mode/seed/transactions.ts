@@ -4,13 +4,13 @@ import type { WalletIds } from './wallets';
 
 export interface TransactionIds {
   transactionIds: string[];
-  paymentIds: string[];
+  transferIds: string[];
 }
 
 export async function seedTransactions(ctx: SeedContext, walletIds: WalletIds, invoiceIds: string[]): Promise<TransactionIds> {
   const { supabase, enterpriseId, userId } = ctx;
   if (!walletIds.ethWallets.length || !walletIds.solWallets.length) {
-    return { transactionIds: [], paymentIds: [] };
+    return { transactionIds: [], transferIds: [] };
   }
 
   // Generate ~35 on-chain transactions over 90 days
@@ -49,15 +49,15 @@ export async function seedTransactions(ctx: SeedContext, walletIds: WalletIds, i
     .insert(txnRows)
     .select('id, wallet_id, chain, direction');
 
-  // Generate payments
-  const paymentRows: any[] = [];
+  // Generate transfers
+  const transferRows: any[] = [];
 
-  // Invoice-linked payments (for first 12 paid invoices)
+  // Invoice-linked transfers (for first 12 paid invoices)
   const paidInvoiceIds = invoiceIds.slice(0, 12);
   for (const invoiceId of paidInvoiceIds) {
     const wallet = pick([...walletIds.ethWallets, ...walletIds.solWallets]);
     const isEth = walletIds.ethWallets.some(w => w.id === wallet.id);
-    paymentRows.push({
+    transferRows.push({
       user_id: userId,
       enterprise_id: enterpriseId,
       invoice_id: invoiceId,
@@ -73,11 +73,11 @@ export async function seedTransactions(ctx: SeedContext, walletIds: WalletIds, i
     });
   }
 
-  // 15 ad-hoc completed payments
+  // 15 ad-hoc completed transfers
   for (let i = 0; i < 15; i++) {
     const wallet = pick([...walletIds.ethWallets, ...walletIds.solWallets]);
     const isEth = walletIds.ethWallets.some(w => w.id === wallet.id);
-    paymentRows.push({
+    transferRows.push({
       user_id: userId,
       enterprise_id: enterpriseId,
       from_wallet_id: wallet.id,
@@ -92,10 +92,10 @@ export async function seedTransactions(ctx: SeedContext, walletIds: WalletIds, i
     });
   }
 
-  // 5 scheduled future payments
+  // 5 scheduled future transfers
   for (let i = 0; i < 5; i++) {
     const wallet = pick(walletIds.ethWallets);
-    paymentRows.push({
+    transferRows.push({
       user_id: userId,
       enterprise_id: enterpriseId,
       from_wallet_id: wallet.id,
@@ -109,23 +109,23 @@ export async function seedTransactions(ctx: SeedContext, walletIds: WalletIds, i
     });
   }
 
-  const { data: payments } = await supabase
-    .from('payments')
-    .insert(paymentRows)
+  const { data: transfers } = await supabase
+    .from('transfers')
+    .insert(transferRows)
     .select('id, status');
 
-  // Payment attempts for failed payments
-  const failedPayments = payments?.filter(p => p.status === 'failed') || [];
-  if (failedPayments.length) {
-    const attemptRows = failedPayments.flatMap(p => [
-      { payment_id: p.id, attempt_no: 1, status: 'failed', error: 'Insufficient gas', attempted_at: daysAgo(randInt(2, 10)) },
-      { payment_id: p.id, attempt_no: 2, status: 'failed', error: 'Nonce too low', attempted_at: daysAgo(randInt(1, 5)) },
+  // Transfer attempts for failed transfers
+  const failedTransfers = transfers?.filter(p => p.status === 'failed') || [];
+  if (failedTransfers.length) {
+    const attemptRows = failedTransfers.flatMap(p => [
+      { transfer_id: p.id, attempt_no: 1, status: 'failed', error: 'Insufficient gas', attempted_at: daysAgo(randInt(2, 10)) },
+      { transfer_id: p.id, attempt_no: 2, status: 'failed', error: 'Nonce too low', attempted_at: daysAgo(randInt(1, 5)) },
     ]);
-    await supabase.from('payment_attempts').insert(attemptRows);
+    await supabase.from('transfer_attempts').insert(attemptRows);
   }
 
   return {
     transactionIds: txns?.map(t => t.id) || [],
-    paymentIds: payments?.map(p => p.id) || [],
+    transferIds: transfers?.map(p => p.id) || [],
   };
 }

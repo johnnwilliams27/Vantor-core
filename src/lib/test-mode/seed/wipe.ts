@@ -40,8 +40,8 @@ export async function wipeTestEnterprise(
     'treasury_rules',
     'bridge_transfers',
     'swaps',
-    'payment_attempts',
-    'payments',
+    'transfer_attempts',
+    'transfers',
     'transactions',
     'gl_postings',
     'invoices',
@@ -55,16 +55,16 @@ export async function wipeTestEnterprise(
   ];
 
   for (const table of tables) {
-    if (table === 'payment_attempts') {
-      const { data: payments } = await supabase
-        .from('payments')
+    if (table === 'transfer_attempts') {
+      const { data: transfers } = await supabase
+        .from('transfers')
         .select('id')
         .eq('enterprise_id', testEnterpriseId);
-      if (payments?.length) {
+      if (transfers?.length) {
         await supabase
-          .from('payment_attempts')
+          .from('transfer_attempts')
           .delete()
-          .in('payment_id', payments.map(p => p.id));
+          .in('transfer_id', transfers.map(p => p.id));
       }
       continue;
     }

@@ -102,11 +102,11 @@ export async function seedCompliance(ctx: SeedContext, walletIds: WalletIds, txI
   const travelRuleStatuses = ['accepted', 'sent', 'received', 'rejected', 'pending', 'accepted'];
   const travelRuleRows = travelRuleStatuses.map((status, i) => {
     const isOutgoing = i % 2 === 0;
-    const paymentId = txIds.paymentIds.length > i ? txIds.paymentIds[i] : null;
+    const transferId = txIds.transferIds.length > i ? txIds.transferIds[i] : null;
 
     return {
       user_id: userId, enterprise_id: enterpriseId,
-      payment_id: paymentId,
+      transfer_id: transferId,
       direction: isOutgoing ? 'outgoing' : 'incoming',
       amount_usd: rand(15000, 300000).toFixed(2),
       originator_name: isOutgoing ? 'Test Enterprise LLC' : `External Corp ${i}`,
