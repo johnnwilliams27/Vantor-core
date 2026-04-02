@@ -30,8 +30,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import Link from 'next/link';
 import { DateTimePicker } from '@/components/ui/datetime-picker';
+import { PayInvoiceModal } from './PayInvoiceModal';
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'USDC', 'USDT'] as const;
 const STABLECOINS = ['USDC', 'USDT'];
@@ -63,10 +63,6 @@ function sourceLabel(inv: Invoice): string {
   }
   if (inv.source === 'erp') return 'ERP';
   return 'Manual';
-}
-
-function isStablecoin(currency: string): boolean {
-  return ['USDC', 'USDT'].includes(currency);
 }
 
 const FILTER_CONFIG = {
@@ -294,76 +290,7 @@ export function InvoiceTable() {
       </CardContent>
     </Card>
 
-    {/* Pay Invoice Modal */}
-    <Dialog open={!!payInvoice} onOpenChange={(o) => !o && setPayInvoice(null)}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Pay Invoice</DialogTitle>
-        </DialogHeader>
-        {payInvoice && (
-          <div className="space-y-3">
-            <div className="text-sm bg-muted/40 rounded-md p-3 space-y-2">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Invoice</span>
-                <span className="font-medium">{payInvoice.invoice_number}</span>
-              </div>
-              {payInvoice.vendor?.name && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Vendor</span>
-                  <span className="font-medium">{payInvoice.vendor.name}</span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Amount</span>
-                <span className="font-semibold">{formatCurrency(payInvoice.amount)} {payInvoice.currency ?? payInvoice.token}</span>
-              </div>
-              {payInvoice.due_date && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Due</span>
-                  <span>{formatDateTime(payInvoice.due_date)}</span>
-                </div>
-              )}
-              {payInvoice.destination_address && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Destination</span>
-                  <span className="font-mono text-xs">{payInvoice.destination_address}</span>
-                </div>
-              )}
-              {payInvoice.description && (
-                <div className="pt-1 border-t border-border/50">
-                  <span className="text-muted-foreground text-xs">Description</span>
-                  <p className="text-sm mt-0.5">{payInvoice.description}</p>
-                </div>
-              )}
-            </div>
-
-            <p className="text-xs text-muted-foreground">
-              {isStablecoin(payInvoice.currency ?? payInvoice.token ?? '')
-                ? 'This will open the payment form pre-filled with the invoice details.'
-                : 'This will open the ramp form to convert and pay this fiat invoice.'}
-            </p>
-          </div>
-        )}
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => setPayInvoice(null)}>Cancel</Button>
-          {payInvoice && (
-            isStablecoin(payInvoice.currency ?? payInvoice.token ?? '') ? (
-              <Button asChild>
-                <Link href={`/payments?invoiceId=${payInvoice.id}&to=${payInvoice.destination_address ?? ''}&amount=${payInvoice.amount}&token=${payInvoice.token ?? 'USDC'}&memo=Invoice ${payInvoice.invoice_number}${payInvoice.vendor?.name ? ` - ${payInvoice.vendor.name}` : ''}`}>
-                  Pay with Crypto
-                </Link>
-              </Button>
-            ) : (
-              <Button asChild>
-                <Link href={`/ramps?invoiceId=${payInvoice.id}&amount=${payInvoice.amount}&currency=${payInvoice.currency ?? 'USD'}&memo=Invoice ${payInvoice.invoice_number}${payInvoice.vendor?.name ? ` - ${payInvoice.vendor.name}` : ''}`}>
-                  Pay with Ramp
-                </Link>
-              </Button>
-            )
-          )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <PayInvoiceModal invoice={payInvoice} open={!!payInvoice} onOpenChange={(o) => !o && setPayInvoice(null)} />
 
     {/* Invoice Detail Modal */}
     <Dialog open={!!selectedInvoice} onOpenChange={(o) => !o && setSelectedInvoice(null)}>
