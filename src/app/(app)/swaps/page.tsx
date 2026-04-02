@@ -1,5 +1,6 @@
 'use client';
 import { SwapForm } from '@/components/swaps/SwapForm';
+import { ScheduleSwapForm } from '@/components/scheduled/ScheduleSwapForm';
 import { useQuery } from '@tanstack/react-query';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -152,7 +153,10 @@ function SwapHistory() {
 export default function SwapsPage() {
   return (
     <div className="space-y-6">
-      <SwapForm />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <SwapForm />
+        <ScheduleSwapForm />
+      </div>
       <SwapHistory />
     </div>
   );
