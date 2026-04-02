@@ -38,6 +38,12 @@ const ACTION_DOT: Record<string, string> = {
   treasury_simulation_run:          'bg-fuchsia-500',
   treasury_report_export:           'bg-slate-400',
   treasury_price_refresh:           'bg-lime-500',
+  scheduled_operation_create:       'bg-indigo-500',
+  scheduled_operation_execute:      'bg-emerald-500',
+  scheduled_operation_deviation:    'bg-amber-500',
+  scheduled_operation_approve:      'bg-green-500',
+  scheduled_operation_cancel:       'bg-red-500',
+  scheduled_operation_expire:       'bg-gray-500',
 };
 
 const LS_KEY = 'notifications_last_seen';
