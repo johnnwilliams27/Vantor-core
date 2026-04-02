@@ -17,9 +17,9 @@ const actionLabel = (action: string) =>
 const ACTION_DOT: Record<string, string> = {
   login:                            'bg-violet-500',
   logout:                           'bg-violet-400',
-  payment_create:                   'bg-amber-500',
-  payment_schedule:                 'bg-amber-500',
-  payment_execute:                  'bg-orange-500',
+  transfer_create:                  'bg-amber-500',
+  transfer_schedule:                'bg-amber-500',
+  transfer_execute:                 'bg-orange-500',
   swap_execute:                     'bg-blue-500',
   wallet_connect:                   'bg-green-500',
   wallet_disconnect:                'bg-red-500',

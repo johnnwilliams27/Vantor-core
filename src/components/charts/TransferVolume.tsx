@@ -5,11 +5,11 @@ import {
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-export function PaymentVolume() {
-  const { data: payments } = useQuery({
-    queryKey: ['payments-volume'],
+export function TransferVolume() {
+  const { data: transfers } = useQuery({
+    queryKey: ['transfers-volume'],
     queryFn: async () => {
-      const res = await fetch('/api/payments');
+      const res = await fetch('/api/transfers');
       if (!res.ok) return [];
       const { data } = await res.json();
       return data ?? [];
@@ -19,7 +19,7 @@ export function PaymentVolume() {
 
   // Group by week
   const weekMap: Record<string, number> = {};
-  for (const p of payments ?? []) {
+  for (const p of transfers ?? []) {
     if (p.status !== 'completed') continue;
     const date = new Date(p.created_at);
     const week = `W${getWeekNumber(date)} ${date.getFullYear()}`;
@@ -33,10 +33,10 @@ export function PaymentVolume() {
   if (!chartData.length) {
     return (
       <Card>
-        <CardHeader><CardTitle>Payment Volume</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Transfer Volume</CardTitle></CardHeader>
         <CardContent>
           <div className="h-48 flex items-center justify-center text-gray-400 text-sm">
-            No completed payments yet.
+            No completed transfers yet.
           </div>
         </CardContent>
       </Card>
@@ -45,7 +45,7 @@ export function PaymentVolume() {
 
   return (
     <Card>
-      <CardHeader><CardTitle>Payment Volume (Weekly)</CardTitle></CardHeader>
+      <CardHeader><CardTitle>Transfer Volume (Weekly)</CardTitle></CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={240}>
           <BarChart data={chartData}>

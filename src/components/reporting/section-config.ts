@@ -17,7 +17,7 @@ export type SectionId =
   | 'obligation-coverage'
   | 'recommendations'
   | 'ramp-history'
-  | 'payments'
+  | 'transfers'
   | 'swaps'
   | 'invoices'
   | 'compliance'
@@ -61,9 +61,9 @@ export const SECTION_REGISTRY: SectionConfig[] = [
     defaultEnabled: true,
   },
   {
-    id: 'payments',
-    label: 'Payments',
-    description: 'Payment volume, status breakdown, execution details',
+    id: 'transfers',
+    label: 'Transfers',
+    description: 'Transfer volume, status breakdown, execution details',
     icon: Send,
     defaultEnabled: false,
   },

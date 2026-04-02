@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { useTreasuryReport } from './useTreasury';
 import type { SectionId } from '@/components/reporting/section-config';
-import type { Payment, Swap, Invoice, YieldTransaction } from '@/types/database';
+import type { Transfer, Swap, Invoice, YieldTransaction } from '@/types/database';
 
 function filterByDate<T>(items: T[], dateAccessor: (item: T) => string, from?: string, to?: string): T[] {
   if (!from && !to) return items;
@@ -23,15 +23,15 @@ export function useReportData(from?: string, to?: string, sections?: Set<Section
     hasSection('recommendations') || hasSection('ramp-history');
   const treasury = useTreasuryReport(needsTreasury ? from : undefined, needsTreasury ? to : undefined);
 
-  const payments = useQuery<Payment[]>({
-    queryKey: ['report-payments', from, to],
+  const transfers = useQuery<Transfer[]>({
+    queryKey: ['report-transfers', from, to],
     queryFn: async () => {
-      const res = await fetch('/api/payments');
+      const res = await fetch('/api/transfers');
       if (!res.ok) return [];
       const { data } = await res.json();
       return filterByDate(data ?? [], (p) => p.created_at, from, to);
     },
-    enabled: hasSection('payments'),
+    enabled: hasSection('transfers'),
     staleTime: 60_000,
   });
 
@@ -84,7 +84,7 @@ export function useReportData(from?: string, to?: string, sections?: Set<Section
   });
 
   const isLoading = (needsTreasury && treasury.isLoading) ||
-    (hasSection('payments') && payments.isLoading) ||
+    (hasSection('transfers') && transfers.isLoading) ||
     (hasSection('swaps') && swaps.isLoading) ||
     (hasSection('invoices') && invoices.isLoading) ||
     (hasSection('compliance') && compliance.isLoading) ||
@@ -92,7 +92,7 @@ export function useReportData(from?: string, to?: string, sections?: Set<Section
 
   return {
     treasury,
-    payments,
+    transfers,
     swaps,
     invoices,
     compliance,

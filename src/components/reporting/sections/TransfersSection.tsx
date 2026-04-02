@@ -6,17 +6,17 @@ import { FilterBar } from '@/components/ui/filter-bar';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { useTableFilter } from '@/hooks/useTableFilter';
 import { formatCurrency, formatDateTime, truncateAddress, capitalize } from '@/lib/utils';
-import type { Payment } from '@/types/database';
+import type { Transfer } from '@/types/database';
 
 const FILTER_CONFIG = {
   searchFields: ['to_address' as const, 'token' as const, 'memo' as const],
   dropdowns: [
-    { key: 'status', accessor: (item: Payment) => item.status },
-    { key: 'chain', accessor: (item: Payment) => item.chain },
+    { key: 'status', accessor: (item: Transfer) => item.status },
+    { key: 'chain', accessor: (item: Transfer) => item.chain },
   ],
 };
 
-export function PaymentsSection({ data }: { data: Payment[] }) {
+export function TransfersSection({ data }: { data: Transfer[] }) {
   const filter = useTableFilter(data, FILTER_CONFIG);
 
   const summary = useMemo(() => {
@@ -31,7 +31,7 @@ export function PaymentsSection({ data }: { data: Payment[] }) {
 
   return (
     <Card>
-      <CardHeader><CardTitle className="text-sm">Payments ({data.length})</CardTitle></CardHeader>
+      <CardHeader><CardTitle className="text-sm">Transfers ({data.length})</CardTitle></CardHeader>
       <CardContent className="space-y-4">
         {/* Summary */}
         <div className="flex flex-wrap gap-3">
@@ -48,7 +48,7 @@ export function PaymentsSection({ data }: { data: Payment[] }) {
         </div>
 
         <FilterBar
-          search={filter.search} onSearchChange={filter.setSearch} searchPlaceholder="Search payments..."
+          search={filter.search} onSearchChange={filter.setSearch} searchPlaceholder="Search transfers..."
           dropdowns={[
             { key: 'status', label: 'Status', options: filter.dropdownOptions.status ?? [] },
             { key: 'chain', label: 'Chain', options: filter.dropdownOptions.chain ?? [] },
@@ -82,7 +82,7 @@ export function PaymentsSection({ data }: { data: Payment[] }) {
                 </tr>
               ))}
               {!filter.pagedData.length && (
-                <tr><td colSpan={6} className="text-center text-muted-foreground py-6">No payments found.</td></tr>
+                <tr><td colSpan={6} className="text-center text-muted-foreground py-6">No transfers found.</td></tr>
               )}
             </tbody>
           </table>

@@ -7,12 +7,12 @@ import { FilterBar } from '@/components/ui/filter-bar';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { useTableFilter } from '@/hooks/useTableFilter';
 import { formatCurrency, formatDateTime, truncateAddress, capitalize } from '@/lib/utils';
-import type { Payment } from '@/types/database';
+import type { Transfer } from '@/types/database';
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { CardSpinner } from '@/components/ui/spinner';
 
-function DirectionCell({ payment }: { payment: Payment }) {
-  if (payment.direction === 'received') {
+function DirectionCell({ transfer }: { transfer: Transfer }) {
+  if (transfer.direction === 'received') {
     return (
       <div className="flex items-center gap-1.5 text-green-700">
         <ArrowDownLeft className="h-4 w-4 shrink-0" />
@@ -28,9 +28,9 @@ function DirectionCell({ payment }: { payment: Payment }) {
   );
 }
 
-function CounterpartyCell({ payment }: { payment: Payment }) {
-  if (payment.direction === 'received') {
-    const addr = payment.from_address ?? payment.from_wallet?.address ?? '—';
+function CounterpartyCell({ transfer }: { transfer: Transfer }) {
+  if (transfer.direction === 'received') {
+    const addr = transfer.from_address ?? transfer.from_wallet?.address ?? '—';
     return (
       <div>
         <div className="text-xs text-gray-400 mb-0.5">From</div>
@@ -41,29 +41,29 @@ function CounterpartyCell({ payment }: { payment: Payment }) {
   return (
     <div>
       <div className="text-xs text-gray-400 mb-0.5">To</div>
-      <span className="font-mono text-xs">{truncateAddress(payment.to_address, 8)}</span>
+      <span className="font-mono text-xs">{truncateAddress(transfer.to_address, 8)}</span>
     </div>
   );
 }
 
-const PAYMENTS_TAB_FILTER_CONFIG = {
+const TRANSFERS_TAB_FILTER_CONFIG = {
   searchFields: [
     'to_address' as const,
     'token' as const,
     'memo' as const,
   ],
   dropdowns: [
-    { key: 'status', accessor: (item: Payment) => item.status },
-    { key: 'chain', accessor: (item: Payment) => item.chain },
+    { key: 'status', accessor: (item: Transfer) => item.status },
+    { key: 'chain', accessor: (item: Transfer) => item.chain },
   ],
-  dateField: (item: Payment) => item.created_at,
+  dateField: (item: Transfer) => item.created_at,
 };
 
-export function PaymentsTab() {
-  const { data, isLoading } = useQuery<Payment[]>({
-    queryKey: ['payments'],
+export function TransfersTab() {
+  const { data, isLoading } = useQuery<Transfer[]>({
+    queryKey: ['transfers'],
     queryFn: async () => {
-      const res = await fetch('/api/payments');
+      const res = await fetch('/api/transfers');
       if (!res.ok) return [];
       const { data } = await res.json();
       return data ?? [];
@@ -71,16 +71,16 @@ export function PaymentsTab() {
     staleTime: 30_000,
   });
 
-  const filter = useTableFilter(data, PAYMENTS_TAB_FILTER_CONFIG);
+  const filter = useTableFilter(data, TRANSFERS_TAB_FILTER_CONFIG);
 
   return (
     <Card>
-      <CardHeader><CardTitle>Payments</CardTitle></CardHeader>
+      <CardHeader><CardTitle>Transfers</CardTitle></CardHeader>
       <CardContent className="space-y-4">
         <FilterBar
           search={filter.search}
           onSearchChange={filter.setSearch}
-          searchPlaceholder="Search payments..."
+          searchPlaceholder="Search transfers..."
           dropdowns={[
             { key: 'status', label: 'Status', options: filter.dropdownOptions.status ?? [] },
             { key: 'chain', label: 'Chain', options: filter.dropdownOptions.chain ?? [] },
@@ -119,8 +119,8 @@ export function PaymentsTab() {
             ) : filter.pagedData.length ? (
               filter.pagedData.map((p) => (
                 <TableRow key={p.id}>
-                  <TableCell><DirectionCell payment={p} /></TableCell>
-                  <TableCell><CounterpartyCell payment={p} /></TableCell>
+                  <TableCell><DirectionCell transfer={p} /></TableCell>
+                  <TableCell><CounterpartyCell transfer={p} /></TableCell>
                   <TableCell>
                     <span className="font-semibold">{formatCurrency(p.amount)}</span>{' '}
                     <Badge variant="outline">{p.token}</Badge>
@@ -143,7 +143,7 @@ export function PaymentsTab() {
             ) : (
               <TableRow>
                 <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                  {filter.activeFilterCount > 0 ? 'No matching payments.' : 'No payments yet.'}
+                  {filter.activeFilterCount > 0 ? 'No matching transfers.' : 'No transfers yet.'}
                 </TableCell>
               </TableRow>
             )}

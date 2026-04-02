@@ -23,12 +23,15 @@ import {
   BrainCircuit,
   ArrowUpFromLine,
   ArrowDownToLine,
+  ArrowRight,
   Minus,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import type { AiRecommendation } from '@/types/database';
 import type { ScheduledOperation, SwapParams, BridgeParams, RampParams } from '@/types/scheduled-operations';
 import { ApprovalModal } from '@/components/scheduled/ApprovalModal';
+import { SimpleMarkdown } from '@/components/ui/simple-markdown';
+import { useWallets } from '@/hooks/useWallets';
 
 function formatUsd(v: string | number | null): string {
   if (v === null || v === undefined) return '—';
@@ -59,14 +62,14 @@ function useCountdown(expiresAt: string): string {
 }
 
 const ACTION_ICONS: Record<string, React.ReactNode> = {
-  offramp: <ArrowUpFromLine className="h-3.5 w-3.5" />,
-  onramp: <ArrowDownToLine className="h-3.5 w-3.5" />,
+  onramp: <ArrowUpFromLine className="h-3.5 w-3.5" />,
+  offramp: <ArrowDownToLine className="h-3.5 w-3.5" />,
   no_action: <Minus className="h-3.5 w-3.5" />,
 };
 
 const ACTION_LABELS: Record<string, string> = {
-  offramp: 'Offramp',
-  onramp: 'Onramp',
+  onramp: 'On-ramp',
+  offramp: 'Off-ramp',
   no_action: 'No Action',
 };
 
@@ -140,7 +143,7 @@ function CompactScheduledOp({
             <Button
               size="sm"
               variant="outline"
-              className="h-6 text-xs px-2 py-0"
+              className="h-6 text-xs px-3 py-0 bg-[#19595b] text-white hover:bg-[#134849] border-0"
               onClick={() => onReview(op)}
             >
               Review
@@ -162,6 +165,14 @@ function CompactRec({ rec }: { rec: AiRecommendation }) {
   const { data: session } = useSession();
   const approve = useApproveRecommendation();
   const reject = useRejectRecommendation();
+  const { data: wallets } = useWallets();
+
+  const targetWallet = wallets?.find((w) => w.chain === rec.stablecoin_chain);
+  const walletLabel = targetWallet?.label || (targetWallet?.address ? `${targetWallet.address.slice(0, 6)}…${targetWallet.address.slice(-4)}` : 'Wallet');
+  const bankLabel = rec.bank_account
+    ? `${rec.bank_account.institution_name}${rec.bank_account.last4 ? ` ****${rec.bank_account.last4}` : ''}`
+    : 'Bank Account';
+  const chainLabel = rec.stablecoin_chain ? rec.stablecoin_chain.charAt(0).toUpperCase() + rec.stablecoin_chain.slice(1) : '';
 
   const isTreasuryManager = hasRole((session?.user?.role as any) ?? 'auditor', 'treasury_manager');
   const canAct = isTreasuryManager && rec.status === 'pending_approval' && new Date(rec.expires_at) > new Date();
@@ -205,7 +216,13 @@ function CompactRec({ rec }: { rec: AiRecommendation }) {
                 )}
               </div>
               <p className="text-xs text-muted-foreground truncate">
-                {rec.ai_reasoning}
+                {rec.action !== 'no_action' && rec.stablecoin_token ? (
+                  rec.action === 'offramp'
+                    ? `${rec.stablecoin_token} on ${chainLabel} (${walletLabel}) → USD (${bankLabel})`
+                    : `USD (${bankLabel}) → ${rec.stablecoin_token} on ${chainLabel} (${walletLabel})`
+                ) : (
+                  'No action required'
+                )}
               </p>
             </div>
           </div>
@@ -215,7 +232,7 @@ function CompactRec({ rec }: { rec: AiRecommendation }) {
               <Button
                 size="sm"
                 variant="outline"
-                className="h-6 text-xs px-2 py-0"
+                className="h-6 text-xs px-3 py-0 bg-[#19595b] text-white hover:bg-[#134849] border-0"
                 onClick={() => setShowReview(true)}
                 disabled={approve.isPending || reject.isPending}
               >
@@ -261,9 +278,9 @@ function CompactRec({ rec }: { rec: AiRecommendation }) {
               )}
             </div>
 
-            <blockquote className="border-l-2 border-[#19595b] pl-3 text-xs text-muted-foreground italic">
-              {rec.ai_reasoning}
-            </blockquote>
+            <div className="border-l-2 border-[#19595b] pl-3 text-sm text-foreground space-y-2">
+              <SimpleMarkdown text={rec.ai_reasoning} />
+            </div>
 
             <div className="grid grid-cols-3 gap-2 text-xs bg-muted/40 rounded-md p-2">
               <div>
@@ -280,10 +297,26 @@ function CompactRec({ rec }: { rec: AiRecommendation }) {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 text-[10px] text-muted-foreground flex-wrap">
-              <span>Model: {rec.ai_model}</span>
-              {rec.stablecoin_token && <span>Token: {rec.stablecoin_token} on {rec.stablecoin_chain}</span>}
-              <span>{new Date(rec.created_at).toLocaleDateString()}</span>
+            {rec.action !== 'no_action' && rec.stablecoin_token && (
+              <div className="flex items-center gap-2 text-xs bg-muted/40 rounded-md px-3 py-2">
+                {rec.action === 'offramp' ? (
+                  <>
+                    <span className="font-medium text-foreground">{rec.stablecoin_token} on {chainLabel} ({walletLabel})</span>
+                    <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                    <span className="font-medium text-foreground">USD ({bankLabel})</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="font-medium text-foreground">USD ({bankLabel})</span>
+                    <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                    <span className="font-medium text-foreground">{rec.stablecoin_token} on {chainLabel} ({walletLabel})</span>
+                  </>
+                )}
+              </div>
+            )}
+
+            <div className="text-[10px] text-muted-foreground">
+              {new Date(rec.created_at).toLocaleDateString()}
             </div>
           </div>
 
