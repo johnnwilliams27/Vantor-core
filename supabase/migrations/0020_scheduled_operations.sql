@@ -65,4 +65,4 @@ CREATE POLICY "Users can update own scheduled operations"
 -- Updated_at trigger
 CREATE TRIGGER set_scheduled_operations_updated_at
   BEFORE UPDATE ON scheduled_operations
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();

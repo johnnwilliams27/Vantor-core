@@ -187,12 +187,14 @@ export async function computeRecommendation(
   let recommendedAmountUsd: number | null = null;
 
   if (surplusUsd > 100) {
-    action = 'offramp';
+    // Excess fiat → deploy to stablecoin (fiat → crypto = onramp)
+    action = 'onramp';
     recommendedAmountUsd = Math.round(surplusUsd * 100) / 100;
   } else if (surplusUsd < -100) {
-    action = 'onramp';
+    // Short on fiat → liquidate crypto (crypto → fiat = offramp)
+    action = 'offramp';
     const needed = Math.abs(surplusUsd);
-    // Cap onramp at available crypto value
+    // Cap offramp at available crypto value
     const availableCrypto = snapshot.totalCryptoBalanceUsd;
     recommendedAmountUsd = Math.round(Math.min(needed, availableCrypto) * 100) / 100;
   }

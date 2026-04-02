@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { truncateAddress, formatDate } from '@/lib/utils';
-import { Trash2, CheckCircle, Clock, Pencil, Check, X } from 'lucide-react';
+import { Trash2, CheckCircle, Clock, Pencil, Check, X, Copy } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
 import { CardSpinner } from '@/components/ui/spinner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -36,6 +36,7 @@ function CryptoWalletsTab() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [saving, setSaving] = useState(false);
+  const [expandedAddr, setExpandedAddr] = useState<string | null>(null);
 
   const handleUnlink = async () => {
     if (!deleteTarget) return;
@@ -157,7 +158,29 @@ function CryptoWalletsTab() {
                             {wallet.chain === 'ethereum' ? 'Ethereum' : 'Solana'}
                           </Badge>
                         </TableCell>
-                        <TableCell className="font-mono text-sm">{truncateAddress(wallet.address, 8)}</TableCell>
+                        <TableCell className="font-mono text-sm">
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setExpandedAddr(expandedAddr === wallet.id ? null : wallet.id)}
+                              className="hover:text-[#19595b] transition-colors cursor-pointer text-left break-all"
+                              title="Click to expand"
+                            >
+                              {expandedAddr === wallet.id ? wallet.address : truncateAddress(wallet.address, 8)}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(wallet.address);
+                                toast({ title: 'Address copied', variant: 'success' });
+                              }}
+                              className="shrink-0 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                              title="Copy address"
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </TableCell>
                         <TableCell>
                           {wallet.verified_at ? (
                             <CheckCircle className="h-4 w-4 text-green-500" />

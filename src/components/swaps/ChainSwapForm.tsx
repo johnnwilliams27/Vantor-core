@@ -19,13 +19,15 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, ArrowRightLeft, ArrowRight, Clock } from 'lucide-react';
 import type { SlippageEstimate } from '@/lib/yield/slippage';
 import type { BridgeQuote } from '@/lib/banking/interface';
+import { TOLERANCE_BPS } from '@/lib/scheduled-operations/tolerances';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
 const schema = z.object({
   fromWalletId: z.string().uuid('Select a source wallet'),
   toWalletId: z.string().uuid('Select a destination wallet'),
   token: z.enum(['USDC', 'USDT']),
   amount: z.string().regex(/^\d+(\.\d{1,6})?$/, 'Enter a valid amount'),
-  slippageBps: z.string().optional(),
+  memo: z.string().max(2000).optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -42,6 +44,7 @@ export function ChainSwapForm() {
   const [quoting, setQuoting] = useState(false);
   const [executing, setExecuting] = useState(false);
   const [slippageEstimate, setSlippageEstimate] = useState<SlippageEstimate | null>(null);
+  const [showRateApproval, setShowRateApproval] = useState(false);
 
   const {
     register,
@@ -138,7 +141,8 @@ export function ChainSwapForm() {
           toChain: toWallet.chain,
           quoteData: quote.quoteData,
           bridgeFee: quote.bridgeFee,
-          slippageBps: data.slippageBps ? parseInt(data.slippageBps) : 50,
+          memo: data.memo || undefined,
+          slippageBps: TOLERANCE_BPS.bridge,
           ...(slippageEstimate && {
             slippage: {
               estimated_slippage_bps: slippageEstimate.estimatedSlippageBps,
@@ -172,7 +176,7 @@ export function ChainSwapForm() {
   const handleExecuteWithSlippageCheck = async () => {
     if (!quote || !fromWallet) return;
     const data = getValues();
-    const maxSlippageBps = data.slippageBps ? parseInt(data.slippageBps) : 50;
+    const maxSlippageBps = TOLERANCE_BPS.bridge;
 
     try {
       const estimate = await slippageCheck.mutateAsync({
@@ -261,25 +265,21 @@ export function ChainSwapForm() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Amount</Label>
-              <Input placeholder="1,000.00" {...register('amount')} />
-              <BalanceHint
-                balance={balance}
-                token={token ?? 'USDC'}
-                currentAmount={amount}
-                onMax={(max) => setValue('amount', max)}
-              />
+          <div className="space-y-2">
+            <Label>Amount</Label>
+            <Input placeholder="1,000.00" {...register('amount')} />
+            <BalanceHint
+              balance={balance}
+              token={token ?? 'USDC'}
+              currentAmount={amount}
+              onMax={(max) => setValue('amount', max)}
+            />
             {errors.amount && <p className="text-sm text-red-500">{errors.amount.message}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label className="inline-flex items-center gap-1.5">
-                Slippage (bps)
-                <InfoTooltip content="Maximum slippage tolerance in basis points (1 bps = 0.01%). The bridge will be blocked if estimated slippage exceeds this value. Default is 50 bps (0.5%)." />
-              </Label>
-              <Input placeholder="50" {...register('slippageBps')} />
-            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Memo <span className="text-muted-foreground">(optional)</span></Label>
+            <Input placeholder="Bridge reference…" {...register('memo')} />
           </div>
 
           <Button
@@ -293,7 +293,14 @@ export function ChainSwapForm() {
         </form>
 
         {/* Quote display */}
-        {quote && (
+        {quote && (() => {
+          const fromAmt = parseFloat(quote.fromAmount);
+          const toAmt = parseFloat(quote.toAmount);
+          const effectiveRate = fromAmt > 0 ? toAmt / fromAmt : 1;
+          const deviationBps = Math.round(Math.abs(effectiveRate - 1) * 10_000);
+          const exceedsTolerance = deviationBps > TOLERANCE_BPS.bridge;
+
+          return (
           <div className="mt-4 p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-3">
             <div className="text-sm font-semibold">Bridge Quote</div>
             <div className="space-y-2 text-sm">
@@ -322,6 +329,12 @@ export function ChainSwapForm() {
               </div>
             </div>
 
+            {exceedsTolerance && (
+              <div className="text-xs text-amber-600 bg-amber-50 rounded-md p-2">
+                Fee deviation {deviationBps}bps from par (limit: {TOLERANCE_BPS.bridge}bps). Approval required.
+              </div>
+            )}
+
             {/* Slippage warning */}
             {slippageEstimate && (
               <SlippageWarning
@@ -335,20 +348,68 @@ export function ChainSwapForm() {
             {!slippageEstimate && (
               <Button
                 className="w-full mt-2"
-                onClick={handleExecuteWithSlippageCheck}
+                onClick={exceedsTolerance ? () => setShowRateApproval(true) : handleExecuteWithSlippageCheck}
                 disabled={executing || slippageCheck.isPending}
               >
                 {slippageCheck.isPending ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Checking liquidity...</>
                 ) : executing ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Bridging...</>
+                ) : exceedsTolerance ? (
+                  'Review & Approve Bridge'
                 ) : (
                   `Bridge ${token}`
                 )}
               </Button>
             )}
           </div>
-        )}
+          );
+        })()}
+
+        {/* Rate deviation approval dialog */}
+        <Dialog open={showRateApproval} onOpenChange={setShowRateApproval}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Fee Deviation — Approve Bridge</DialogTitle>
+            </DialogHeader>
+            {quote && (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  The bridge fee deviates more than {TOLERANCE_BPS.bridge}bps from the expected 1:1 transfer rate.
+                </p>
+                <div className="text-sm bg-muted/40 rounded-md p-3 space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Send</span>
+                    <span className="font-mono font-medium">{quote.fromAmount} {quote.token}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Receive</span>
+                    <span className="font-mono font-medium">{quote.toAmount} {quote.token}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Fee</span>
+                    <span className="font-mono font-medium">{quote.bridgeFee} {quote.token}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Deviation</span>
+                    <span className="font-mono font-medium text-amber-600">
+                      {Math.round(Math.abs((parseFloat(quote.toAmount) / parseFloat(quote.fromAmount)) - 1) * 10_000)}bps
+                    </span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Proceeding will execute the bridge at the current fee rate.
+                </p>
+              </div>
+            )}
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => setShowRateApproval(false)}>Cancel</Button>
+              <Button onClick={() => { setShowRateApproval(false); handleExecuteWithSlippageCheck(); }} disabled={executing}>
+                {executing ? 'Bridging…' : 'Approve & Bridge'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );

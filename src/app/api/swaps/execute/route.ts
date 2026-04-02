@@ -19,6 +19,7 @@ const schema = z.object({
   toAmount: z.string(),
   quoteData: z.record(z.unknown()).refine((obj) => JSON.stringify(obj).length <= 10000, 'quoteData too large'),
   txHash: z.string().max(100).optional(),
+  memo: z.string().max(2000).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -63,6 +64,7 @@ export async function POST(req: NextRequest) {
       tx_hash: parsed.data.txHash ?? null,
       status: parsed.data.txHash ? 'completed' : 'pending',
       quote_data: parsed.data.quoteData,
+      memo: parsed.data.memo ?? null,
       executed_at: parsed.data.txHash ? new Date().toISOString() : null,
     })
     .select()

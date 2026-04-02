@@ -1,4 +1,5 @@
 'use client';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,8 +10,10 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
-import { Loader2, Calendar } from 'lucide-react';
+import { Loader2, Calendar, ArrowDownLeft, ArrowUpRight, ArrowDown } from 'lucide-react';
+import { DateTimePicker } from '@/components/ui/datetime-picker';
 import { useCreateScheduledOperation } from '@/hooks/useScheduledOperations';
+import { useWallets } from '@/hooks/useWallets';
 import type { BankAccount } from '@/types/database';
 
 async function fetchBankAccounts(): Promise<BankAccount[]> {
@@ -22,10 +25,11 @@ async function fetchBankAccounts(): Promise<BankAccount[]> {
 
 const schema = z.object({
   direction: z.enum(['onramp', 'offramp']),
+  walletId: z.string().uuid('Select a wallet'),
+  bankAccountId: z.string().uuid('Select a bank account'),
   cryptoToken: z.enum(['USDC', 'USDT']),
   fiatCurrency: z.enum(['USD', 'EUR', 'GBP']),
-  amount: z.string().regex(/^\d+(\.\d{1,6})?$/, 'Enter a valid amount'),
-  bankAccountId: z.string().uuid('Select a bank account'),
+  amount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Enter a valid amount'),
   scheduledFor: z.string().min(1, 'Select a date/time'),
   memo: z.string().optional(),
 });
@@ -41,12 +45,15 @@ export function ScheduleRampForm() {
     queryFn: fetchBankAccounts,
   });
 
+  const { data: wallets } = useWallets();
+
   const {
     register,
     handleSubmit,
     reset,
     watch,
-    formState: { errors, isSubmitting },
+    setValue,
+    formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -57,6 +64,20 @@ export function ScheduleRampForm() {
   });
 
   const direction = watch('direction');
+  const selectedBankId = watch('bankAccountId');
+  const isOfframp = direction === 'offramp';
+
+  const selectedBank = bankAccounts?.find((a) => a.id === selectedBankId);
+
+  // Auto-set fiat currency from bank account
+  useEffect(() => {
+    if (selectedBank?.balance_currency) {
+      const bankCurrency = selectedBank.balance_currency as 'USD' | 'EUR' | 'GBP';
+      if (['USD', 'EUR', 'GBP'].includes(bankCurrency)) {
+        setValue('fiatCurrency', bankCurrency);
+      }
+    }
+  }, [selectedBankId, selectedBank, setValue]);
 
   const onSubmit = async (data: FormData) => {
     try {
@@ -70,6 +91,7 @@ export function ScheduleRampForm() {
           fiatCurrency: data.fiatCurrency,
           cryptoAmount: parseFloat(data.amount),
           bankAccountId: data.bankAccountId,
+          walletId: data.walletId,
         },
       });
       toast({ title: 'Ramp scheduled', description: `Scheduled for ${data.scheduledFor}`, variant: 'success' });
@@ -78,6 +100,30 @@ export function ScheduleRampForm() {
       toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
     }
   };
+
+  const walletSelect = (
+    <Select {...register('walletId')}>
+      <option value="">Select wallet…</option>
+      {wallets?.map((w) => (
+        <option key={w.id} value={w.id}>
+          {w.label
+            ? `${w.label} · ${w.chain.charAt(0).toUpperCase() + w.chain.slice(1)} (${w.address.slice(0, 6)}…${w.address.slice(-4)})`
+            : `${w.chain.charAt(0).toUpperCase() + w.chain.slice(1)} · ${w.address.slice(0, 6)}…${w.address.slice(-4)}`}
+        </option>
+      ))}
+    </Select>
+  );
+
+  const bankSelect = (
+    <Select {...register('bankAccountId')}>
+      <option value="">Select account…</option>
+      {bankAccounts?.map((a) => (
+        <option key={a.id} value={a.id}>
+          {`${a.nickname ? `${a.nickname} – ` : ''}${a.institution_name}${a.last4 ? ` ****${a.last4}` : ''}`}
+        </option>
+      ))}
+    </Select>
+  );
 
   return (
     <Card>
@@ -89,58 +135,91 @@ export function ScheduleRampForm() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Direction</Label>
-            <Select {...register('direction')}>
-              <option value="offramp">Off-ramp (Crypto → Fiat)</option>
-              <option value="onramp">On-ramp (Fiat → Crypto)</option>
-            </Select>
-            {errors.direction && <p className="text-sm text-red-500">{errors.direction.message}</p>}
+          {/* Direction toggle */}
+          <div className="flex rounded-lg border overflow-hidden">
+            <label className="flex-1">
+              <input type="radio" value="offramp" {...register('direction')} className="sr-only" />
+              <div className={`flex items-center justify-center gap-2 py-2 text-sm font-medium cursor-pointer transition-colors ${isOfframp ? 'bg-muted text-foreground border-r border-border' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground/70 border-r border-border'}`}>
+                <ArrowUpRight className="h-4 w-4" />
+                Off-ramp (Crypto → Fiat)
+              </div>
+            </label>
+            <label className="flex-1">
+              <input type="radio" value="onramp" {...register('direction')} className="sr-only" />
+              <div className={`flex items-center justify-center gap-2 py-2 text-sm font-medium cursor-pointer transition-colors ${!isOfframp ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground/70'}`}>
+                <ArrowDownLeft className="h-4 w-4" />
+                On-ramp (Fiat → Crypto)
+              </div>
+            </label>
           </div>
 
+          {/* From */}
+          <div className="space-y-2">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+              From {isOfframp ? '(Crypto Wallet)' : '(Bank Account)'}
+            </Label>
+            {isOfframp ? walletSelect : bankSelect}
+            {isOfframp && errors.walletId && <p className="text-xs text-red-500">{errors.walletId.message}</p>}
+            {!isOfframp && errors.bankAccountId && <p className="text-xs text-red-500">{errors.bankAccountId.message}</p>}
+          </div>
+
+          {/* Arrow */}
+          <div className="flex justify-center">
+            <div className="rounded-full border p-1.5 bg-muted/50">
+              <ArrowDown className="h-4 w-4 text-muted-foreground" />
+            </div>
+          </div>
+
+          {/* To */}
+          <div className="space-y-2">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+              To {isOfframp ? '(Bank Account)' : '(Crypto Wallet)'}
+            </Label>
+            {isOfframp ? bankSelect : walletSelect}
+            {isOfframp && errors.bankAccountId && <p className="text-xs text-red-500">{errors.bankAccountId.message}</p>}
+            {!isOfframp && errors.walletId && <p className="text-xs text-red-500">{errors.walletId.message}</p>}
+          </div>
+
+          {/* Currency + Amount */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Crypto Token</Label>
-              <Select {...register('cryptoToken')}>
-                <option value="USDC">USDC</option>
-                <option value="USDT">USDT</option>
-              </Select>
+              {isOfframp ? (
+                <>
+                  <Label>Token</Label>
+                  <Select {...register('cryptoToken')}>
+                    <option value="USDC">USDC</option>
+                    <option value="USDT">USDT</option>
+                  </Select>
+                </>
+              ) : (
+                <>
+                  <Label>Currency</Label>
+                  <Select {...register('fiatCurrency')}>
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                    <option value="GBP">GBP</option>
+                  </Select>
+                </>
+              )}
             </div>
             <div className="space-y-2">
-              <Label>Fiat Currency</Label>
-              <Select {...register('fiatCurrency')}>
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-                <option value="GBP">GBP</option>
-              </Select>
+              <Label>Amount</Label>
+              <Input placeholder="1000.00" {...register('amount')} />
+              {errors.amount && <p className="text-xs text-red-500">{errors.amount.message}</p>}
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Crypto Amount</Label>
-            <Input placeholder="1000.00" {...register('amount')} />
-            {errors.amount && <p className="text-sm text-red-500">{errors.amount.message}</p>}
-          </div>
-
-          <div className="space-y-2">
-            <Label>Bank Account</Label>
-            <Select {...register('bankAccountId')}>
-              <option value="">Select account…</option>
-              {bankAccounts?.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {`${a.nickname ? `${a.nickname} – ` : ''}${a.institution_name}${a.last4 ? ` ****${a.last4}` : ''}`}
-                </option>
-              ))}
-            </Select>
-            {errors.bankAccountId && <p className="text-sm text-red-500">{errors.bankAccountId.message}</p>}
-          </div>
-
+          {/* Schedule For */}
           <div className="space-y-2">
             <Label>Schedule For</Label>
-            <Input type="datetime-local" {...register('scheduledFor')} />
-            {errors.scheduledFor && <p className="text-sm text-red-500">{errors.scheduledFor.message}</p>}
+            <DateTimePicker
+              value={watch('scheduledFor') ?? ''}
+              onChange={(v) => setValue('scheduledFor', v, { shouldValidate: true })}
+            />
+            {errors.scheduledFor && <p className="text-xs text-red-500">{errors.scheduledFor.message}</p>}
           </div>
 
+          {/* Memo */}
           <div className="space-y-2">
             <Label>Memo (optional)</Label>
             <Input placeholder="Ramp reference…" {...register('memo')} />
@@ -150,11 +229,11 @@ export function ScheduleRampForm() {
             Auto-executes within 50bps of quoted rate. If rate deviates further, you&apos;ll be asked to approve.
           </p>
 
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? (
+          <Button type="submit" className="w-full" disabled={createOp.isPending || !watch('walletId') || !watch('bankAccountId') || !watch('amount') || !watch('scheduledFor')}>
+            {createOp.isPending ? (
               <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Scheduling…</>
             ) : (
-              `Schedule ${direction === 'offramp' ? 'Off-ramp' : 'On-ramp'}`
+              `Schedule ${isOfframp ? 'Off-ramp' : 'On-ramp'}`
             )}
           </Button>
         </form>

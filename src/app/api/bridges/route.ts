@@ -13,7 +13,7 @@ export async function GET(_req: NextRequest) {
 
   const { data, error } = await supabase
     .from('bridge_transfers')
-    .select('*')
+    .select('*, from_wallet:wallets!from_wallet_id(id, label, address, chain), to_wallet:wallets!to_wallet_id(id, label, address, chain)')
     .eq('user_id', session.user.id)
     .eq('enterprise_id', enterpriseId)
     .order('created_at', { ascending: false });

@@ -13,7 +13,7 @@ import { TreasuryOverviewSection } from './sections/TreasuryOverviewSection';
 import { ObligationCoverageSection } from './sections/ObligationCoverageSection';
 import { RecommendationsSection } from './sections/RecommendationsSection';
 import { RampHistorySection } from './sections/RampHistorySection';
-import { PaymentsSection } from './sections/PaymentsSection';
+import { TransfersSection } from './sections/TransfersSection';
 import { SwapsSection } from './sections/SwapsSection';
 import { InvoicesSection } from './sections/InvoicesSection';
 import { ComplianceSection } from './sections/ComplianceSection';
@@ -180,8 +180,8 @@ export function ReportBuilderPanel() {
                 <RampHistorySection data={treasuryData.rampSummary} />
               )}
 
-              {activeSections.has('payments') && report.payments.data && (
-                <PaymentsSection data={report.payments.data} />
+              {activeSections.has('transfers') && report.transfers.data && (
+                <TransfersSection data={report.transfers.data} />
               )}
 
               {activeSections.has('swaps') && report.swaps.data && (

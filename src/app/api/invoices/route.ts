@@ -13,10 +13,13 @@ const createSchema = z.object({
   invoiceNumber: z.string().min(1).max(100),
   description: z.string().max(2000).optional(),
   amount: z.string().max(50),
-  token: z.enum(['USDC', 'USDT']),
-  chain: z.enum(['ethereum', 'solana']),
+  currency: z.string().min(1).max(10),
+  token: z.enum(['USDC', 'USDT']).optional(),
+  chain: z.enum(['ethereum', 'solana']).optional(),
   dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   vendorId: z.string().uuid().optional(),
+  vendorName: z.string().max(200).optional(),
+  destinationAddress: z.string().max(200).optional(),
 });
 
 export async function GET(req: NextRequest) {
@@ -29,17 +32,19 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const rawStatus = searchParams.get('status');
-  const status = rawStatus && (INVOICE_STATUSES as readonly string[]).includes(rawStatus) ? rawStatus : null;
   const supabase = createAdminClient();
+
+  const statusList = rawStatus?.split(',').map((s) => s.trim()).filter(Boolean) ?? [];
 
   let query = supabase
     .from('invoices')
-    .select('*, vendor:erp_vendors(*)')
+    .select('*, vendor:erp_vendors(*), erp_config:erp_configurations(id, label, provider)')
     .eq('user_id', session.user.id)
     .eq('enterprise_id', enterpriseId)
     .order('created_at', { ascending: false });
 
-  if (status) query = query.eq('status', status);
+  if (statusList.length === 1) query = query.eq('status', statusList[0]);
+  else if (statusList.length > 1) query = query.in('status', statusList);
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -71,10 +76,14 @@ export async function POST(req: NextRequest) {
       invoice_number: parsed.data.invoiceNumber,
       description: parsed.data.description,
       amount: parsed.data.amount,
-      token: parsed.data.token,
-      chain: parsed.data.chain,
+      currency: parsed.data.currency,
+      token: parsed.data.token ?? null,
+      chain: parsed.data.chain ?? null,
       due_date: parsed.data.dueDate,
-      vendor_id: parsed.data.vendorId,
+      vendor_id: parsed.data.vendorId ?? null,
+      vendor_name: parsed.data.vendorName ?? null,
+      destination_address: parsed.data.destinationAddress ?? null,
+      source: 'manual',
     })
     .select()
     .single();

@@ -49,6 +49,7 @@ interface UnifiedBridgeRow {
   to_chain: string;
   fromWalletLabel: string;
   toWalletLabel: string;
+  bridge_fee: string | null;
   status: string;
   created_at: string;
   scheduled_for: string | null;
@@ -97,6 +98,7 @@ export function BridgeHistory() {
       to_chain: b.to_chain,
       fromWalletLabel: walletDisplayName(b.from_wallet),
       toWalletLabel: walletDisplayName(b.to_wallet),
+      bridge_fee: b.bridge_fee ?? null,
       status: b.status,
       created_at: b.created_at,
       scheduled_for: null,
@@ -118,6 +120,7 @@ export function BridgeHistory() {
           to_chain: p.toChain,
           fromWalletLabel: truncated,
           toWalletLabel: truncated,
+          bridge_fee: null,
           status: op.status === 'awaiting_authorization' ? 'awaiting approval' : op.status,
           created_at: op.created_at,
           scheduled_for: op.scheduled_for,
@@ -185,9 +188,10 @@ export function BridgeHistory() {
               <TableRow>
                 <TableHead>Token</TableHead>
                 <TableHead>Amount</TableHead>
-                <TableHead>From Wallet</TableHead>
-                <TableHead>To Wallet</TableHead>
+                <TableHead>From</TableHead>
+                <TableHead>To</TableHead>
                 <TableHead>Route</TableHead>
+                <TableHead>Fee</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Scheduled</TableHead>
                 <TableHead>Date</TableHead>
@@ -199,15 +203,20 @@ export function BridgeHistory() {
                 filter.pagedData.map((b) => (
                   <TableRow key={b.id}>
                     <TableCell><Badge variant="outline">{b.token}</Badge></TableCell>
-                    <TableCell className="font-semibold">{formatCurrency(b.amount)}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{b.fromWalletLabel}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{b.toWalletLabel}</TableCell>
+                    <TableCell className="text-sm font-semibold">{formatCurrency(b.amount)}</TableCell>
+                    <TableCell className="text-sm text-foreground">{b.fromWalletLabel}</TableCell>
+                    <TableCell className="text-sm text-foreground">{b.toWalletLabel}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1.5 text-sm">
                         <Badge variant={b.from_chain === 'ethereum' ? 'ethereum' : 'solana'}>{capitalize(b.from_chain)}</Badge>
                         <ArrowRight className="h-3 w-3 text-muted-foreground" />
                         <Badge variant={b.to_chain === 'ethereum' ? 'ethereum' : 'solana'}>{capitalize(b.to_chain)}</Badge>
                       </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {b.bridge_fee && parseFloat(b.bridge_fee) > 0
+                        ? `${parseFloat(b.bridge_fee).toFixed(4)} ${b.token}`
+                        : '—'}
                     </TableCell>
                     <TableCell>
                       <Badge variant={
@@ -240,7 +249,7 @@ export function BridgeHistory() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
                     {filter.activeFilterCount > 0 ? 'No matching bridges.' : 'No bridge transfers yet.'}
                   </TableCell>
                 </TableRow>

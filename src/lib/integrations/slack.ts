@@ -114,9 +114,9 @@ export async function postRecommendationToSlack(
   }
 ): Promise<{ ts: string; channel: string } | null> {
   const actionLabel = rec.action === 'onramp'
-    ? `On-ramp $${rec.recommendedAmountUsd?.toLocaleString()} ${rec.stablecoinToken ?? 'USDC'} to ${rec.stablecoinChain ?? 'Ethereum'}`
+    ? `On-ramp $${rec.recommendedAmountUsd?.toLocaleString()} USD to ${rec.stablecoinToken ?? 'USDC'} on ${rec.stablecoinChain ?? 'Ethereum'}`
     : rec.action === 'offramp'
-    ? `Off-ramp $${rec.recommendedAmountUsd?.toLocaleString()} ${rec.stablecoinToken ?? 'USDC'} from ${rec.stablecoinChain ?? 'Ethereum'}`
+    ? `Off-ramp $${rec.recommendedAmountUsd?.toLocaleString()} ${rec.stablecoinToken ?? 'USDC'} to USD from ${rec.stablecoinChain ?? 'Ethereum'}`
     : 'No action required';
 
   const reasoningSnippet = rec.aiReasoning.length > 200

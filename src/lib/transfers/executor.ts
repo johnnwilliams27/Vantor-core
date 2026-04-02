@@ -2,7 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { requireClearScreening } from '@/lib/compliance/screening';
 import { getComplianceAdapter } from '@/lib/compliance/factory';
-import { updateBalancesAfterPayment } from '@/lib/balances/update-after-movement';
+import { updateBalancesAfterTransfer } from '@/lib/balances/update-after-movement';
 import type { Transfer } from '@/types/database';
 
 /**
@@ -75,7 +75,7 @@ export async function executeTransfer(transfer: Transfer): Promise<{
 
     // Update sender wallet balance (mock fallback — real balances sync from chain)
     if (transfer.from_wallet_id) {
-      await updateBalancesAfterPayment({
+      await updateBalancesAfterTransfer({
         walletId: transfer.from_wallet_id,
         token: transfer.token,
         amount: Number(transfer.amount),

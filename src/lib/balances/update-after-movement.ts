@@ -101,9 +101,9 @@ export async function updateBalancesAfterRamp(params: {
 }
 
 /**
- * Update wallet balance after a payment (outgoing transfer).
+ * Update wallet balance after a transfer (outgoing transfer).
  */
-export async function updateBalancesAfterPayment(params: {
+export async function updateBalancesAfterTransfer(params: {
   walletId: string;
   token: string;
   amount: number;

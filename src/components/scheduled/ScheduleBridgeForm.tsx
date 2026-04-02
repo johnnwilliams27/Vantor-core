@@ -13,6 +13,7 @@ import { useWallets } from '@/hooks/useWallets';
 import { useWalletTokenBalance } from '@/hooks/useBalances';
 import { BalanceHint } from '@/components/ui/balance-hint';
 import { Loader2, Calendar } from 'lucide-react';
+import { DateTimePicker } from '@/components/ui/datetime-picker';
 import { useCreateScheduledOperation } from '@/hooks/useScheduledOperations';
 
 const CHAIN_LABELS: Record<string, string> = { ethereum: 'Ethereum', solana: 'Solana' };
@@ -158,7 +159,10 @@ export function ScheduleBridgeForm() {
             </div>
             <div className="space-y-2">
               <Label>Schedule For</Label>
-              <Input type="datetime-local" {...register('scheduledFor')} />
+              <DateTimePicker
+                value={watch('scheduledFor') ?? ''}
+                onChange={(v) => setValue('scheduledFor', v, { shouldValidate: true })}
+              />
               {errors.scheduledFor && <p className="text-sm text-red-500">{errors.scheduledFor.message}</p>}
             </div>
           </div>
@@ -172,7 +176,7 @@ export function ScheduleBridgeForm() {
             Auto-executes within 25bps of quoted rate. If rate deviates further, you&apos;ll be asked to approve.
           </p>
 
-          <Button type="submit" className="w-full" disabled={isSubmitting || exceeds || !!sameChain}>
+          <Button type="submit" className="w-full" disabled={createOp.isPending || exceeds || !!sameChain || !fromWalletId || !toWalletId || !amount || !watch('scheduledFor')}>
             {isSubmitting ? (
               <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Scheduling…</>
             ) : (

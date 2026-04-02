@@ -103,7 +103,7 @@ export function AuditTable() {
               ) : filter.pagedData.length ? (
                 filter.pagedData.map((log) => (
                   <TableRow key={log.id}>
-                    <TableCell className="text-sm text-gray-500 whitespace-nowrap">
+                    <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                       {formatDateTime(log.created_at)}
                     </TableCell>
                     <TableCell className="text-sm">
@@ -114,17 +114,17 @@ export function AuditTable() {
                         {capitalize(log.action)}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm text-gray-500">
+                    <TableCell className="text-sm text-muted-foreground">
                       {log.entity_type ? `${log.entity_type} ${log.entity_id?.slice(0, 8)}…` : '—'}
                     </TableCell>
-                    <TableCell className="text-xs text-gray-400 max-w-xs truncate">
+                    <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
                       {log.details ? JSON.stringify(log.details) : ''}
                     </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-gray-400 py-8">
+                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                     {filter.activeFilterCount > 0 ? 'No matching audit events.' : 'No audit events yet.'}
                   </TableCell>
                 </TableRow>

@@ -1,6 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ScheduledOperation, ScheduledOperationType } from '@/types/scheduled-operations';
 
+async function safeJsonParse(res: Response): Promise<ScheduledOperation[]> {
+  try {
+    if (!res.ok) return [];
+    const text = await res.text();
+    if (!text || text.startsWith('<!')) return []; // HTML error page
+    const { data } = JSON.parse(text);
+    return data ?? [];
+  } catch {
+    return [];
+  }
+}
+
 export function useScheduledOperations(filters?: { type?: ScheduledOperationType; status?: string }) {
   return useQuery<ScheduledOperation[]>({
     queryKey: ['scheduled-operations', filters],
@@ -9,9 +21,7 @@ export function useScheduledOperations(filters?: { type?: ScheduledOperationType
       if (filters?.type) params.set('type', filters.type);
       if (filters?.status) params.set('status', filters.status);
       const res = await fetch(`/api/scheduled-operations?${params}`);
-      if (!res.ok) return [];
-      const { data } = await res.json();
-      return data ?? [];
+      return safeJsonParse(res);
     },
     staleTime: 15_000,
   });
@@ -22,9 +32,7 @@ export function usePendingApprovals() {
     queryKey: ['scheduled-operations', { status: 'awaiting_authorization' }],
     queryFn: async () => {
       const res = await fetch('/api/scheduled-operations?status=awaiting_authorization');
-      if (!res.ok) return [];
-      const { data } = await res.json();
-      return data ?? [];
+      return safeJsonParse(res);
     },
     staleTime: 15_000,
   });

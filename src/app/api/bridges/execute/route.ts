@@ -21,6 +21,7 @@ const schema = z.object({
   quoteData: z.record(z.unknown()),
   bridgeFee: z.string().optional(),
   slippageBps: z.number().optional(),
+  memo: z.string().max(2000).optional(),
   slippage: z.object({
     estimated_slippage_bps: z.number(),
     pool_liquidity_usd: z.number(),
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid request', details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { fromWalletId, toWalletId, token, amount, fromChain, toChain, quoteData, bridgeFee, slippageBps, slippage } = parsed.data;
+  const { fromWalletId, toWalletId, token, amount, fromChain, toChain, quoteData, bridgeFee, slippageBps, slippage, memo } = parsed.data;
   const supabase = createAdminClient();
 
   // Verify wallets belong to user
@@ -114,6 +115,7 @@ export async function POST(req: NextRequest) {
             user_acknowledged_slippage: slippage.user_acknowledged,
           }),
         },
+        memo: memo ?? null,
         executed_at: new Date().toISOString(),
       })
       .select()

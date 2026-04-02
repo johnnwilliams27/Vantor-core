@@ -30,15 +30,16 @@ function mockReasoning(input: RecommendationInput): string {
   const surplus = formatUsd(Math.abs(surplusUsd));
 
   if (action === 'no_action') {
-    return `[MOCK] Treasury position is balanced. Bank balance ${bankBal} is within the safety buffer target of ${target} (${obligations} in obligations over the next ${lookaheadDays} days × ${input.ruleLabel} multiplier). No ramp action is required at this time.`;
+    return `📊 **Current Position**\nBank balance of ${bankBal} is within the ${target} safety buffer target.\n\n📋 **Obligations**\n${obligations} in obligations due over the next ${lookaheadDays} days are fully covered.\n\n✅ **Recommendation**\nNo action required.`;
   }
 
-  if (action === 'offramp') {
-    return `[MOCK] Bank balance ${bankBal} exceeds the safety buffer target of ${target} by ${surplus}. With ${obligations} in fiat obligations due within ${lookaheadDays} days, ${surplus} in excess fiat can be deployed into ${input.targetStablecoinToken} on ${input.targetChain} to earn yield. Recommended offramp: ${formatUsd(recommendedAmountUsd ?? 0)}.`;
+  if (action === 'onramp') {
+    // Excess fiat → deploy to stablecoin (fiat → crypto)
+    return `📊 **Current Position**\nBank balance of ${bankBal} exceeds the ${target} safety buffer by ${surplus}.\n\n💡 **Reasoning**\nOnly ${obligations} in obligations are due within ${lookaheadDays} days, leaving excess fiat that can earn yield.\n\n✅ **Recommendation**\nOn-ramp ${formatUsd(recommendedAmountUsd ?? 0)} USD to ${input.targetStablecoinToken} on ${input.targetChain}.`;
   }
 
-  // onramp
-  return `[MOCK] Bank balance ${bankBal} falls short of the safety buffer target of ${target} by ${surplus}. With ${obligations} in fiat obligations due within ${lookaheadDays} days, it is necessary to liquidate ${formatUsd(recommendedAmountUsd ?? 0)} in ${input.targetStablecoinToken} to fiat to ensure adequate liquidity. Crypto treasury holds ${cryptoBal}.`;
+  // offramp — stablecoin to fiat (user needs fiat, liquidate crypto)
+  return `📊 **Current Position**\nBank balance of ${bankBal} is ${surplus} below the ${target} safety buffer.\n\n⚠️ **Reasoning**\n${obligations} in obligations are due within ${lookaheadDays} days and current fiat reserves are insufficient. Crypto treasury holds ${cryptoBal}.\n\n✅ **Recommendation**\nOff-ramp ${formatUsd(recommendedAmountUsd ?? 0)} ${input.targetStablecoinToken} to USD.`;
 }
 
 export interface ForecastSummaryInput {
@@ -166,10 +167,11 @@ export async function generateTreasuryReasoning(
     model: 'claude-sonnet-4-6',
     max_tokens: 512,
     system:
-      'You are a treasury AI assistant for Vantor, a stablecoin treasury management platform. ' +
-      'Analyze the treasury snapshot and provide a concise, professional 2-4 sentence explanation ' +
-      'of why the recommended action is appropriate. Be specific about dollar amounts and timeframes. ' +
-      'Do not use bullet points — write in clear prose.',
+      'You are a treasury AI assistant. Explain the recommended action using exactly 3 sections with this format:\n\n' +
+      '📊 **Current Position**\nOne sentence about balances and safety buffer.\n\n' +
+      '💡 **Reasoning**\nOne sentence explaining why this action makes sense. Use ⚠️ instead of 💡 if there is a liquidity shortfall.\n\n' +
+      '✅ **Recommendation**\nOne sentence with the specific action and dollar amount.\n\n' +
+      'Keep each section to exactly 1 sentence. Use specific dollar amounts. No other formatting.',
     messages: [
       {
         role: 'user',

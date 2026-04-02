@@ -34,7 +34,7 @@ const schema = z.object({
   cryptoToken: z.enum(['USDC', 'USDT']),
   fiatCurrency: z.enum(['USD', 'EUR', 'GBP']),
   amount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Enter a valid amount'),
-  amountType: z.enum(['crypto', 'fiat']),
+  memo: z.string().max(2000).optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -67,7 +67,6 @@ export function RampForm() {
       direction: 'offramp',
       cryptoToken: 'USDC',
       fiatCurrency: 'USD',
-      amountType: 'crypto',
     },
   });
 
@@ -76,7 +75,6 @@ export function RampForm() {
   const selectedBankId = watch('bankAccountId');
   const cryptoToken = watch('cryptoToken');
   const fiatCurrency = watch('fiatCurrency');
-  const amountType = watch('amountType');
   const amount = watch('amount');
   const selectedWallet = wallets?.find((w) => w.id === selectedWalletId);
 
@@ -106,10 +104,10 @@ export function RampForm() {
   const exceeds = useMemo(() => {
     if (!amount) return false;
     const val = parseFloat(amount);
-    if (isOfframp && amountType === 'crypto' && cryptoBalance !== null) return val > cryptoBalance;
-    if (!isOfframp && amountType === 'fiat' && bankBalance !== null) return val > bankBalance;
+    if (isOfframp && cryptoBalance !== null) return val > cryptoBalance;
+    if (!isOfframp && bankBalance !== null) return val > bankBalance;
     return false;
-  }, [amount, isOfframp, amountType, cryptoBalance, bankBalance]);
+  }, [amount, isOfframp, cryptoBalance, bankBalance]);
 
   // Clear quote when direction changes
   useEffect(() => { setQuote(null); }, [direction]);
@@ -129,7 +127,8 @@ export function RampForm() {
         cryptoToken: data.cryptoToken,
         fiatCurrency: data.fiatCurrency,
       };
-      if (data.amountType === 'crypto') {
+      // Off-ramp: user enters crypto amount. On-ramp: user enters fiat amount.
+      if (data.direction === 'offramp') {
         payload.cryptoAmount = parseFloat(data.amount);
       } else {
         payload.fiatAmount = parseFloat(data.amount);
@@ -167,6 +166,7 @@ export function RampForm() {
           fiatCurrency: data.fiatCurrency,
           exchangeRate: quote.exchangeRate,
           feeAmount: quote.feeAmount,
+          memo: data.memo || undefined,
         }),
       });
       const json = await res.json();
@@ -291,32 +291,32 @@ export function RampForm() {
             )}
           </div>
 
-          {/* Token + amount */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Currency + Amount */}
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Token</Label>
-              <Select {...register('cryptoToken')}>
-                <option value="USDC">USDC</option>
-                <option value="USDT">USDT</option>
-              </Select>
+              {isOfframp ? (
+                <>
+                  <Label>Token</Label>
+                  <Select {...register('cryptoToken')}>
+                    <option value="USDC">USDC</option>
+                    <option value="USDT">USDT</option>
+                  </Select>
+                </>
+              ) : (
+                <>
+                  <Label>Currency</Label>
+                  <Select {...register('fiatCurrency')}>
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                    <option value="GBP">GBP</option>
+                  </Select>
+                </>
+              )}
             </div>
-            <div className="col-span-2 space-y-2">
-              <div className="flex items-center gap-2">
-                <Label>Amount</Label>
-                <Select {...register('fiatCurrency')} className="w-20 h-7 text-xs">
-                  <option value="USD">USD</option>
-                  <option value="EUR">EUR</option>
-                  <option value="GBP">GBP</option>
-                </Select>
-              </div>
-              <div className="flex gap-2">
-                <Input placeholder="1000.00" {...register('amount')} />
-                <Select {...register('amountType')} className="w-28">
-                  <option value="crypto">Crypto</option>
-                  <option value="fiat">{fiatCurrency}</option>
-                </Select>
-              </div>
-              {isOfframp && amountType === 'crypto' && cryptoBalance !== null && (
+            <div className="space-y-2">
+              <Label>Amount</Label>
+              <Input placeholder="1000.00" {...register('amount')} />
+              {isOfframp && cryptoBalance !== null && (
                 <BalanceHint
                   balance={cryptoBalance}
                   token={cryptoToken ?? 'USDC'}
@@ -324,7 +324,7 @@ export function RampForm() {
                   onMax={(max) => setValue('amount', max)}
                 />
               )}
-              {!isOfframp && amountType === 'fiat' && selectedBank && bankBalance !== null && (
+              {!isOfframp && selectedBank && bankBalance !== null && (
                 <FiatBalanceHint
                   balance={bankBalance}
                   currency={selectedBank.balance_currency ?? 'USD'}
@@ -335,7 +335,12 @@ export function RampForm() {
             </div>
           </div>
 
-          <Button type="button" className="w-full" onClick={getQuote} disabled={quoting || exceeds}>
+          <div className="space-y-2">
+            <Label>Memo <span className="text-muted-foreground">(optional)</span></Label>
+            <Input placeholder="Ramp reference…" {...register('memo')} />
+          </div>
+
+          <Button type="button" className="w-full" onClick={getQuote} disabled={quoting || exceeds || !selectedWalletId || !selectedBankId || !amount}>
             {quoting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Getting Quote…</> : 'Get Quote'}
           </Button>
         </form>

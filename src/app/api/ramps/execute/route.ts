@@ -20,6 +20,7 @@ const schema = z.object({
   fiatCurrency: z.string().default('USD'),
   exchangeRate: z.number().positive(),
   feeAmount: z.number().min(0),
+  memo: z.string().max(2000).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -79,6 +80,7 @@ export async function POST(req: NextRequest) {
         provider: 'bridge',
         provider_transaction_id: result.providerTransactionId,
         settled_at: result.settledAt,
+        memo: parsed.data.memo ?? null,
       })
       .select()
       .single();

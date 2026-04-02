@@ -13,7 +13,7 @@ export async function GET(_req: NextRequest) {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('swaps')
-    .select('*')
+    .select('*, wallet:wallets!wallet_id(id, label, address, chain)')
     .eq('user_id', session.user.id)
     .eq('enterprise_id', enterpriseId)
     .order('created_at', { ascending: false });

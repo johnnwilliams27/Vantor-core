@@ -40,10 +40,12 @@ export function simulateRecommendation(
   let recommendedAmountUsd: number | null = null;
 
   if (surplusUsd > 100) {
-    action = 'offramp';
+    // Excess fiat → deploy to stablecoin (fiat → crypto = onramp)
+    action = 'onramp';
     recommendedAmountUsd = Math.round(surplusUsd * 100) / 100;
   } else if (surplusUsd < -100) {
-    action = 'onramp';
+    // Short on fiat → liquidate crypto (crypto → fiat = offramp)
+    action = 'offramp';
     const needed = Math.abs(surplusUsd);
     recommendedAmountUsd = Math.round(Math.min(needed, cryptoBalanceUsd) * 100) / 100;
   }

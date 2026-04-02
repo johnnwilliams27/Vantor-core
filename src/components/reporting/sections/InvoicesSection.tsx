@@ -14,7 +14,7 @@ const FILTER_CONFIG = {
   ],
   dropdowns: [
     { key: 'status', accessor: (item: Invoice) => item.status },
-    { key: 'token', accessor: (item: Invoice) => item.token },
+    { key: 'currency', accessor: (item: Invoice) => item.currency ?? item.token ?? '' },
   ],
 };
 

@@ -24,6 +24,11 @@ function walletDisplayName(wallet?: { label?: string | null; address: string } |
   return wallet.label || `${wallet.address.slice(0, 6)}…${wallet.address.slice(-4)}`;
 }
 
+function bankDisplayName(bank?: FiatTransaction['bank_account']): string {
+  if (!bank) return '—';
+  return `${bank.nickname ? `${bank.nickname}` : bank.institution_name}${bank.last4 ? ` ****${bank.last4}` : ''}`;
+}
+
 async function fetchFiatTransactions(): Promise<FiatTransaction[]> {
   const res = await fetch('/api/ramps');
   const json = await res.json();
@@ -42,6 +47,9 @@ interface UnifiedRampRow {
   fee_amount?: string | null;
   bank_account?: FiatTransaction['bank_account'];
   walletLabel: string;
+  bankLabel: string;
+  fromLabel: string;
+  toLabel: string;
   status: string;
   created_at: string;
   scheduled_for: string | null;
@@ -85,8 +93,8 @@ const RAMP_EXPORT_COLUMNS: ExportColumn<UnifiedRampRow>[] = [
   { header: 'Fiat Currency', accessor: (r) => r.fiat_currency },
   { header: 'Rate', accessor: (r) => r.exchange_rate ? parseFloat(r.exchange_rate).toFixed(4) : '' },
   { header: 'Fee', accessor: (r) => r.fee_amount ? parseFloat(r.fee_amount).toLocaleString() : '' },
-  { header: 'Wallet', accessor: (r) => r.walletLabel },
-  { header: 'Bank', accessor: (r) => r.bank_account?.institution_name ?? '' },
+  { header: 'From', accessor: (r) => r.fromLabel },
+  { header: 'To', accessor: (r) => r.toLabel },
   { header: 'Status', accessor: (r) => capitalize(r.status) },
   { header: 'Scheduled', accessor: (r) => r.scheduled_for ? formatDateTime(r.scheduled_for) : '' },
   { header: 'Date', accessor: (r) => formatDateTime(r.created_at) },
@@ -122,22 +130,29 @@ export function FiatTransactionTable() {
 
   // Merge executed ramp transactions + scheduled ops into unified rows
   const allRows: UnifiedRampRow[] = [
-    ...(txs ?? []).map((tx): UnifiedRampRow => ({
-      id: tx.id,
-      direction: tx.direction,
-      crypto_amount: tx.crypto_amount,
-      crypto_token: tx.crypto_token,
-      fiat_amount: tx.fiat_amount,
-      fiat_currency: tx.fiat_currency,
-      exchange_rate: tx.exchange_rate,
-      fee_amount: tx.fee_amount,
-      bank_account: tx.bank_account,
-      walletLabel: walletDisplayName(wallets?.[0]),
-      status: tx.status,
-      created_at: tx.created_at,
-      scheduled_for: null,
-      isScheduled: false,
-    })),
+    ...(txs ?? []).map((tx): UnifiedRampRow => {
+      const wLabel = walletDisplayName(wallets?.[0]);
+      const bLabel = bankDisplayName(tx.bank_account);
+      return {
+        id: tx.id,
+        direction: tx.direction,
+        crypto_amount: tx.crypto_amount,
+        crypto_token: tx.crypto_token,
+        fiat_amount: tx.fiat_amount,
+        fiat_currency: tx.fiat_currency,
+        exchange_rate: tx.exchange_rate,
+        fee_amount: tx.fee_amount,
+        bank_account: tx.bank_account,
+        walletLabel: wLabel,
+        bankLabel: bLabel,
+        fromLabel: tx.direction === 'offramp' ? wLabel : bLabel,
+        toLabel: tx.direction === 'offramp' ? bLabel : wLabel,
+        status: tx.status,
+        created_at: tx.created_at,
+        scheduled_for: null,
+        isScheduled: false,
+      };
+    }),
     ...(scheduledOps ?? [])
       .filter((op) => op.status !== 'completed') // completed ones will show as fiat transactions
       .map((op): UnifiedRampRow => {
@@ -145,6 +160,8 @@ export function FiatTransactionTable() {
         const matchedWallet = p.walletId
           ? wallets?.find((w) => w.id === p.walletId)
           : wallets?.[0];
+        const wLabel = walletDisplayName(matchedWallet);
+        const bLabel = '—';
         return {
           id: `sched-${op.id}`,
           direction: p.direction,
@@ -155,7 +172,10 @@ export function FiatTransactionTable() {
           exchange_rate: null,
           fee_amount: null,
           bank_account: undefined,
-          walletLabel: walletDisplayName(matchedWallet),
+          walletLabel: wLabel,
+          bankLabel: bLabel,
+          fromLabel: p.direction === 'offramp' ? wLabel : bLabel,
+          toLabel: p.direction === 'offramp' ? bLabel : wLabel,
           status: op.status === 'awaiting_authorization' ? 'awaiting approval' : op.status,
           created_at: op.created_at,
           scheduled_for: op.scheduled_for,
@@ -218,7 +238,7 @@ export function FiatTransactionTable() {
             onExportPdf={() => exportPdf('ramp-transactions', 'Ramp History', RAMP_EXPORT_COLUMNS, filter.filteredData, 'landscape')}
           />
           {!filter.filteredData.length ? (
-            <div className="text-sm text-gray-400 text-center py-8">
+            <div className="text-sm text-muted-foreground text-center py-8">
               {filter.activeFilterCount > 0
                 ? 'No matching transactions.'
                 : 'No ramp transactions yet. Use the form above to get started.'}
@@ -233,8 +253,8 @@ export function FiatTransactionTable() {
                   <th className="text-right py-2 pr-4">Fiat</th>
                   <th className="text-right py-2 pr-4">Rate</th>
                   <th className="text-right py-2 pr-4">Fee</th>
-                  <th className="text-left py-2 pr-4">Wallet</th>
-                  <th className="text-left py-2 pr-4">Bank</th>
+                  <th className="text-left py-2 pr-4">From</th>
+                  <th className="text-left py-2 pr-4">To</th>
                   <th className="text-left py-2 pr-4">Status</th>
                   <th className="text-left py-2 pr-4">Scheduled</th>
                   <th className="text-left py-2 pr-4">Date</th>
@@ -247,27 +267,25 @@ export function FiatTransactionTable() {
                     <td className="py-2 pr-4">
                       <DirectionBadge direction={row.direction} />
                     </td>
-                    <td className="py-2 pr-4 text-right font-mono">
+                    <td className="py-2 pr-4 text-sm text-right">
                       {parseFloat(row.crypto_amount).toLocaleString(undefined, { maximumFractionDigits: 2 })} {row.crypto_token}
                     </td>
-                    <td className="py-2 pr-4 text-right font-mono">
+                    <td className="py-2 pr-4 text-sm text-right">
                       {parseFloat(row.fiat_amount).toLocaleString(undefined, { style: 'currency', currency: row.fiat_currency })}
                     </td>
-                    <td className="py-2 pr-4 text-right text-gray-500">
+                    <td className="py-2 pr-4 text-right text-muted-foreground">
                       {row.exchange_rate ? parseFloat(row.exchange_rate).toFixed(4) : '—'}
                     </td>
-                    <td className="py-2 pr-4 text-right text-gray-500">
+                    <td className="py-2 pr-4 text-right text-muted-foreground">
                       {row.fee_amount
                         ? parseFloat(row.fee_amount).toLocaleString(undefined, { style: 'currency', currency: row.fiat_currency })
                         : '—'}
                     </td>
-                    <td className="py-2 pr-4 text-gray-600 font-mono text-xs">
-                      {row.walletLabel}
+                    <td className="py-2 pr-4 text-sm">
+                      {row.fromLabel}
                     </td>
-                    <td className="py-2 pr-4 text-gray-600">
-                      {row.bank_account
-                        ? `${row.bank_account.nickname ? `${row.bank_account.nickname} – ` : ''}${row.bank_account.institution_name}${row.bank_account.last4 ? ` ****${row.bank_account.last4}` : ''}`
-                        : '—'}
+                    <td className="py-2 pr-4 text-sm">
+                      {row.toLabel}
                     </td>
                     <td className="py-2 pr-4">
                       <StatusBadge status={row.status} />
@@ -275,7 +293,7 @@ export function FiatTransactionTable() {
                     <td className="py-2 pr-4 text-sm text-muted-foreground whitespace-nowrap">
                       {row.scheduled_for ? formatDateTime(row.scheduled_for) : 'Immediate'}
                     </td>
-                    <td className="py-2 pr-4 text-gray-400 whitespace-nowrap">
+                    <td className="py-2 pr-4 text-sm text-muted-foreground whitespace-nowrap">
                       {formatDateTime(row.created_at)}
                     </td>
                     <td className="py-2">

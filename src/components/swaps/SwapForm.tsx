@@ -19,13 +19,15 @@ import { SlippageWarning } from '@/components/yield/SlippageWarning';
 import { useSlippageCheck } from '@/hooks/useYield';
 import type { SlippageEstimate } from '@/lib/yield/slippage';
 import type { SwapQuoteResponse } from '@/types/api';
+import { TOLERANCE_BPS } from '@/lib/scheduled-operations/tolerances';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
 const schema = z.object({
   walletId: z.string().uuid('Select a wallet'),
   fromToken: z.enum(['USDC', 'USDT']),
   toToken: z.enum(['USDC', 'USDT']),
   amount: z.string().regex(/^\d+(\.\d{1,6})?$/, 'Enter a valid amount'),
-  slippageBps: z.string().optional(),
+  memo: z.string().max(2000).optional(),
 }).refine((d) => d.fromToken !== d.toToken, {
   message: 'From and to tokens must differ',
   path: ['toToken'],
@@ -42,6 +44,7 @@ export function SwapForm() {
   const [quoting, setQuoting] = useState(false);
   const [executing, setExecuting] = useState(false);
   const [slippageEstimate, setSlippageEstimate] = useState<SlippageEstimate | null>(null);
+  const [showRateApproval, setShowRateApproval] = useState(false);
 
   const {
     register,
@@ -52,7 +55,7 @@ export function SwapForm() {
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { fromToken: 'USDC', toToken: 'USDT', slippageBps: '50' },
+    defaultValues: { fromToken: 'USDC', toToken: 'USDT' },
   });
 
   const selectedWalletId = watch('walletId');
@@ -95,7 +98,7 @@ export function SwapForm() {
           fromToken: data.fromToken,
           toToken: data.toToken,
           amount: data.amount,
-          slippageBps: data.slippageBps ? parseInt(data.slippageBps) : 50,
+          slippageBps: TOLERANCE_BPS.swap,
           walletAddress: wallet.address,
         }),
       });
@@ -125,6 +128,7 @@ export function SwapForm() {
           fromAmount: quote.fromAmount,
           toAmount: quote.toAmount,
           quoteData: quote.quoteData,
+          memo: data.memo || undefined,
         }),
       });
       const json = await res.json();
@@ -132,6 +136,7 @@ export function SwapForm() {
       toast({ title: 'Swap recorded', description: `${quote.fromAmount} ${data.fromToken} → ${quote.toAmount} ${data.toToken}`, variant: 'success' });
       setQuote(null);
       setSlippageEstimate(null);
+      queryClient.invalidateQueries({ queryKey: ['swaps'] });
       queryClient.invalidateQueries({ queryKey: ['balances'] });
     } catch (err) {
       toast({ title: 'Swap failed', description: (err as Error).message, variant: 'destructive' });
@@ -211,34 +216,35 @@ export function SwapForm() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Amount</Label>
-              <Input placeholder="100.00" {...register('amount')} />
-              <BalanceHint
-                balance={balance}
-                token={fromToken ?? 'USDC'}
-                currentAmount={amount}
-                onMax={(max) => setValue('amount', max)}
-              />
-              {errors.amount && <p className="text-sm text-red-500">{errors.amount.message}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label className="inline-flex items-center gap-1.5">
-                Slippage (bps)
-                <InfoTooltip content="Slippage tolerance in basis points (1 bps = 0.01%). This is the maximum price change you'll accept between submitting and executing the swap. For stablecoins, 50 bps (0.5%) is typical." />
-              </Label>
-              <Input placeholder="50" {...register('slippageBps')} />
-            </div>
+          <div className="space-y-2">
+            <Label>Amount</Label>
+            <Input placeholder="100.00" {...register('amount')} />
+            <BalanceHint
+              balance={balance}
+              token={fromToken ?? 'USDC'}
+              currentAmount={amount}
+              onMax={(max) => setValue('amount', max)}
+            />
+            {errors.amount && <p className="text-sm text-red-500">{errors.amount.message}</p>}
           </div>
 
-          <Button type="button" className="w-full" onClick={getQuote} disabled={quoting || exceeds}>
+          <div className="space-y-2">
+            <Label>Memo <span className="text-muted-foreground">(optional)</span></Label>
+            <Input placeholder="Swap reference…" {...register('memo')} />
+          </div>
+
+          <Button type="button" className="w-full" onClick={getQuote} disabled={quoting || exceeds || !selectedWalletId || !fromToken || !toToken || !amount}>
             {quoting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Getting Quote…</> : 'Get Quote'}
           </Button>
         </form>
 
         {/* Quote display */}
-        {quote && (
+        {quote && (() => {
+          const rateVal = parseFloat(quote.rate);
+          const deviationBps = Math.round(Math.abs(rateVal - 1) * 10_000);
+          const exceedsTolerance = deviationBps > TOLERANCE_BPS.swap;
+
+          return (
           <div className="mt-4 p-4 rounded-lg bg-[#19595b]/5 border border-[#19595b]/20 space-y-2">
             <div className="text-sm font-semibold text-[#134849]">Quote</div>
             <div className="flex items-center justify-between text-sm">
@@ -265,6 +271,13 @@ export function SwapForm() {
                 <span className="text-muted-foreground">${Number(quote.vantor_fee).toFixed(2)}</span>
               </div>
             )}
+
+            {exceedsTolerance && (
+              <div className="text-xs text-amber-600 bg-amber-50 rounded-md p-2">
+                Rate deviates {deviationBps}bps from par (limit: {TOLERANCE_BPS.swap}bps). Approval required.
+              </div>
+            )}
+
             {/* Slippage warning */}
             {slippageEstimate && (
               <SlippageWarning
@@ -278,20 +291,64 @@ export function SwapForm() {
             {!slippageEstimate && (
               <Button
                 className="w-full mt-2"
-                onClick={handleExecuteWithSlippageCheck}
+                onClick={exceedsTolerance ? () => setShowRateApproval(true) : handleExecuteWithSlippageCheck}
                 disabled={executing || slippageCheck.isPending}
               >
                 {slippageCheck.isPending ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Checking liquidity…</>
                 ) : executing ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Executing…</>
+                ) : exceedsTolerance ? (
+                  'Review & Approve Swap'
                 ) : (
                   'Execute Swap'
                 )}
               </Button>
             )}
           </div>
-        )}
+          );
+        })()}
+
+        {/* Rate deviation approval dialog */}
+        <Dialog open={showRateApproval} onOpenChange={setShowRateApproval}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Rate Deviation — Approve Swap</DialogTitle>
+            </DialogHeader>
+            {quote && (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  The quoted rate deviates more than {TOLERANCE_BPS.swap}bps from the expected 1:1 stablecoin rate.
+                </p>
+                <div className="text-sm bg-muted/40 rounded-md p-3 space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Expected Rate</span>
+                    <span className="font-mono font-medium">1.0000</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Quoted Rate</span>
+                    <span className="font-mono font-medium">{quote.rate}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Deviation</span>
+                    <span className="font-mono font-medium text-amber-600">
+                      {Math.round(Math.abs(parseFloat(quote.rate) - 1) * 10_000)}bps
+                    </span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Proceeding will execute at the current market rate.
+                </p>
+              </div>
+            )}
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => setShowRateApproval(false)}>Cancel</Button>
+              <Button onClick={() => { setShowRateApproval(false); handleExecuteWithSlippageCheck(); }} disabled={executing}>
+                {executing ? 'Executing…' : 'Approve & Execute'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );

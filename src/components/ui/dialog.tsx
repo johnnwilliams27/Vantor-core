@@ -4,6 +4,8 @@ import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 import { X } from 'lucide-react';
 
+const DialogCloseContext = React.createContext<(() => void) | null>(null);
+
 interface DialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -26,13 +28,15 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
   if (!open || !mounted) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center">
-      <div
-        className="fixed inset-0 bg-black/50"
-        onClick={() => onOpenChange(false)}
-      />
-      <div className="relative z-[9999] w-full max-w-lg mx-4">{children}</div>
-    </div>,
+    <DialogCloseContext.Provider value={() => onOpenChange(false)}>
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+        <div
+          className="fixed inset-0 bg-black/50"
+          onClick={() => onOpenChange(false)}
+        />
+        <div className="relative z-[9999] w-full max-w-lg mx-4">{children}</div>
+      </div>
+    </DialogCloseContext.Provider>,
     document.body
   );
 }
@@ -47,7 +51,22 @@ export function DialogContent({ className, children, ...props }: React.HTMLAttri
       {...props}
     >
       {children}
+      <DialogCloseX />
     </div>
+  );
+}
+
+function DialogCloseX() {
+  const close = React.useContext(DialogCloseContext);
+  if (!close) return null;
+  return (
+    <button
+      onClick={close}
+      className="absolute top-4 right-4 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+      aria-label="Close"
+    >
+      <X className="h-4 w-4" />
+    </button>
   );
 }
 

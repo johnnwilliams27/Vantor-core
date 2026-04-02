@@ -81,6 +81,12 @@ export function ApprovalModal({ op, open, onOpenChange }: Props) {
   const { toast } = useToast();
   const approve = useApproveScheduledOperation();
   const cancel = useCancelScheduledOperation();
+  const [confirmAction, setConfirmAction] = useState<'approve' | 'deny' | null>(null);
+
+  // Reset confirmation when modal closes or op changes
+  useEffect(() => {
+    setConfirmAction(null);
+  }, [open, op?.id]);
 
   // Fetch fresh quote when modal opens
   const { data: freshData, isLoading: quoteLoading } = useScheduledOperationQuote(
@@ -219,19 +225,54 @@ export function ApprovalModal({ op, open, onOpenChange }: Props) {
         </div>
 
         <DialogFooter className="gap-2">
-          <Button
-            variant="outline"
-            className="text-red-600 border-red-300 hover:bg-red-50"
-            onClick={handleDeny}
-            disabled={busy}
-          >
-            {cancel.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
-            Deny
-          </Button>
-          <Button onClick={handleApprove} disabled={busy}>
-            {approve.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
-            Approve &amp; Execute
-          </Button>
+          {confirmAction === null ? (
+            <>
+              <Button
+                variant="outline"
+                className="text-red-600 border-red-300 hover:bg-red-50"
+                onClick={() => setConfirmAction('deny')}
+                disabled={busy}
+              >
+                Deny
+              </Button>
+              <Button onClick={() => setConfirmAction('approve')} disabled={busy}>
+                Approve &amp; Execute
+              </Button>
+            </>
+          ) : (
+            <div className="w-full space-y-3">
+              <p className="text-sm text-muted-foreground">
+                {confirmAction === 'approve'
+                  ? 'This will execute the operation at the current market rate. This action cannot be undone.'
+                  : 'This will permanently cancel the scheduled operation.'}
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setConfirmAction(null)}
+                  disabled={busy}
+                >
+                  Go Back
+                </Button>
+                {confirmAction === 'approve' ? (
+                  <Button onClick={handleApprove} disabled={busy}>
+                    {approve.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+                    Confirm Execute
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="text-red-600 border-red-300 hover:bg-red-50"
+                    onClick={handleDeny}
+                    disabled={busy}
+                  >
+                    {cancel.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+                    Confirm Deny
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
