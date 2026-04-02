@@ -15,12 +15,12 @@ export interface Enterprise {
 }
 export type ChainType = 'ethereum' | 'solana';
 export type TokenSymbol = 'USDC' | 'USDT';
-export type PaymentStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
+export type TransferStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
 export type InvoiceStatus = 'unpaid' | 'paid' | 'partially_paid' | 'overdue' | 'cancelled';
 export type ErpProvider = 'sap' | 'oracle' | 'xero' | 'netsuite';
 export type AuditAction =
   | 'login' | 'logout'
-  | 'payment_create' | 'payment_execute' | 'payment_cancel' | 'payment_schedule'
+  | 'transfer_create' | 'transfer_execute' | 'transfer_cancel' | 'transfer_schedule'
   | 'invoice_create' | 'invoice_update' | 'invoice_sync' | 'invoice_link_tx'
   | 'swap_quote' | 'swap_execute'
   | 'wallet_connect' | 'wallet_disconnect'
@@ -117,11 +117,15 @@ export interface Invoice {
   erp_config_id: string | null;
   erp_invoice_id: string | null;
   vendor_id: string | null;
+  vendor_name: string | null;
   invoice_number: string;
   description: string | null;
   amount: string;
-  token: TokenSymbol;
-  chain: ChainType;
+  currency: string;
+  token: TokenSymbol | null;
+  chain: ChainType | null;
+  source: string;
+  destination_address: string | null;
   status: InvoiceStatus;
   due_date: string | null;
   paid_at: string | null;
@@ -131,9 +135,10 @@ export interface Invoice {
   // joined
   vendor?: ErpVendor;
   linked_tx?: Transaction;
+  erp_config?: Pick<ErpConfiguration, 'id' | 'label' | 'provider'>;
 }
 
-export interface Payment {
+export interface Transfer {
   id: string;
   user_id: string;
   erp_config_id: string | null;
@@ -145,7 +150,7 @@ export interface Payment {
   chain: ChainType;
   token: TokenSymbol;
   amount: string;
-  status: PaymentStatus;
+  status: TransferStatus;
   scheduled_for: string | null;
   executed_at: string | null;
   tx_hash: string | null;
@@ -159,11 +164,11 @@ export interface Payment {
   erp_config?: Pick<ErpConfiguration, 'id' | 'label' | 'provider'>;
 }
 
-export interface PaymentAttempt {
+export interface TransferAttempt {
   id: string;
-  payment_id: string;
+  transfer_id: string;
   attempt_no: number;
-  status: PaymentStatus;
+  status: TransferStatus;
   tx_hash: string | null;
   error: string | null;
   attempted_at: string;
@@ -200,10 +205,12 @@ export interface Swap {
   rate: string | null;
   slippage_bps: number | null;
   tx_hash: string | null;
-  status: PaymentStatus;
+  status: TransferStatus;
   quote_data: Record<string, unknown> | null;
   executed_at: string | null;
   created_at: string;
+  // joined
+  wallet?: Pick<Wallet, 'id' | 'label' | 'address' | 'chain'>;
 }
 
 export type BridgeProvider = 'cctp' | 'layerzero';
@@ -222,7 +229,7 @@ export interface BridgeTransfer {
   to_chain: ChainType;
   provider: BridgeProvider;
   tx_hash: string | null;
-  status: PaymentStatus;
+  status: TransferStatus;
   slippage_bps: number | null;
   estimated_arrival_minutes: number | null;
   error_message: string | null;
@@ -230,6 +237,9 @@ export interface BridgeTransfer {
   executed_at: string | null;
   created_at: string;
   updated_at: string;
+  // joined
+  from_wallet?: Pick<Wallet, 'id' | 'label' | 'address' | 'chain'>;
+  to_wallet?: Pick<Wallet, 'id' | 'label' | 'address' | 'chain'>;
 }
 
 export interface GlPosting {
@@ -237,7 +247,7 @@ export interface GlPosting {
   user_id: string;
   erp_config_id: string;
   invoice_id: string | null;
-  payment_id: string | null;
+  transfer_id: string | null;
   external_gl_id: string | null;
   amount: string;
   token: TokenSymbol;
@@ -410,7 +420,7 @@ export interface KytTransfer {
   cluster_name: string | null;
   cluster_category: string | null;
   raw_response: Record<string, unknown> | null;
-  payment_id: string | null;
+  transfer_id: string | null;
   transaction_id: string | null;
   registered_at: string;
   created_at: string;
@@ -438,7 +448,7 @@ export interface KytAlert {
 export interface TravelRuleTransfer {
   id: string;
   user_id: string;
-  payment_id: string | null;
+  transfer_id: string | null;
   direction: 'outgoing' | 'incoming';
   amount_usd: string;
   originator_name: string | null;
