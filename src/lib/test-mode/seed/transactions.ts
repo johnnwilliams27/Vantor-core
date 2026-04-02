@@ -142,7 +142,7 @@ export async function seedFiatPayments(ctx: SeedContext, bankAccountIds: string[
     { name: 'HSBC Business Banking', routing: '022000020' },
   ];
 
-  const currencies = ['USD', 'EUR', 'GBP'] as const;
+  const currencies = ['USD', 'EUR', 'GBP'];
 
   const rows: any[] = [];
 
