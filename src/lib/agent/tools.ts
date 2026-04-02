@@ -716,6 +716,221 @@ const withdrawAndOfframp: AgentTool = {
   },
 };
 
+// ---------------------------------------------------------------------------
+// Scheduled operations tools
+// ---------------------------------------------------------------------------
+
+const scheduleSwap: AgentTool = {
+  name: 'schedule_swap',
+  description: 'Schedule a future token swap. The swap will auto-execute at the scheduled time if the re-quoted rate is within 10bps tolerance. Always confirm with the user before calling this tool.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      walletId: { type: 'string', description: 'Source wallet UUID' },
+      chain: { type: 'string', enum: ['ethereum', 'solana'], description: 'Blockchain network' },
+      fromToken: { type: 'string', enum: ['USDC', 'USDT'], description: 'Token to sell' },
+      toToken: { type: 'string', enum: ['USDC', 'USDT'], description: 'Token to buy' },
+      amount: { type: 'string', description: 'Amount of fromToken to sell' },
+      walletAddress: { type: 'string', description: 'Wallet address executing the swap' },
+      scheduledFor: { type: 'string', description: 'ISO timestamp for when to execute the swap' },
+      memo: { type: 'string', description: 'Optional memo' },
+    },
+    required: ['walletId', 'chain', 'fromToken', 'toToken', 'amount', 'walletAddress', 'scheduledFor'],
+  },
+  minRole: 'treasury_manager',
+  async handler(input, ctx) {
+    const res = await fetch(`${process.env.NEXTAUTH_URL ?? 'http://localhost:3000'}/api/scheduled-operations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-agent-user-id': ctx.userId, 'x-agent-enterprise-id': ctx.enterpriseId ?? '' },
+      body: JSON.stringify({
+        type: 'swap',
+        walletId: input.walletId,
+        chain: input.chain,
+        fromToken: input.fromToken,
+        toToken: input.toToken,
+        amount: input.amount,
+        walletAddress: input.walletAddress,
+        scheduledFor: input.scheduledFor,
+        memo: input.memo,
+      }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error ?? 'Failed to schedule swap');
+    return { operationId: json.data?.id, status: 'scheduled', scheduledFor: input.scheduledFor, toleranceBps: 10 };
+  },
+};
+
+const scheduleBridge: AgentTool = {
+  name: 'schedule_bridge',
+  description: 'Schedule a future cross-chain bridge. The bridge will auto-execute at the scheduled time if the re-quoted rate is within 25bps tolerance. Always confirm with the user before calling this tool.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      fromWalletId: { type: 'string', description: 'Source wallet UUID' },
+      toWalletId: { type: 'string', description: 'Destination wallet UUID' },
+      token: { type: 'string', enum: ['USDC', 'USDT'], description: 'Token to bridge' },
+      amount: { type: 'string', description: 'Amount to bridge' },
+      fromChain: { type: 'string', enum: ['ethereum', 'solana'], description: 'Source blockchain network' },
+      toChain: { type: 'string', enum: ['ethereum', 'solana'], description: 'Destination blockchain network' },
+      walletAddress: { type: 'string', description: 'Source wallet address' },
+      scheduledFor: { type: 'string', description: 'ISO timestamp for when to execute the bridge' },
+      memo: { type: 'string', description: 'Optional memo' },
+    },
+    required: ['fromWalletId', 'toWalletId', 'token', 'amount', 'fromChain', 'toChain', 'walletAddress', 'scheduledFor'],
+  },
+  minRole: 'treasury_manager',
+  async handler(input, ctx) {
+    const res = await fetch(`${process.env.NEXTAUTH_URL ?? 'http://localhost:3000'}/api/scheduled-operations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-agent-user-id': ctx.userId, 'x-agent-enterprise-id': ctx.enterpriseId ?? '' },
+      body: JSON.stringify({
+        type: 'bridge',
+        fromWalletId: input.fromWalletId,
+        toWalletId: input.toWalletId,
+        token: input.token,
+        amount: input.amount,
+        fromChain: input.fromChain,
+        toChain: input.toChain,
+        walletAddress: input.walletAddress,
+        scheduledFor: input.scheduledFor,
+        memo: input.memo,
+      }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error ?? 'Failed to schedule bridge');
+    return { operationId: json.data?.id, status: 'scheduled', scheduledFor: input.scheduledFor, toleranceBps: 25 };
+  },
+};
+
+const scheduleRamp: AgentTool = {
+  name: 'schedule_ramp',
+  description: 'Schedule a future on-ramp (fiat → crypto) or off-ramp (crypto → fiat). The ramp will auto-execute at the scheduled time if the re-quoted rate is within 50bps tolerance. Always confirm with the user before calling this tool.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      direction: { type: 'string', enum: ['onramp', 'offramp'], description: 'Direction: onramp = fiat→crypto, offramp = crypto→fiat' },
+      cryptoToken: { type: 'string', enum: ['USDC', 'USDT'], description: 'Stablecoin token' },
+      fiatCurrency: { type: 'string', description: 'Fiat currency code (e.g. USD, EUR, GBP)' },
+      cryptoAmount: { type: 'string', description: 'Amount in crypto' },
+      bankAccountId: { type: 'string', description: 'Bank account UUID for fiat settlement' },
+      walletId: { type: 'string', description: 'Optional wallet UUID' },
+      scheduledFor: { type: 'string', description: 'ISO timestamp for when to execute the ramp' },
+      memo: { type: 'string', description: 'Optional memo' },
+    },
+    required: ['direction', 'cryptoToken', 'fiatCurrency', 'cryptoAmount', 'bankAccountId', 'scheduledFor'],
+  },
+  minRole: 'treasury_manager',
+  async handler(input, ctx) {
+    const res = await fetch(`${process.env.NEXTAUTH_URL ?? 'http://localhost:3000'}/api/scheduled-operations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-agent-user-id': ctx.userId, 'x-agent-enterprise-id': ctx.enterpriseId ?? '' },
+      body: JSON.stringify({
+        type: 'ramp',
+        direction: input.direction,
+        cryptoToken: input.cryptoToken,
+        fiatCurrency: input.fiatCurrency,
+        cryptoAmount: input.cryptoAmount,
+        bankAccountId: input.bankAccountId,
+        walletId: input.walletId,
+        scheduledFor: input.scheduledFor,
+        memo: input.memo,
+      }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error ?? 'Failed to schedule ramp');
+    return { operationId: json.data?.id, status: 'scheduled', scheduledFor: input.scheduledFor, toleranceBps: 50 };
+  },
+};
+
+const getScheduledOperations: AgentTool = {
+  name: 'get_scheduled_operations',
+  description: 'List scheduled operations, optionally filtered by type (swap, bridge, ramp, payment) or status (pending, awaiting_authorization, executing, completed, failed, cancelled).',
+  input_schema: {
+    type: 'object',
+    properties: {
+      type: {
+        type: 'string',
+        enum: ['swap', 'bridge', 'ramp', 'payment'],
+        description: 'Filter by operation type',
+      },
+      status: {
+        type: 'string',
+        enum: ['pending', 'awaiting_authorization', 'executing', 'completed', 'failed', 'cancelled'],
+        description: 'Filter by operation status',
+      },
+    },
+    required: [],
+  },
+  minRole: 'treasury_manager',
+  async handler(input, ctx) {
+    let q = ctx.supabase
+      .from('scheduled_operations')
+      .select('*')
+      .eq('enterprise_id', ctx.enterpriseId)
+      .order('scheduled_for', { ascending: true })
+      .limit(20);
+    if (input.type) q = q.eq('type', input.type as string);
+    if (input.status) q = q.eq('status', input.status as string);
+    const { data, error } = await q;
+    if (error) throw new Error(error.message);
+    return data;
+  },
+};
+
+const cancelScheduledOperation: AgentTool = {
+  name: 'cancel_scheduled_operation',
+  description: 'Cancel a pending or awaiting-authorization scheduled operation.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      operationId: { type: 'string', description: 'Scheduled operation UUID to cancel' },
+    },
+    required: ['operationId'],
+  },
+  minRole: 'treasury_manager',
+  async handler(input, ctx) {
+    const { data: op, error: fetchError } = await ctx.supabase
+      .from('scheduled_operations')
+      .select('id, status')
+      .eq('id', input.operationId as string)
+      .eq('enterprise_id', ctx.enterpriseId)
+      .single();
+    if (fetchError || !op) throw new Error('Scheduled operation not found');
+    if (!['pending', 'awaiting_authorization'].includes(op.status as string)) {
+      throw new Error(`Cannot cancel operation with status '${op.status}'`);
+    }
+    const { error: updateError } = await ctx.supabase
+      .from('scheduled_operations')
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('id', input.operationId as string);
+    if (updateError) throw new Error(updateError.message);
+    await writeAuditLog({ userId: ctx.userId, action: 'scheduled_operation_cancel', entityType: 'scheduled_operation', entityId: input.operationId as string, details: { previousStatus: op.status } });
+    return { success: true };
+  },
+};
+
+const approveScheduledOperation: AgentTool = {
+  name: 'approve_scheduled_operation',
+  description: 'Approve a scheduled operation that is awaiting manual authorization (rate deviated beyond tolerance).',
+  input_schema: {
+    type: 'object',
+    properties: {
+      operationId: { type: 'string', description: 'Scheduled operation UUID to approve' },
+    },
+    required: ['operationId'],
+  },
+  minRole: 'treasury_manager',
+  async handler(input, ctx) {
+    const res = await fetch(`${process.env.NEXTAUTH_URL ?? 'http://localhost:3000'}/api/scheduled-operations/${input.operationId as string}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-agent-user-id': ctx.userId, 'x-agent-enterprise-id': ctx.enterpriseId ?? '' },
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error ?? 'Failed to approve scheduled operation');
+    return { success: true, txHash: json.data?.txHash };
+  },
+};
+
 const ALL_TOOLS: AgentTool[] = [
   // Read-only (all roles)
   getTreasuryOverview,
@@ -744,6 +959,13 @@ const ALL_TOOLS: AgentTool[] = [
   yieldDeposit,
   yieldWithdraw,
   withdrawAndOfframp,
+  // Scheduled operations
+  scheduleSwap,
+  scheduleBridge,
+  scheduleRamp,
+  getScheduledOperations,
+  cancelScheduledOperation,
+  approveScheduledOperation,
 ];
 
 /** Return Anthropic tool definitions filtered by role */
