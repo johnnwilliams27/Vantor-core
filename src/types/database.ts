@@ -44,7 +44,9 @@ export type AuditAction =
   | 'scheduled_operation_create' | 'scheduled_operation_approve'
   | 'scheduled_operation_cancel' | 'scheduled_operation_expire'
   | 'scheduled_operation_execute' | 'scheduled_operation_deviation'
-  | 'bridge_execute';
+  | 'bridge_execute'
+  | 'fiat_payment_create' | 'fiat_payment_execute'
+  | 'fiat_payment_cancel' | 'fiat_payment_settle';
 
 export interface UserProfile {
   id: string;

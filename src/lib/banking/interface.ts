@@ -122,6 +122,30 @@ export interface BridgeExecuteResult {
   estimatedArrivalMinutes: number;
 }
 
+// ---- Fiat Payments (bank-to-bank) ----
+
+export interface FiatPaymentParams {
+  fromBankAccountRef: string;
+  toBankName: string;
+  toAccountNumber: string;
+  toRoutingNumber: string;
+  toAccountHolder: string;
+  amount: number;
+  currency: string;
+  memo?: string;
+}
+
+export interface FiatPaymentResult {
+  providerPaymentId: string;
+  status: 'pending';
+  estimatedSettlement: string;
+}
+
+export interface FiatPaymentStatusResult {
+  status: 'pending' | 'completed' | 'failed';
+  settledAt: string | null;
+}
+
 // ---- Unified adapter ----
 
 export interface IBankingAdapter {
@@ -136,4 +160,8 @@ export interface IBankingAdapter {
   // Bridges (cross-chain, same token)
   getBridgeQuote(params: BridgeQuoteParams): Promise<BridgeQuote>;
   executeBridge(params: BridgeExecuteParams): Promise<BridgeExecuteResult>;
+
+  // Fiat Payments (bank-to-bank)
+  createFiatPayment(params: FiatPaymentParams): Promise<FiatPaymentResult>;
+  getFiatPaymentStatus(providerPaymentId: string): Promise<FiatPaymentStatusResult>;
 }

@@ -14,6 +14,7 @@ import type {
   RampQuoteParams, RampQuote, RampExecuteParams, RampResult,
   SwapQuoteParams, SwapQuote, SwapExecuteParams, SwapResult,
   BridgeQuoteParams, BridgeQuote, BridgeExecuteParams, BridgeExecuteResult,
+  FiatPaymentParams, FiatPaymentResult, FiatPaymentStatusResult,
 } from '../interface';
 import { getFxRate, type FiatCurrency } from '@/lib/fx/rates';
 
@@ -172,5 +173,28 @@ export class BridgeMockAdapter implements IBankingAdapter {
       status: 'pending', // Bridge transfers are async
       estimatedArrivalMinutes: estimatedTimes[routeKey] ?? 15,
     };
+  }
+
+  // ---- Fiat Payments (bank-to-bank) ----
+
+  async createFiatPayment(params: FiatPaymentParams): Promise<FiatPaymentResult> {
+    await delay(400);
+    const now = new Date();
+    let settleDays = 2;
+    const dayOfWeek = now.getDay();
+    if (dayOfWeek === 5) settleDays = 4;
+    if (dayOfWeek === 6) settleDays = 3;
+    if (dayOfWeek === 0) settleDays = 2;
+    const estimated = new Date(now.getTime() + settleDays * 24 * 60 * 60 * 1000);
+    return {
+      providerPaymentId: genId('mock_fp'),
+      status: 'pending',
+      estimatedSettlement: estimated.toISOString(),
+    };
+  }
+
+  async getFiatPaymentStatus(providerPaymentId: string): Promise<FiatPaymentStatusResult> {
+    await delay(200);
+    return { status: 'completed', settledAt: new Date().toISOString() };
   }
 }
