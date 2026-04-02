@@ -24,6 +24,9 @@ const TOOL_LABELS: Record<string, string> = {
   approve_recommendation: 'Approve Recommendation',
   reject_recommendation: 'Reject Recommendation',
   generate_recommendation: 'Generate Recommendation',
+  get_fiat_payments: 'Fiat Payments',
+  create_fiat_payment: 'Send Fiat Payment',
+  schedule_fiat_payment: 'Schedule Fiat Payment',
 };
 
 function summariseResult(name: string, result: unknown): string {

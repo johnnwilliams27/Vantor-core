@@ -77,6 +77,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'Swaps', href: '/swaps', icon: ArrowLeftRight, minRole: 'treasury_manager' },
       { label: 'Bridges', href: '/bridges', icon: GitBranchPlus, minRole: 'treasury_manager' },
       { label: 'Ramps', href: '/ramps', icon: Banknote, minRole: 'treasury_manager' },
+      { label: 'Payments', href: '/payments', icon: CreditCard, minRole: 'treasury_manager' },
     ],
   },
   {

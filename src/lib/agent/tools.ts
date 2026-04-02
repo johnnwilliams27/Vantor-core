@@ -931,6 +931,113 @@ const approveScheduledOperation: AgentTool = {
   },
 };
 
+// ---------------------------------------------------------------------------
+// Fiat payment tools
+// ---------------------------------------------------------------------------
+
+const getFiatPayments: AgentTool = {
+  name: 'get_fiat_payments',
+  description: 'List fiat bank-to-bank payments.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      limit: { type: 'number', description: 'Max number of payments to return (default 20)' },
+    },
+    required: [],
+  },
+  minRole: 'treasury_manager',
+  async handler(input, ctx) {
+    const { data, error } = await ctx.supabase
+      .from('fiat_payments')
+      .select('*, from_bank_account:bank_accounts(id, institution_name, account_name, last4, nickname)')
+      .eq('enterprise_id', ctx.enterpriseId)
+      .order('created_at', { ascending: false })
+      .limit((input.limit as number) ?? 20);
+    if (error) throw new Error(error.message);
+    return data;
+  },
+};
+
+const createFiatPayment: AgentTool = {
+  name: 'create_fiat_payment',
+  description: 'Send a fiat bank-to-bank payment. Always confirm with the user before calling.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      fromBankAccountId: { type: 'string', description: 'Source bank account UUID' },
+      toBankName: { type: 'string', description: 'Destination bank name' },
+      toAccountNumber: { type: 'string', description: 'Destination account number' },
+      toRoutingNumber: { type: 'string', description: 'Destination routing number' },
+      toAccountHolder: { type: 'string', description: 'Name of the destination account holder' },
+      amount: { type: 'string', description: 'Amount to send as a string number' },
+      currency: { type: 'string', enum: ['USD', 'EUR', 'GBP'], description: 'Payment currency' },
+      memo: { type: 'string', description: 'Optional payment memo' },
+    },
+    required: ['fromBankAccountId', 'toBankName', 'toAccountNumber', 'toRoutingNumber', 'toAccountHolder', 'amount', 'currency'],
+  },
+  minRole: 'treasury_manager',
+  async handler(input, ctx) {
+    const res = await fetch(`${process.env.NEXTAUTH_URL ?? 'http://localhost:3000'}/api/payments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-agent-user-id': ctx.userId, 'x-agent-enterprise-id': ctx.enterpriseId ?? '' },
+      body: JSON.stringify({
+        fromBankAccountId: input.fromBankAccountId,
+        toBankName: input.toBankName,
+        toAccountNumber: input.toAccountNumber,
+        toRoutingNumber: input.toRoutingNumber,
+        toAccountHolder: input.toAccountHolder,
+        amount: input.amount,
+        currency: input.currency,
+        memo: input.memo,
+      }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error ?? 'Fiat payment failed');
+    return { paymentId: json.data?.id, status: json.data?.status };
+  },
+};
+
+const scheduleFiatPayment: AgentTool = {
+  name: 'schedule_fiat_payment',
+  description: 'Schedule a future fiat bank-to-bank payment. Always confirm with the user before calling.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      fromBankAccountId: { type: 'string', description: 'Source bank account UUID' },
+      toBankName: { type: 'string', description: 'Destination bank name' },
+      toAccountNumber: { type: 'string', description: 'Destination account number' },
+      toRoutingNumber: { type: 'string', description: 'Destination routing number' },
+      toAccountHolder: { type: 'string', description: 'Name of the destination account holder' },
+      amount: { type: 'string', description: 'Amount to send as a string number' },
+      currency: { type: 'string', enum: ['USD', 'EUR', 'GBP'], description: 'Payment currency' },
+      scheduledFor: { type: 'string', description: 'ISO timestamp for when to send the payment' },
+      memo: { type: 'string', description: 'Optional payment memo' },
+    },
+    required: ['fromBankAccountId', 'toBankName', 'toAccountNumber', 'toRoutingNumber', 'toAccountHolder', 'amount', 'currency', 'scheduledFor'],
+  },
+  minRole: 'treasury_manager',
+  async handler(input, ctx) {
+    const res = await fetch(`${process.env.NEXTAUTH_URL ?? 'http://localhost:3000'}/api/payments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-agent-user-id': ctx.userId, 'x-agent-enterprise-id': ctx.enterpriseId ?? '' },
+      body: JSON.stringify({
+        fromBankAccountId: input.fromBankAccountId,
+        toBankName: input.toBankName,
+        toAccountNumber: input.toAccountNumber,
+        toRoutingNumber: input.toRoutingNumber,
+        toAccountHolder: input.toAccountHolder,
+        amount: input.amount,
+        currency: input.currency,
+        scheduledFor: input.scheduledFor,
+        memo: input.memo,
+      }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error ?? 'Failed to schedule fiat payment');
+    return { paymentId: json.data?.id, status: json.data?.status, scheduledFor: input.scheduledFor };
+  },
+};
+
 const ALL_TOOLS: AgentTool[] = [
   // Read-only (all roles)
   getTreasuryOverview,
@@ -966,6 +1073,10 @@ const ALL_TOOLS: AgentTool[] = [
   getScheduledOperations,
   cancelScheduledOperation,
   approveScheduledOperation,
+  // Fiat payments
+  getFiatPayments,
+  createFiatPayment,
+  scheduleFiatPayment,
 ];
 
 /** Return Anthropic tool definitions filtered by role */

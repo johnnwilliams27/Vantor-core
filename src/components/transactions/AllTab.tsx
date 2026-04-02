@@ -18,11 +18,12 @@ import { exportCsv, exportPdf } from '@/lib/export';
 import type { ExportColumn } from '@/lib/export';
 import { CardSpinner } from '@/components/ui/spinner';
 import type { Transfer, Swap, FiatTransaction, YieldTransaction, BridgeTransfer, Wallet } from '@/types/database';
+import type { FiatPayment } from '@/types/fiat-payments';
 import { useWallets } from '@/hooks/useWallets';
 
 interface UnifiedRow {
   id: string;
-  type: 'transfer' | 'swap' | 'ramp' | 'bridge' | 'yield';
+  type: 'transfer' | 'swap' | 'ramp' | 'bridge' | 'yield' | 'payment';
   date: string;
   amount: string;
   currency: string;
@@ -175,12 +176,48 @@ function mapYield(txs: YieldTransaction[]): UnifiedRow[] {
   }));
 }
 
+function mapFiatPayments(payments: FiatPayment[]): UnifiedRow[] {
+  return payments.map((p) => {
+    const fromLabel = p.from_bank_account
+      ? (p.from_bank_account.nickname || p.from_bank_account.institution_name) + (p.from_bank_account.last4 ? ` ****${p.from_bank_account.last4}` : '')
+      : '—';
+    const toLabel = `${p.to_account_holder} (${p.to_bank_name})`;
+    return {
+      id: `payment-${p.id}`,
+      type: 'payment',
+      date: p.created_at,
+      amount: p.amount,
+      currency: p.currency,
+      chain: null,
+      status: p.status,
+      from: fromLabel,
+      to: toLabel,
+      fee: null,
+      rate: null,
+      memo: p.memo ?? null,
+      details: {
+        'From Bank': fromLabel,
+        'To Bank': p.to_bank_name,
+        'Account Holder': p.to_account_holder,
+        'Amount': `${formatCurrency(p.amount)} ${p.currency}`,
+        'Currency': p.currency,
+        'Status': capitalize(p.status),
+        ...(p.scheduled_for ? { 'Scheduled': formatDateTime(p.scheduled_for) } : {}),
+        ...(p.executed_at ? { 'Executed': formatDateTime(p.executed_at) } : {}),
+        ...(p.estimated_settlement ? { 'Est. Settlement': formatDateTime(p.estimated_settlement) } : {}),
+        ...(p.settled_at ? { 'Settled': formatDateTime(p.settled_at) } : {}),
+      },
+    };
+  });
+}
+
 const TYPE_BADGE: Record<UnifiedRow['type'], string> = {
   transfer: 'bg-[#19595b]/10 text-[#134849] dark:bg-[#19595b]/25 dark:text-teal-300',
   swap: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200',
   ramp: 'bg-amber-50 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
   bridge: 'bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
   yield: 'bg-green-50 text-green-700 dark:bg-green-900/40 dark:text-green-300',
+  payment: 'bg-purple-50 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
 };
 
 const ALL_EXPORT_COLUMNS: ExportColumn<UnifiedRow>[] = [
@@ -218,12 +255,13 @@ export function AllTab() {
   const { data, isLoading } = useQuery<UnifiedRow[]>({
     queryKey: ['unified-transactions', wallets?.length],
     queryFn: async () => {
-      const [p, s, r, b, y] = await Promise.allSettled([
+      const [p, s, r, b, y, fp] = await Promise.allSettled([
         fetch('/api/transfers').then((res) => res.json()),
         fetch('/api/swaps').then((res) => res.json()),
         fetch('/api/ramps').then((res) => res.json()),
         fetch('/api/bridges').then((res) => res.json()),
         fetch('/api/yield/transactions').then((res) => res.json()),
+        fetch('/api/payments').then((res) => res.json()),
       ]);
 
       const transfers: Transfer[] = p.status === 'fulfilled' ? (p.value.data ?? []) : [];
@@ -231,6 +269,7 @@ export function AllTab() {
       const ramps: FiatTransaction[] = r.status === 'fulfilled' ? (r.value.data ?? []) : [];
       const bridges: BridgeTransfer[] = b.status === 'fulfilled' ? (b.value.data ?? []) : [];
       const yieldTxs: YieldTransaction[] = y.status === 'fulfilled' ? (y.value.data ?? []) : [];
+      const fiatPayments: FiatPayment[] = fp.status === 'fulfilled' ? (fp.value.data ?? []) : [];
 
       const all: UnifiedRow[] = [
         ...mapTransfers(transfers),
@@ -238,6 +277,7 @@ export function AllTab() {
         ...mapRamps(ramps, wallets),
         ...mapBridges(bridges),
         ...mapYield(yieldTxs),
+        ...mapFiatPayments(fiatPayments),
       ];
 
       return all.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());

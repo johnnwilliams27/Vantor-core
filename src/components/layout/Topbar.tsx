@@ -24,6 +24,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/swaps': 'Swaps',
   '/bridges': 'Bridges',
   '/ramps': 'Ramps',
+  '/payments': 'Payments',
   '/transactions': 'Transactions',
   '/audit': 'Audit',
   '/settings/accounts': 'Account Management',

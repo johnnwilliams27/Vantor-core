@@ -44,6 +44,10 @@ const ACTION_DOT: Record<string, string> = {
   scheduled_operation_approve:      'bg-green-500',
   scheduled_operation_cancel:       'bg-red-500',
   scheduled_operation_expire:       'bg-gray-500',
+  fiat_payment_create:              'bg-purple-500',
+  fiat_payment_execute:             'bg-purple-400',
+  fiat_payment_cancel:              'bg-red-500',
+  fiat_payment_settle:              'bg-emerald-500',
 };
 
 const LS_KEY = 'notifications_last_seen';
