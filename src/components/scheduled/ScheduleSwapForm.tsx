@@ -14,6 +14,7 @@ import { BalanceHint } from '@/components/ui/balance-hint';
 import { Loader2, Calendar } from 'lucide-react';
 import { DateTimePicker } from '@/components/ui/datetime-picker';
 import { useCreateScheduledOperation } from '@/hooks/useScheduledOperations';
+import { InfoTooltip } from '@/components/ui/info-tooltip';
 
 const schema = z.object({
   walletId: z.string().uuid('Select a wallet'),
@@ -88,6 +89,7 @@ export function ScheduleSwapForm() {
         <CardTitle className="flex items-center gap-2">
           <Calendar className="h-5 w-5" />
           Schedule Swap
+          <InfoTooltip content="Exchange one stablecoin for another on the same blockchain. Scheduled for a future date." />
         </CardTitle>
       </CardHeader>
       <CardContent>

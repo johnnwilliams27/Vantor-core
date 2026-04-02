@@ -13,6 +13,7 @@ import { DateTimePicker } from '@/components/ui/datetime-picker';
 import { useCreateFiatPayment } from '@/hooks/useFiatPayments';
 import { useInvoices } from '@/hooks/useInvoices';
 import { Loader2, Calendar } from 'lucide-react';
+import { InfoTooltip } from '@/components/ui/info-tooltip';
 import type { BankAccount } from '@/types/database';
 
 const schema = z.object({
@@ -99,6 +100,7 @@ export function SchedulePaymentForm() {
         <CardTitle className="flex items-center gap-2">
           <Calendar className="h-5 w-5" />
           Schedule Payment
+          <InfoTooltip content="Send fiat currency from your bank account to another bank account. Scheduled for a future date." />
         </CardTitle>
       </CardHeader>
       <CardContent>

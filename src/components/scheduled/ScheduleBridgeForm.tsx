@@ -15,6 +15,7 @@ import { BalanceHint } from '@/components/ui/balance-hint';
 import { Loader2, Calendar } from 'lucide-react';
 import { DateTimePicker } from '@/components/ui/datetime-picker';
 import { useCreateScheduledOperation } from '@/hooks/useScheduledOperations';
+import { InfoTooltip } from '@/components/ui/info-tooltip';
 
 const CHAIN_LABELS: Record<string, string> = { ethereum: 'Ethereum', solana: 'Solana' };
 
@@ -104,6 +105,7 @@ export function ScheduleBridgeForm() {
         <CardTitle className="flex items-center gap-2">
           <Calendar className="h-5 w-5" />
           Schedule Bridge
+          <InfoTooltip content="Move the same stablecoin across different blockchains. Scheduled for a future date." />
         </CardTitle>
       </CardHeader>
       <CardContent>

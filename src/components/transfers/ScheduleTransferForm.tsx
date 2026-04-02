@@ -15,6 +15,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, Calendar } from 'lucide-react';
 import { DateTimePicker } from '@/components/ui/datetime-picker';
+import { InfoTooltip } from '@/components/ui/info-tooltip';
+import { useInvoices } from '@/hooks/useInvoices';
+import { formatCurrency } from '@/lib/utils';
 import type { ErpConfiguration } from '@/types/database';
 
 const schema = z.object({
@@ -25,12 +28,14 @@ const schema = z.object({
   scheduledFor: z.string().min(1, 'Select a date/time'),
   memo: z.string().optional(),
   erpConfigId: z.string().optional(),
+  invoiceId: z.string().uuid().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
 
 export function ScheduleTransferForm() {
   const { data: wallets } = useWallets();
+  const { data: unpaidInvoices } = useInvoices('unpaid');
   const { data: erpConfigs } = useQuery<ErpConfiguration[]>({
     queryKey: ['erp-configs'],
     queryFn: async () => {
@@ -74,6 +79,7 @@ export function ScheduleTransferForm() {
           ...data,
           chain: wallet.chain,
           scheduledFor: new Date(data.scheduledFor).toISOString(),
+          invoiceId: data.invoiceId || undefined,
         }),
       });
       const json = await res.json();
@@ -92,6 +98,7 @@ export function ScheduleTransferForm() {
         <CardTitle className="flex items-center gap-2">
           <Calendar className="h-5 w-5" />
           Schedule Transfer
+          <InfoTooltip content="Send stablecoins (USDC/USDT) from your wallet to another wallet address. Scheduled for a future date." />
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -158,6 +165,22 @@ export function ScheduleTransferForm() {
                     {cfg.label} ({cfg.provider.toUpperCase()})
                   </option>
                 ))}
+              </Select>
+            </div>
+          )}
+
+          {unpaidInvoices && unpaidInvoices.filter((inv) => ['USDC', 'USDT'].includes(inv.currency ?? inv.token ?? '')).length > 0 && (
+            <div className="space-y-2">
+              <Label>Apply to Invoice <span className="text-muted-foreground">(optional)</span></Label>
+              <Select {...register('invoiceId')}>
+                <option value="">None</option>
+                {unpaidInvoices
+                  .filter((inv) => ['USDC', 'USDT'].includes(inv.currency ?? inv.token ?? ''))
+                  .map((inv) => (
+                    <option key={inv.id} value={inv.id}>
+                      {inv.invoice_number} — {inv.vendor_name ?? 'Unknown'} ({formatCurrency(inv.amount)} {inv.currency ?? inv.token})
+                    </option>
+                  ))}
               </Select>
             </div>
           )}

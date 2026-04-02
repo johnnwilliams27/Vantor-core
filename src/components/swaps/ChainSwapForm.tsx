@@ -212,8 +212,8 @@ export function ChainSwapForm() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <ArrowRightLeft className="h-5 w-5" />
-          Chain Bridge
-          <InfoTooltip content="Transfer the same token between chains via Bridge.xyz. Bridge handles protocol selection internally — CCTP for USDC, liquidity network for other tokens." />
+          Cross-Chain Bridge
+          <InfoTooltip content="Move the same stablecoin across different blockchains." />
         </CardTitle>
       </CardHeader>
       <CardContent>

@@ -13,6 +13,7 @@ import { useToast } from '@/components/ui/toast';
 import { Loader2, Calendar, ArrowDownLeft, ArrowUpRight, ArrowDown } from 'lucide-react';
 import { DateTimePicker } from '@/components/ui/datetime-picker';
 import { useCreateScheduledOperation } from '@/hooks/useScheduledOperations';
+import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { useWallets } from '@/hooks/useWallets';
 import type { BankAccount } from '@/types/database';
 
@@ -131,6 +132,7 @@ export function ScheduleRampForm() {
         <CardTitle className="flex items-center gap-2">
           <Calendar className="h-5 w-5" />
           Schedule Ramp
+          <InfoTooltip content="Convert between fiat currency and stablecoins. Scheduled for a future date." />
         </CardTitle>
       </CardHeader>
       <CardContent>

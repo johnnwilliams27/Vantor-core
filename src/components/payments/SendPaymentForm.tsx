@@ -12,6 +12,7 @@ import { useToast } from '@/components/ui/toast';
 import { useCreateFiatPayment } from '@/hooks/useFiatPayments';
 import { useInvoices } from '@/hooks/useInvoices';
 import { Loader2, Send } from 'lucide-react';
+import { InfoTooltip } from '@/components/ui/info-tooltip';
 import type { BankAccount } from '@/types/database';
 
 const schema = z.object({
@@ -94,6 +95,7 @@ export function SendPaymentForm() {
         <CardTitle className="flex items-center gap-2">
           <Send className="h-5 w-5" />
           Send Payment
+          <InfoTooltip content="Send fiat currency from your bank account to another bank account." />
         </CardTitle>
       </CardHeader>
       <CardContent>

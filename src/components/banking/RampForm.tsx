@@ -14,6 +14,7 @@ import { useWallets } from '@/hooks/useWallets';
 import { useBalances } from '@/hooks/useBalances';
 import { BalanceHint, FiatBalanceHint } from '@/components/ui/balance-hint';
 import { Loader2, ArrowDownLeft, ArrowUpRight, ArrowDown } from 'lucide-react';
+import { InfoTooltip } from '@/components/ui/info-tooltip';
 import type { BankAccount } from '@/types/database';
 
 interface RampQuote {
@@ -192,7 +193,10 @@ export function RampForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Convert Funds</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          Convert Funds
+          <InfoTooltip content="Convert between fiat currency and stablecoins." />
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <form className="space-y-4">

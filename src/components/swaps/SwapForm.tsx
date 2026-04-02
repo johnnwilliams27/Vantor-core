@@ -172,6 +172,7 @@ export function SwapForm() {
         <CardTitle className="flex items-center gap-2">
           <ArrowLeftRight className="h-5 w-5" />
           Token Swap
+          <InfoTooltip content="Exchange one stablecoin for another on the same blockchain." />
         </CardTitle>
       </CardHeader>
       <CardContent>
