@@ -5,7 +5,7 @@ import { hasRole } from '@/lib/auth/rbac';
 import { buildTreasurySnapshot, collectObligations } from '@/lib/treasury/rules-engine';
 import { getBankingAdapter } from '@/lib/banking/factory';
 import { getERPAdapter, decryptCredentials } from '@/lib/erp/factory';
-import { executePayment } from '@/lib/payments/executor';
+import { executeTransfer } from '@/lib/transfers/executor';
 import { writeAuditLog } from '@/lib/audit/logger';
 
 export interface ToolContext {
@@ -110,25 +110,25 @@ const getInvoices: AgentTool = {
   },
 };
 
-const getPayments: AgentTool = {
-  name: 'get_payments',
-  description: 'List recent payments, optionally filtered by status (pending, processing, completed, failed).',
+const getTransfers: AgentTool = {
+  name: 'get_transfers',
+  description: 'List recent transfers, optionally filtered by status (pending, processing, completed, failed).',
   input_schema: {
     type: 'object',
     properties: {
       status: {
         type: 'string',
         enum: ['pending', 'processing', 'completed', 'failed'],
-        description: 'Filter by payment status',
+        description: 'Filter by transfer status',
       },
-      limit: { type: 'number', description: 'Max number of payments to return (default 20)' },
+      limit: { type: 'number', description: 'Max number of transfers to return (default 20)' },
     },
     required: [],
   },
   minRole: 'auditor',
   async handler(input, ctx) {
     let q = ctx.supabase
-      .from('payments')
+      .from('transfers')
       .select('id, to_address, chain, token, amount, status, memo, created_at, executed_at, tx_hash')
       .eq('user_id', ctx.userId)
       .eq('enterprise_id', ctx.enterpriseId)
@@ -331,9 +331,9 @@ const createInvoice: AgentTool = {
 // Treasury manager tools
 // ---------------------------------------------------------------------------
 
-const createPayment: AgentTool = {
-  name: 'create_payment',
-  description: 'Create and execute a crypto payment. Always confirm with the user before calling this tool.',
+const createTransfer: AgentTool = {
+  name: 'create_transfer',
+  description: 'Create and execute a crypto transfer. Always confirm with the user before calling this tool.',
   input_schema: {
     type: 'object',
     properties: {
@@ -342,16 +342,16 @@ const createPayment: AgentTool = {
       chain: { type: 'string', enum: ['ethereum', 'solana'], description: 'Blockchain network' },
       token: { type: 'string', enum: ['USDC', 'USDT'], description: 'Stablecoin token' },
       amount: { type: 'string', description: 'Amount to send as a string number' },
-      memo: { type: 'string', description: 'Optional payment memo' },
+      memo: { type: 'string', description: 'Optional transfer memo' },
       invoiceId: { type: 'string', description: 'Optional linked invoice UUID' },
     },
     required: ['fromWalletId', 'toAddress', 'chain', 'token', 'amount'],
   },
   minRole: 'treasury_manager',
   async handler(input, ctx) {
-    // Insert payment record
-    const { data: payment, error } = await ctx.supabase
-      .from('payments')
+    // Insert transfer record
+    const { data: transfer, error } = await ctx.supabase
+      .from('transfers')
       .insert({
         user_id: ctx.userId,
         from_wallet_id: input.fromWalletId as string,
@@ -367,16 +367,16 @@ const createPayment: AgentTool = {
       .single();
     if (error) throw new Error(error.message);
 
-    // Execute the payment
-    const result = await executePayment(payment as any);
+    // Execute the transfer
+    const result = await executeTransfer(transfer as any);
     if (result.error) throw new Error(result.error);
-    return { paymentId: payment.id, txHash: result.txHash, status: 'completed' };
+    return { transferId: transfer.id, txHash: result.txHash, status: 'completed' };
   },
 };
 
-const schedulePayment: AgentTool = {
-  name: 'schedule_payment',
-  description: 'Schedule a future payment. Always confirm with the user before calling this tool.',
+const scheduleTransfer: AgentTool = {
+  name: 'schedule_transfer',
+  description: 'Schedule a future transfer. Always confirm with the user before calling this tool.',
   input_schema: {
     type: 'object',
     properties: {
@@ -385,7 +385,7 @@ const schedulePayment: AgentTool = {
       chain: { type: 'string', enum: ['ethereum', 'solana'], description: 'Blockchain network' },
       token: { type: 'string', enum: ['USDC', 'USDT'], description: 'Stablecoin token' },
       amount: { type: 'string', description: 'Amount to send' },
-      scheduledFor: { type: 'string', description: 'ISO timestamp for when to send the payment' },
+      scheduledFor: { type: 'string', description: 'ISO timestamp for when to send the transfer' },
       memo: { type: 'string', description: 'Optional memo' },
     },
     required: ['fromWalletId', 'toAddress', 'chain', 'token', 'amount', 'scheduledFor'],
@@ -393,7 +393,7 @@ const schedulePayment: AgentTool = {
   minRole: 'treasury_manager',
   async handler(input, ctx) {
     const { data, error } = await ctx.supabase
-      .from('payments')
+      .from('transfers')
       .insert({
         user_id: ctx.userId,
         from_wallet_id: input.fromWalletId as string,
@@ -408,8 +408,8 @@ const schedulePayment: AgentTool = {
       .select()
       .single();
     if (error) throw new Error(error.message);
-    await writeAuditLog({ userId: ctx.userId, action: 'payment_schedule', entityType: 'payment', entityId: data.id as string, details: { amount: input.amount, scheduledFor: input.scheduledFor } });
-    return { paymentId: data.id, status: 'scheduled', scheduledFor: input.scheduledFor };
+    await writeAuditLog({ userId: ctx.userId, action: 'transfer_schedule', entityType: 'transfer', entityId: data.id as string, details: { amount: input.amount, scheduledFor: input.scheduledFor } });
+    return { transferId: data.id, status: 'scheduled', scheduledFor: input.scheduledFor };
   },
 };
 
@@ -937,7 +937,7 @@ const ALL_TOOLS: AgentTool[] = [
   getWallets,
   getBankAccounts,
   getInvoices,
-  getPayments,
+  getTransfers,
   getTransactions,
   getObligations,
   getForecast,
@@ -946,8 +946,8 @@ const ALL_TOOLS: AgentTool[] = [
   syncErpInvoices,
   createInvoice,
   // Treasury manager only
-  createPayment,
-  schedulePayment,
+  createTransfer,
+  scheduleTransfer,
   getRampQuote,
   executeRamp,
   getSwapQuote,

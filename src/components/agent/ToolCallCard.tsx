@@ -7,7 +7,7 @@ const TOOL_LABELS: Record<string, string> = {
   get_wallets: 'Wallets',
   get_bank_accounts: 'Bank Accounts',
   get_invoices: 'Invoices',
-  get_payments: 'Payments',
+  get_transfers: 'Transfers',
   get_transactions: 'Transactions',
   get_obligations: 'Obligations',
   get_forecast: 'Cash Flow Forecast',
@@ -15,8 +15,8 @@ const TOOL_LABELS: Record<string, string> = {
   sync_erp_invoices: 'ERP Invoice Sync',
   create_invoice: 'Create Invoice',
   post_gl_entry: 'Post GL Entry',
-  create_payment: 'Create Payment',
-  schedule_payment: 'Schedule Payment',
+  create_transfer: 'Create Transfer',
+  schedule_transfer: 'Schedule Transfer',
   get_ramp_quote: 'Ramp Quote',
   execute_ramp: 'Execute Ramp',
   get_swap_quote: 'Swap Quote',
@@ -40,7 +40,7 @@ function summariseResult(name: string, result: unknown): string {
     if (name === 'get_bank_accounts') {
       return `${(result as unknown as unknown[]).length ?? 0} account(s)`;
     }
-    if (name === 'get_invoices' || name === 'get_payments' || name === 'get_transactions') {
+    if (name === 'get_invoices' || name === 'get_transfers' || name === 'get_transactions') {
       return `${(result as unknown as unknown[]).length ?? 0} item(s)`;
     }
     if (name === 'get_obligations') {
@@ -48,10 +48,10 @@ function summariseResult(name: string, result: unknown): string {
       const count = (r.obligations as unknown[])?.length ?? 0;
       return `${count} obligation(s) · ${total} total`;
     }
-    if (name === 'create_payment') {
-      return `Payment created · tx ${String(r.txHash ?? '').slice(0, 10)}...`;
+    if (name === 'create_transfer') {
+      return `Transfer created · tx ${String(r.txHash ?? '').slice(0, 10)}...`;
     }
-    if (name === 'schedule_payment') {
+    if (name === 'schedule_transfer') {
       return `Scheduled for ${r.scheduledFor}`;
     }
     if (name === 'sync_erp_invoices') {
