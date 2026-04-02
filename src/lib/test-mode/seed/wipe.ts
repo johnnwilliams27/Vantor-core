@@ -48,6 +48,7 @@ export async function wipeTestEnterprise(
     'erp_vendors',
     'erp_configurations',
     'fiat_transactions',
+    'fiat_payments',
     'bank_accounts',
     'balance_snapshots',
     'wallet_balances',

@@ -30,6 +30,8 @@ export async function seedAudit(ctx: SeedContext): Promise<void> {
     { action: 'bank_balance_refresh', entity_type: 'bank_account', details: { count: 6 } },
     { action: 'transfer_execute', entity_type: 'transfer', details: { amount: '80000', token: 'USDT' } },
     { action: 'invoice_sync', entity_type: 'invoice', details: { erp: 'Oracle', count: 3 } },
+    { action: 'fiat_payment_create', entity_type: 'fiat_payment', details: { amount: '25000', currency: 'USD' } },
+    { action: 'fiat_payment_settle', entity_type: 'fiat_payment', details: { amount: '25000', currency: 'USD' } },
   ];
 
   const auditRows = actions.map((a, i) => ({

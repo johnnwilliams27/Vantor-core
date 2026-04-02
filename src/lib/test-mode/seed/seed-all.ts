@@ -3,7 +3,7 @@ import type { SeedContext } from './helpers';
 import { seedWallets } from './wallets';
 import { seedBanking } from './banking';
 import { seedErp } from './erp';
-import { seedTransactions } from './transactions';
+import { seedTransactions, seedFiatPayments } from './transactions';
 import { seedSwaps } from './swaps';
 import { seedBridges } from './bridges';
 import { seedTreasury } from './treasury';
@@ -40,11 +40,12 @@ export async function seedAll(
     seedErp(ctx),
   ]);
 
-  // Phase 2: Depend on wallets/erp
+  // Phase 2: Depend on wallets/erp/banking
   const [txIds] = await Promise.all([
     seedTransactions(ctx, walletIds, erpIds.invoiceIds),
     seedSwaps(ctx, walletIds),
     seedBridges(ctx, walletIds),
+    seedFiatPayments(ctx, bankIds.bankAccountIds),
   ]);
 
   // Phase 3: Depend on wallets
