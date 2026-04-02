@@ -22,31 +22,31 @@ export async function DELETE(
 
   const supabase = createAdminClient();
 
-  // Only pending payments can be cancelled
-  const { data: payment } = await supabase
-    .from('payments')
+  // Only pending transfers can be cancelled
+  const { data: transfer } = await supabase
+    .from('transfers')
     .select('id, status')
     .eq('id', params.id)
     .eq('user_id', session.user.id)
     .eq('enterprise_id', enterpriseId)
     .single();
 
-  if (!payment) return NextResponse.json({ error: 'Payment not found' }, { status: 404 });
-  if (payment.status !== 'pending') {
-    return NextResponse.json({ error: 'Only pending payments can be cancelled' }, { status: 400 });
+  if (!transfer) return NextResponse.json({ error: 'Transfer not found' }, { status: 404 });
+  if (transfer.status !== 'pending') {
+    return NextResponse.json({ error: 'Only pending transfers can be cancelled' }, { status: 400 });
   }
 
   await supabase
-    .from('payments')
+    .from('transfers')
     .update({ status: 'cancelled', updated_at: new Date().toISOString() })
     .eq('id', params.id);
 
   await writeAuditLog({
     userId: session.user.id,
-    action: 'payment_cancel',
-    entityType: 'payment',
+    action: 'transfer_cancel',
+    entityType: 'transfer',
     entityId: params.id,
   });
 
-  return NextResponse.json({ message: 'Payment cancelled' });
+  return NextResponse.json({ message: 'Transfer cancelled' });
 }

@@ -2,7 +2,7 @@
   "framework": "nextjs",
   "crons": [
     {
-      "path": "/api/cron/process-scheduled-payments",
+      "path": "/api/cron/process-scheduled-transfers",
       "schedule": "0 0 * * *"
     },
     {

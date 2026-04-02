@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/nextauth.config';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
-import { executePayment } from '@/lib/payments/executor';
+import { executeTransfer } from '@/lib/transfers/executor';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { screenAddressWithCache } from '@/lib/compliance/screening';
 import { isAboveTravelRuleThreshold, createTravelRuleTransfer } from '@/lib/compliance/travel-rule';
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
 
   // Try with ERP join (requires erp_config_id column migration to have run)
   let q = supabase
-    .from('payments')
+    .from('transfers')
     .select('*, from_wallet:wallets(*), invoice:invoices(*), erp_config:erp_configurations(id, label, provider)')
     .eq('user_id', session.user.id)
     .eq('enterprise_id', enterpriseId)
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
   if (error) {
     // Column not yet migrated — fall back to query without ERP join
     let q2 = supabase
-      .from('payments')
+      .from('transfers')
       .select('*, from_wallet:wallets(*), invoice:invoices(*)')
       .eq('user_id', session.user.id)
       .eq('enterprise_id', enterpriseId)
@@ -127,9 +127,9 @@ export async function POST(req: NextRequest) {
 
   const isScheduled = !!parsed.data.scheduledFor;
 
-  // Create payment record
-  const { data: payment, error: pErr } = await supabase
-    .from('payments')
+  // Create transfer record
+  const { data: transfer, error: pErr } = await supabase
+    .from('transfers')
     .insert({
       user_id: session.user.id,
       enterprise_id: enterpriseId,
@@ -153,26 +153,26 @@ export async function POST(req: NextRequest) {
 
   await writeAuditLog({
     userId: session.user.id,
-    action: isScheduled ? 'payment_schedule' : 'payment_create',
-    entityType: 'payment',
-    entityId: payment.id,
+    action: isScheduled ? 'transfer_schedule' : 'transfer_create',
+    entityType: 'transfer',
+    entityId: transfer.id,
     details: {
-      chain: payment.chain,
-      token: payment.token,
-      amount: payment.amount,
-      scheduledFor: payment.scheduled_for,
+      chain: transfer.chain,
+      token: transfer.token,
+      amount: transfer.amount,
+      scheduledFor: transfer.scheduled_for,
     },
   });
 
   // --- Submit Travel Rule data if applicable ---
   if (parsed.data.travelRule && isAboveTravelRuleThreshold(amountUsd)) {
     try {
-      await createTravelRuleTransfer(session.user.id, payment.id, {
+      await createTravelRuleTransfer(session.user.id, transfer.id, {
         direction: 'outgoing',
         amountUsd,
         originatorName: parsed.data.travelRule.originatorName,
         originatorAddress: parsed.data.travelRule.originatorAddress,
-        originatorWallet: payment.from_address ?? '',
+        originatorWallet: transfer.from_address ?? '',
         originatorChain: parsed.data.chain,
         beneficiaryName: parsed.data.travelRule.beneficiaryName,
         beneficiaryAddress: parsed.data.travelRule.beneficiaryAddress,
@@ -182,15 +182,15 @@ export async function POST(req: NextRequest) {
       });
     } catch (err) {
       console.error('[TravelRule] Submission failed:', err);
-      // Non-blocking: payment proceeds, travel rule recorded as failed
+      // Non-blocking: transfer proceeds, travel rule recorded as failed
     }
   }
 
   // Execute immediately if not scheduled
   if (!isScheduled) {
-    const result = await executePayment(payment);
-    return NextResponse.json({ data: { ...payment, ...result } });
+    const result = await executeTransfer(transfer);
+    return NextResponse.json({ data: { ...transfer, ...result } });
   }
 
-  return NextResponse.json({ data: payment }, { status: 201 });
+  return NextResponse.json({ data: transfer }, { status: 201 });
 }
