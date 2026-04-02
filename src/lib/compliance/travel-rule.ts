@@ -11,7 +11,7 @@ export function isAboveTravelRuleThreshold(amountUsd: number): boolean {
 
 export async function createTravelRuleTransfer(
   userId: string,
-  paymentId: string,
+  transferId: string,
   params: TravelRuleCreateParams
 ) {
   const supabase = createAdminClient();
@@ -25,7 +25,7 @@ export async function createTravelRuleTransfer(
     .from('travel_rule_transfers')
     .insert({
       user_id: userId,
-      payment_id: paymentId,
+      transfer_id: transferId,
       direction: params.direction,
       amount_usd: params.amountUsd,
       originator_name: params.originatorName,
@@ -56,7 +56,7 @@ export async function createTravelRuleTransfer(
     entityType: 'travel_rule_transfer',
     entityId: transfer.id,
     details: {
-      paymentId,
+      transferId,
       direction: params.direction,
       amountUsd: params.amountUsd,
       status: result.status,

@@ -39,20 +39,20 @@ export function subscribeToWalletBalances(
   };
 }
 
-export function subscribeToPayments(
+export function subscribeToTransfers(
   userId: string,
   onUpdate: (payload: { new: Record<string, unknown> }) => void
 ) {
   const supabase = createClient();
 
   const channel = supabase
-    .channel('payments_realtime')
+    .channel('transfers_realtime')
     .on(
       'postgres_changes',
       {
         event: '*',
         schema: 'public',
-        table: 'payments',
+        table: 'transfers',
         filter: `user_id=eq.${userId}`,
       },
       onUpdate

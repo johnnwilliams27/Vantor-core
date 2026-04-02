@@ -3,15 +3,15 @@ import { writeAuditLog } from '@/lib/audit/logger';
 import { requireClearScreening } from '@/lib/compliance/screening';
 import { getComplianceAdapter } from '@/lib/compliance/factory';
 import { updateBalancesAfterPayment } from '@/lib/balances/update-after-movement';
-import type { Payment } from '@/types/database';
+import type { Transfer } from '@/types/database';
 
 /**
- * Core payment execution logic (server-side only).
+ * Core transfer execution logic (server-side only).
  * NOTE: In production this would use hot-wallet private keys from a KMS.
- * For this implementation we record the payment and emit the audit log;
+ * For this implementation we record the transfer and emit the audit log;
  * actual on-chain tx submission requires a funded server-side wallet.
  */
-export async function executePayment(payment: Payment): Promise<{
+export async function executeTransfer(transfer: Transfer): Promise<{
   txHash?: string;
   error?: string;
 }> {
@@ -20,49 +20,49 @@ export async function executePayment(payment: Payment): Promise<{
   try {
     // --- Sanctions screening (pre-execution gate) ---
     await requireClearScreening(
-      payment.user_id,
-      payment.to_address,
-      payment.chain,
-      'payment',
-      payment.id
+      transfer.user_id,
+      transfer.to_address,
+      transfer.chain,
+      'transfer',
+      transfer.id
     );
 
     // Mark as processing first (idempotency)
     await supabase
-      .from('payments')
+      .from('transfers')
       .update({ status: 'processing', updated_at: new Date().toISOString() })
-      .eq('id', payment.id);
+      .eq('id', transfer.id);
 
     // --- SIMULATE tx execution (replace with real blockchain call) ---
     // In production:
     //   if chain === 'solana': await transferSolanaToken(...)
     //   if chain === 'ethereum': await transferEthereumToken(...)
     const fakeTxHash =
-      payment.chain === 'ethereum'
-        ? `0x${Buffer.from(payment.id).toString('hex').slice(0, 64)}`
-        : Buffer.from(payment.id).toString('hex').slice(0, 88);
+      transfer.chain === 'ethereum'
+        ? `0x${Buffer.from(transfer.id).toString('hex').slice(0, 64)}`
+        : Buffer.from(transfer.id).toString('hex').slice(0, 88);
 
     // Record completed
     await supabase
-      .from('payments')
+      .from('transfers')
       .update({
         status: 'completed',
         tx_hash: fakeTxHash,
         executed_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
-      .eq('id', payment.id);
+      .eq('id', transfer.id);
 
-    // Record payment attempt
-    await supabase.from('payment_attempts').insert({
-      payment_id: payment.id,
+    // Record transfer attempt
+    await supabase.from('transfer_attempts').insert({
+      transfer_id: transfer.id,
       attempt_no: 1,
       status: 'completed',
       tx_hash: fakeTxHash,
     });
 
     // Update invoice if linked
-    if (payment.invoice_id) {
+    if (transfer.invoice_id) {
       await supabase
         .from('invoices')
         .update({
@@ -70,64 +70,64 @@ export async function executePayment(payment: Payment): Promise<{
           paid_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
-        .eq('id', payment.invoice_id);
+        .eq('id', transfer.invoice_id);
     }
 
     // Update sender wallet balance (mock fallback — real balances sync from chain)
-    if (payment.from_wallet_id) {
+    if (transfer.from_wallet_id) {
       await updateBalancesAfterPayment({
-        walletId: payment.from_wallet_id,
-        token: payment.token,
-        amount: Number(payment.amount),
+        walletId: transfer.from_wallet_id,
+        token: transfer.token,
+        amount: Number(transfer.amount),
       });
     }
 
     await writeAuditLog({
-      userId: payment.user_id,
-      action: 'payment_execute',
-      entityType: 'payment',
-      entityId: payment.id,
-      details: { txHash: fakeTxHash, chain: payment.chain, amount: payment.amount },
+      userId: transfer.user_id,
+      action: 'transfer_execute',
+      entityType: 'transfer',
+      entityId: transfer.id,
+      details: { txHash: fakeTxHash, chain: transfer.chain, amount: transfer.amount },
     });
 
     // --- KYT: register transfer for monitoring (non-blocking) ---
     getComplianceAdapter()
       .registerTransfer({
-        externalId: payment.id,
-        chain: payment.chain,
+        externalId: transfer.id,
+        chain: transfer.chain,
         direction: 'sent',
         txHash: fakeTxHash,
-        fromAddress: payment.from_address ?? '',
-        toAddress: payment.to_address,
-        asset: payment.token,
-        amount: Number(payment.amount),
-        amountUsd: Number(payment.amount),
+        fromAddress: transfer.from_address ?? '',
+        toAddress: transfer.to_address,
+        asset: transfer.token,
+        amount: Number(transfer.amount),
+        amountUsd: Number(transfer.amount),
         timestamp: new Date().toISOString(),
       })
       .then(async (kytResult) => {
         // Persist KYT transfer record
         await supabase.from('kyt_transfers').insert({
-          user_id: payment.user_id,
-          external_id: payment.id,
-          chain: payment.chain,
+          user_id: transfer.user_id,
+          external_id: transfer.id,
+          chain: transfer.chain,
           direction: 'sent',
           tx_hash: fakeTxHash,
-          from_address: payment.from_address ?? '',
-          to_address: payment.to_address,
-          token: payment.token,
-          amount: payment.amount,
-          asset_amount_usd: payment.amount,
+          from_address: transfer.from_address ?? '',
+          to_address: transfer.to_address,
+          token: transfer.token,
+          amount: transfer.amount,
+          asset_amount_usd: transfer.amount,
           risk_score: kytResult.riskScore,
           cluster_name: kytResult.clusterName,
           cluster_category: kytResult.clusterCategory,
           raw_response: kytResult.rawResponse,
-          payment_id: payment.id,
+          transfer_id: transfer.id,
         });
 
         // Persist any alerts
         for (const alert of kytResult.alerts) {
           await supabase.from('kyt_alerts').insert({
-            user_id: payment.user_id,
+            user_id: transfer.user_id,
             kyt_transfer_id: null,
             external_alert_id: alert.alertId,
             severity: alert.severity,
@@ -139,10 +139,10 @@ export async function executePayment(payment: Payment): Promise<{
 
         if (kytResult.alerts.length > 0) {
           await writeAuditLog({
-            userId: payment.user_id,
+            userId: transfer.user_id,
             action: 'compliance_kyt_register',
-            entityType: 'payment',
-            entityId: payment.id,
+            entityType: 'transfer',
+            entityId: transfer.id,
             details: {
               riskScore: kytResult.riskScore,
               alertCount: kytResult.alerts.length,
@@ -157,26 +157,26 @@ export async function executePayment(payment: Payment): Promise<{
     const errorMsg = err instanceof Error ? err.message : String(err);
 
     await supabase
-      .from('payments')
+      .from('transfers')
       .update({
         status: 'failed',
         error_message: errorMsg,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', payment.id);
+      .eq('id', transfer.id);
 
-    await supabase.from('payment_attempts').insert({
-      payment_id: payment.id,
+    await supabase.from('transfer_attempts').insert({
+      transfer_id: transfer.id,
       attempt_no: 1,
       status: 'failed',
       error: errorMsg,
     });
 
     await writeAuditLog({
-      userId: payment.user_id,
-      action: 'payment_execute',
-      entityType: 'payment',
-      entityId: payment.id,
+      userId: transfer.user_id,
+      action: 'transfer_execute',
+      entityType: 'transfer',
+      entityId: transfer.id,
       details: { error: errorMsg },
     });
 
