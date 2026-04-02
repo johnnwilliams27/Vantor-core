@@ -40,7 +40,11 @@ export type AuditAction =
   | 'slack_recommendation_notify' | 'slack_recommendation_approve' | 'slack_recommendation_reject'
   | 'compliance_sanctions_screen' | 'compliance_kyt_register' | 'compliance_kyt_alert'
   | 'compliance_travel_rule_create' | 'compliance_travel_rule_update' | 'compliance_override'
-  | 'yield_deposit' | 'yield_withdraw' | 'yield_position_refresh';
+  | 'yield_deposit' | 'yield_withdraw' | 'yield_position_refresh'
+  | 'scheduled_operation_create' | 'scheduled_operation_approve'
+  | 'scheduled_operation_cancel' | 'scheduled_operation_expire'
+  | 'scheduled_operation_execute' | 'scheduled_operation_deviation'
+  | 'bridge_execute';
 
 export interface UserProfile {
   id: string;
