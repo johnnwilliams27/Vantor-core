@@ -240,3 +240,106 @@ export async function postTestMessage(botToken: string, channelId: string): Prom
     text: '✅ Vantor Treasury: Slack integration connected successfully! You will receive treasury recommendations here.',
   });
 }
+
+// ---- Scheduled Operations Notifications ----
+
+export async function notifyScheduledOperationDeviation(
+  botToken: string,
+  channelId: string,
+  op: {
+    id: string;
+    type: string;
+    tolerance_bps: number;
+    deviation_bps: number | null;
+    initial_quote: Record<string, unknown>;
+    execution_quote: Record<string, unknown> | null;
+    params: Record<string, unknown>;
+  }
+): Promise<{ ts: string; channel: string } | null> {
+  await ensureChannelJoined(botToken, channelId);
+
+  const typeLabel = op.type.charAt(0).toUpperCase() + op.type.slice(1);
+  const deviationDisplay = op.deviation_bps != null ? `${op.deviation_bps} bps` : 'Unknown';
+  const toleranceDisplay = `${op.tolerance_bps} bps`;
+
+  const result = await slackPost(botToken, 'chat.postMessage', {
+    channel: channelId,
+    blocks: [
+      {
+        type: 'header',
+        text: { type: 'plain_text', text: `⚠️ Scheduled ${typeLabel} — Approval Required`, emoji: true },
+      },
+      {
+        type: 'section',
+        fields: [
+          { type: 'mrkdwn', text: `*Type:*\n${typeLabel}` },
+          { type: 'mrkdwn', text: `*Operation ID:*\n${op.id.slice(0, 8)}…` },
+          { type: 'mrkdwn', text: `*Deviation:*\n${deviationDisplay}` },
+          { type: 'mrkdwn', text: `*Tolerance:*\n${toleranceDisplay}` },
+        ],
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `The market rate for this scheduled ${typeLabel.toLowerCase()} has moved beyond your configured tolerance of *${toleranceDisplay}* (actual deviation: *${deviationDisplay}*). You have *24 hours* to review and approve or deny this operation before it expires.`,
+        },
+      },
+      { type: 'divider' },
+      {
+        type: 'actions',
+        elements: [
+          {
+            type: 'button',
+            text: { type: 'plain_text', text: '🔍 Review & Approve', emoji: true },
+            style: 'primary',
+            action_id: 'scheduled_op_approve_review',
+            value: op.id,
+          },
+          {
+            type: 'button',
+            text: { type: 'plain_text', text: '❌ Deny', emoji: true },
+            style: 'danger',
+            action_id: 'scheduled_op_deny',
+            value: op.id,
+          },
+        ],
+      },
+    ],
+    text: `⚠️ Scheduled ${typeLabel} requires approval — deviation ${deviationDisplay} exceeds tolerance ${toleranceDisplay}`,
+  });
+
+  if (!result.ok) return null;
+  return { ts: result.ts ?? '', channel: result.channel ?? channelId };
+}
+
+export async function notifyScheduledOperationExpiry(
+  botToken: string,
+  channelId: string,
+  op: { id: string; type: string }
+): Promise<void> {
+  await ensureChannelJoined(botToken, channelId);
+  const typeLabel = op.type.charAt(0).toUpperCase() + op.type.slice(1);
+  await slackPost(botToken, 'chat.postMessage', {
+    channel: channelId,
+    text: `⏰ Scheduled ${typeLabel} (${op.id.slice(0, 8)}…) expired — no action taken within 24 hours.`,
+  });
+}
+
+export async function postScheduledOpConfirmation(
+  botToken: string,
+  channelId: string,
+  op: { id: string; type: string },
+  status: 'executed' | 'cancelled'
+): Promise<void> {
+  await ensureChannelJoined(botToken, channelId);
+  const typeLabel = op.type.charAt(0).toUpperCase() + op.type.slice(1);
+  const shortId = `${op.id.slice(0, 8)}…`;
+  const text = status === 'executed'
+    ? `✅ Scheduled ${typeLabel} (${shortId}) has been executed.`
+    : `❌ Scheduled ${typeLabel} (${shortId}) has been cancelled.`;
+  await slackPost(botToken, 'chat.postMessage', {
+    channel: channelId,
+    text,
+  });
+}

@@ -6,6 +6,7 @@ import {
   verifySlackSignature,
   updateSlackMessage,
   postEphemeralConfirmation,
+  postScheduledOpConfirmation,
 } from '@/lib/integrations/slack';
 import { getBankingAdapter } from '@/lib/banking/factory';
 import { updateBalancesAfterRamp } from '@/lib/balances/update-after-movement';
@@ -268,6 +269,156 @@ export async function POST(req: NextRequest) {
         })
         .eq('id', recId);
 
+      await respondViaUrl(responseUrl, `❌ Execution failed: ${(execErr as Error).message}`);
+    }
+
+    return NextResponse.json({ ok: true });
+  }
+
+  // ---- Scheduled Operations ----
+
+  if (actionId === 'scheduled_op_deny') {
+    const operationId = action.value;
+
+    const { data: op, error: fetchErr } = await supabase
+      .from('scheduled_operations')
+      .select('id, type, status, enterprise_id')
+      .eq('id', operationId)
+      .maybeSingle();
+
+    if (fetchErr || !op) {
+      await respondViaUrl(responseUrl, '❌ Scheduled operation not found.');
+      return NextResponse.json({ ok: true });
+    }
+
+    if (op.status !== 'awaiting_authorization') {
+      await respondViaUrl(responseUrl, `❌ Cannot deny: operation is already ${op.status}.`);
+      return NextResponse.json({ ok: true });
+    }
+
+    await supabase
+      .from('scheduled_operations')
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('id', operationId);
+
+    await writeAuditLog({
+      userId: ownerId,
+      action: 'scheduled_operation_cancel' as any,
+      entityType: 'scheduled_operation',
+      entityId: operationId,
+      details: { via_slack: true, slack_user: slackUsername, previous_status: 'awaiting_authorization' },
+    });
+
+    await postScheduledOpConfirmation(creds.botToken, integration.channel_id, { id: operationId, type: op.type }, 'cancelled');
+    return NextResponse.json({ ok: true });
+  }
+
+  if (actionId === 'scheduled_op_approve_review') {
+    const operationId = action.value;
+
+    const { data: op, error: fetchErr } = await supabase
+      .from('scheduled_operations')
+      .select('id, type, status, tolerance_bps, deviation_bps, initial_quote, execution_quote, params')
+      .eq('id', operationId)
+      .maybeSingle();
+
+    if (fetchErr || !op) {
+      await respondViaUrl(responseUrl, '❌ Scheduled operation not found.');
+      return NextResponse.json({ ok: true });
+    }
+
+    // Fetch fresh quote via banking adapter
+    let currentRate: number | null = null;
+    let originalRate: number | null = null;
+    let freshDeviationBps: number | null = null;
+
+    try {
+      const adapter = getBankingAdapter();
+      const freshQuote = await adapter.getQuote({
+        direction: op.params?.direction as 'onramp' | 'offramp' ?? 'onramp',
+        cryptoToken: op.params?.cryptoToken as string ?? 'USDC',
+        fiatCurrency: op.params?.fiatCurrency as string ?? 'USD',
+        amount: op.params?.amount as number ?? 0,
+      });
+      currentRate = freshQuote?.exchangeRate ?? null;
+      originalRate = (op.initial_quote as Record<string, unknown>)?.exchangeRate as number ?? null;
+      if (currentRate != null && originalRate != null && originalRate !== 0) {
+        freshDeviationBps = Math.round(Math.abs((currentRate - originalRate) / originalRate) * 10000);
+      }
+    } catch {
+      // Non-fatal — show what we have
+    }
+
+    const rateInfo = currentRate != null && originalRate != null
+      ? `*Original rate:* ${originalRate}\n*Current rate:* ${currentRate}\n*Deviation:* ${freshDeviationBps ?? op.deviation_bps ?? 'n/a'} bps (tolerance: ${op.tolerance_bps} bps)`
+      : `*Stored deviation:* ${op.deviation_bps ?? 'n/a'} bps (tolerance: ${op.tolerance_bps} bps)\n_Could not fetch fresh quote._`;
+
+    await fetch(responseUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        response_type: 'ephemeral',
+        replace_original: false,
+        text: `Review scheduled ${op.type}`,
+        blocks: [
+          {
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: `*Review Scheduled ${op.type.charAt(0).toUpperCase() + op.type.slice(1)}* (${operationId.slice(0, 8)}…)\n\n${rateInfo}`,
+            },
+          },
+          {
+            type: 'actions',
+            elements: [
+              {
+                type: 'button',
+                text: { type: 'plain_text', text: 'Confirm Execute', emoji: true },
+                style: 'primary',
+                action_id: 'scheduled_op_confirm_execute',
+                value: operationId,
+              },
+              {
+                type: 'button',
+                text: { type: 'plain_text', text: 'Cancel', emoji: true },
+                action_id: 'slack_approve_cancel',
+                value: operationId,
+              },
+            ],
+          },
+        ],
+      }),
+    });
+
+    return NextResponse.json({ ok: true });
+  }
+
+  if (actionId === 'scheduled_op_confirm_execute') {
+    const operationId = action.value;
+
+    const { data: op, error: fetchErr } = await supabase
+      .from('scheduled_operations')
+      .select('*')
+      .eq('id', operationId)
+      .maybeSingle();
+
+    if (fetchErr || !op) {
+      await respondViaUrl(responseUrl, '❌ Scheduled operation not found.');
+      return NextResponse.json({ ok: true });
+    }
+
+    try {
+      const { approveAndExecute } = await import('@/lib/scheduled-operations/executor');
+      const result = await approveAndExecute(op);
+
+      if (!result.executed) {
+        await respondViaUrl(responseUrl, `❌ Execution failed: ${result.error ?? 'Unknown error'}`);
+        return NextResponse.json({ ok: true });
+      }
+
+      await postScheduledOpConfirmation(creds.botToken, integration.channel_id, { id: operationId, type: op.type }, 'executed');
+      await respondViaUrl(responseUrl, `✅ Scheduled ${op.type} executed successfully.`);
+    } catch (execErr) {
       await respondViaUrl(responseUrl, `❌ Execution failed: ${(execErr as Error).message}`);
     }
 
