@@ -2,6 +2,12 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getBankingAdapter } from '@/lib/banking/factory';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { NotificationService } from '@/lib/notifications/service';
+
+const SCHEDULED_OP_ROUTE: Record<string, string> = {
+  swap: '/swaps',
+  bridge: '/bridges',
+  ramp: '/ramps',
+};
 import { actionNotificationEmail, alertEmail } from '@/lib/notifications/email-templates';
 import {
   updateBalancesAfterSwap,
@@ -410,7 +416,7 @@ export async function executeScheduledOperation(
           title: 'Scheduled Operation Flagged',
           description: `A scheduled ${op.type} exceeded the rate tolerance (${deviationBps}bps vs ${op.tolerance_bps}bps allowed) and requires your authorization before executing.`,
           ctaLabel: 'Review Operation',
-          ctaHref: '/transactions',
+          ctaHref: SCHEDULED_OP_ROUTE[op.type] ?? '/transactions',
           severity: 'warning',
         });
 
@@ -419,7 +425,7 @@ export async function executeScheduledOperation(
           enterpriseId: op.enterprise_id,
           title: 'Scheduled Operation Needs Approval',
           body: `Scheduled ${op.type} flagged — rate deviation ${deviationBps}bps exceeds ${op.tolerance_bps}bps tolerance`,
-          link: '/transactions',
+          link: SCHEDULED_OP_ROUTE[op.type] ?? '/transactions',
           metadata: {
             operationId: op.id,
             operationType: op.type,
@@ -478,8 +484,8 @@ export async function executeScheduledOperation(
       const executedEmailHtml = actionNotificationEmail({
         title: `Scheduled ${opLabel} Executed`,
         details,
-        ctaLabel: 'View Transaction',
-        ctaHref: '/transactions',
+        ctaLabel: `View ${opLabel}`,
+        ctaHref: SCHEDULED_OP_ROUTE[op.type] ?? '/transactions',
         scheduledDeviation: { toleranceBps: op.tolerance_bps, actualBps: deviationBps },
       });
 
@@ -488,7 +494,7 @@ export async function executeScheduledOperation(
         enterpriseId: op.enterprise_id,
         title: `Scheduled ${opLabel} Executed`,
         body: `Scheduled ${op.type} completed with ${deviationBps}bps deviation`,
-        link: '/transactions',
+        link: SCHEDULED_OP_ROUTE[op.type] ?? '/transactions',
         metadata: {
           operationId: op.id,
           recordId: result.recordId,
@@ -510,7 +516,7 @@ export async function executeScheduledOperation(
         title: 'Scheduled Operation Failed',
         description: `A scheduled ${op.type} operation failed to execute. Error: ${message}`,
         ctaLabel: 'View Details',
-        ctaHref: '/transactions',
+        ctaHref: SCHEDULED_OP_ROUTE[op.type] ?? '/transactions',
         severity: 'error',
       });
 
@@ -519,7 +525,7 @@ export async function executeScheduledOperation(
         enterpriseId: op.enterprise_id,
         title: 'Scheduled Operation Failed',
         body: `Scheduled ${op.type} failed: ${message}`,
-        link: '/transactions',
+        link: SCHEDULED_OP_ROUTE[op.type] ?? '/transactions',
         metadata: {
           operationId: op.id,
           operationType: op.type,

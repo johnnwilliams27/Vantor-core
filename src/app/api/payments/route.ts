@@ -164,7 +164,7 @@ export async function POST(req: NextRequest) {
         { label: 'Bank', value: payment.to_bank_name },
       ],
       ctaLabel: 'View Payment',
-      ctaHref: '/transactions',
+      ctaHref: '/payments',
     });
 
     NotificationService.notify({
@@ -172,7 +172,7 @@ export async function POST(req: NextRequest) {
       enterpriseId,
       title: 'Payment Sent',
       body: `Sent ${fmtUsd(payment.amount)} ${payment.currency} to ${payment.to_account_holder}`,
-      link: '/transactions',
+      link: '/payments',
       metadata: {
         paymentId: payment.id,
         _emailSubject: 'Payment Sent',

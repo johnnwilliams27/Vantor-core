@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
       { label: 'Chain', value: swap.chain },
     ],
     ctaLabel: 'View Swap',
-    ctaHref: '/transactions',
+    ctaHref: '/swaps',
   });
 
   NotificationService.notify({
@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
     enterpriseId,
     title: 'Swap Completed',
     body: `Swapped ${swap.from_amount} ${swap.from_token} → ${swap.to_amount} ${swap.to_token} on ${swap.chain}`,
-    link: '/transactions',
+    link: '/swaps',
     metadata: {
       swapId: swap.id,
       _emailSubject: 'Swap Completed',
