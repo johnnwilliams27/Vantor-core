@@ -1,79 +1,41 @@
 'use client';
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { Bell, CheckCheck } from 'lucide-react';
 import { CardSpinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
-import type { AuditLog } from '@/types/database';
+import { useNotifications, useMarkNotificationsRead } from '@/hooks/useNotifications';
+import { useRouter } from 'next/navigation';
+import type { Notification } from '@/types/notifications';
 
-const ACTION_LABEL: Record<string, string> = {
-  erp_connect: 'ERP Connect',
-  gl_post:     'GL Post',
+const CATEGORY_DOT: Record<string, string> = {
+  treasury_ai: 'bg-sky-500',
+  transactions: 'bg-amber-500',
+  swaps: 'bg-blue-500',
+  ramps: 'bg-green-500',
+  bridges: 'bg-indigo-500',
+  payments: 'bg-purple-500',
+  yield: 'bg-teal-500',
+  compliance: 'bg-rose-500',
+  invoices: 'bg-orange-500',
+  scheduled_ops: 'bg-cyan-500',
+  wallets_accounts: 'bg-emerald-500',
+  treasury_rules: 'bg-cyan-400',
+  team: 'bg-violet-500',
+  kyc_kyb: 'bg-pink-500',
+  billing: 'bg-slate-500',
 };
-const actionLabel = (action: string) =>
-  ACTION_LABEL[action] ?? action.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-
-const ACTION_DOT: Record<string, string> = {
-  login:                            'bg-violet-500',
-  logout:                           'bg-violet-400',
-  transfer_create:                  'bg-amber-500',
-  transfer_schedule:                'bg-amber-500',
-  transfer_execute:                 'bg-orange-500',
-  swap_execute:                     'bg-blue-500',
-  wallet_connect:                   'bg-green-500',
-  wallet_disconnect:                'bg-red-500',
-  invoice_sync:                     'bg-indigo-500',
-  erp_connect:                      'bg-indigo-500',
-  gl_post:                          'bg-slate-500',
-  treasury_rule_create:             'bg-cyan-500',
-  treasury_rule_update:             'bg-cyan-400',
-  treasury_obligation_create:       'bg-purple-500',
-  treasury_obligation_delete:       'bg-purple-400',
-  treasury_recommendation_generate: 'bg-sky-500',
-  treasury_recommendation_approve:  'bg-emerald-500',
-  treasury_recommendation_reject:   'bg-rose-500',
-  treasury_recommendation_execute:  'bg-teal-500',
-  treasury_forecast_generate:       'bg-pink-500',
-  treasury_simulation_run:          'bg-fuchsia-500',
-  treasury_report_export:           'bg-slate-400',
-  treasury_price_refresh:           'bg-lime-500',
-  scheduled_operation_create:       'bg-indigo-500',
-  scheduled_operation_execute:      'bg-emerald-500',
-  scheduled_operation_deviation:    'bg-amber-500',
-  scheduled_operation_approve:      'bg-green-500',
-  scheduled_operation_cancel:       'bg-red-500',
-  scheduled_operation_expire:       'bg-gray-500',
-  fiat_payment_create:              'bg-purple-500',
-  fiat_payment_execute:             'bg-purple-400',
-  fiat_payment_cancel:              'bg-red-500',
-  fiat_payment_settle:              'bg-emerald-500',
-};
-
-const LS_KEY = 'notifications_last_seen';
 
 export function NotificationsPanel() {
   const [open, setOpen] = useState(false);
-  const [lastSeen, setLastSeen] = useState<number>(() => {
-    if (typeof window === 'undefined') return 0;
-    return parseInt(localStorage.getItem(LS_KEY) ?? '0', 10);
-  });
   const ref = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
-  const { data, isLoading } = useQuery<{ data: AuditLog[]; total: number }>({
-    queryKey: ['audit-notifications'],
-    queryFn: async () => {
-      const res = await fetch('/api/audit?limit=15');
-      if (!res.ok) throw new Error('Failed');
-      return res.json();
-    },
-    staleTime: 30_000,
-  });
+  const { data, isLoading } = useNotifications();
+  const markRead = useMarkNotificationsRead();
 
-  const logs = data?.data ?? [];
-  const unreadCount = logs.filter(
-    (l) => new Date(l.created_at).getTime() > lastSeen
-  ).length;
+  const notifications = data?.data ?? [];
+  const unreadCount = data?.unreadCount ?? 0;
 
   useEffect(() => {
     function onMouseDown(e: MouseEvent) {
@@ -92,11 +54,19 @@ export function NotificationsPanel() {
     };
   }, [open]);
 
-  const markAllRead = useCallback(() => {
-    const now = Date.now();
-    localStorage.setItem(LS_KEY, String(now));
-    setLastSeen(now);
-  }, []);
+  const handleMarkAllRead = useCallback(() => {
+    markRead.mutate(undefined);
+  }, [markRead]);
+
+  const handleClickNotification = useCallback((notif: Notification) => {
+    if (!notif.read) {
+      markRead.mutate([notif.id]);
+    }
+    if (notif.link) {
+      router.push(notif.link);
+      setOpen(false);
+    }
+  }, [markRead, router]);
 
   return (
     <div ref={ref} className="relative">
@@ -126,7 +96,7 @@ export function NotificationsPanel() {
             <span className="text-sm font-semibold text-foreground">Notifications</span>
             {unreadCount > 0 && (
               <button
-                onClick={markAllRead}
+                onClick={handleMarkAllRead}
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 <CheckCheck className="h-3.5 w-3.5" />
@@ -138,35 +108,28 @@ export function NotificationsPanel() {
           <div className="max-h-96 overflow-y-auto divide-y divide-border/40">
             {isLoading ? (
               <CardSpinner />
-            ) : logs.length === 0 ? (
-              <p className="py-10 text-center text-sm text-muted-foreground">No activity yet.</p>
+            ) : notifications.length === 0 ? (
+              <p className="py-10 text-center text-sm text-muted-foreground">No notifications yet.</p>
             ) : (
-              logs.map((log) => {
-                const isUnread = new Date(log.created_at).getTime() > lastSeen;
-                const entityInfo = log.entity_type
-                  ? `${log.entity_type.replace(/_/g, ' ')} ${log.entity_id?.slice(0, 6) ?? ''}…`
-                  : null;
-                return (
-                  <div
-                    key={log.id}
-                    className={cn(
-                      'flex items-start gap-3 px-4 py-3 transition-colors',
-                      isUnread ? 'bg-[#19595b]/5' : 'hover:bg-black/[0.03]'
-                    )}
-                  >
-                    <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', ACTION_DOT[log.action] ?? 'bg-muted-foreground')} />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-foreground leading-snug">{actionLabel(log.action)}</p>
-                      {entityInfo && (
-                        <p className="text-xs text-muted-foreground truncate mt-0.5">{entityInfo}</p>
-                      )}
-                    </div>
-                    <span className="shrink-0 text-xs text-muted-foreground whitespace-nowrap mt-0.5">
-                      {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
-                    </span>
+              notifications.map((notif) => (
+                <button
+                  key={notif.id}
+                  onClick={() => handleClickNotification(notif)}
+                  className={cn(
+                    'flex items-start gap-3 px-4 py-3 transition-colors w-full text-left',
+                    !notif.read ? 'bg-[#19595b]/5' : 'hover:bg-black/[0.03] dark:hover:bg-white/[0.03]'
+                  )}
+                >
+                  <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', CATEGORY_DOT[notif.category] ?? 'bg-muted-foreground')} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-foreground leading-snug">{notif.title}</p>
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">{notif.body}</p>
                   </div>
-                );
-              })
+                  <span className="shrink-0 text-xs text-muted-foreground whitespace-nowrap mt-0.5">
+                    {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true })}
+                  </span>
+                </button>
+              ))
             )}
           </div>
         </div>
