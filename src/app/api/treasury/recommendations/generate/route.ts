@@ -10,6 +10,8 @@ import { getBankingAdapter } from '@/lib/banking/factory';
 import { checkRateLimit } from '@/lib/api/rate-limit';
 import { decryptSlackCredentials, postRecommendationToSlack } from '@/lib/integrations/slack';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
+import { NotificationService } from '@/lib/notifications/service';
+import { recommendationEmailHtml } from '@/lib/notifications/recommendation-email';
 
 export async function POST(_req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -127,6 +129,40 @@ export async function POST(_req: NextRequest) {
       requires_approval: requiresApproval,
     },
   });
+
+  // Notify — non-blocking
+  const emailHtml = recommendationEmailHtml({
+    id: rec.id,
+    action: result.action,
+    recommendedAmountUsd: rec.recommended_amount_usd,
+    totalBankBalanceUsd: rec.total_bank_balance_usd,
+    obligationsInWindowUsd: rec.obligations_in_window_usd,
+    safetyBufferTargetUsd: rec.safety_buffer_target_usd,
+    obligationLookaheadDays: rec.obligation_lookahead_days,
+    aiReasoning: reasoning,
+    stablecoinToken: rec.stablecoin_token,
+    stablecoinChain: rec.stablecoin_chain,
+    bankLabel: 'Bank Account',
+    walletLabel: 'Wallet',
+    status: rec.status,
+    expiresAt: rec.expires_at,
+  });
+
+  NotificationService.notify({
+    eventType: requiresApproval ? 'recommendation_pending' : 'recommendation_auto_executed',
+    enterpriseId,
+    title: requiresApproval ? 'New AI Recommendation — Approval Required' : 'AI Recommendation Auto-Executed',
+    body: `${result.action === 'onramp' ? 'On-ramp' : result.action === 'offramp' ? 'Off-ramp' : 'No action'} ${result.recommendedAmountUsd ? '$' + Math.round(result.recommendedAmountUsd).toLocaleString() : ''}`,
+    link: requiresApproval ? `/treasury?reviewRec=${rec.id}` : '/treasury',
+    metadata: {
+      recommendationId: rec.id,
+      action: result.action,
+      amount: result.recommendedAmountUsd,
+      _emailSubject: requiresApproval ? 'Action Required: New AI Recommendation' : 'AI Recommendation Auto-Executed',
+      _emailHtml: emailHtml,
+    },
+    actorId: session.user.id,
+  }).catch(() => {});
 
   // 6. Auto-execute if below threshold and action is not no_action
   if (willAutoExecute && result.action !== 'no_action' && result.recommendedAmountUsd) {

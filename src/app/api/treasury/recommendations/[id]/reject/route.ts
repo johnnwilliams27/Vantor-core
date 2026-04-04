@@ -7,6 +7,8 @@ import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { z } from 'zod';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
+import { NotificationService } from '@/lib/notifications/service';
+import { recommendationEmailHtml } from '@/lib/notifications/recommendation-email';
 
 const rejectSchema = z.object({
   reason: z.string().min(1).max(500).optional(),
@@ -35,7 +37,7 @@ export async function POST(
 
   const { data: rec, error: fetchErr } = await supabase
     .from('ai_recommendations')
-    .select('id, status, action, recommended_amount_usd')
+    .select('*')
     .eq('id', params.id)
     .eq('user_id', session.user.id)
     .eq('enterprise_id', enterpriseId)
@@ -71,6 +73,36 @@ export async function POST(
       amount_usd: rec.recommended_amount_usd,
     },
   });
+
+  const emailHtml = recommendationEmailHtml({
+    id: rec.id,
+    action: rec.action,
+    recommendedAmountUsd: rec.recommended_amount_usd,
+    totalBankBalanceUsd: rec.total_bank_balance_usd,
+    obligationsInWindowUsd: rec.obligations_in_window_usd,
+    safetyBufferTargetUsd: rec.safety_buffer_target_usd,
+    obligationLookaheadDays: rec.obligation_lookahead_days,
+    aiReasoning: rec.ai_reasoning,
+    stablecoinToken: rec.stablecoin_token,
+    stablecoinChain: rec.stablecoin_chain,
+    bankLabel: 'Bank Account',
+    walletLabel: 'Wallet',
+    status: 'rejected',
+  });
+
+  NotificationService.notify({
+    eventType: 'recommendation_rejected',
+    enterpriseId: rec.enterprise_id,
+    title: 'AI Recommendation Rejected',
+    body: `${rec.action === 'onramp' ? 'On-ramp' : 'Off-ramp'} recommendation was rejected`,
+    link: '/treasury',
+    metadata: {
+      recommendationId: rec.id,
+      _emailSubject: 'AI Recommendation Rejected',
+      _emailHtml: emailHtml,
+    },
+    actorId: session.user.id,
+  }).catch(() => {});
 
   return NextResponse.json({ data: { status: 'rejected' } });
 }

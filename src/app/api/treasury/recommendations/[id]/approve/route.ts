@@ -8,6 +8,8 @@ import { writeAuditLog } from '@/lib/audit/logger';
 import { getBankingAdapter } from '@/lib/banking/factory';
 import { updateBalancesAfterRamp } from '@/lib/balances/update-after-movement';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
+import { NotificationService } from '@/lib/notifications/service';
+import { recommendationEmailHtml } from '@/lib/notifications/recommendation-email';
 
 export async function POST(
   _req: NextRequest,
@@ -129,6 +131,36 @@ export async function POST(
         fiat_transaction_id: fiatTx?.id,
       },
     });
+
+    const emailHtml = recommendationEmailHtml({
+      id: rec.id,
+      action: rec.action,
+      recommendedAmountUsd: rec.recommended_amount_usd,
+      totalBankBalanceUsd: rec.total_bank_balance_usd,
+      obligationsInWindowUsd: rec.obligations_in_window_usd,
+      safetyBufferTargetUsd: rec.safety_buffer_target_usd,
+      obligationLookaheadDays: rec.obligation_lookahead_days,
+      aiReasoning: rec.ai_reasoning,
+      stablecoinToken: rec.stablecoin_token,
+      stablecoinChain: rec.stablecoin_chain,
+      bankLabel: 'Bank Account',
+      walletLabel: 'Wallet',
+      status: 'approved',
+    });
+
+    NotificationService.notify({
+      eventType: 'recommendation_approved',
+      enterpriseId: rec.enterprise_id,
+      title: 'AI Recommendation Approved & Executed',
+      body: `${rec.action === 'onramp' ? 'On-ramp' : 'Off-ramp'} of $${Math.round(Number(rec.recommended_amount_usd)).toLocaleString()} was approved`,
+      link: '/treasury',
+      metadata: {
+        recommendationId: rec.id,
+        _emailSubject: 'AI Recommendation Approved & Executed',
+        _emailHtml: emailHtml,
+      },
+      actorId: session.user.id,
+    }).catch(() => {});
 
     return NextResponse.json({ data: { status: 'executed', fiat_transaction_id: fiatTx?.id } });
   } catch (execErr) {
