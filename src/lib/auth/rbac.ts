@@ -9,9 +9,10 @@ export const ROLE_ROUTES: Record<string, UserRole> = {
   '/payments': 'treasury_manager',
   '/treasury': 'treasury_manager',
   '/yield': 'treasury_manager',
-  '/reporting': 'treasury_manager',
-  '/settings/billing': 'treasury_manager',  // Must be before /settings
-  '/compliance': 'accountant',
+  '/reporting': 'accountant',
+  '/settings/billing': 'treasury_manager',
+  '/settings/notifications': 'auditor',
+  '/compliance': 'auditor',
   '/settings': 'accountant',
   '/invoices': 'accountant',
   '/wallets': 'accountant',

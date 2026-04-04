@@ -28,6 +28,7 @@ import {
   FileBarChart,
   GitBranchPlus,
   CreditCard,
+  Bell,
 } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import type { UserRole } from '@/types/database';
@@ -58,7 +59,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
       { label: 'Treasury AI', href: '/treasury', icon: BrainCircuit, minRole: 'treasury_manager' },
-      { label: 'Compliance', href: '/compliance', icon: ShieldCheck, minRole: 'accountant' },
+      { label: 'Compliance', href: '/compliance', icon: ShieldCheck, minRole: 'auditor' },
       { label: 'Yield', href: '/yield', icon: TrendingUp, minRole: 'treasury_manager' },
     ],
   },
@@ -86,12 +87,13 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'Invoices', href: '/invoices', icon: FileText, minRole: 'accountant' },
       { label: 'Transactions', href: '/transactions', icon: History },
       { label: 'Audit', href: '/audit', icon: Shield },
-      { label: 'Reporting', href: '/reporting', icon: FileBarChart, minRole: 'treasury_manager' },
+      { label: 'Reporting', href: '/reporting', icon: FileBarChart, minRole: 'accountant' },
     ],
   },
   {
     heading: 'Settings',
     items: [
+      { label: 'Notifications', href: '/settings/notifications', icon: Bell },
       { label: 'Account Management', href: '/settings/accounts', icon: Users, minRole: 'treasury_manager' },
       { label: 'Billing', href: '/settings/billing', icon: CreditCard, minRole: 'treasury_manager' },
       { label: 'External Integrations', href: '/settings/integrations', icon: Plug, minRole: 'treasury_manager' },
