@@ -50,9 +50,11 @@ export const NotificationService = {
       );
 
       const allRecipients = [...eligibleByRole, ...additionalUsers];
-      const recipients = actorId
+      // Exclude the actor, but if that leaves zero recipients, keep them
+      const withoutActor = actorId
         ? allRecipients.filter((u) => u.id !== actorId)
         : allRecipients;
+      const recipients = withoutActor.length > 0 ? withoutActor : allRecipients;
 
       if (recipients.length === 0) return;
 
