@@ -239,7 +239,7 @@ export default function NotificationsSettingsPage() {
       </div>
 
       {/* Sticky column headers */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm pb-2 border-b border-border">
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm pb-1.5 border-b border-border">
         <div className="flex items-center px-4 pt-2">
           <span className="flex-1" />
           <div className="flex items-center gap-8">
@@ -265,7 +265,7 @@ export default function NotificationsSettingsPage() {
       </div>
 
       {/* Category sections */}
-      <div className="space-y-4">
+      <div className="space-y-4 -mt-2">
         {CATEGORY_ORDER.map((cat) => (
           <CategorySection
             key={cat}
