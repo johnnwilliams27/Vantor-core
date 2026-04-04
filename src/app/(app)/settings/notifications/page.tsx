@@ -85,8 +85,8 @@ function CategorySection({
 
       {expanded && (
         <div>
-          <div className="flex items-center px-4 py-2 border-b border-border/60 bg-muted/10">
-            <span className="flex-1 text-xs text-muted-foreground font-medium">Toggle all</span>
+          <div className="flex items-center px-4 py-2.5 border-b-2 border-border bg-muted/30">
+            <span className="flex-1 text-xs font-semibold text-foreground uppercase tracking-wide">Toggle all</span>
             <div className="flex items-center gap-6">
               <div className="w-14 flex justify-center">
                 <Toggle checked={allInApp} onChange={() => handleBulkToggle('in_app')} />
