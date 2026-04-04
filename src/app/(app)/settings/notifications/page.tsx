@@ -90,7 +90,7 @@ function CategorySection({
   slackConnected: boolean;
   onToggle: (eventType: NotificationEventType, channel: 'in_app' | 'email' | 'slack', value: boolean) => void;
 }) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
 
   const events = EVENT_CATALOG.filter(
     (e) => e.category === category && e.defaultRoles.some((r) => hasRole(userRole, r))
@@ -262,7 +262,7 @@ export default function NotificationsSettingsPage() {
       </div>
 
       {/* Category sections */}
-      <div className="space-y-8">
+      <div className="space-y-4">
         {CATEGORY_ORDER.map((cat) => (
           <CategorySection
             key={cat}
