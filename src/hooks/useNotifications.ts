@@ -101,6 +101,7 @@ export function useNotificationPreferences() {
       return res.json();
     },
     enabled: !!session?.user?.id,
+    staleTime: 0,
   });
 }
 
