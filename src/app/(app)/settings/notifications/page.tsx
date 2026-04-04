@@ -11,6 +11,8 @@ import { cn } from '@/lib/utils';
 import type { UserRole } from '@/types/database';
 import type { NotificationEventType, NotificationCategory } from '@/types/notifications';
 
+/* ── Toggle ─────────────────────────────────────────────────────────────────── */
+
 function Toggle({
   checked,
   onChange,
@@ -43,6 +45,38 @@ function Toggle({
   );
 }
 
+/* ── Three-column toggle grid (reused in header + rows) ─────────────────────── */
+
+function ToggleRow({
+  inApp,
+  email,
+  slack,
+  slackDisabled,
+  onToggle,
+}: {
+  inApp: boolean;
+  email: boolean;
+  slack: boolean;
+  slackDisabled: boolean;
+  onToggle: (channel: 'in_app' | 'email' | 'slack', value: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center gap-8">
+      <div className="w-12 flex justify-center">
+        <Toggle checked={inApp} onChange={(v) => onToggle('in_app', v)} />
+      </div>
+      <div className="w-12 flex justify-center">
+        <Toggle checked={email} onChange={(v) => onToggle('email', v)} />
+      </div>
+      <div className="w-12 flex justify-center">
+        <Toggle checked={slack} onChange={(v) => onToggle('slack', v)} disabled={slackDisabled} />
+      </div>
+    </div>
+  );
+}
+
+/* ── Category section ───────────────────────────────────────────────────────── */
+
 function CategorySection({
   category,
   userRole,
@@ -74,49 +108,38 @@ function CategorySection({
   };
 
   return (
-    <div className="border border-border rounded-xl overflow-hidden">
-      {/* Category header with inline column labels and toggle-all */}
-      <div className="flex items-center px-4 py-3 bg-muted/40 border-b border-border">
-        <button
-          onClick={() => setExpanded((v) => !v)}
-          className="flex items-center gap-2 flex-1 min-w-0"
-        >
-          <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform duration-200 shrink-0', expanded && 'rotate-180')} />
+    <div>
+      {/* Category header row — name + toggle-all */}
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="flex items-center w-full group"
+      >
+        <div className="flex items-center gap-2 flex-1 min-w-0 py-2">
+          <ChevronDown className={cn(
+            'h-4 w-4 text-muted-foreground transition-transform duration-200 shrink-0',
+            expanded && 'rotate-180'
+          )} />
           <span className="text-sm font-semibold text-foreground">{CATEGORY_LABELS[category]}</span>
-        </button>
-        <div className="flex items-center gap-6">
-          <div className="w-16 flex flex-col items-center gap-1">
-            <div className="flex items-center gap-1 text-muted-foreground">
-              <Bell className="h-3 w-3" />
-              <span className="text-[10px] font-medium">In-App</span>
-            </div>
-            <Toggle checked={allInApp} onChange={() => handleBulkToggle('in_app')} />
-          </div>
-          <div className="w-16 flex flex-col items-center gap-1">
-            <div className="flex items-center gap-1 text-muted-foreground">
-              <Mail className="h-3 w-3" />
-              <span className="text-[10px] font-medium">Email</span>
-            </div>
-            <Toggle checked={allEmail} onChange={() => handleBulkToggle('email')} />
-          </div>
-          <div className="w-16 flex flex-col items-center gap-1">
-            <div className="flex items-center gap-1 text-muted-foreground relative">
-              <MessageSquare className="h-3 w-3" />
-              <span className="text-[10px] font-medium">Slack</span>
-              {!slackConnected && (
-                <span className="absolute -top-2 -right-4">
-                  <InfoTooltip content="Connect Slack in Settings > Integrations to enable Slack notifications." />
-                </span>
-              )}
-            </div>
-            <Toggle checked={allSlack} onChange={() => handleBulkToggle('slack')} disabled={!slackConnected} />
-          </div>
+          <span className="text-[10px] text-muted-foreground font-medium ml-1">({events.length})</span>
         </div>
+      </button>
+
+      {/* Toggle-all bar */}
+      <div className="flex items-center px-4 py-2 bg-muted/30 rounded-t-lg border border-border border-b-0">
+        <span className="flex-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">All {CATEGORY_LABELS[category]}</span>
+        <ToggleRow
+          inApp={allInApp}
+          email={allEmail}
+          slack={allSlack}
+          slackDisabled={!slackConnected}
+          onToggle={(ch, v) => handleBulkToggle(ch)}
+        />
       </div>
 
+      {/* Event rows */}
       {expanded && (
-        <div>
-          {events.map((event) => {
+        <div className="border border-border border-t-0 rounded-b-lg overflow-hidden">
+          {events.map((event, i) => {
             const pref = preferences.get(event.eventType);
             const inApp = pref?.in_app ?? true;
             const email = pref?.email ?? true;
@@ -125,23 +148,22 @@ function CategorySection({
             return (
               <div
                 key={event.eventType}
-                className="flex items-center px-4 py-2.5 border-b border-border/30 last:border-b-0 hover:bg-muted/20 transition-colors"
+                className={cn(
+                  'flex items-center px-4 py-3 hover:bg-muted/20 transition-colors',
+                  i < events.length - 1 && 'border-b border-border/30'
+                )}
               >
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 pl-6">
                   <p className="text-sm text-foreground">{event.label}</p>
                   <p className="text-xs text-muted-foreground truncate">{event.description}</p>
                 </div>
-                <div className="flex items-center gap-6">
-                  <div className="w-16 flex justify-center">
-                    <Toggle checked={inApp} onChange={(v) => onToggle(event.eventType, 'in_app', v)} />
-                  </div>
-                  <div className="w-16 flex justify-center">
-                    <Toggle checked={email} onChange={(v) => onToggle(event.eventType, 'email', v)} />
-                  </div>
-                  <div className="w-16 flex justify-center">
-                    <Toggle checked={slack} onChange={(v) => onToggle(event.eventType, 'slack', v)} disabled={!slackConnected} />
-                  </div>
-                </div>
+                <ToggleRow
+                  inApp={inApp}
+                  email={email}
+                  slack={slack}
+                  slackDisabled={!slackConnected}
+                  onToggle={(ch, v) => onToggle(event.eventType, ch, v)}
+                />
               </div>
             );
           })}
@@ -150,6 +172,8 @@ function CategorySection({
     </div>
   );
 }
+
+/* ── Page ────────────────────────────────────────────────────────────────────── */
 
 export default function NotificationsSettingsPage() {
   const { data: session } = useSession();
@@ -180,7 +204,6 @@ export default function NotificationsSettingsPage() {
       slack: p.slack_enabled,
     });
   });
-  // Apply overrides on top
   for (const [key, val] of Object.entries(overrides)) {
     prefMap.set(key, val);
   }
@@ -212,7 +235,34 @@ export default function NotificationsSettingsPage() {
         <p className="text-sm text-muted-foreground mt-1">Choose how you want to be notified for each event type.</p>
       </div>
 
-      <div className="space-y-3">
+      {/* Sticky column headers */}
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm pb-2 border-b border-border">
+        <div className="flex items-center px-4 pt-2">
+          <span className="flex-1" />
+          <div className="flex items-center gap-8">
+            <div className="w-12 flex flex-col items-center gap-0.5">
+              <Bell className="h-4 w-4 text-muted-foreground" />
+              <span className="text-[10px] text-muted-foreground font-medium">In-App</span>
+            </div>
+            <div className="w-12 flex flex-col items-center gap-0.5">
+              <Mail className="h-4 w-4 text-muted-foreground" />
+              <span className="text-[10px] text-muted-foreground font-medium">Email</span>
+            </div>
+            <div className="w-12 flex flex-col items-center gap-0.5 relative">
+              <MessageSquare className="h-4 w-4 text-muted-foreground" />
+              <span className="text-[10px] text-muted-foreground font-medium">Slack</span>
+              {!slackConnected && (
+                <span className="absolute -top-1.5 -right-3.5">
+                  <InfoTooltip content="Connect Slack in Settings > Integrations to enable Slack notifications." />
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Category sections */}
+      <div className="space-y-8">
         {CATEGORY_ORDER.map((cat) => (
           <CategorySection
             key={cat}
