@@ -70,7 +70,7 @@ export async function PATCH(
 
     NotificationService.notify({
       eventType: 'treasury_rule_updated',
-      enterpriseId,
+      enterpriseId: session.user.enterprise_id!,
       title: 'Treasury Rule Updated',
       body: `Rule "${rule.label}" updated (${changedFields})`,
       link: '/treasury',

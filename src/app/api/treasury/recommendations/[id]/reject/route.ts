@@ -92,7 +92,7 @@ export async function POST(
 
   NotificationService.notify({
     eventType: 'recommendation_rejected',
-    enterpriseId: rec.enterprise_id,
+    enterpriseId: session.user.enterprise_id!,
     title: 'AI Recommendation Rejected',
     body: `${rec.action === 'onramp' ? 'On-ramp' : 'Off-ramp'} recommendation was rejected`,
     link: '/treasury',

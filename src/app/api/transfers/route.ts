@@ -180,7 +180,7 @@ export async function POST(req: NextRequest) {
 
     NotificationService.notify({
       eventType: 'transfer_completed',
-      enterpriseId,
+      enterpriseId: session.user.enterprise_id!,
       title: 'Transfer Completed',
       body: `Sent ${transfer.amount} ${transfer.token} on ${transfer.chain}`,
       link: '/transactions',

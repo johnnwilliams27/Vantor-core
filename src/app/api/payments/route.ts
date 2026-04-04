@@ -169,7 +169,7 @@ export async function POST(req: NextRequest) {
 
     NotificationService.notify({
       eventType: 'payment_sent',
-      enterpriseId,
+      enterpriseId: session.user.enterprise_id!,
       title: 'Payment Sent',
       body: `Sent ${fmtUsd(payment.amount)} ${payment.currency} to ${payment.to_account_holder}`,
       link: '/payments',

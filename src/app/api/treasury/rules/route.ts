@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
 
     NotificationService.notify({
       eventType: 'treasury_rule_created',
-      enterpriseId,
+      enterpriseId: session.user.enterprise_id!,
       title: 'Treasury Rule Created',
       body: `New rule "${parsed.data.label}" created`,
       link: '/treasury',

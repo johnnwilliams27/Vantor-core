@@ -150,7 +150,7 @@ export async function POST(
 
     NotificationService.notify({
       eventType: 'recommendation_approved',
-      enterpriseId: rec.enterprise_id,
+      enterpriseId: session.user.enterprise_id!,
       title: 'AI Recommendation Approved & Executed',
       body: `${rec.action === 'onramp' ? 'On-ramp' : 'Off-ramp'} of $${Math.round(Number(rec.recommended_amount_usd)).toLocaleString()} was approved`,
       link: '/treasury',

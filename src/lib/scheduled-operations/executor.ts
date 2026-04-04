@@ -8,6 +8,17 @@ const SCHEDULED_OP_ROUTE: Record<string, string> = {
   bridge: '/bridges',
   ramp: '/ramps',
 };
+
+/** Resolve the user's real enterprise_id (not test-mode) for notifications */
+async function getRealEnterpriseId(userId: string): Promise<string | null> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from('user_profiles')
+    .select('enterprise_id')
+    .eq('id', userId)
+    .single();
+  return data?.enterprise_id ?? null;
+}
 import { actionNotificationEmail, alertEmail } from '@/lib/notifications/email-templates';
 import {
   updateBalancesAfterSwap,
@@ -368,6 +379,7 @@ export async function executeScheduledOperation(
   op: ScheduledOperation,
 ): Promise<{ executed: boolean; flagged?: boolean; error?: string }> {
   const supabase = createAdminClient();
+  const realEnterpriseId = await getRealEnterpriseId(op.user_id);
 
   // Mark as processing
   await markStatus(op.id, 'processing');
@@ -422,7 +434,7 @@ export async function executeScheduledOperation(
 
         NotificationService.notify({
           eventType: 'scheduled_operation_flagged',
-          enterpriseId: op.enterprise_id,
+          enterpriseId: realEnterpriseId ?? op.enterprise_id!,
           title: 'Scheduled Operation Needs Approval',
           body: `Scheduled ${op.type} flagged — rate deviation ${deviationBps}bps exceeds ${op.tolerance_bps}bps tolerance`,
           link: SCHEDULED_OP_ROUTE[op.type] ?? '/transactions',
@@ -491,7 +503,7 @@ export async function executeScheduledOperation(
 
       NotificationService.notify({
         eventType,
-        enterpriseId: op.enterprise_id,
+        enterpriseId: realEnterpriseId ?? op.enterprise_id!,
         title: `Scheduled ${opLabel} Executed`,
         body: `Scheduled ${op.type} completed with ${deviationBps}bps deviation`,
         link: SCHEDULED_OP_ROUTE[op.type] ?? '/transactions',
@@ -522,7 +534,7 @@ export async function executeScheduledOperation(
 
       NotificationService.notify({
         eventType: 'scheduled_operation_failed',
-        enterpriseId: op.enterprise_id,
+        enterpriseId: realEnterpriseId ?? op.enterprise_id!,
         title: 'Scheduled Operation Failed',
         body: `Scheduled ${op.type} failed: ${message}`,
         link: SCHEDULED_OP_ROUTE[op.type] ?? '/transactions',

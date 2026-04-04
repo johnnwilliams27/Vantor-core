@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
 
   NotificationService.notify({
     eventType: 'swap_completed',
-    enterpriseId,
+    enterpriseId: session.user.enterprise_id!,
     title: 'Swap Completed',
     body: `Swapped ${swap.from_amount} ${swap.from_token} → ${swap.to_amount} ${swap.to_token} on ${swap.chain}`,
     link: '/swaps',
