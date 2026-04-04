@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth/nextauth.config';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
+import { NotificationService } from '@/lib/notifications/service';
+import { actionNotificationEmail, fmtUsd } from '@/lib/notifications/email-templates';
 import { getBankingAdapter } from '@/lib/banking/factory';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 import { z } from 'zod';
@@ -151,6 +153,34 @@ export async function POST(req: NextRequest) {
       scheduledFor: payment.scheduled_for,
     },
   });
+
+  if (!isScheduled && enterpriseId) {
+    const emailHtml = actionNotificationEmail({
+      title: 'Payment Sent',
+      details: [
+        { label: 'Amount', value: fmtUsd(payment.amount) },
+        { label: 'Currency', value: payment.currency },
+        { label: 'Recipient', value: payment.to_account_holder },
+        { label: 'Bank', value: payment.to_bank_name },
+      ],
+      ctaLabel: 'View Payment',
+      ctaHref: '/transactions',
+    });
+
+    NotificationService.notify({
+      eventType: 'payment_sent',
+      enterpriseId,
+      title: 'Payment Sent',
+      body: `Sent ${fmtUsd(payment.amount)} ${payment.currency} to ${payment.to_account_holder}`,
+      link: '/transactions',
+      metadata: {
+        paymentId: payment.id,
+        _emailSubject: 'Payment Sent',
+        _emailHtml: emailHtml,
+      },
+      actorId: session.user.id,
+    }).catch(() => {});
+  }
 
   return NextResponse.json({ data: payment }, { status: 201 });
 }

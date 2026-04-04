@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth/nextauth.config';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
+import { NotificationService } from '@/lib/notifications/service';
+import { actionNotificationEmail } from '@/lib/notifications/email-templates';
 import { updateBalancesAfterSwap } from '@/lib/balances/update-after-movement';
 import { z } from 'zod';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
@@ -102,6 +104,31 @@ export async function POST(req: NextRequest) {
       fromAmount: swap.from_amount,
     },
   });
+
+  const emailHtml = actionNotificationEmail({
+    title: 'Swap Completed',
+    details: [
+      { label: 'From', value: `${swap.from_amount} ${swap.from_token}` },
+      { label: 'To', value: `${swap.to_amount} ${swap.to_token}` },
+      { label: 'Chain', value: swap.chain },
+    ],
+    ctaLabel: 'View Swap',
+    ctaHref: '/transactions',
+  });
+
+  NotificationService.notify({
+    eventType: 'swap_completed',
+    enterpriseId,
+    title: 'Swap Completed',
+    body: `Swapped ${swap.from_amount} ${swap.from_token} → ${swap.to_amount} ${swap.to_token} on ${swap.chain}`,
+    link: '/transactions',
+    metadata: {
+      swapId: swap.id,
+      _emailSubject: 'Swap Completed',
+      _emailHtml: emailHtml,
+    },
+    actorId: session.user.id,
+  }).catch(() => {});
 
   return NextResponse.json({ data: swap }, { status: 201 });
 }

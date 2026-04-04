@@ -1,6 +1,8 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getBankingAdapter } from '@/lib/banking/factory';
 import { writeAuditLog } from '@/lib/audit/logger';
+import { NotificationService } from '@/lib/notifications/service';
+import { actionNotificationEmail, alertEmail } from '@/lib/notifications/email-templates';
 import {
   updateBalancesAfterSwap,
   updateWalletBalance,
@@ -403,6 +405,32 @@ export async function executeScheduledOperation(
         },
       });
 
+      if (op.enterprise_id) {
+        const flaggedEmailHtml = alertEmail({
+          title: 'Scheduled Operation Flagged',
+          description: `A scheduled ${op.type} exceeded the rate tolerance (${deviationBps}bps vs ${op.tolerance_bps}bps allowed) and requires your authorization before executing.`,
+          ctaLabel: 'Review Operation',
+          ctaHref: '/transactions',
+          severity: 'warning',
+        });
+
+        NotificationService.notify({
+          eventType: 'scheduled_operation_flagged',
+          enterpriseId: op.enterprise_id,
+          title: 'Scheduled Operation Needs Approval',
+          body: `Scheduled ${op.type} flagged — rate deviation ${deviationBps}bps exceeds ${op.tolerance_bps}bps tolerance`,
+          link: '/transactions',
+          metadata: {
+            operationId: op.id,
+            operationType: op.type,
+            origin: 'scheduled_operation',
+            _emailSubject: 'Scheduled Operation Flagged — Authorization Required',
+            _emailHtml: flaggedEmailHtml,
+          },
+          actorId: op.user_id,
+        }).catch(() => {});
+      }
+
       return { executed: false, flagged: true };
     }
 
@@ -427,10 +455,83 @@ export async function executeScheduledOperation(
       },
     });
 
+    if (op.enterprise_id) {
+      const opLabel = op.type.charAt(0).toUpperCase() + op.type.slice(1);
+      const eventType = `scheduled_${op.type}_executed` as 'scheduled_swap_executed' | 'scheduled_bridge_executed' | 'scheduled_ramp_executed';
+      const params = op.params as unknown as Record<string, unknown>;
+
+      const details: { label: string; value: string }[] = [
+        { label: 'Type', value: opLabel },
+        { label: 'Rate Deviation', value: `${deviationBps}bps` },
+      ];
+      if (op.type === 'swap') {
+        details.push({ label: 'From', value: `${params.amount} ${params.fromToken}` });
+        details.push({ label: 'To', value: String(params.toToken) });
+      } else if (op.type === 'bridge') {
+        details.push({ label: 'Amount', value: `${params.amount} ${params.token}` });
+        details.push({ label: 'Route', value: `${params.fromChain} → ${params.toChain}` });
+      } else if (op.type === 'ramp') {
+        details.push({ label: 'Direction', value: String(params.direction) });
+        details.push({ label: 'Amount', value: `${params.cryptoAmount} ${params.cryptoToken}` });
+      }
+
+      const executedEmailHtml = actionNotificationEmail({
+        title: `Scheduled ${opLabel} Executed`,
+        details,
+        ctaLabel: 'View Transaction',
+        ctaHref: '/transactions',
+        scheduledDeviation: { toleranceBps: op.tolerance_bps, actualBps: deviationBps },
+      });
+
+      NotificationService.notify({
+        eventType,
+        enterpriseId: op.enterprise_id,
+        title: `Scheduled ${opLabel} Executed`,
+        body: `Scheduled ${op.type} completed with ${deviationBps}bps deviation`,
+        link: '/transactions',
+        metadata: {
+          operationId: op.id,
+          recordId: result.recordId,
+          origin: 'scheduled_operation',
+          _emailSubject: `Scheduled ${opLabel} Executed`,
+          _emailHtml: executedEmailHtml,
+        },
+        actorId: op.user_id,
+      }).catch(() => {});
+    }
+
     return { executed: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     await markStatus(op.id, 'failed', { error_message: message });
+
+    if (op.enterprise_id) {
+      const failedEmailHtml = alertEmail({
+        title: 'Scheduled Operation Failed',
+        description: `A scheduled ${op.type} operation failed to execute. Error: ${message}`,
+        ctaLabel: 'View Details',
+        ctaHref: '/transactions',
+        severity: 'error',
+      });
+
+      NotificationService.notify({
+        eventType: 'scheduled_operation_failed',
+        enterpriseId: op.enterprise_id,
+        title: 'Scheduled Operation Failed',
+        body: `Scheduled ${op.type} failed: ${message}`,
+        link: '/transactions',
+        metadata: {
+          operationId: op.id,
+          operationType: op.type,
+          error: message,
+          origin: 'scheduled_operation',
+          _emailSubject: 'Scheduled Operation Failed',
+          _emailHtml: failedEmailHtml,
+        },
+        actorId: op.user_id,
+      }).catch(() => {});
+    }
+
     return { executed: false, error: message };
   }
 }

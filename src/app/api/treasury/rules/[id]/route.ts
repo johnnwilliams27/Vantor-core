@@ -5,6 +5,8 @@ import { authOptions } from '@/lib/auth/nextauth.config';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
+import { NotificationService } from '@/lib/notifications/service';
+import { infoEmail } from '@/lib/notifications/email-templates';
 import { z } from 'zod';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
@@ -56,6 +58,30 @@ export async function PATCH(
     entityId: params.id,
     details: parsed.data as Record<string, unknown>,
   });
+
+  if (enterpriseId) {
+    const changedFields = Object.keys(parsed.data).join(', ');
+    const emailHtml = infoEmail({
+      title: 'Treasury Rule Updated',
+      description: `The treasury rule "${rule.label}" has been updated. Changed fields: ${changedFields}.`,
+      ctaLabel: 'View Rules',
+      ctaHref: '/treasury',
+    });
+
+    NotificationService.notify({
+      eventType: 'treasury_rule_updated',
+      enterpriseId,
+      title: 'Treasury Rule Updated',
+      body: `Rule "${rule.label}" updated (${changedFields})`,
+      link: '/treasury',
+      metadata: {
+        ruleId: rule.id,
+        _emailSubject: 'Treasury Rule Updated',
+        _emailHtml: emailHtml,
+      },
+      actorId: session.user.id,
+    }).catch(() => {});
+  }
 
   return NextResponse.json({ data: rule });
 }

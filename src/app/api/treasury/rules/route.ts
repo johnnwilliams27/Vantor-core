@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth/nextauth.config';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
+import { NotificationService } from '@/lib/notifications/service';
+import { infoEmail } from '@/lib/notifications/email-templates';
 import { z } from 'zod';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
@@ -87,6 +89,29 @@ export async function POST(req: NextRequest) {
     entityId: rule.id,
     details: { label: parsed.data.label },
   });
+
+  if (enterpriseId) {
+    const emailHtml = infoEmail({
+      title: 'Treasury Rule Created',
+      description: `A new treasury rule "${parsed.data.label}" has been created with a ${parsed.data.safety_buffer_multiplier}x safety buffer and ${parsed.data.obligation_lookahead_days}-day lookahead.`,
+      ctaLabel: 'View Rules',
+      ctaHref: '/treasury',
+    });
+
+    NotificationService.notify({
+      eventType: 'treasury_rule_created',
+      enterpriseId,
+      title: 'Treasury Rule Created',
+      body: `New rule "${parsed.data.label}" created`,
+      link: '/treasury',
+      metadata: {
+        ruleId: rule.id,
+        _emailSubject: 'Treasury Rule Created',
+        _emailHtml: emailHtml,
+      },
+      actorId: session.user.id,
+    }).catch(() => {});
+  }
 
   return NextResponse.json({ data: rule }, { status: 201 });
 }

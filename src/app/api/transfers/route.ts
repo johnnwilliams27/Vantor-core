@@ -5,6 +5,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { executeTransfer } from '@/lib/transfers/executor';
 import { writeAuditLog } from '@/lib/audit/logger';
+import { NotificationService } from '@/lib/notifications/service';
+import { actionNotificationEmail } from '@/lib/notifications/email-templates';
 import { screenAddressWithCache } from '@/lib/compliance/screening';
 import { isAboveTravelRuleThreshold, createTravelRuleTransfer } from '@/lib/compliance/travel-rule';
 import { z } from 'zod';
@@ -163,6 +165,33 @@ export async function POST(req: NextRequest) {
       scheduledFor: transfer.scheduled_for,
     },
   });
+
+  if (!isScheduled && enterpriseId) {
+    const emailHtml = actionNotificationEmail({
+      title: 'Transfer Completed',
+      details: [
+        { label: 'Amount', value: `${transfer.amount} ${transfer.token}` },
+        { label: 'To', value: transfer.to_address },
+        { label: 'Chain', value: transfer.chain },
+      ],
+      ctaLabel: 'View Transaction',
+      ctaHref: '/transactions',
+    });
+
+    NotificationService.notify({
+      eventType: 'transfer_completed',
+      enterpriseId,
+      title: 'Transfer Completed',
+      body: `Sent ${transfer.amount} ${transfer.token} on ${transfer.chain}`,
+      link: '/transactions',
+      metadata: {
+        transferId: transfer.id,
+        _emailSubject: 'Transfer Completed',
+        _emailHtml: emailHtml,
+      },
+      actorId: session.user.id,
+    }).catch(() => {});
+  }
 
   // --- Submit Travel Rule data if applicable ---
   if (parsed.data.travelRule && isAboveTravelRuleThreshold(amountUsd)) {
