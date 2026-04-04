@@ -66,7 +66,6 @@ export const NotificationService = {
       const { data: prefs } = await supabase
         .from('notification_preferences')
         .select('*')
-        .eq('enterprise_id', enterpriseId)
         .eq('event_type', eventType)
         .in('user_id', recipients.map((r) => r.id));
 

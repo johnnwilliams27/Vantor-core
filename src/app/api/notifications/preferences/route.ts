@@ -2,20 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/nextauth.config';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 export async function GET(_req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
   const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('notification_preferences')
     .select('*')
-    .eq('user_id', session.user.id)
-    .eq('enterprise_id', enterpriseId);
+    .eq('user_id', session.user.id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
@@ -26,7 +23,6 @@ export async function PUT(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
   const supabase = createAdminClient();
   const body = await req.json();
 
@@ -41,7 +37,7 @@ export async function PUT(req: NextRequest) {
     .upsert(
       {
         user_id: session.user.id,
-        enterprise_id: enterpriseId,
+        enterprise_id: session.user.enterprise_id,
         event_type,
         in_app_enabled: in_app_enabled ?? true,
         email_enabled: email_enabled ?? true,
