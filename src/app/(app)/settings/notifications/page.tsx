@@ -75,31 +75,40 @@ function CategorySection({
 
   return (
     <div className="border border-border rounded-xl overflow-hidden">
-      <button
-        onClick={() => setExpanded((v) => !v)}
-        className="flex items-center justify-between w-full px-4 py-3 bg-muted/30 hover:bg-muted/50 transition-colors"
-      >
-        <span className="text-sm font-semibold text-foreground">{CATEGORY_LABELS[category]}</span>
-        <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform duration-200', expanded && 'rotate-180')} />
-      </button>
+      {/* Category header with inline column labels and toggle-all */}
+      <div className="flex items-center px-4 py-3 bg-muted/40 border-b border-border">
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="flex items-center gap-2 flex-1 min-w-0"
+        >
+          <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform duration-200 shrink-0', expanded && 'rotate-180')} />
+          <span className="text-sm font-semibold text-foreground">{CATEGORY_LABELS[category]}</span>
+        </button>
+        <div className="flex items-center gap-6">
+          <div className="w-14 flex flex-col items-center gap-1">
+            <Bell className="h-3.5 w-3.5 text-muted-foreground" />
+            <Toggle checked={allInApp} onChange={() => handleBulkToggle('in_app')} />
+          </div>
+          <div className="w-14 flex flex-col items-center gap-1">
+            <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+            <Toggle checked={allEmail} onChange={() => handleBulkToggle('email')} />
+          </div>
+          <div className="w-14 flex flex-col items-center gap-1">
+            <span className="relative">
+              <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
+              {!slackConnected && (
+                <span className="absolute -top-2 -right-4">
+                  <InfoTooltip content="Connect Slack in Settings > Integrations to enable Slack notifications." />
+                </span>
+              )}
+            </span>
+            <Toggle checked={allSlack} onChange={() => handleBulkToggle('slack')} disabled={!slackConnected} />
+          </div>
+        </div>
+      </div>
 
       {expanded && (
         <div>
-          <div className="flex items-center px-4 py-2.5 border-b-2 border-border bg-muted/30">
-            <span className="flex-1 text-xs font-semibold text-foreground uppercase tracking-wide">Toggle all</span>
-            <div className="flex items-center gap-6">
-              <div className="w-14 flex justify-center">
-                <Toggle checked={allInApp} onChange={() => handleBulkToggle('in_app')} />
-              </div>
-              <div className="w-14 flex justify-center">
-                <Toggle checked={allEmail} onChange={() => handleBulkToggle('email')} />
-              </div>
-              <div className="w-14 flex justify-center">
-                <Toggle checked={allSlack} onChange={() => handleBulkToggle('slack')} disabled={!slackConnected} />
-              </div>
-            </div>
-          </div>
-
           {events.map((event) => {
             const pref = preferences.get(event.eventType);
             const inApp = pref?.in_app ?? true;
@@ -194,31 +203,6 @@ export default function NotificationsSettingsPage() {
       <div>
         <h1 className="text-2xl font-bold text-foreground">Notification Preferences</h1>
         <p className="text-sm text-muted-foreground mt-1">Choose how you want to be notified for each event type.</p>
-      </div>
-
-      <div className="flex items-center px-4 py-2">
-        <span className="flex-1" />
-        <div className="flex items-center gap-6">
-          <div className="w-14 flex flex-col items-center gap-1">
-            <Bell className="h-4 w-4 text-muted-foreground" />
-            <span className="text-[10px] text-muted-foreground font-medium">In-App</span>
-          </div>
-          <div className="w-14 flex flex-col items-center gap-1">
-            <Mail className="h-4 w-4 text-muted-foreground" />
-            <span className="text-[10px] text-muted-foreground font-medium">Email</span>
-          </div>
-          <div className="w-14 flex flex-col items-center gap-1">
-            <span className="relative">
-              <MessageSquare className="h-4 w-4 text-muted-foreground" />
-              {!slackConnected && (
-                <span className="absolute -top-2 -right-4">
-                  <InfoTooltip content="Connect Slack in Settings > Integrations to enable Slack notifications." />
-                </span>
-              )}
-            </span>
-            <span className="text-[10px] text-muted-foreground font-medium">Slack</span>
-          </div>
-        </div>
       </div>
 
       <div className="space-y-3">
