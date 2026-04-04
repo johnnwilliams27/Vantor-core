@@ -148,21 +148,26 @@ export async function POST(_req: NextRequest) {
     expiresAt: rec.expires_at,
   });
 
-  await NotificationService.notify({
-    eventType: requiresApproval ? 'recommendation_pending' : 'recommendation_auto_executed',
-    enterpriseId: session.user.enterprise_id!,
-    title: requiresApproval ? 'New AI Recommendation — Approval Required' : 'AI Recommendation Auto-Executed',
-    body: `${result.action === 'onramp' ? 'On-ramp' : result.action === 'offramp' ? 'Off-ramp' : 'No action'} ${result.recommendedAmountUsd ? '$' + Math.round(result.recommendedAmountUsd).toLocaleString() : ''}`,
-    link: requiresApproval ? `/treasury?reviewRec=${rec.id}` : '/treasury',
-    metadata: {
-      recommendationId: rec.id,
-      action: result.action,
-      amount: result.recommendedAmountUsd,
-      _emailSubject: requiresApproval ? 'Action Required: New AI Recommendation' : 'AI Recommendation Auto-Executed',
-      _emailHtml: emailHtml,
-    },
-    actorId: session.user.id,
-  }).catch(() => {});
+  try {
+    await NotificationService.notify({
+      eventType: requiresApproval ? 'recommendation_pending' : 'recommendation_auto_executed',
+      enterpriseId: session.user.enterprise_id!,
+      title: requiresApproval ? 'New AI Recommendation — Approval Required' : 'AI Recommendation Auto-Executed',
+      body: `${result.action === 'onramp' ? 'On-ramp' : result.action === 'offramp' ? 'Off-ramp' : 'No action'} ${result.recommendedAmountUsd ? '$' + Math.round(result.recommendedAmountUsd).toLocaleString() : ''}`,
+      link: requiresApproval ? `/treasury?reviewRec=${rec.id}` : '/treasury',
+      metadata: {
+        recommendationId: rec.id,
+        action: result.action,
+        amount: result.recommendedAmountUsd,
+        _emailSubject: requiresApproval ? 'Action Required: New AI Recommendation' : 'AI Recommendation Auto-Executed',
+        _emailHtml: emailHtml,
+      },
+      actorId: session.user.id,
+    });
+  } catch (notifyErr) {
+    console.error('[NOTIFY ERROR]', notifyErr instanceof Error ? notifyErr.message : notifyErr);
+    console.error('[NOTIFY STACK]', notifyErr instanceof Error ? notifyErr.stack : 'no stack');
+  }
 
   // 6. Auto-execute if below threshold and action is not no_action
   if (willAutoExecute && result.action !== 'no_action' && result.recommendedAmountUsd) {
