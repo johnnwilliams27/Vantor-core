@@ -39,24 +39,28 @@ export const NotificationService = {
         .eq('enterprise_id', enterpriseId)
         .neq('is_app_admin', true);
 
-      if (!users || users.length === 0) return;
+      console.log(`[NotificationService] Event: ${eventType}, Enterprise: ${enterpriseId}, Users found: ${users?.length ?? 0}`);
+      if (!users || users.length === 0) {
+        console.warn('[NotificationService] No users found for enterprise');
+        return;
+      }
 
       const eligibleByRole = users.filter((u) =>
         config.defaultRoles.some((requiredRole) => hasRole(u.role as UserRole, requiredRole))
       );
+      console.log(`[NotificationService] Eligible by role: ${eligibleByRole.length}, roles needed: ${config.defaultRoles.join(',')}, user roles: ${users.map(u => u.role).join(',')}`);
 
       const additionalUsers = users.filter(
         (u) => additionalUserIds.includes(u.id) && !eligibleByRole.some((e) => e.id === u.id)
       );
 
-      const allRecipients = [...eligibleByRole, ...additionalUsers];
-      // Exclude the actor, but if that leaves zero recipients, keep them
-      const withoutActor = actorId
-        ? allRecipients.filter((u) => u.id !== actorId)
-        : allRecipients;
-      const recipients = withoutActor.length > 0 ? withoutActor : allRecipients;
+      const recipients = [...eligibleByRole, ...additionalUsers];
 
-      if (recipients.length === 0) return;
+      if (recipients.length === 0) {
+        console.warn('[NotificationService] No recipients after filtering');
+        return;
+      }
+      console.log(`[NotificationService] Sending to ${recipients.length} recipients: ${recipients.map(r => r.email).join(', ')}`);
 
       // 2. Fetch preferences
       const { data: prefs } = await supabase
@@ -90,9 +94,12 @@ export const NotificationService = {
           slacked: false,
         }));
 
+        console.log(`[NotificationService] Inserting ${rows.length} in-app notifications`);
         const { error: insertErr } = await supabase.from('notifications').insert(rows);
         if (insertErr) {
-          console.error('[NotificationService] Insert failed:', insertErr.message);
+          console.error('[NotificationService] Insert failed:', insertErr.message, insertErr);
+        } else {
+          console.log('[NotificationService] Insert succeeded');
         }
       }
 
