@@ -47,7 +47,8 @@ function formatUsd(value: number | string): string {
 function formatAPY(value: string | number | null): string {
   if (value === null || value === undefined) return '—';
   const num = typeof value === 'string' ? parseFloat(value) : value;
-  return `${(num * 100).toFixed(2)}%`;
+  // apy_snapshot is stored as a percentage (e.g. 6.1 = 6.1%), not a decimal
+  return `${num.toFixed(2)}%`;
 }
 
 export function YieldPositionList() {
