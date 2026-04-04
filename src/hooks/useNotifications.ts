@@ -29,7 +29,34 @@ export function useMarkNotificationsRead() {
       if (!res.ok) throw new Error('Failed to mark read');
       return res.json();
     },
-    onSuccess: () => {
+    onMutate: async (ids) => {
+      // Cancel outgoing refetches so they don't overwrite our optimistic update
+      await queryClient.cancelQueries({ queryKey: ['notifications'] });
+
+      // Snapshot current data
+      const queries = queryClient.getQueriesData<{ data: Notification[]; unreadCount: number }>({ queryKey: ['notifications'] });
+
+      // Optimistically update all matching queries
+      for (const [key, current] of queries) {
+        if (!current) continue;
+        const updated = current.data.map((n) =>
+          ids ? (ids.includes(n.id) ? { ...n, read: true } : n) : { ...n, read: true }
+        );
+        const unread = updated.filter((n) => !n.read).length;
+        queryClient.setQueryData(key, { data: updated, unreadCount: unread });
+      }
+
+      return { queries };
+    },
+    onError: (_err, _ids, context) => {
+      // Rollback on error
+      if (context?.queries) {
+        for (const [key, data] of context.queries) {
+          queryClient.setQueryData(key, data);
+        }
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });

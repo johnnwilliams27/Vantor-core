@@ -34,17 +34,8 @@ export function NotificationsPanel() {
   const { data, isLoading } = useNotifications();
   const markRead = useMarkNotificationsRead();
 
-  // Optimistic read state — track IDs we've locally marked as read
-  const [localReadIds, setLocalReadIds] = useState<Set<string>>(new Set());
-  const [allMarkedRead, setAllMarkedRead] = useState(false);
-
-  // Reset optimistic state when fresh server data arrives
-  const serverNotifications = data?.data ?? [];
-  const notifications = serverNotifications.map((n) => ({
-    ...n,
-    read: n.read || allMarkedRead || localReadIds.has(n.id),
-  }));
-  const unreadCount = allMarkedRead ? 0 : Math.max(0, (data?.unreadCount ?? 0) - localReadIds.size);
+  const notifications = data?.data ?? [];
+  const unreadCount = data?.unreadCount ?? 0;
 
   useEffect(() => {
     function onMouseDown(e: MouseEvent) {
@@ -64,13 +55,11 @@ export function NotificationsPanel() {
   }, [open]);
 
   const handleMarkAllRead = useCallback(() => {
-    setAllMarkedRead(true);
     markRead.mutate(undefined);
   }, [markRead]);
 
   const handleClickNotification = useCallback((notif: Notification) => {
     if (!notif.read) {
-      setLocalReadIds((prev) => new Set(prev).add(notif.id));
       markRead.mutate([notif.id]);
     }
     if (notif.link) {
