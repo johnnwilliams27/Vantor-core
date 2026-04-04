@@ -68,7 +68,7 @@ export async function PATCH(
       ctaHref: '/treasury',
     });
 
-    NotificationService.notify({
+    await NotificationService.notify({
       eventType: 'treasury_rule_updated',
       enterpriseId: session.user.enterprise_id!,
       title: 'Treasury Rule Updated',

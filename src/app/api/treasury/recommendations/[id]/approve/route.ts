@@ -148,7 +148,7 @@ export async function POST(
       status: 'approved',
     });
 
-    NotificationService.notify({
+    await NotificationService.notify({
       eventType: 'recommendation_approved',
       enterpriseId: session.user.enterprise_id!,
       title: 'AI Recommendation Approved & Executed',

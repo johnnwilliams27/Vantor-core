@@ -432,7 +432,7 @@ export async function executeScheduledOperation(
           severity: 'warning',
         });
 
-        NotificationService.notify({
+        await NotificationService.notify({
           eventType: 'scheduled_operation_flagged',
           enterpriseId: realEnterpriseId ?? op.enterprise_id!,
           title: 'Scheduled Operation Needs Approval',

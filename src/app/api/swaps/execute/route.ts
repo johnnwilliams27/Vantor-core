@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
     ctaHref: '/swaps',
   });
 
-  NotificationService.notify({
+  await NotificationService.notify({
     eventType: 'swap_completed',
     enterpriseId: session.user.enterprise_id!,
     title: 'Swap Completed',

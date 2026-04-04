@@ -148,7 +148,7 @@ export async function POST(_req: NextRequest) {
     expiresAt: rec.expires_at,
   });
 
-  NotificationService.notify({
+  await NotificationService.notify({
     eventType: requiresApproval ? 'recommendation_pending' : 'recommendation_auto_executed',
     enterpriseId: session.user.enterprise_id!,
     title: requiresApproval ? 'New AI Recommendation — Approval Required' : 'AI Recommendation Auto-Executed',

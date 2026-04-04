@@ -178,7 +178,7 @@ export async function POST(req: NextRequest) {
       ctaHref: '/transactions',
     });
 
-    NotificationService.notify({
+    await NotificationService.notify({
       eventType: 'transfer_completed',
       enterpriseId: session.user.enterprise_id!,
       title: 'Transfer Completed',

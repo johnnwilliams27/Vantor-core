@@ -90,7 +90,7 @@ export async function POST(
     status: 'rejected',
   });
 
-  NotificationService.notify({
+  await NotificationService.notify({
     eventType: 'recommendation_rejected',
     enterpriseId: session.user.enterprise_id!,
     title: 'AI Recommendation Rejected',

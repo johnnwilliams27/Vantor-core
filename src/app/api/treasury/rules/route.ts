@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
       ctaHref: '/treasury',
     });
 
-    NotificationService.notify({
+    await NotificationService.notify({
       eventType: 'treasury_rule_created',
       enterpriseId: session.user.enterprise_id!,
       title: 'Treasury Rule Created',
