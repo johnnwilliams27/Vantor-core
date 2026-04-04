@@ -195,6 +195,22 @@ const PREVIEWS: PreviewEntry[] = [
     }),
   },
   {
+    id: 'yield-withdrawal',
+    label: 'Yield Withdrawal Confirmed',
+    category: 'Yield',
+    html: actionNotificationEmail({
+      title: 'Yield Withdrawal Confirmed',
+      details: [
+        { label: 'Protocol', value: 'Aave V3' },
+        { label: 'Token', value: 'USDC' },
+        { label: 'Amount', value: '50,000' },
+        { label: 'Previous APY', value: '4.2%' },
+      ],
+      ctaLabel: 'View Position',
+      ctaHref: '/yield',
+    }),
+  },
+  {
     id: 'scheduled-swap',
     label: 'Scheduled Swap Executed',
     category: 'Scheduled Ops',
