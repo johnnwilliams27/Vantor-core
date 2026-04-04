@@ -51,3 +51,17 @@ export async function PATCH(req: NextRequest) {
 
   return NextResponse.json({ success: true });
 }
+
+export async function DELETE(_req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const supabase = createAdminClient();
+
+  await supabase
+    .from('notifications')
+    .delete()
+    .eq('user_id', session.user.id);
+
+  return NextResponse.json({ success: true });
+}

@@ -1,10 +1,10 @@
 'use client';
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { Bell, CheckCheck } from 'lucide-react';
+import { Bell, CheckCheck, Trash2 } from 'lucide-react';
 import { CardSpinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
-import { useNotifications, useMarkNotificationsRead } from '@/hooks/useNotifications';
+import { useNotifications, useMarkNotificationsRead, useClearNotifications } from '@/hooks/useNotifications';
 import { useRouter } from 'next/navigation';
 import type { Notification } from '@/types/notifications';
 
@@ -33,6 +33,7 @@ export function NotificationsPanel() {
 
   const { data, isLoading } = useNotifications();
   const markRead = useMarkNotificationsRead();
+  const clearAll = useClearNotifications();
 
   const notifications = data?.data ?? [];
   const unreadCount = data?.unreadCount ?? 0;
@@ -94,15 +95,26 @@ export function NotificationsPanel() {
         <div className="animate-dropdown absolute -right-2 sm:right-0 top-full mt-2 w-[calc(100vw-1.5rem)] sm:w-80 z-50 rounded-xl border border-border bg-popover shadow-xl overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
             <span className="text-sm font-semibold text-foreground">Notifications</span>
-            {unreadCount > 0 && (
-              <button
-                onClick={handleMarkAllRead}
-                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <CheckCheck className="h-3.5 w-3.5" />
-                Mark all read
-              </button>
-            )}
+            <div className="flex items-center gap-3">
+              {unreadCount > 0 && (
+                <button
+                  onClick={handleMarkAllRead}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <CheckCheck className="h-3.5 w-3.5" />
+                  Mark all read
+                </button>
+              )}
+              {notifications.length > 0 && unreadCount === 0 && (
+                <button
+                  onClick={() => clearAll.mutate()}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-red-500 transition-colors"
+                >
+                  <Trash2 className="h-3 w-3" />
+                  Clear all
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="max-h-96 overflow-y-auto divide-y divide-border/40">

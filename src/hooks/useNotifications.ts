@@ -62,6 +62,35 @@ export function useMarkNotificationsRead() {
   });
 }
 
+export function useClearNotifications() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const res = await fetch('/api/notifications', { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to clear');
+      return res.json();
+    },
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['notifications'] });
+      const queries = queryClient.getQueriesData<{ data: Notification[]; unreadCount: number }>({ queryKey: ['notifications'] });
+      for (const [key] of queries) {
+        queryClient.setQueryData(key, { data: [], unreadCount: 0 });
+      }
+      return { queries };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.queries) {
+        for (const [key, data] of context.queries) {
+          queryClient.setQueryData(key, data);
+        }
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+}
+
 export function useNotificationPreferences() {
   const { data: session } = useSession();
   return useQuery<{ data: NotificationPreference[] }>({
