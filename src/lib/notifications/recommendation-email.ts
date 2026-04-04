@@ -20,19 +20,21 @@ interface RecommendationEmailParams {
   expiresAt?: string;
 }
 
-/** Bold section headers in AI reasoning (lines like "📊 Current Position" or "Reasoning") */
+/** Format AI reasoning for email: convert **markdown bold** to HTML and bold section headers */
 function formatReasoning(text: string): string {
-  // Known section header patterns from the Claude AI reasoning format
+  // First convert **bold** markdown to <strong> tags
+  let formatted = text.replace(/\*\*([^*]+)\*\*/g, '<strong style="font-weight:700;color:#111">$1</strong>');
+
+  // Also bold any remaining header lines (emoji + plain text, no markdown)
   const headerPatterns = [
     'Current Position', 'Reasoning', 'Recommendation',
-    'Analysis', 'Summary', 'Action', 'Overview',
+    'Obligations', 'Analysis', 'Summary', 'Action', 'Overview',
   ];
-  return text
+  formatted = formatted
     .split('\n')
     .map((line) => {
       const trimmed = line.trim();
-      if (trimmed.length === 0) return line;
-      // Match lines containing a known header keyword that are short and don't end with a period
+      if (trimmed.length === 0 || trimmed.includes('<strong')) return line;
       const isHeader = trimmed.length < 60 && !trimmed.endsWith('.') &&
         headerPatterns.some((h) => trimmed.includes(h));
       if (isHeader) {
@@ -41,6 +43,8 @@ function formatReasoning(text: string): string {
       return line;
     })
     .join('\n');
+
+  return formatted;
 }
 
 export function recommendationEmailHtml(params: RecommendationEmailParams): string {
