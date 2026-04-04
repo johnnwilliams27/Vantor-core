@@ -125,7 +125,10 @@ function CategorySection({
       </button>
 
       {/* Toggle-all bar */}
-      <div className="flex items-center px-4 py-2 bg-muted/30 rounded-t-lg border border-border border-b-0">
+      <div className={cn(
+        'flex items-center px-4 py-2 bg-muted/30 border border-border',
+        expanded ? 'rounded-t-lg border-b-0' : 'rounded-lg'
+      )}>
         <span className="flex-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">All {CATEGORY_LABELS[category]}</span>
         <ToggleRow
           inApp={allInApp}
@@ -252,7 +255,7 @@ export default function NotificationsSettingsPage() {
               <MessageSquare className="h-4 w-4 text-muted-foreground" />
               <span className="text-[10px] text-muted-foreground font-medium">Slack</span>
               {!slackConnected && (
-                <span className="absolute -top-1.5 -right-3.5">
+                <span className="absolute -top-1 -right-2.5">
                   <InfoTooltip content="Connect Slack in Settings > Integrations to enable Slack notifications." />
                 </span>
               )}
