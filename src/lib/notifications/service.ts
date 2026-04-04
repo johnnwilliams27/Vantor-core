@@ -77,7 +77,9 @@ export const NotificationService = {
           category: config.category,
           title,
           body,
-          metadata: { ...metadata, _emailHtml: undefined, _emailSubject: undefined },
+          metadata: Object.fromEntries(
+            Object.entries(metadata).filter(([k]) => !k.startsWith('_'))
+          ),
           link: link ?? null,
           read: false,
           emailed: false,
@@ -86,7 +88,7 @@ export const NotificationService = {
 
         const { error: insertErr } = await supabase.from('notifications').insert(rows);
         if (insertErr) {
-          console.error('[NotificationService] Insert failed:', insertErr.message);
+          console.error('[NotificationService] Insert failed:', JSON.stringify(insertErr));
         }
       }
 
