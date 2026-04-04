@@ -191,7 +191,7 @@ export function RecommendationCard({ rec }: Props) {
               </div>
             )}
             <div className="text-xs text-muted-foreground">
-              <span>{new Date(rec.created_at).toLocaleDateString()} {new Date(rec.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>
+              <span>{new Date(rec.created_at).toLocaleDateString()} {new Date(rec.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' })}</span>
             </div>
           </div>
 
