@@ -203,8 +203,10 @@ const PREVIEWS: PreviewEntry[] = [
       details: [
         { label: 'Protocol', value: 'Aave V3' },
         { label: 'Token', value: 'USDC' },
-        { label: 'Amount', value: '50,000' },
-        { label: 'Previous APY', value: '4.2%' },
+        { label: 'Deposited', value: '50,000' },
+        { label: 'Withdrawn', value: '51,247.83' },
+        { label: 'Yield Earned', value: '+$1,247.83 (+2.50%)' },
+        { label: 'Duration', value: '217 days' },
       ],
       ctaLabel: 'View Position',
       ctaHref: '/yield',
