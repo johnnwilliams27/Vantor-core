@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useQuery } from '@tanstack/react-query';
 import { useNotificationPreferences, useUpdateNotificationPreference } from '@/hooks/useNotifications';
@@ -152,6 +152,10 @@ export default function NotificationsSettingsPage() {
   });
   const slackConnected = slackData?.connected ?? false;
 
+  // Optimistic overrides — keyed by event_type, merged on top of server data
+  const [overrides, setOverrides] = useState<Record<string, { in_app: boolean; email: boolean; slack: boolean }>>({});
+
+  // Build preferences map: server data + optimistic overrides
   const prefMap = new Map<string, { in_app: boolean; email: boolean; slack: boolean }>();
   (prefsData?.data ?? []).forEach((p) => {
     prefMap.set(p.event_type, {
@@ -160,23 +164,30 @@ export default function NotificationsSettingsPage() {
       slack: p.slack_enabled,
     });
   });
+  // Apply overrides on top
+  for (const [key, val] of Object.entries(overrides)) {
+    prefMap.set(key, val);
+  }
 
-  const handleToggle = (eventType: NotificationEventType, channel: 'in_app' | 'email' | 'slack', value: boolean) => {
-    const existing = prefMap.get(eventType);
-    const newPref = {
-      in_app: channel === 'in_app' ? value : (existing?.in_app ?? true),
-      email: channel === 'email' ? value : (existing?.email ?? true),
-      slack: channel === 'slack' ? value : (existing?.slack ?? true),
-    };
-    // Optimistic update
-    prefMap.set(eventType, newPref);
-    updatePref.mutate({
-      event_type: eventType,
-      in_app_enabled: newPref.in_app,
-      email_enabled: newPref.email,
-      slack_enabled: newPref.slack,
+  const handleToggle = useCallback((eventType: NotificationEventType, channel: 'in_app' | 'email' | 'slack', value: boolean) => {
+    setOverrides((prev) => {
+      const existing = prev[eventType] ?? prefMap.get(eventType) ?? { in_app: true, email: true, slack: true };
+      const newPref = {
+        in_app: channel === 'in_app' ? value : existing.in_app,
+        email: channel === 'email' ? value : existing.email,
+        slack: channel === 'slack' ? value : existing.slack,
+      };
+
+      updatePref.mutate({
+        event_type: eventType,
+        in_app_enabled: newPref.in_app,
+        email_enabled: newPref.email,
+        slack_enabled: newPref.slack,
+      });
+
+      return { ...prev, [eventType]: newPref };
     });
-  };
+  }, [prefMap, updatePref]);
 
   return (
     <div className="space-y-6">
