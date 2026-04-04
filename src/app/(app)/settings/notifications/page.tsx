@@ -196,12 +196,14 @@ export default function NotificationsSettingsPage() {
             <Mail className="h-4 w-4 text-muted-foreground" />
             <span className="text-[10px] text-muted-foreground font-medium">Email</span>
           </div>
-          <div className="w-14 flex flex-col items-center gap-1 relative">
+          <div className="w-14 flex flex-col items-center gap-1">
             <MessageSquare className="h-4 w-4 text-muted-foreground" />
-            <span className="text-[10px] text-muted-foreground font-medium">Slack</span>
-            {!slackConnected && (
-              <InfoTooltip content="Connect Slack in Settings > Integrations to enable Slack notifications." />
-            )}
+            <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-0.5">
+              Slack
+              {!slackConnected && (
+                <InfoTooltip content="Connect Slack in Settings > Integrations to enable Slack notifications." />
+              )}
+            </span>
           </div>
         </div>
       </div>
