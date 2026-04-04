@@ -85,23 +85,30 @@ function CategorySection({
           <span className="text-sm font-semibold text-foreground">{CATEGORY_LABELS[category]}</span>
         </button>
         <div className="flex items-center gap-6">
-          <div className="w-14 flex flex-col items-center gap-1">
-            <Bell className="h-3.5 w-3.5 text-muted-foreground" />
+          <div className="w-16 flex flex-col items-center gap-1">
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <Bell className="h-3 w-3" />
+              <span className="text-[10px] font-medium">In-App</span>
+            </div>
             <Toggle checked={allInApp} onChange={() => handleBulkToggle('in_app')} />
           </div>
-          <div className="w-14 flex flex-col items-center gap-1">
-            <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+          <div className="w-16 flex flex-col items-center gap-1">
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <Mail className="h-3 w-3" />
+              <span className="text-[10px] font-medium">Email</span>
+            </div>
             <Toggle checked={allEmail} onChange={() => handleBulkToggle('email')} />
           </div>
-          <div className="w-14 flex flex-col items-center gap-1">
-            <span className="relative">
-              <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
+          <div className="w-16 flex flex-col items-center gap-1">
+            <div className="flex items-center gap-1 text-muted-foreground relative">
+              <MessageSquare className="h-3 w-3" />
+              <span className="text-[10px] font-medium">Slack</span>
               {!slackConnected && (
                 <span className="absolute -top-2 -right-4">
                   <InfoTooltip content="Connect Slack in Settings > Integrations to enable Slack notifications." />
                 </span>
               )}
-            </span>
+            </div>
             <Toggle checked={allSlack} onChange={() => handleBulkToggle('slack')} disabled={!slackConnected} />
           </div>
         </div>
@@ -125,13 +132,13 @@ function CategorySection({
                   <p className="text-xs text-muted-foreground truncate">{event.description}</p>
                 </div>
                 <div className="flex items-center gap-6">
-                  <div className="w-14 flex justify-center">
+                  <div className="w-16 flex justify-center">
                     <Toggle checked={inApp} onChange={(v) => onToggle(event.eventType, 'in_app', v)} />
                   </div>
-                  <div className="w-14 flex justify-center">
+                  <div className="w-16 flex justify-center">
                     <Toggle checked={email} onChange={(v) => onToggle(event.eventType, 'email', v)} />
                   </div>
-                  <div className="w-14 flex justify-center">
+                  <div className="w-16 flex justify-center">
                     <Toggle checked={slack} onChange={(v) => onToggle(event.eventType, 'slack', v)} disabled={!slackConnected} />
                   </div>
                 </div>
