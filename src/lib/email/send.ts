@@ -31,3 +31,23 @@ export async function sendEmail(params: {
 
   return result;
 }
+
+export async function sendNotificationEmail(params: {
+  to: string;
+  subject: string;
+  html: string;
+}) {
+  if (USE_MOCK) {
+    console.log('[MOCK NOTIFICATION EMAIL]', { to: params.to, subject: params.subject });
+    return { id: 'mock-' + Date.now() };
+  }
+
+  const result = await getResend().emails.send({
+    from: 'Vantor <notifications@vantor.xyz>',
+    to: params.to,
+    subject: params.subject,
+    html: params.html,
+  });
+
+  return result;
+}
