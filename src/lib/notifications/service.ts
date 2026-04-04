@@ -39,16 +39,11 @@ export const NotificationService = {
         .eq('enterprise_id', enterpriseId)
         .neq('is_app_admin', true);
 
-      console.log(`[NotificationService] Event: ${eventType}, Enterprise: ${enterpriseId}, Users found: ${users?.length ?? 0}`);
-      if (!users || users.length === 0) {
-        console.warn('[NotificationService] No users found for enterprise');
-        return;
-      }
+      if (!users || users.length === 0) return;
 
       const eligibleByRole = users.filter((u) =>
         config.defaultRoles.some((requiredRole) => hasRole(u.role as UserRole, requiredRole))
       );
-      console.log(`[NotificationService] Eligible by role: ${eligibleByRole.length}, roles needed: ${config.defaultRoles.join(',')}, user roles: ${users.map(u => u.role).join(',')}`);
 
       const additionalUsers = users.filter(
         (u) => additionalUserIds.includes(u.id) && !eligibleByRole.some((e) => e.id === u.id)
@@ -56,11 +51,7 @@ export const NotificationService = {
 
       const recipients = [...eligibleByRole, ...additionalUsers];
 
-      if (recipients.length === 0) {
-        console.warn('[NotificationService] No recipients after filtering');
-        return;
-      }
-      console.log(`[NotificationService] Sending to ${recipients.length} recipients: ${recipients.map(r => r.email).join(', ')}`);
+      if (recipients.length === 0) return;
 
       // 2. Fetch preferences
       const { data: prefs } = await supabase
@@ -93,12 +84,9 @@ export const NotificationService = {
           slacked: false,
         }));
 
-        console.log(`[NotificationService] Inserting ${rows.length} in-app notifications`);
         const { error: insertErr } = await supabase.from('notifications').insert(rows);
         if (insertErr) {
-          console.error('[NotificationService] Insert failed:', insertErr.message, insertErr);
-        } else {
-          console.log('[NotificationService] Insert succeeded');
+          console.error('[NotificationService] Insert failed:', insertErr.message);
         }
       }
 
