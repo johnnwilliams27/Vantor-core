@@ -200,7 +200,7 @@ export default function NotificationsSettingsPage() {
             <span className="relative">
               <MessageSquare className="h-4 w-4 text-muted-foreground" />
               {!slackConnected && (
-                <span className="absolute -top-1 -right-3">
+                <span className="absolute -top-2 -right-4">
                   <InfoTooltip content="Connect Slack in Settings > Integrations to enable Slack notifications." />
                 </span>
               )}
