@@ -5,7 +5,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useNotificationPreferences, useUpdateNotificationPreference } from '@/hooks/useNotifications';
 import { EVENT_CATALOG, CATEGORY_LABELS, CATEGORY_ORDER } from '@/lib/notifications/events';
 import { hasRole } from '@/lib/auth/rbac';
-import { ChevronDown, Bell, Mail, MessageSquare, Info } from 'lucide-react';
+import { ChevronDown, Bell, Mail, MessageSquare } from 'lucide-react';
+import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/types/database';
 import type { NotificationEventType, NotificationCategory } from '@/types/notifications';
@@ -199,9 +200,7 @@ export default function NotificationsSettingsPage() {
             <MessageSquare className="h-4 w-4 text-muted-foreground" />
             <span className="text-[10px] text-muted-foreground font-medium">Slack</span>
             {!slackConnected && (
-              <div className="absolute -top-1 -right-1" title="Connect Slack in Settings > Integrations">
-                <Info className="h-3 w-3 text-amber-500" />
-              </div>
+              <InfoTooltip content="Connect Slack in Settings > Integrations to enable Slack notifications." />
             )}
           </div>
         </div>
