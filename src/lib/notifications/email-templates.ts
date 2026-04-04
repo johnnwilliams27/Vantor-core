@@ -1,5 +1,5 @@
 const BRAND_COLOR = '#19595b';
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.vantor.xyz';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.vantor.xyz';
 
 export function emailLayout(content: string): string {
   return `<!DOCTYPE html>
