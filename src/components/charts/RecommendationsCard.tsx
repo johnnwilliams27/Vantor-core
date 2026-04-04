@@ -316,7 +316,7 @@ function CompactRec({ rec }: { rec: AiRecommendation }) {
             )}
 
             <div className="text-[10px] text-muted-foreground">
-              {new Date(rec.created_at).toLocaleDateString()}
+              {new Date(rec.created_at).toLocaleDateString()} {new Date(rec.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
             </div>
           </div>
 
