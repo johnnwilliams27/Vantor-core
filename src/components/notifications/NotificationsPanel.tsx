@@ -132,7 +132,7 @@ export function NotificationsPanel() {
                     !notif.read ? 'bg-[#19595b]/5' : 'hover:bg-black/[0.03] dark:hover:bg-white/[0.03]'
                   )}
                 >
-                  <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', CATEGORY_DOT[notif.category] ?? 'bg-muted-foreground')} />
+                  <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', !notif.read ? (CATEGORY_DOT[notif.category] ?? 'bg-muted-foreground') : 'bg-transparent')} />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-foreground leading-snug">{notif.title}</p>
                     <p className="text-xs text-muted-foreground truncate mt-0.5">{notif.body}</p>
