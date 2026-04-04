@@ -148,51 +148,21 @@ export async function POST(_req: NextRequest) {
     expiresAt: rec.expires_at,
   });
 
-  // Direct inline notification insert + service call
-  try {
-    // Direct insert test — bypasses NotificationService to isolate the issue
-    const { error: directErr } = await supabase.from('notifications').insert({
-      enterprise_id: session.user.enterprise_id,
-      user_id: session.user.id,
-      event_type: requiresApproval ? 'recommendation_pending' : 'recommendation_auto_executed',
-      category: 'treasury_ai',
-      title: requiresApproval ? 'New AI Recommendation — Approval Required' : 'AI Recommendation Auto-Executed',
-      body: `${result.action === 'onramp' ? 'On-ramp' : result.action === 'offramp' ? 'Off-ramp' : 'No action'} ${result.recommendedAmountUsd ? '$' + Math.round(result.recommendedAmountUsd).toLocaleString() : ''}`,
-      link: requiresApproval ? `/treasury?reviewRec=${rec.id}` : '/treasury',
-      metadata: { recommendationId: rec.id, action: result.action },
-      read: false,
-      emailed: false,
-      slacked: false,
-    });
-    if (directErr) {
-      console.error('[DIRECT INSERT ERROR]', JSON.stringify(directErr));
-    } else {
-      console.log('[DIRECT INSERT] Success');
-    }
-  } catch (e) {
-    console.error('[DIRECT INSERT EXCEPTION]', e instanceof Error ? e.message : e);
-  }
-
-  // Also run the full service for email delivery
-  try {
-    await NotificationService.notify({
-      eventType: requiresApproval ? 'recommendation_pending' : 'recommendation_auto_executed',
-      enterpriseId: session.user.enterprise_id!,
-      title: requiresApproval ? 'New AI Recommendation ��� Approval Required' : 'AI Recommendation Auto-Executed',
-      body: `${result.action === 'onramp' ? 'On-ramp' : result.action === 'offramp' ? 'Off-ramp' : 'No action'} ${result.recommendedAmountUsd ? '$' + Math.round(result.recommendedAmountUsd).toLocaleString() : ''}`,
-      link: requiresApproval ? `/treasury?reviewRec=${rec.id}` : '/treasury',
-      metadata: {
-        recommendationId: rec.id,
-        action: result.action,
-        amount: result.recommendedAmountUsd,
-        _emailSubject: requiresApproval ? 'Action Required: New AI Recommendation' : 'AI Recommendation Auto-Executed',
-        _emailHtml: emailHtml,
-      },
-      actorId: session.user.id,
-    });
-  } catch (notifyErr) {
-    console.error('[NOTIFY ERROR]', notifyErr instanceof Error ? notifyErr.message : notifyErr);
-  }
+  await NotificationService.notify({
+    eventType: requiresApproval ? 'recommendation_pending' : 'recommendation_auto_executed',
+    enterpriseId: session.user.enterprise_id!,
+    title: requiresApproval ? 'New AI Recommendation — Approval Required' : 'AI Recommendation Auto-Executed',
+    body: `${result.action === 'onramp' ? 'On-ramp' : result.action === 'offramp' ? 'Off-ramp' : 'No action'} ${result.recommendedAmountUsd ? '$' + Math.round(result.recommendedAmountUsd).toLocaleString() : ''}`,
+    link: requiresApproval ? `/treasury?reviewRec=${rec.id}` : '/treasury',
+    metadata: {
+      recommendationId: rec.id,
+      action: result.action,
+      amount: result.recommendedAmountUsd,
+      _emailSubject: requiresApproval ? 'Action Required: New AI Recommendation' : 'AI Recommendation Auto-Executed',
+      _emailHtml: emailHtml,
+    },
+    actorId: session.user.id,
+  }).catch(() => {});
 
   // 6. Auto-execute if below threshold and action is not no_action
   if (willAutoExecute && result.action !== 'no_action' && result.recommendedAmountUsd) {
