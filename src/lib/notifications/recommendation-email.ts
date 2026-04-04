@@ -20,6 +20,29 @@ interface RecommendationEmailParams {
   expiresAt?: string;
 }
 
+/** Bold section headers in AI reasoning (lines like "📊 Current Position" or "Reasoning") */
+function formatReasoning(text: string): string {
+  // Known section header patterns from the Claude AI reasoning format
+  const headerPatterns = [
+    'Current Position', 'Reasoning', 'Recommendation',
+    'Analysis', 'Summary', 'Action', 'Overview',
+  ];
+  return text
+    .split('\n')
+    .map((line) => {
+      const trimmed = line.trim();
+      if (trimmed.length === 0) return line;
+      // Match lines containing a known header keyword that are short and don't end with a period
+      const isHeader = trimmed.length < 60 && !trimmed.endsWith('.') &&
+        headerPatterns.some((h) => trimmed.includes(h));
+      if (isHeader) {
+        return `<strong style="font-weight:700;color:#111">${line}</strong>`;
+      }
+      return line;
+    })
+    .join('\n');
+}
+
 export function recommendationEmailHtml(params: RecommendationEmailParams): string {
   const actionLabel = ACTION_LABELS[params.action] ?? params.action;
   const actionColor = ACTION_COLORS[params.action] ?? '#6b7280';
@@ -93,7 +116,7 @@ export function recommendationEmailHtml(params: RecommendationEmailParams): stri
         </tr>
       </table>
 
-      <div style="border-left:3px solid ${actionColor};padding:12px 16px;margin-top:16px;font-size:13px;color:#333;line-height:1.6;white-space:pre-line">${params.aiReasoning}</div>
+      <div style="border-left:3px solid ${actionColor};padding:12px 16px;margin-top:16px;font-size:13px;color:#333;line-height:1.6;white-space:pre-line">${formatReasoning(params.aiReasoning)}</div>
 
       ${movementHtml}
       ${ctaHtml}
