@@ -150,7 +150,7 @@ export async function POST(_req: NextRequest) {
 
   NotificationService.notify({
     eventType: requiresApproval ? 'recommendation_pending' : 'recommendation_auto_executed',
-    enterpriseId,
+    enterpriseId: enterpriseId!,
     title: requiresApproval ? 'New AI Recommendation — Approval Required' : 'AI Recommendation Auto-Executed',
     body: `${result.action === 'onramp' ? 'On-ramp' : result.action === 'offramp' ? 'Off-ramp' : 'No action'} ${result.recommendedAmountUsd ? '$' + Math.round(result.recommendedAmountUsd).toLocaleString() : ''}`,
     link: requiresApproval ? `/treasury?reviewRec=${rec.id}` : '/treasury',
