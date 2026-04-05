@@ -5,8 +5,6 @@ import { authOptions } from '@/lib/auth/nextauth.config';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
-import { getFCBalance } from '@/lib/banking/stripe-fc';
-import { getIntegrationMode } from '@/lib/env/integration-mode';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 export async function POST(
@@ -29,7 +27,7 @@ export async function POST(
   const supabase = createAdminClient();
 
   // Verify account belongs to user
-  const { data: account, error: fetchErr } = await supabase
+  const { data: bankAccount, error: fetchErr } = await supabase
     .from('bank_accounts')
     .select('id, banking_provider, stripe_fc_account_id')
     .eq('id', params.id)
@@ -39,41 +37,24 @@ export async function POST(
     .maybeSingle();
 
   if (fetchErr) return NextResponse.json({ error: fetchErr.message }, { status: 500 });
-  if (!account) return NextResponse.json({ error: 'Account not found' }, { status: 404 });
+  if (!bankAccount) return NextResponse.json({ error: 'Account not found' }, { status: 404 });
 
-  const mode = getIntegrationMode(session.user.subscription_tier);
+  if (bankAccount.banking_provider === 'stripe_fc') {
+    const { getFCBalance } = await import('@/lib/banking/stripe-fc');
+    const { getIntegrationMode } = await import('@/lib/env/integration-mode');
 
-  try {
-    const stripeAccountId = account.stripe_fc_account_id ?? account.id;
-    const balance = await getFCBalance(mode, stripeAccountId);
+    const mode = getIntegrationMode(session.user.subscription_tier);
+    const balance = await getFCBalance(mode, bankAccount.stripe_fc_account_id!);
 
-    const { error: updateErr } = await supabase
-      .from('bank_accounts')
-      .update({
-        current_balance: balance.current,
-        balance_currency: balance.currency,
-        balance_as_of: new Date().toISOString(),
-      })
-      .eq('id', params.id);
+    await supabase.from('bank_accounts').update({
+      current_balance: balance.current,
+      balance_currency: balance.currency,
+      balance_as_of: new Date().toISOString(),
+    }).eq('id', bankAccount.id);
 
-    if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });
-
-    await writeAuditLog({
-      userId: session.user.id,
-      action: 'bank_balance_refresh',
-      entityType: 'bank_account',
-      entityId: params.id,
-      details: { balance: balance.current, currency: balance.currency },
-    });
-
-    return NextResponse.json({
-      data: {
-        current_balance: balance.current,
-        balance_currency: balance.currency,
-        balance_as_of: new Date().toISOString(),
-      },
-    });
-  } catch (err) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+    return NextResponse.json({ data: { balance: balance.current, currency: balance.currency } });
   }
+
+  // Belvo flow handled in Task 13, manual accounts have no auto-refresh
+  return NextResponse.json({ error: 'Balance refresh not supported for this account type' }, { status: 400 });
 }
