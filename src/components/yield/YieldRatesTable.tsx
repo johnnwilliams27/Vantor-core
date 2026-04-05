@@ -541,7 +541,7 @@ export function YieldRatesTable() {
       {/* Rate timestamp */}
       {oldestFetchedAt && (
         <p className="text-xs text-muted-foreground text-right">
-          Rates as of {formatRelativeTime(oldestFetchedAt)}
+          Last updated: {new Date(oldestFetchedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'medium' })} ({formatRelativeTime(oldestFetchedAt)})
         </p>
       )}
 
