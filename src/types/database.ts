@@ -9,6 +9,7 @@ export interface Enterprise {
   kyc_status: KycStatus;
   kyc_submitted_at: string | null;
   kyc_verified_at: string | null;
+  country: string | null;  // ISO 3166-1 alpha-2
   metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
@@ -277,6 +278,11 @@ export interface BankAccount {
   balance_currency: string;
   balance_as_of: string | null;
   nickname: string | null;
+  banking_provider: 'stripe_fc' | 'belvo' | 'manual';
+  stripe_fc_account_id: string | null;
+  iban: string | null;
+  belvo_link_id: string | null;
+  belvo_account_id: string | null;
 }
 
 export interface FiatTransaction {
@@ -584,4 +590,27 @@ export interface YieldTransaction {
   metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+}
+
+// ---- EU Banking / Yield Tier ----
+
+export interface OndoKycVerification {
+  id: string;
+  enterprise_id: string;
+  wallet_address: string;
+  status: 'pending' | 'verified';
+  verified_at: string | null;
+  created_at: string;
+}
+
+export interface YieldRateCache {
+  id: string;
+  protocol: string;
+  token: string;
+  chain: string;
+  supply_apy: number;
+  reward_apy: number;
+  total_apy: number;
+  fetched_at: string;
+  is_stale: boolean;
 }
