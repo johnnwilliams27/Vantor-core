@@ -14,6 +14,8 @@ const VENDORS = [
   { extId: 'v-010', name: 'Greenfield Energy', email: 'finance@greenfield.example.com', wallet: 'TESTvendorSo3333333333333333333333333333', chain: 'solana' },
   { extId: 'v-011', name: 'Urban Property Mgmt', email: 'billing@urbanprop.example.com', wallet: '0xTESTvendor8888888888888888888888888888', chain: 'ethereum' },
   { extId: 'v-012', name: 'Legal Eagles LLP', email: 'invoicing@legaleagles.example.com', wallet: '0xTESTvendor9999999999999999999999999999', chain: 'ethereum' },
+  { extId: 'v-013', name: 'TechBR Soluções Ltda', email: 'financeiro@techbr.example.com', wallet: null, chain: null },
+  { extId: 'v-014', name: 'CloudMX Servicios SA', email: 'cuentas@cloudmx.example.com', wallet: null, chain: null },
 ];
 
 export interface ErpIds {
@@ -101,9 +103,51 @@ export async function seedErp(ctx: SeedContext): Promise<ErpIds> {
     };
   });
 
+  // Add BRL and MXN invoices for LATAM vendors
+  const latamVendors = vendors.filter(v => ['v-013', 'v-014'].includes(v.external_id));
+  const latamInvoiceDefs = [
+    { extId: 'v-013', currency: 'BRL', amount: '45000.00', description: 'Software development sprint', status: 'paid', daysAgoDue: 15 },
+    { extId: 'v-013', currency: 'BRL', amount: '127500.00', description: 'Annual platform license', status: 'unpaid', daysFromNowDue: 18 },
+    { extId: 'v-014', currency: 'MXN', amount: '350000.00', description: 'Cloud infrastructure Q2', status: 'paid', daysAgoDue: 30 },
+    { extId: 'v-014', currency: 'MXN', amount: '185000.00', description: 'Managed services retainer', status: 'overdue', daysAgoDue: 5 },
+  ];
+
+  const latamInvoiceRows = latamInvoiceDefs.map((def, i) => {
+    const vendor = latamVendors.find(v => v.external_id === def.extId) ?? vendors[0];
+    let dueDate: string;
+    let paidAt: string | null = null;
+    const idx = invoiceRows.length + i;
+
+    if (def.status === 'paid') {
+      dueDate = dateDaysAgo(def.daysAgoDue!);
+      paidAt = daysAgo(def.daysAgoDue! - Math.floor(rand(0, 3)));
+    } else if (def.status === 'overdue') {
+      dueDate = dateDaysAgo(def.daysAgoDue!);
+    } else {
+      dueDate = dateDaysFromNow(def.daysFromNowDue!);
+    }
+
+    return {
+      user_id: userId,
+      enterprise_id: enterpriseId,
+      erp_config_id: vendor.erp_config_id,
+      erp_invoice_id: `INV-TEST-${String(idx + 1).padStart(3, '0')}`,
+      vendor_id: vendor.id,
+      invoice_number: `INV-TEST-${String(idx + 1).padStart(3, '0')}`,
+      description: def.description,
+      amount: def.amount,
+      currency: def.currency,
+      token: null,
+      chain: null,
+      due_date: dueDate,
+      status: def.status,
+      paid_at: paidAt,
+    };
+  });
+
   const { data: invoices } = await supabase
     .from('invoices')
-    .insert(invoiceRows)
+    .insert([...invoiceRows, ...latamInvoiceRows])
     .select('id, erp_config_id, amount, token, status');
 
   // GL postings for paid invoices
