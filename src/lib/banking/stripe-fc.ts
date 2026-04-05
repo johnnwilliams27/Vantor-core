@@ -32,6 +32,10 @@ export async function createFCSession(mode: IntegrationMode): Promise<{
     permissions: ['balances', 'ownership', 'transactions'],
   });
 
+  if (!session.client_secret) {
+    throw new Error('Stripe Financial Connections session did not return a client_secret');
+  }
+
   return {
     clientSecret: session.client_secret,
     sessionId: session.id,
@@ -57,7 +61,7 @@ export async function getFCAccount(mode: IntegrationMode, accountId: string): Pr
     institutionName: account.institution_name ?? 'Bank',
     displayName: account.display_name ?? null,
     accountType: account.subcategory ?? account.category ?? 'checking',
-    currency: account.balance?.currency ?? null,
+    currency: account.balance ? (Object.keys(account.balance.current)[0]?.toUpperCase() ?? null) : null,
     last4: account.last4 ?? null,
   };
 }
@@ -81,9 +85,13 @@ export async function getFCBalance(mode: IntegrationMode, accountId: string): Pr
   const account = await stripe.financialConnections.accounts.retrieve(accountId);
   const bal = account.balance;
 
+  // bal.current is a map of { [currencyCode]: amountInCents }
+  const currencyKey = bal ? Object.keys(bal.current)[0] : undefined;
+  const currentAmount = bal && currencyKey ? bal.current[currencyKey]! : 0;
+
   return {
-    current: (bal?.current ?? 0) / 100,
+    current: currentAmount / 100,
     available: bal?.cash?.available ? Object.values(bal.cash.available)[0]! / 100 : null,
-    currency: bal?.currency?.toUpperCase() ?? 'USD',
+    currency: currencyKey?.toUpperCase() ?? 'USD',
   };
 }
