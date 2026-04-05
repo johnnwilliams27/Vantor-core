@@ -22,6 +22,15 @@ const PROTOCOL_META: Record<YieldProtocolId, Omit<YieldProtocolInfo, 'id'>> = {
     riskFactors: { smartContract: 1, counterparty: 1, liquidity: 1, regulatory: 2 },
     kycRequired: false,
   },
+  compound_v3: {
+    name: 'Compound V3',
+    chain: 'ethereum',
+    supportedTokens: ['USDC', 'USDT'],
+    description: 'Battle-tested lending protocol. Supply stablecoins to the Comet market and earn yield from borrowers.',
+    riskLevel: 'low',
+    riskFactors: { smartContract: 1, counterparty: 1, liquidity: 1, regulatory: 2 },
+    kycRequired: false,
+  },
   morpho: {
     name: 'Morpho Blue',
     chain: 'ethereum',
@@ -107,6 +116,7 @@ const PROTOCOL_META: Record<YieldProtocolId, Omit<YieldProtocolInfo, 'id'>> = {
 
 const MOCK_APYS: Record<YieldProtocolId, { supply: number; reward: number }> = {
   aave_v3:           { supply: 0.0485, reward: 0.0020 },
+  compound_v3:       { supply: 0.0440, reward: 0.0035 },
   morpho:            { supply: 0.0620, reward: 0.0080 },
   morpho_steakhouse: { supply: 0.1150, reward: 0.0200 },
   kamino:            { supply: 0.0710, reward: 0.0050 },
@@ -120,6 +130,7 @@ const MOCK_APYS: Record<YieldProtocolId, { supply: number; reward: number }> = {
 
 const YIELD_TOKENS: Record<YieldProtocolId, string> = {
   aave_v3: 'aUSDC',
+  compound_v3: 'cUSDCv3',
   morpho: 'mUSDC',
   morpho_steakhouse: 'mshUSDC',
   kamino: 'kUSDC',

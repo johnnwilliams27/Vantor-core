@@ -8,6 +8,7 @@ export function getYieldAdapter(protocol: YieldProtocolId): IYieldProtocol {
 
 export const ALL_YIELD_PROTOCOLS: YieldProtocolId[] = [
   'aave_v3',
+  'compound_v3',
   'sky',
   'ondo',
   'morpho',
