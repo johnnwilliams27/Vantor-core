@@ -33,7 +33,7 @@ import { z } from 'zod';
 import { DateTimePicker } from '@/components/ui/datetime-picker';
 import { PayInvoiceModal } from './PayInvoiceModal';
 
-const CURRENCIES = ['USD', 'EUR', 'GBP', 'USDC', 'USDT'] as const;
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'BRL', 'MXN', 'USDC', 'USDT'] as const;
 const STABLECOINS = ['USDC', 'USDT'];
 
 const createInvoiceSchema = z.object({

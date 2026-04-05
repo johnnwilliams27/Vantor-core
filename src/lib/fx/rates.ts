@@ -1,4 +1,4 @@
-export const SUPPORTED_FIAT_CURRENCIES = ['USD', 'EUR', 'GBP'] as const;
+export const SUPPORTED_FIAT_CURRENCIES = ['USD', 'EUR', 'GBP', 'BRL', 'MXN'] as const;
 export type FiatCurrency = (typeof SUPPORTED_FIAT_CURRENCIES)[number];
 
 /**
@@ -9,6 +9,8 @@ const MOCK_RATES: Record<FiatCurrency, number> = {
   USD: 1.0,
   EUR: 0.92,
   GBP: 0.79,
+  BRL: 5.05,
+  MXN: 17.15,
 };
 
 export function getMockFxRates(): Record<FiatCurrency, number> {
@@ -17,7 +19,6 @@ export function getMockFxRates(): Record<FiatCurrency, number> {
 
 export function getFxRate(from: FiatCurrency, to: FiatCurrency): number {
   if (from === to) return 1;
-  // Convert via USD: from → USD → to
   const fromToUsd = 1 / MOCK_RATES[from];
   return fromToUsd * MOCK_RATES[to];
 }
@@ -30,6 +31,8 @@ const CURRENCY_SYMBOLS: Record<FiatCurrency, string> = {
   USD: '$',
   EUR: '€',
   GBP: '£',
+  BRL: 'R$',
+  MXN: 'MX$',
 };
 
 export function getCurrencySymbol(currency: string): string {

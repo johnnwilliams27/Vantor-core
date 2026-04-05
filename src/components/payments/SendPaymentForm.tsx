@@ -22,7 +22,7 @@ const schema = z.object({
   toAccountNumber: z.string().min(1, 'Enter account number'),
   toRoutingNumber: z.string().min(1, 'Enter routing number'),
   amount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Enter a valid amount'),
-  currency: z.enum(['USD', 'EUR', 'GBP']),
+  currency: z.enum(['USD', 'EUR', 'GBP', 'BRL', 'MXN']),
   invoiceId: z.string().optional(),
   memo: z.string().optional(),
 });
@@ -155,6 +155,8 @@ export function SendPaymentForm() {
                 <option value="USD">USD</option>
                 <option value="EUR">EUR</option>
                 <option value="GBP">GBP</option>
+                <option value="BRL">BRL</option>
+                <option value="MXN">MXN</option>
               </Select>
             </div>
           </div>

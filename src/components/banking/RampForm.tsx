@@ -33,7 +33,7 @@ const schema = z.object({
   bankAccountId: z.string().uuid('Select a bank account'),
   walletId: z.string().uuid('Select a wallet'),
   cryptoToken: z.enum(['USDC', 'USDT']),
-  fiatCurrency: z.enum(['USD', 'EUR', 'GBP']),
+  fiatCurrency: z.enum(['USD', 'EUR', 'GBP', 'BRL', 'MXN']),
   amount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Enter a valid amount'),
   memo: z.string().max(2000).optional(),
 });
@@ -93,8 +93,8 @@ export function RampForm() {
   // Auto-set fiat currency from bank account
   useEffect(() => {
     if (selectedBank?.balance_currency) {
-      const bankCurrency = selectedBank.balance_currency as 'USD' | 'EUR' | 'GBP';
-      if (['USD', 'EUR', 'GBP'].includes(bankCurrency)) {
+      const bankCurrency = selectedBank.balance_currency as 'USD' | 'EUR' | 'GBP' | 'BRL' | 'MXN';
+      if (['USD', 'EUR', 'GBP', 'BRL', 'MXN'].includes(bankCurrency)) {
         setValue('fiatCurrency', bankCurrency);
       }
     }
@@ -173,7 +173,7 @@ export function RampForm() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
 
-      const currSym = { USD: '$', EUR: '€', GBP: '£' }[data.fiatCurrency] ?? data.fiatCurrency;
+      const currSym = { USD: '$', EUR: '€', GBP: '£', BRL: 'R$', MXN: 'MX$' }[data.fiatCurrency] ?? data.fiatCurrency;
       const desc = data.direction === 'offramp'
         ? `${quote.cryptoAmount.toLocaleString()} ${data.cryptoToken} → ${currSym}${quote.fiatAmount.toLocaleString()}`
         : `${currSym}${quote.fiatAmount.toLocaleString()} → ${quote.cryptoAmount} ${data.cryptoToken}`;
@@ -313,6 +313,8 @@ export function RampForm() {
                     <option value="USD">USD</option>
                     <option value="EUR">EUR</option>
                     <option value="GBP">GBP</option>
+                    <option value="BRL">BRL</option>
+                    <option value="MXN">MXN</option>
                   </Select>
                 </>
               )}
@@ -351,7 +353,7 @@ export function RampForm() {
 
         {/* Quote */}
         {quote && (() => {
-          const sym = { USD: '$', EUR: '€', GBP: '£' }[fiatCurrency] ?? fiatCurrency;
+          const sym = { USD: '$', EUR: '€', GBP: '£', BRL: 'R$', MXN: 'MX$' }[fiatCurrency] ?? fiatCurrency;
           return (
           <div className="mt-4 p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-2">
             <div className="text-sm font-semibold">Quote</div>
