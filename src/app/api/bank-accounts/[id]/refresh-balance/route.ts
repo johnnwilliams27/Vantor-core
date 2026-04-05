@@ -29,7 +29,7 @@ export async function POST(
   // Verify account belongs to user
   const { data: bankAccount, error: fetchErr } = await supabase
     .from('bank_accounts')
-    .select('id, banking_provider, stripe_fc_account_id')
+    .select('id, banking_provider, stripe_fc_account_id, belvo_link_id, belvo_account_id')
     .eq('id', params.id)
     .eq('user_id', session.user.id)
     .eq('enterprise_id', enterpriseId)
@@ -55,6 +55,22 @@ export async function POST(
     return NextResponse.json({ data: { balance: balance.current, currency: balance.currency } });
   }
 
-  // Belvo flow handled in Task 13, manual accounts have no auto-refresh
+  if (bankAccount.banking_provider === 'belvo') {
+    const { getBalances } = await import('@/lib/banking/belvo');
+    const { getIntegrationMode } = await import('@/lib/env/integration-mode');
+
+    const mode = getIntegrationMode(session.user.subscription_tier);
+    const balance = await getBalances(mode, bankAccount.belvo_link_id!, bankAccount.belvo_account_id!);
+
+    await supabase.from('bank_accounts').update({
+      current_balance: balance.current,
+      balance_currency: balance.currency,
+      balance_as_of: new Date().toISOString(),
+    }).eq('id', bankAccount.id);
+
+    return NextResponse.json({ data: { balance: balance.current, currency: balance.currency } });
+  }
+
+  // Manual accounts have no auto-refresh
   return NextResponse.json({ error: 'Balance refresh not supported for this account type' }, { status: 400 });
 }
