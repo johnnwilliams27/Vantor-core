@@ -9,6 +9,7 @@ import { actionNotificationEmail, fmtUsd } from '@/lib/notifications/email-templ
 import { getBankingAdapter } from '@/lib/banking/factory';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 import { z } from 'zod';
+import { requirePaidTier, tierGateResponse, TierGateError } from '@/lib/auth/tier-gate';
 
 const PAYMENT_STATUSES = ['pending', 'processing', 'completed', 'failed', 'cancelled'] as const;
 
@@ -57,6 +58,8 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try { requireRole(session.user.role as any, 'treasury_manager'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
+  try { requirePaidTier(session.user.subscription_tier); }
+  catch (e) { if (e instanceof TierGateError) return tierGateResponse('send payments'); throw e; }
 
   const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
 

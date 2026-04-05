@@ -9,6 +9,7 @@ import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
 import type { YieldProtocolId } from '@/lib/yield/interface';
 import { z } from 'zod';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
+import { requirePaidTier, tierGateResponse, TierGateError } from '@/lib/auth/tier-gate';
 
 const depositSchema = z.object({
   protocol: z.enum(['aave_v3', 'morpho', 'morpho_steakhouse', 'kamino', 'kamino_multiply', 'ondo', 'sky', 'ethena', 'maple', 'drift']),
@@ -30,6 +31,8 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try { requireRole(session.user.role as any, 'treasury_manager'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
+  try { requirePaidTier(session.user.subscription_tier); }
+  catch (e) { if (e instanceof TierGateError) return tierGateResponse('deposit into yield protocols'); throw e; }
 
   const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
 

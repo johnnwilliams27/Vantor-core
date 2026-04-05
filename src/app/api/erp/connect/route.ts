@@ -8,6 +8,7 @@ import { writeAuditLog } from '@/lib/audit/logger';
 import { z } from 'zod';
 import type { ErpProvider } from '@/types/database';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
+import { requirePaidTier, tierGateResponse, TierGateError } from '@/lib/auth/tier-gate';
 
 const schema = z.object({
   provider: z.enum(['sap', 'oracle', 'xero', 'netsuite']),
@@ -28,6 +29,8 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try { requireRole(session.user.role as any, 'accountant'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
+  try { requirePaidTier(session.user.subscription_tier); }
+  catch (e) { if (e instanceof TierGateError) return tierGateResponse('connect ERP'); throw e; }
 
   const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
 

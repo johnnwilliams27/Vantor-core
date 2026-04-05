@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { z } from 'zod';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
+import { requirePaidTier, tierGateResponse, TierGateError } from '@/lib/auth/tier-gate';
 
 export async function GET(_req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -43,6 +44,8 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+  try { requirePaidTier(session.user.subscription_tier); }
+  catch (e) { if (e instanceof TierGateError) return tierGateResponse('connect wallets'); throw e; }
 
   const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
 

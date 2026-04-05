@@ -6,6 +6,7 @@ import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { z } from 'zod';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
+import { requirePaidTier, tierGateResponse, TierGateError } from '@/lib/auth/tier-gate';
 
 export async function GET(_req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -42,6 +43,8 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try { requireRole(session.user.role as any, 'accountant'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
+  try { requirePaidTier(session.user.subscription_tier); }
+  catch (e) { if (e instanceof TierGateError) return tierGateResponse('add a bank account'); throw e; }
 
   const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
 
