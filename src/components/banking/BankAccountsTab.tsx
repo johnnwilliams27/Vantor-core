@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { PlaidLinkButton } from './PlaidLinkButton';
+import { BankLinkButton } from './BankLinkButton';
 import { formatDate } from '@/lib/utils';
 import { useTreasuryOverview } from '@/hooks/useTreasury';
 import { Trash2, CheckCircle, Building2, Pencil, Check, X } from 'lucide-react';
@@ -26,7 +26,7 @@ function formatCurrencyAmount(n: number, currency = 'USD') {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 2 }).format(n);
 }
 
-export function BankAccountsTab({ plaidConfigured = false }: { plaidConfigured?: boolean }) {
+export function BankAccountsTab({ bankingProvider = 'stripe_fc' }: { bankingProvider?: 'stripe_fc' | 'belvo' | null }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string } | null>(null);
@@ -89,7 +89,7 @@ export function BankAccountsTab({ plaidConfigured = false }: { plaidConfigured?:
   return (
     <div className="space-y-6">
       {/* Connect section */}
-      <PlaidLinkButton onSuccess={handleRefresh} plaidConfigured={plaidConfigured} />
+      <BankLinkButton onSuccess={handleRefresh} bankingProvider={bankingProvider} />
 
       {/* Linked bank accounts */}
       <Card>

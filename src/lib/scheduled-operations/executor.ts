@@ -224,7 +224,7 @@ async function executeRampOp(
   // Look up bank account for provider ref
   const { data: bankAccount } = await supabase
     .from('bank_accounts')
-    .select('id, plaid_account_id')
+    .select('id, stripe_fc_account_id')
     .eq('id', params.bankAccountId)
     .single();
 
@@ -236,7 +236,7 @@ async function executeRampOp(
     fiatCurrency: params.fiatCurrency,
     exchangeRate: quote.exchangeRate as number,
     feeAmount: (quote.feeAmount as number) ?? 0,
-    bankAccountRef: bankAccount?.plaid_account_id ?? bankAccount?.id,
+    bankAccountRef: bankAccount?.stripe_fc_account_id ?? bankAccount?.id,
   });
 
   const { data: fiatTx, error } = await supabase

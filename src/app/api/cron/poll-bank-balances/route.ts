@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { getAccountBalance } from '@/lib/banking/plaid';
+import { getFCBalance } from '@/lib/banking/stripe-fc';
 
 // Cross-enterprise system job: refreshes bank account balances across all enterprises.
 // Authenticated via CRON_SECRET. Data isolation enforced by bank_account ownership.
@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
 
   const { data: accounts, error } = await supabase
     .from('bank_accounts')
-    .select('id, plaid_item_id, plaid_account_id')
+    .select('id, banking_provider, stripe_fc_account_id')
     .eq('is_active', true);
 
   if (error) {
@@ -30,18 +30,15 @@ export async function GET(req: NextRequest) {
 
   for (const account of accounts) {
     try {
-      const accessToken = account.plaid_item_id
-        ? `access-sandbox-${account.plaid_item_id}`
-        : `access-sandbox-mock-${account.id}`;
-      const accountId = account.plaid_account_id ?? account.id;
-      const balance = await getAccountBalance(accessToken, accountId);
+      const stripeAccountId = account.stripe_fc_account_id ?? account.id;
+      const balance = await getFCBalance('live', stripeAccountId);
 
       const { error: updateErr } = await supabase
         .from('bank_accounts')
         .update({
           current_balance: balance.current,
-          balance_currency: balance.isoCurrencyCode,
-          balance_as_of: balance.balanceAsOf,
+          balance_currency: balance.currency,
+          balance_as_of: new Date().toISOString(),
         })
         .eq('id', account.id);
 

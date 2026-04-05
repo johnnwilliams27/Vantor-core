@@ -5,7 +5,8 @@ import { authOptions } from '@/lib/auth/nextauth.config';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
-import { getAccountBalance } from '@/lib/banking/plaid';
+import { getFCBalance } from '@/lib/banking/stripe-fc';
+import { getIntegrationMode } from '@/lib/env/integration-mode';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 export async function POST(
@@ -30,7 +31,7 @@ export async function POST(
   // Verify account belongs to user
   const { data: account, error: fetchErr } = await supabase
     .from('bank_accounts')
-    .select('id, plaid_item_id, plaid_account_id')
+    .select('id, banking_provider, stripe_fc_account_id')
     .eq('id', params.id)
     .eq('user_id', session.user.id)
     .eq('enterprise_id', enterpriseId)
@@ -40,20 +41,18 @@ export async function POST(
   if (fetchErr) return NextResponse.json({ error: fetchErr.message }, { status: 500 });
   if (!account) return NextResponse.json({ error: 'Account not found' }, { status: 404 });
 
+  const mode = getIntegrationMode(session.user.subscription_tier);
+
   try {
-    // Use mock access token pattern when no Plaid item linked
-    const accessToken = account.plaid_item_id
-      ? `access-sandbox-${account.plaid_item_id}`
-      : `access-sandbox-mock-${account.id}`;
-    const accountId = account.plaid_account_id ?? account.id;
-    const balance = await getAccountBalance(accessToken, accountId);
+    const stripeAccountId = account.stripe_fc_account_id ?? account.id;
+    const balance = await getFCBalance(mode, stripeAccountId);
 
     const { error: updateErr } = await supabase
       .from('bank_accounts')
       .update({
         current_balance: balance.current,
-        balance_currency: balance.isoCurrencyCode,
-        balance_as_of: balance.balanceAsOf,
+        balance_currency: balance.currency,
+        balance_as_of: new Date().toISOString(),
       })
       .eq('id', params.id);
 
@@ -64,14 +63,14 @@ export async function POST(
       action: 'bank_balance_refresh',
       entityType: 'bank_account',
       entityId: params.id,
-      details: { balance: balance.current, currency: balance.isoCurrencyCode },
+      details: { balance: balance.current, currency: balance.currency },
     });
 
     return NextResponse.json({
       data: {
         current_balance: balance.current,
-        balance_currency: balance.isoCurrencyCode,
-        balance_as_of: balance.balanceAsOf,
+        balance_currency: balance.currency,
+        balance_as_of: new Date().toISOString(),
       },
     });
   } catch (err) {

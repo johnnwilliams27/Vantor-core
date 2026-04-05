@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
   // Verify bank account belongs to user
   const { data: bankAccount } = await supabase
     .from('bank_accounts')
-    .select('id, plaid_account_id, institution_name')
+    .select('id, stripe_fc_account_id, institution_name')
     .eq('id', parsed.data.bankAccountId)
     .eq('user_id', session.user.id)
     .eq('enterprise_id', enterpriseId)
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
       fiatCurrency: parsed.data.fiatCurrency,
       exchangeRate: parsed.data.exchangeRate,
       feeAmount: parsed.data.feeAmount,
-      bankAccountRef: bankAccount.plaid_account_id ?? bankAccount.id,
+      bankAccountRef: bankAccount.stripe_fc_account_id ?? bankAccount.id,
     });
 
     const { data: fiatTx, error } = await supabase
