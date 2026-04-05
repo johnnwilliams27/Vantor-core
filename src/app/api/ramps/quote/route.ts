@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/nextauth.config';
 import { requireRole } from '@/lib/auth/rbac';
 import { getBankingAdapter } from '@/lib/banking/factory';
+import { getIntegrationMode } from '@/lib/env/integration-mode';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
 import { isTestMode } from '@/lib/test-mode/helpers';
@@ -34,7 +35,8 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: 'Invalid request', details: parsed.error.flatten() }, { status: 400 });
 
   try {
-    const adapter = getBankingAdapter();
+    const mode = getIntegrationMode(session.user.subscription_tier);
+    const adapter = getBankingAdapter(mode);
     const quote = await adapter.getRampQuote(parsed.data);
 
     const testMode = isTestMode();

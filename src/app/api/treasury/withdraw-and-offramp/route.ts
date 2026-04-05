@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { getYieldAdapter } from '@/lib/yield/factory';
 import { getBankingAdapter } from '@/lib/banking/factory';
+import { getIntegrationMode } from '@/lib/env/integration-mode';
 import { updateWalletBalance, updateBankBalance } from '@/lib/balances/update-after-movement';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { z } from 'zod';
@@ -112,7 +113,8 @@ export async function POST(req: NextRequest) {
       .single();
 
     // 4. Off-ramp to fiat
-    const bankingAdapter = getBankingAdapter();
+    const mode = getIntegrationMode(session.user.subscription_tier);
+    const bankingAdapter = getBankingAdapter(mode);
     const rampResult = await bankingAdapter.executeRamp({
       direction: 'offramp',
       cryptoToken: position.underlying_token,

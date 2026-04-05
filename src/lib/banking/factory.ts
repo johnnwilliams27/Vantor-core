@@ -1,5 +1,6 @@
 import type { IBankingAdapter } from './interface';
 import { BridgeMockAdapter } from './mock/bridge-mock';
+import { BridgeAdapter } from './bridge';
 import type { IntegrationMode } from '@/lib/env/integration-mode';
 
 export function getBankingAdapter(mode: IntegrationMode = 'mock'): IBankingAdapter {
@@ -7,7 +8,6 @@ export function getBankingAdapter(mode: IntegrationMode = 'mock'): IBankingAdapt
     return new BridgeMockAdapter();
   }
 
-  // TODO: Real Bridge adapter — for now fall back to mock
-  // When implemented: return new BridgeAdapter(mode === 'sandbox' ? sandboxKeys : liveKeys);
-  return new BridgeMockAdapter();
+  // Both sandbox and live use the real Bridge adapter with appropriate keys
+  return new BridgeAdapter(mode);
 }

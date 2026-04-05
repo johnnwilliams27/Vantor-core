@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { getBankingAdapter } from '@/lib/banking/factory';
+import { getIntegrationMode } from '@/lib/env/integration-mode';
 import { updateBalancesAfterRamp } from '@/lib/balances/update-after-movement';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 import { NotificationService } from '@/lib/notifications/service';
@@ -68,7 +69,8 @@ export async function POST(
 
   // Execute ramp
   try {
-    const adapter = getBankingAdapter();
+    const mode = getIntegrationMode(session.user.subscription_tier);
+    const adapter = getBankingAdapter(mode);
     const rampResult = await adapter.executeRamp({
       direction: rec.action as 'onramp' | 'offramp',
       cryptoToken: rec.stablecoin_token ?? 'USDC',

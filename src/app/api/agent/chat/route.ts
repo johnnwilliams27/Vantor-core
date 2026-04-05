@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
   const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
   const systemPrompt = await buildSystemPrompt(supabase, userId, userRole, enterpriseId);
   const tools = getToolsForRole(userRole);
-  const ctx = { supabase, userId, userRole, enterpriseId };
+  const ctx = { supabase, userId, userRole, enterpriseId, subscriptionTier: session.user.subscription_tier ?? 'lite' };
 
   const stream = new ReadableStream({
     async start(controller) {

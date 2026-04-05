@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { getBankingAdapter } from '@/lib/banking/factory';
+import { getIntegrationMode, type IntegrationMode } from '@/lib/env/integration-mode';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 import { TOLERANCE_BPS } from '@/lib/scheduled-operations/tolerances';
 import { z } from 'zod';
@@ -57,8 +58,9 @@ const bodySchema = z.object({
 async function fetchInitialQuote(
   type: ScheduledOperationType,
   params: Record<string, unknown>,
+  mode: IntegrationMode,
 ): Promise<Record<string, unknown>> {
-  const adapter = getBankingAdapter();
+  const adapter = getBankingAdapter(mode);
 
   switch (type) {
     case 'swap': {
@@ -171,9 +173,10 @@ export async function POST(req: NextRequest) {
   }
 
   // Fetch initial quote
+  const mode = getIntegrationMode(session.user.subscription_tier);
   let initialQuote: Record<string, unknown>;
   try {
-    initialQuote = await fetchInitialQuote(type, validatedParams);
+    initialQuote = await fetchInitialQuote(type, validatedParams, mode);
   } catch (err) {
     return NextResponse.json(
       { error: `Failed to fetch initial quote: ${(err as Error).message}` },

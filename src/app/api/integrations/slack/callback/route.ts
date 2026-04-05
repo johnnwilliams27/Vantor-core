@@ -10,6 +10,7 @@ import {
 } from '@/lib/integrations/slack';
 import { getBankingAdapter } from '@/lib/banking/factory';
 import { updateBalancesAfterRamp } from '@/lib/balances/update-after-movement';
+// No session available in Slack callback — authenticated via HMAC; always use live mode
 
 // No session auth — authenticated via Slack HMAC signature verification
 
@@ -184,7 +185,7 @@ export async function POST(req: NextRequest) {
 
     // Execute ramp
     try {
-      const adapter = getBankingAdapter();
+      const adapter = getBankingAdapter('live');
       const rampResult = await adapter.executeRamp({
         direction: rec.action as 'onramp' | 'offramp',
         cryptoToken: rec.stablecoin_token ?? 'USDC',
@@ -333,7 +334,7 @@ export async function POST(req: NextRequest) {
     let freshDeviationBps: number | null = null;
 
     try {
-      const adapter = getBankingAdapter();
+      const adapter = getBankingAdapter('live');
       const { extractRate, calculateDeviationBps } = await import('@/lib/scheduled-operations/tolerances');
       let freshQuote: Record<string, unknown> | null = null;
       const params = op.params as Record<string, unknown>;

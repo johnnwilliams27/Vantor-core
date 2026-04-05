@@ -7,6 +7,7 @@ import { writeAuditLog } from '@/lib/audit/logger';
 import { NotificationService } from '@/lib/notifications/service';
 import { actionNotificationEmail, fmtUsd } from '@/lib/notifications/email-templates';
 import { getBankingAdapter } from '@/lib/banking/factory';
+import { getIntegrationMode } from '@/lib/env/integration-mode';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 import { z } from 'zod';
 import { requirePaidTier, tierGateResponse, TierGateError } from '@/lib/auth/tier-gate';
@@ -103,7 +104,8 @@ export async function POST(req: NextRequest) {
     };
   } else {
     // Immediate: call adapter
-    const adapter = getBankingAdapter();
+    const mode = getIntegrationMode(session.user.subscription_tier);
+    const adapter = getBankingAdapter(mode);
     const result = await adapter.createFiatPayment({
       fromBankAccountRef: parsed.data.fromBankAccountId,
       toBankName: parsed.data.toBankName,

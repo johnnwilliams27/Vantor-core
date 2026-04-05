@@ -14,7 +14,8 @@ export async function GET(req: NextRequest) {
   }
 
   const supabase = createAdminClient();
-  const adapter = getBankingAdapter();
+  // Cron job — no session; authenticated via CRON_SECRET; always use live mode
+  const adapter = getBankingAdapter('live');
 
   // Get test enterprise IDs to exclude from cron processing
   const { data: testEnts } = await supabase

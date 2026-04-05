@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth/nextauth.config';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { getBankingAdapter } from '@/lib/banking/factory';
+import { getIntegrationMode } from '@/lib/env/integration-mode';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { updateWalletBalance } from '@/lib/balances/update-after-movement';
 import { z } from 'zod';
@@ -75,7 +76,8 @@ export async function POST(req: NextRequest) {
 
   if (!toWallet) return NextResponse.json({ error: 'Destination wallet not found' }, { status: 404 });
 
-  const adapter = getBankingAdapter();
+  const mode = getIntegrationMode(session.user.subscription_tier);
+  const adapter = getBankingAdapter(mode);
 
   try {
     const result = await adapter.executeBridge({

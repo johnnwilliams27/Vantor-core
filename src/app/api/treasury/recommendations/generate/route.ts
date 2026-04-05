@@ -7,6 +7,7 @@ import { writeAuditLog } from '@/lib/audit/logger';
 import { getActiveTreasuryRule, computeRecommendation } from '@/lib/treasury/rules-engine';
 import { generateTreasuryReasoning } from '@/lib/treasury/claude';
 import { getBankingAdapter } from '@/lib/banking/factory';
+import { getIntegrationMode } from '@/lib/env/integration-mode';
 import { checkRateLimit } from '@/lib/api/rate-limit';
 import { decryptSlackCredentials, postRecommendationToSlack } from '@/lib/integrations/slack';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
@@ -167,7 +168,8 @@ export async function POST(_req: NextRequest) {
   // 6. Auto-execute if below threshold and action is not no_action
   if (willAutoExecute && result.action !== 'no_action' && result.recommendedAmountUsd) {
     try {
-      const adapter = getBankingAdapter();
+      const mode = getIntegrationMode(session.user.subscription_tier);
+      const adapter = getBankingAdapter(mode);
       const rampResult = await adapter.executeRamp({
         direction: result.action,
         cryptoToken: result.targetStablecoinToken,

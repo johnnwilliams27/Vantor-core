@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth/nextauth.config';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { getBankingAdapter } from '@/lib/banking/factory';
+import { getIntegrationMode } from '@/lib/env/integration-mode';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { updateBalancesAfterRamp } from '@/lib/balances/update-after-movement';
 import { z } from 'zod';
@@ -54,7 +55,8 @@ export async function POST(req: NextRequest) {
   if (!bankAccount) return NextResponse.json({ error: 'Bank account not found' }, { status: 404 });
 
   try {
-    const adapter = getBankingAdapter();
+    const mode = getIntegrationMode(session.user.subscription_tier);
+    const adapter = getBankingAdapter(mode);
     const result = await adapter.executeRamp({
       direction: parsed.data.direction,
       cryptoToken: parsed.data.cryptoToken,

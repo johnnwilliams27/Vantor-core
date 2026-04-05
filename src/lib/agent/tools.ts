@@ -4,6 +4,7 @@ import type { UserRole } from './types';
 import { hasRole } from '@/lib/auth/rbac';
 import { buildTreasurySnapshot, collectObligations } from '@/lib/treasury/rules-engine';
 import { getBankingAdapter } from '@/lib/banking/factory';
+import { getIntegrationMode } from '@/lib/env/integration-mode';
 import { getERPAdapter, decryptCredentials } from '@/lib/erp/factory';
 import { executeTransfer } from '@/lib/transfers/executor';
 import { writeAuditLog } from '@/lib/audit/logger';
@@ -13,6 +14,7 @@ export interface ToolContext {
   userId: string;
   userRole: UserRole;
   enterpriseId: string | null;
+  subscriptionTier: string;
 }
 
 type ToolHandler = (input: Record<string, unknown>, ctx: ToolContext) => Promise<unknown>;
@@ -428,8 +430,9 @@ const getRampQuote: AgentTool = {
     required: ['direction', 'cryptoToken', 'fiatCurrency'],
   },
   minRole: 'treasury_manager',
-  async handler(input, _ctx) {
-    const adapter = getBankingAdapter();
+  async handler(input, ctx) {
+    const mode = getIntegrationMode(ctx.subscriptionTier);
+    const adapter = getBankingAdapter(mode);
     const quote = await adapter.getRampQuote({
       direction: input.direction as 'onramp' | 'offramp',
       cryptoToken: input.cryptoToken as 'USDC' | 'USDT',
@@ -460,7 +463,8 @@ const executeRamp: AgentTool = {
   },
   minRole: 'treasury_manager',
   async handler(input, ctx) {
-    const adapter = getBankingAdapter();
+    const mode = getIntegrationMode(ctx.subscriptionTier);
+    const adapter = getBankingAdapter(mode);
     const result = await adapter.executeRamp({
       direction: input.direction as 'onramp' | 'offramp',
       cryptoToken: input.cryptoToken as string,
@@ -492,8 +496,9 @@ const getSwapQuote: AgentTool = {
     required: ['chain', 'fromToken', 'toToken', 'amount', 'walletAddress'],
   },
   minRole: 'treasury_manager',
-  async handler(input, _ctx) {
-    const adapter = getBankingAdapter();
+  async handler(input, ctx) {
+    const mode = getIntegrationMode(ctx.subscriptionTier);
+    const adapter = getBankingAdapter(mode);
     return await adapter.getSwapQuote({
       chain: input.chain as any,
       fromToken: input.fromToken as any,
@@ -521,7 +526,8 @@ const executeSwap: AgentTool = {
   },
   minRole: 'treasury_manager',
   async handler(input, ctx) {
-    const adapter = getBankingAdapter();
+    const mode = getIntegrationMode(ctx.subscriptionTier);
+    const adapter = getBankingAdapter(mode);
     const quote = await adapter.getSwapQuote({
       chain: input.chain as any,
       fromToken: input.fromToken as any,

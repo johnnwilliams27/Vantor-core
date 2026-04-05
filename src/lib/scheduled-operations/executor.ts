@@ -76,7 +76,7 @@ async function executeSwapOp(
   quote: Record<string, unknown>,
   meta: ScheduledMetadata,
 ) {
-  const adapter = getBankingAdapter();
+  const adapter = getBankingAdapter('live');
   const supabase = createAdminClient();
 
   const result = await adapter.executeSwap({
@@ -142,7 +142,7 @@ async function executeBridgeOp(
   quote: Record<string, unknown>,
   meta: ScheduledMetadata,
 ) {
-  const adapter = getBankingAdapter();
+  const adapter = getBankingAdapter('live');
   const supabase = createAdminClient();
 
   const result = await adapter.executeBridge({
@@ -218,7 +218,7 @@ async function executeRampOp(
   quote: Record<string, unknown>,
   meta: ScheduledMetadata,
 ) {
-  const adapter = getBankingAdapter();
+  const adapter = getBankingAdapter('live');
   const supabase = createAdminClient();
 
   // Look up bank account for provider ref
@@ -305,7 +305,7 @@ async function executeRampOp(
 async function fetchQuote(
   op: ScheduledOperation,
 ): Promise<Record<string, unknown>> {
-  const adapter = getBankingAdapter();
+  const adapter = getBankingAdapter('live');
 
   switch (op.type) {
     case 'swap': {
