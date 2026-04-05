@@ -22,6 +22,7 @@ import { useToast } from '@/components/ui/toast';
 import { YieldWithdrawForm } from './YieldWithdrawForm';
 import { useState } from 'react';
 import { CardSpinner } from '@/components/ui/spinner';
+import { UpgradeGate } from '@/components/ui/upgrade-gate';
 
 const PROTOCOL_LABELS: Record<string, string> = {
   aave_v3: 'Aave V3',
@@ -172,15 +173,17 @@ export function YieldPositionList() {
                   <RefreshCw className="h-3.5 w-3.5" />
                   Refresh
                 </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-1"
-                  onClick={() => setWithdrawId(pos.id)}
-                >
-                  <ArrowDownRight className="h-3.5 w-3.5" />
-                  Withdraw
-                </Button>
+                <UpgradeGate feature="Withdraw from Yield">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1"
+                    onClick={() => setWithdrawId(pos.id)}
+                  >
+                    <ArrowDownRight className="h-3.5 w-3.5" />
+                    Withdraw
+                  </Button>
+                </UpgradeGate>
               </div>
 
               {pos.last_refreshed_at && (

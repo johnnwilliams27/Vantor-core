@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -7,7 +7,7 @@ import { CardSpinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { ArrowUpRight, ArrowLeft, Shield, Lock, Loader2, CheckCircle2 } from 'lucide-react';
+import { ArrowUpRight, ArrowLeft, Shield, Lock, Loader2, CheckCircle2, X } from 'lucide-react';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { useYieldProtocols, useYieldDeposit, useSlippageCheck } from '@/hooks/useYield';
 import { SlippageWarning } from './SlippageWarning';
@@ -19,6 +19,7 @@ import { useToast } from '@/components/ui/toast';
 import { RISK_FACTOR_LABELS, RISK_SCORE_LABELS } from '@/lib/yield/interface';
 import type { RiskFactors } from '@/lib/yield/interface';
 import type { YieldProtocolWithRates } from '@/hooks/useYield';
+import { UpgradeGate } from '@/components/ui/upgrade-gate';
 
 const CHAIN_LABELS: Record<string, string> = {
   ethereum: 'Ethereum',
@@ -62,6 +63,111 @@ function capitalize(s: string): string {
 
 function formatAPY(value: number): string {
   return `${(value * 100).toFixed(2)}%`;
+}
+
+function formatRelativeTime(isoString: string): string {
+  const diffMs = Date.now() - new Date(isoString).getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  return `${diffHr}h ago`;
+}
+
+/* ---- Ondo KYC Modal ---- */
+
+interface OndoKycModalProps {
+  walletAddress: string;
+  onVerified: () => void;
+  onClose: () => void;
+}
+
+function OndoKycModal({ walletAddress, onVerified, onClose }: OndoKycModalProps) {
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<{ verified: boolean; message?: string } | null>(null);
+
+  const handleVerify = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/yield/ondo/verify-kyc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletAddress }),
+      });
+      const data = await res.json();
+      setResult(data);
+      if (data.verified) {
+        setTimeout(() => {
+          onVerified();
+        }, 1200);
+      }
+    } catch {
+      setResult({ verified: false, message: 'Verification request failed.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="bg-[#0a1628] border border-white/10 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <Image src="/partners/Ondo_Logo_0.svg" alt="Ondo" width={56} height={28} className="h-7 w-auto object-contain" unoptimized />
+            <h3 className="text-white font-semibold">Identity Verification Required</h3>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <p className="text-sm text-gray-400 mb-4">
+          Ondo requires separate identity verification before you can deposit. Complete KYC on
+          Ondo&apos;s website, then return here to confirm.
+        </p>
+
+        <a
+          href="https://ondo.finance"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-sm text-teal-400 hover:text-teal-300 underline underline-offset-2 mb-5 block"
+        >
+          <ArrowUpRight className="h-3.5 w-3.5" />
+          Go to ondo.finance to complete KYC
+        </a>
+
+        {result && (
+          <div className={`rounded-lg p-3 text-sm mb-4 ${
+            result.verified
+              ? 'bg-green-900/20 border border-green-800 text-green-300'
+              : 'bg-red-900/20 border border-red-800 text-red-300'
+          }`}>
+            {result.verified
+              ? 'KYC verified! You can now deposit.'
+              : (result.message ?? 'Verification pending. Please complete KYC on ondo.finance first.')}
+          </div>
+        )}
+
+        <div className="flex gap-3">
+          <Button variant="outline" className="flex-1" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            className="flex-1"
+            onClick={handleVerify}
+            disabled={loading || result?.verified === true}
+          >
+            {loading ? (
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Checking…</>
+            ) : (
+              "I've completed Ondo KYC"
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 const RISK_FACTOR_TOOLTIPS: Record<keyof RiskFactors, string> = {
@@ -368,6 +474,16 @@ function InlineDepositForm({
 export function YieldRatesTable() {
   const { data: protocols, isLoading } = useYieldProtocols();
   const [depositId, setDepositId] = useState<string | null>(null);
+  const [ondoKycModal, setOndoKycModal] = useState<{ walletAddress: string } | null>(null);
+  const [ondoKycVerified, setOndoKycVerified] = useState(false);
+  // Tick every 10s so the "X ago" label stays current
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 10_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const { data: wallets } = useWallets();
 
   if (isLoading) {
     return <CardSpinner />;
@@ -380,92 +496,172 @@ export function YieldRatesTable() {
     return bestA - bestB;
   });
 
+  // Compute oldest fetchedAt across all rates for the global timestamp
+  const allFetchedAts = sorted
+    .flatMap((p) => p.rates)
+    .map((r) => (r as unknown as { fetchedAt?: string }).fetchedAt)
+    .filter(Boolean) as string[];
+  const oldestFetchedAt = allFetchedAts.length > 0
+    ? allFetchedAts.reduce((oldest, ts) => (ts < oldest ? ts : oldest))
+    : null;
+
+  const handleOndoDeposit = async (protocolId: string) => {
+    if (protocolId !== 'ondo') {
+      setDepositId(protocolId);
+      return;
+    }
+    // Find first wallet to check KYC (use first available wallet as proxy)
+    const firstWallet = wallets?.[0];
+    if (!firstWallet) {
+      setDepositId(protocolId);
+      return;
+    }
+    try {
+      const res = await fetch('/api/yield/ondo/kyc-status');
+      const data = await res.json();
+      const record = (data.data ?? []).find(
+        (d: { wallet_address: string; status: string }) =>
+          d.wallet_address.toLowerCase() === firstWallet.address.toLowerCase() &&
+          d.status === 'verified'
+      );
+      if (record) {
+        setOndoKycVerified(true);
+        setDepositId(protocolId);
+      } else {
+        setOndoKycModal({ walletAddress: firstWallet.address });
+      }
+    } catch {
+      // On error, fall through to deposit form
+      setDepositId(protocolId);
+    }
+  };
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      {sorted.map((p) => {
-        if (depositId === p.id) {
+    <div className="space-y-3">
+      {/* Rate timestamp */}
+      {oldestFetchedAt && (
+        <p className="text-xs text-muted-foreground text-right">
+          Rates as of {formatRelativeTime(oldestFetchedAt)}
+        </p>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {sorted.map((p) => {
+          if (depositId === p.id) {
+            return (
+              <InlineDepositForm
+                key={p.id}
+                protocol={p}
+                onBack={() => setDepositId(null)}
+              />
+            );
+          }
+
           return (
-            <InlineDepositForm
-              key={p.id}
-              protocol={p}
-              onBack={() => setDepositId(null)}
-            />
-          );
-        }
-
-        return (
-          <Card key={p.id} className="relative overflow-hidden">
-            <div className="flex items-center justify-between px-5 pt-5 pb-3">
-              {PROTOCOL_LOGOS[p.id] ? (
-                <Image src={PROTOCOL_LOGOS[p.id]} alt={p.name} width={64} height={38} className="h-[38px] w-auto object-contain" unoptimized />
-              ) : (
-                <span className="text-2xl font-bold text-muted-foreground">{p.name}</span>
-              )}
-              <div className="flex flex-col items-end gap-1.5 shrink-0">
-                <Badge variant={p.chain === 'ethereum' ? 'ethereum' : 'solana'}>{CHAIN_LABELS[p.chain] ?? p.chain}</Badge>
-                <Badge className={RISK_COLORS[p.riskLevel]}>
-                  <Shield className="h-3 w-3 mr-1" />
-                  {capitalize(p.riskLevel)} Risk
-                </Badge>
-              </div>
-            </div>
-            <div className="px-5 pb-2 border-b border-border/50">
-              <CardTitle className="text-base">{p.name}</CardTitle>
-              <p className="text-xs text-muted-foreground mt-0.5">{p.description}</p>
-            </div>
-            <CardContent className="space-y-3 pt-2">
-
-              {p.riskFactors && (
-                <div className="border rounded-md p-3 bg-muted/30">
-                  <RiskMeter factors={p.riskFactors} />
+            <Card key={p.id} className="relative overflow-hidden">
+              <div className="flex items-center justify-between px-5 pt-5 pb-3">
+                {PROTOCOL_LOGOS[p.id] ? (
+                  <div className="flex items-center gap-2">
+                    <Image src={PROTOCOL_LOGOS[p.id]} alt={p.name} width={64} height={38} className="h-[38px] w-auto object-contain" unoptimized />
+                    {p.id === 'ondo' && ondoKycVerified && (
+                      <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-[10px]">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        KYC Verified
+                      </Badge>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-2xl font-bold text-muted-foreground">{p.name}</span>
+                )}
+                <div className="flex flex-col items-end gap-1.5 shrink-0">
+                  <Badge variant={p.chain === 'ethereum' ? 'ethereum' : 'solana'}>{CHAIN_LABELS[p.chain] ?? p.chain}</Badge>
+                  <Badge className={RISK_COLORS[p.riskLevel]}>
+                    <Shield className="h-3 w-3 mr-1" />
+                    {capitalize(p.riskLevel)} Risk
+                  </Badge>
                 </div>
-              )}
+              </div>
+              <div className="px-5 pb-2 border-b border-border/50">
+                <CardTitle className="text-base">{p.name}</CardTitle>
+                <p className="text-xs text-muted-foreground mt-0.5">{p.description}</p>
+              </div>
+              <CardContent className="space-y-3 pt-2">
 
-              <div className="border rounded-md overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-muted/50">
-                      <th className="text-left px-3 py-2 font-medium">Token</th>
-                      <th className="text-right px-3 py-2 font-medium">Supply APY</th>
-                      <th className="text-right px-3 py-2 font-medium">Rewards</th>
-                      <th className="text-right px-3 py-2 font-medium">Total APY</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {p.rates.map((r) => (
-                      <tr key={`${r.protocol}-${r.token}`} className="border-t">
-                        <td className="px-3 py-2 font-medium">{r.token}</td>
-                        <td className="text-right px-3 py-2">{formatAPY(r.supplyAPY)}</td>
-                        <td className="text-right px-3 py-2 text-muted-foreground">
-                          {r.rewardAPY > 0 ? `+${formatAPY(r.rewardAPY)}` : '—'}
-                        </td>
-                        <td className="text-right px-3 py-2 font-semibold text-green-600">
-                          {formatAPY(r.totalAPY)}
-                        </td>
+                {p.riskFactors && (
+                  <div className="border rounded-md p-3 bg-muted/30">
+                    <RiskMeter factors={p.riskFactors} />
+                  </div>
+                )}
+
+                <div className="border rounded-md overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-muted/50">
+                        <th className="text-left px-3 py-2 font-medium">Token</th>
+                        <th className="text-right px-3 py-2 font-medium">Supply APY</th>
+                        <th className="text-right px-3 py-2 font-medium">Rewards</th>
+                        <th className="text-right px-3 py-2 font-medium">Total APY</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="flex items-center justify-between pt-1">
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  {p.kycRequired && (
-                    <>
-                      <Lock className="h-3 w-3" />
-                      KYC Required
-                    </>
-                  )}
+                    </thead>
+                    <tbody>
+                      {p.rates.map((r) => {
+                        const rateWithMeta = r as unknown as { fetchedAt?: string; isStale?: boolean };
+                        return (
+                          <tr key={`${r.protocol}-${r.token}`} className="border-t">
+                            <td className="px-3 py-2 font-medium">{r.token}</td>
+                            <td className="text-right px-3 py-2">{formatAPY(r.supplyAPY)}</td>
+                            <td className="text-right px-3 py-2 text-muted-foreground">
+                              {r.rewardAPY > 0 ? `+${formatAPY(r.rewardAPY)}` : '—'}
+                            </td>
+                            <td className="text-right px-3 py-2">
+                              <span className="font-semibold text-green-600">{formatAPY(r.totalAPY)}</span>
+                              {rateWithMeta.isStale && (
+                                <span className="ml-1.5 inline-flex items-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-1.5 py-0.5 text-[10px] font-medium">
+                                  Stale
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-                <Button size="sm" className="gap-1" onClick={() => setDepositId(p.id)}>
-                  <ArrowUpRight className="h-3.5 w-3.5" />
-                  Deposit
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
+
+                <div className="flex items-center justify-between pt-1">
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    {p.kycRequired && (
+                      <>
+                        <Lock className="h-3 w-3" />
+                        KYC Required
+                      </>
+                    )}
+                  </div>
+                  <UpgradeGate feature="Deposit into Yield">
+                    <Button size="sm" className="gap-1" onClick={() => handleOndoDeposit(p.id)}>
+                      <ArrowUpRight className="h-3.5 w-3.5" />
+                      Deposit
+                    </Button>
+                  </UpgradeGate>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Ondo KYC Modal */}
+      {ondoKycModal && (
+        <OndoKycModal
+          walletAddress={ondoKycModal.walletAddress}
+          onVerified={() => {
+            setOndoKycVerified(true);
+            setOndoKycModal(null);
+            setDepositId('ondo');
+          }}
+          onClose={() => setOndoKycModal(null)}
+        />
+      )}
     </div>
   );
 }
