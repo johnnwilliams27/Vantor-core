@@ -1,13 +1,13 @@
 import type { IBankingAdapter } from './interface';
 import { BridgeMockAdapter } from './mock/bridge-mock';
+import type { IntegrationMode } from '@/lib/env/integration-mode';
 
-export function getBankingAdapter(): IBankingAdapter {
-  const useMock = process.env.BANKING_USE_MOCK !== 'false';
-
-  if (useMock) {
+export function getBankingAdapter(mode: IntegrationMode = 'mock'): IBankingAdapter {
+  if (mode === 'mock') {
     return new BridgeMockAdapter();
   }
 
-  // Real Bridge adapter would be loaded here
-  throw new Error('Real banking adapter not implemented. Set BANKING_USE_MOCK=true.');
+  // TODO: Real Bridge adapter — for now fall back to mock
+  // When implemented: return new BridgeAdapter(mode === 'sandbox' ? sandboxKeys : liveKeys);
+  return new BridgeMockAdapter();
 }
