@@ -94,7 +94,7 @@ async function handleInquiryCompleted(inquiry: any) {
   // Check KYB
   const { data: kyb } = await supabaseAdmin
     .from('kyb_verifications')
-    .select('id')
+    .select('id, enterprise_id')
     .eq('persona_inquiry_id', inquiryId)
     .single();
 
@@ -103,6 +103,20 @@ async function handleInquiryCompleted(inquiry: any) {
       .from('kyb_verifications')
       .update({ status: 'completed', completed_at: new Date().toISOString() })
       .eq('id', kyb.id);
+
+    // Extract country from Persona inquiry attributes
+    // Persona KYB inquiries include address fields on the inquiry object
+    const country =
+      inquiry?.attributes?.fields?.address_country_code?.value  // Persona v2 format
+      ?? inquiry?.attributes?.['country-code']                   // alternate field
+      ?? null;
+
+    if (country && kyb.enterprise_id) {
+      await supabaseAdmin
+        .from('enterprises')
+        .update({ country: country.toUpperCase() })
+        .eq('id', kyb.enterprise_id);
+    }
   }
 }
 
