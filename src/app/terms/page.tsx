@@ -31,7 +31,7 @@ export default function TermsPage() {
 
           <section>
             <h2 className="text-lg font-semibold text-white mb-3">2. Description of Service</h2>
-            <p>Vantor is a treasury management platform that enables organizations to connect ERP systems, digital asset wallets, and bank accounts for unified treasury visibility, AI-powered recommendations, compliance management, and related financial operations. The Service is intended for use by authorized business users only.</p>
+            <p>Vantor provides treasury automation software that enables organizations to connect ERP systems, digital asset wallets, and bank accounts for unified treasury visibility, automated yield deployment, compliance management, and related financial operations. The Service is intended for use by authorized business users only. Vantor does not provide investment advice, and customers retain all investment discretion over their treasury activities.</p>
           </section>
 
           <section>
@@ -59,7 +59,7 @@ export default function TermsPage() {
 
           <section>
             <h2 className="text-lg font-semibold text-white mb-3">6. Financial Services Disclaimer</h2>
-            <p>Vantor is a technology platform and does not provide financial, investment, tax, or legal advice. AI-generated recommendations are informational only and should not be construed as financial advice. All treasury decisions remain the responsibility of the user. You should consult with qualified professionals before making financial decisions. Vantor does not exercise discretion over user funds or assets; all instructions and authorizations are provided by the User.</p>
+            <p>Vantor provides treasury automation software and does not provide financial, investment, tax, or legal advice. AI-generated proposals and risk scores are informational only and should not be construed as investment advice or recommendations to buy, sell, or hold any asset. Customers retain all investment discretion — all treasury decisions, including the deployment of reserves into yield opportunities, remain the sole responsibility of the user. You should consult with qualified professionals before making financial decisions. Vantor does not exercise discretion over user funds or assets; all instructions and authorizations are provided by the User.</p>
           </section>
 
           <section>

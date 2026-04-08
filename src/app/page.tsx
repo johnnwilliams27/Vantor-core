@@ -567,11 +567,12 @@ const PARTNERS = [
   { name: 'MetaMask', src: '/partners/MetaMask_Logo_0.svg', className: 'h-11' },
   { name: 'Phantom', src: '/partners/Phantom_Logo_0.svg', className: 'h-11' },
   { name: 'WalletConnect', src: '/partners/walletconnect-white.svg', className: 'h-8' },
-  { name: 'Plaid', src: '/partners/Plaid_id25TiQUJW_0.svg', className: 'h-11' },
+  { name: 'Bridge', src: '/partners/bridge-white.png', className: 'h-11' },
   { name: 'Aave', src: '/partners/Aave_idWRQ7YLO7_0.svg', className: 'h-11' },
   { name: 'Kamino', src: '/partners/kamino-logo.svg', className: 'h-8' },
   { name: 'Ondo', src: '/partners/Ondo_Logo_0.svg', className: 'h-11' },
   { name: 'Morpho', src: '/partners/morpho-white.svg', className: 'h-11' },
+  { name: 'Compound', src: '/partners/compound-white.png', className: 'h-[104px]' },
 ];
 
 function PartnerScroll() {
@@ -623,7 +624,7 @@ function Hero() {
         </h1>
 
         <p className="mt-6 text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed landing-fade-in landing-delay-2">
-          Connect your ERP system, digital asset wallets, and bank accounts for agentic treasury management. Let Vantor's agents optimize yield, hedge FX exposure, and manage compliance — always with a human in the loop.
+          Connect your ERP system, digital asset wallets, and bank accounts for agentic treasury management. Let Vantor's agents execute yield strategies, hedge FX exposure, and manage compliance — always with a human in the loop.
         </p>
 
         <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 landing-fade-in landing-delay-3">
@@ -661,7 +662,7 @@ function Hero() {
           </div>
           <div className="flex flex-wrap items-center justify-center gap-6">
             {[
-              { label: 'Agentic Recommendation Engine', icon: Brain },
+              { label: 'Agentic Orchestration Layer', icon: Brain },
               { label: 'Compliance-First Architecture', icon: Lock },
             ].map(({ label, icon: Icon }) => (
               <div
@@ -732,12 +733,12 @@ function Features() {
     {
       icon: Landmark,
       title: 'Bank Accounts',
-      desc: 'Link your bank accounts via Plaid or Bridge. Unified fiat and crypto balance view, on-ramp/off-ramp flows, and automated cash position reconciliation.',
+      desc: 'Link your bank accounts via Stripe Financial Connections or Belvo. Unified fiat and crypto balance view, on-ramp/off-ramp flows, and automated cash position reconciliation.',
     },
     {
       icon: TrendingUp,
       title: 'Yield Optimization',
-      desc: 'AI-driven strategies to deploy treasury reserves into vetted yield opportunities. Risk-scored recommendations with full transparency on APY and exposure.',
+      desc: 'AI-driven automation to deploy treasury reserves into vetted yield opportunities. Risk-scored insights with full transparency on APY and exposure.',
     },
     {
       icon: Globe,
@@ -790,8 +791,8 @@ function AgentSection() {
   const { ref, visible } = useInView();
 
   const capabilities = [
-    'AI-generated treasury rebalancing recommendations',
-    'Yield farming strategy proposals with risk scoring',
+    'AI-generated treasury rebalancing proposals',
+    'Yield optimization proposals with risk scoring',
     'FX hedging alerts and automated position monitoring',
     'Cash flow anomaly detection and obligation tracking',
     'Multi-step approval workflows before execution',
@@ -809,7 +810,7 @@ function AgentSection() {
         <SectionHeading
           eyebrow="AI Agent"
           title="Agentic Intelligence, Human Control"
-          subtitle="Vantor's AI orchestration layer analyzes your treasury in real-time and surfaces actionable recommendations — but you always make the final call."
+          subtitle="Vantor's AI orchestration layer monitors your treasury in real-time and queues actions for your review — you control what executes and when."
         />
 
         <div
@@ -821,8 +822,8 @@ function AgentSection() {
             <div className="space-y-4">
               {[
                 { step: '01', title: 'Analyze', desc: 'AI agents continuously monitor balances, obligations, market conditions, and yield opportunities across all connected accounts.' },
-                { step: '02', title: 'Recommend', desc: 'The orchestration layer generates risk-scored recommendations with full reasoning and explainability for every suggested action.' },
-                { step: '03', title: 'Approve', desc: 'Human reviewers evaluate recommendations through role-based approval workflows. Multi-signature support for high-value operations.' },
+                { step: '02', title: 'Propose', desc: 'The orchestration layer generates risk-scored proposed actions with full reasoning and explainability for every queued operation.' },
+                { step: '03', title: 'Approve', desc: 'Human reviewers evaluate insights through role-based approval workflows. Multi-signature support for high-value operations.' },
                 { step: '04', title: 'Execute', desc: 'Approved actions are executed atomically with real-time monitoring. Every step is logged to an immutable audit trail.' },
               ].map((s, i) => (
                 <div
@@ -909,7 +910,7 @@ function Security() {
       <SectionHeading
         eyebrow="Security & Compliance"
         title="Institutional-Grade from Day One"
-        subtitle="Vantor is built for secure treasury management. Every layer — from wallet onboarding to AI recommendations — is designed with compliance, auditability, and security at its core."
+        subtitle="Vantor is built for secure treasury management. Every layer — from wallet onboarding to AI-proposed actions — is designed with compliance, auditability, and security at its core."
       />
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {pillars.map((p, i) => {

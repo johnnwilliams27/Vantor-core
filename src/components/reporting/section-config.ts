@@ -48,7 +48,7 @@ export const SECTION_REGISTRY: SectionConfig[] = [
   },
   {
     id: 'recommendations',
-    label: 'AI Recommendations',
+    label: 'Actions Overview',
     description: 'Recommendation outcomes and reasoning',
     icon: BrainCircuit,
     defaultEnabled: true,

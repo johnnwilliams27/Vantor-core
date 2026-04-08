@@ -30,7 +30,7 @@ export function RecommendationList() {
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
         <CardTitle className="flex items-center gap-2">
           <Sparkles className="h-4 w-4" />
-          Vantor AI Recommendations
+          Actions Overview
         </CardTitle>
         <Button
           size="sm"
