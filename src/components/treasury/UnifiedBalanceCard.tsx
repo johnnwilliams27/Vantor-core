@@ -142,7 +142,7 @@ function TotalTreasuryCard({
             <AllocationBar
               segments={[
                 { label: 'Cash', value: fiatUsd, color: 'bg-blue-400' },
-                { label: 'Available Stablecoin', value: availableCryptoUsd, color: 'bg-violet-400' },
+                { label: 'Stablecoin', value: availableCryptoUsd, color: 'bg-violet-400' },
                 { label: 'Deployed', value: deployedUsd, color: 'bg-green-400' },
               ]}
             />
