@@ -45,11 +45,16 @@ export function UnifiedBalanceCard() {
 
   const totalTreasury = (overview?.totalBankBalanceUsd ?? 0) + (overview?.totalCryptoBalanceUsd ?? 0);
 
-  // Group fiat by currency
-  const fiatByCurrency: Record<string, number> = {};
+  // Group fiat by currency — track both USD-converted and local amounts
+  const fiatByCurrency: Record<string, { usd: number; local: number }> = {};
+  const fxRates = fxData?.rates ?? {};
   for (const acct of overview?.bankAccounts ?? []) {
     const cur = acct.currency ?? 'USD';
-    fiatByCurrency[cur] = (fiatByCurrency[cur] ?? 0) + acct.currentBalanceUsd;
+    if (!fiatByCurrency[cur]) fiatByCurrency[cur] = { usd: 0, local: 0 };
+    fiatByCurrency[cur].usd += acct.currentBalanceUsd;
+    // Reconstruct local amount from USD value × FX rate
+    const fxRate = fxRates[cur] ?? 1;
+    fiatByCurrency[cur].local += acct.currentBalanceUsd * fxRate;
   }
 
   // Group crypto by token
@@ -77,12 +82,17 @@ export function UnifiedBalanceCard() {
             ) : (
               <div className="flex-1 flex flex-col">
                 <div className="space-y-4 flex-1">
-                  {Object.entries(fiatByCurrency).map(([currency, total]) => (
+                  {Object.entries(fiatByCurrency).map(([currency, { usd, local }]) => (
                     <div key={currency} className="flex items-center justify-between">
                       <Badge variant={(currency.toLowerCase() as 'usd' | 'eur' | 'gbp' | 'brl' | 'mxn') ?? 'default'}>
                         {currency}
                       </Badge>
-                      <span className="text-sm font-semibold tabular-nums">{formatCurrency(total, currency)}</span>
+                      <div className="text-right">
+                        <span className="text-sm font-semibold tabular-nums">{formatCurrency(local, currency)}</span>
+                        {currency !== 'USD' && (
+                          <div className="text-[11px] text-muted-foreground tabular-nums">{formatUsdEquiv(usd)}</div>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>

@@ -61,15 +61,30 @@ export async function buildTreasurySnapshot(
   // Resolve prices: use provided prices or fetch from oracle
   const resolvedPrices: StablecoinPrices = prices ?? (await getStablecoinPrices()).prices;
 
-  const bankAccounts = (bankRes.data ?? []).map((acct) => ({
-    id: acct.id as string,
-    institutionName: acct.institution_name as string,
-    accountName: acct.account_name as string,
-    last4: acct.last4 as string | null,
-    currency: (acct.currency as string) ?? 'USD',
-    currentBalanceUsd: acct.current_balance ? parseFloat(acct.current_balance as string) : 0,
-    balanceAsOf: acct.balance_as_of as string | null,
-  }));
+  // Fetch cached FX rates for converting non-USD balances
+  const { data: fxRows } = await supabase
+    .from('fx_rate_cache')
+    .select('target_currency, rate')
+    .eq('base_currency', 'USD');
+  const fxRates: Record<string, number> = { USD: 1 };
+  for (const row of fxRows ?? []) {
+    fxRates[row.target_currency] = parseFloat(row.rate as string);
+  }
+
+  const bankAccounts = (bankRes.data ?? []).map((acct) => {
+    const currency = (acct.currency as string) ?? 'USD';
+    const localBalance = acct.current_balance ? parseFloat(acct.current_balance as string) : 0;
+    const fxRate = fxRates[currency] ?? 1;
+    return {
+      id: acct.id as string,
+      institutionName: acct.institution_name as string,
+      accountName: acct.account_name as string,
+      last4: acct.last4 as string | null,
+      currency,
+      currentBalanceUsd: localBalance / fxRate,
+      balanceAsOf: acct.balance_as_of as string | null,
+    };
+  });
 
   const totalBankBalanceUsd = bankAccounts.reduce((sum, a) => sum + a.currentBalanceUsd, 0);
 
