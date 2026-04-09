@@ -117,7 +117,7 @@ function TotalTreasuryCard({
 
   return (
     <Card className="bg-[#19595b] text-white dark:bg-slate-800 dark:text-foreground dark:border-slate-700">
-      <CardContent className="py-5 space-y-4">
+      <CardContent className="py-5">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-white/70 dark:text-muted-foreground">Total Treasury</p>
@@ -138,7 +138,7 @@ function TotalTreasuryCard({
         </div>
 
         {!isLoading && total > 0 && (
-          <div>
+          <div className="mt-4">
             <AllocationBar
               segments={[
                 { label: 'Cash', value: fiatUsd, color: 'bg-blue-400' },
@@ -150,7 +150,7 @@ function TotalTreasuryCard({
         )}
 
         {sources.length > 0 && (
-          <div className="flex items-center gap-1 text-[11px] text-white/50 dark:text-muted-foreground">
+          <div className="flex items-center gap-1 text-[11px] text-white/50 dark:text-muted-foreground mt-2">
             <Info className="h-3 w-3 shrink-0" />
             <span>{sources.join(' · ')}</span>
           </div>
