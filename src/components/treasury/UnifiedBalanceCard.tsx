@@ -170,7 +170,7 @@ export function UnifiedBalanceCard() {
                 {/* Deployed */}
                 {activePositions.length > 0 && (
                   <div className={Object.keys(cryptoByToken).length > 0 ? 'mt-4' : ''}>
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Deployed in Yield</p>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Deployed</p>
                     <div className="space-y-3">
                       {activePositions.map((pos) => (
                         <div key={pos.id} className="flex items-center justify-between">
