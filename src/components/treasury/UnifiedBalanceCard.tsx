@@ -143,8 +143,8 @@ function TotalTreasuryCard({
           <div className="[&_.bg-secondary\\/50]:bg-white/10">
             <AllocationBar
               segments={[
-                { label: 'Fiat', value: fiatUsd, color: 'bg-blue-400' },
-                { label: 'Available Crypto', value: availableCryptoUsd, color: 'bg-violet-400' },
+                { label: 'Cash', value: fiatUsd, color: 'bg-blue-400' },
+                { label: 'Available Stablecoin', value: availableCryptoUsd, color: 'bg-violet-400' },
                 { label: 'Deployed', value: deployedUsd, color: 'bg-green-400' },
               ]}
             />
@@ -162,7 +162,7 @@ function TotalTreasuryCard({
   );
 }
 
-// ─── Fiat Holdings ────────────────────────────────────────────────
+// ─── Cash Holdings ────────────────────────────────────────────────
 
 function FiatHoldingsCard({
   fiatByCurrency,
@@ -184,7 +184,7 @@ function FiatHoldingsCard({
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5 text-gray-500" />
-            Fiat Holdings
+            Cash Holdings
           </CardTitle>
           {!isLoading && accountCount > 0 && (
             <span className="text-xs text-muted-foreground">{accountCount} account{accountCount !== 1 ? 's' : ''}</span>
