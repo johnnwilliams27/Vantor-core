@@ -1,8 +1,18 @@
 'use client';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useTheme } from 'next-themes';
-import { Settings, Sun, Moon, Monitor, RefreshCw } from 'lucide-react';
+import { Settings, Sun, Moon, Monitor, RefreshCw, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency';
+import { SUPPORTED_FIAT_CURRENCIES } from '@/lib/fx/rates';
+
+const CURRENCY_LABELS: Record<string, string> = {
+  USD: 'USD ($)',
+  EUR: 'EUR (€)',
+  GBP: 'GBP (£)',
+  BRL: 'BRL (R$)',
+  MXN: 'MXN (MX$)',
+};
 
 const THEME_OPTIONS = [
   { value: 'light', label: 'Light', icon: Sun },
@@ -12,6 +22,7 @@ const THEME_OPTIONS = [
 
 export function SettingsMenu() {
   const { theme, setTheme } = useTheme();
+  const { currency: displayCurrency, setCurrency: setDisplayCurrency } = useDisplayCurrency();
   const [open, setOpen] = useState(false);
   const [confirmArmed, setConfirmArmed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -102,6 +113,29 @@ export function SettingsMenu() {
                 <Icon className="h-4 w-4 shrink-0" />
                 {label}
                 {theme === value && (
+                  <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#19595b] dark:bg-teal-400" />
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Display currency section */}
+          <div className="py-1.5 border-b border-border/60">
+            <p className="px-3 py-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Display Currency</p>
+            {SUPPORTED_FIAT_CURRENCIES.map((cur) => (
+              <button
+                key={cur}
+                onClick={() => setDisplayCurrency(cur)}
+                className={cn(
+                  'flex w-full items-center gap-3 px-3 py-2 text-sm transition-colors',
+                  displayCurrency === cur
+                    ? 'text-[#19595b] dark:text-teal-300 font-medium bg-[#19595b]/10 dark:bg-teal-500/15'
+                    : 'text-foreground hover:bg-black/5 dark:hover:bg-white/10'
+                )}
+              >
+                <DollarSign className="h-4 w-4 shrink-0" />
+                {CURRENCY_LABELS[cur] ?? cur}
+                {displayCurrency === cur && (
                   <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#19595b] dark:bg-teal-400" />
                 )}
               </button>

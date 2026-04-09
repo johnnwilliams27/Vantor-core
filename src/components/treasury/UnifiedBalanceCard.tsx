@@ -6,6 +6,8 @@ import { Building2, Coins, Info, TrendingUp } from 'lucide-react';
 import { useTreasuryOverview } from '@/hooks/useTreasury';
 import { useYieldPositions } from '@/hooks/useYield';
 import { useFxRates } from '@/hooks/useFxRates';
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency';
+import { getCurrencySymbol } from '@/lib/fx/rates';
 import { CardSpinner } from '@/components/ui/spinner';
 
 const TOKEN_COLORS: Record<string, string> = {
@@ -89,23 +91,26 @@ function AllocationBar({ segments }: { segments: { label: string; value: number;
 
 function TotalTreasuryCard({
   total,
-  fiatUsd,
-  availableCryptoUsd,
-  deployedUsd,
+  fiatValue,
+  stablecoinValue,
+  deployedValue,
+  displayCurrency,
   fxSource,
   fxFetchedAt,
   priceSource,
   isLoading,
 }: {
   total: number;
-  fiatUsd: number;
-  availableCryptoUsd: number;
-  deployedUsd: number;
+  fiatValue: number;
+  stablecoinValue: number;
+  deployedValue: number;
+  displayCurrency: string;
   fxSource: string | undefined;
   fxFetchedAt: string | null | undefined;
   priceSource: string | undefined;
   isLoading: boolean;
 }) {
+  const dc = displayCurrency;
   const sources: string[] = [];
   if (fxSource && fxSource !== 'mock') {
     const time = fxFetchedAt
@@ -118,32 +123,34 @@ function TotalTreasuryCard({
   return (
     <Card className="bg-[#19595b] text-white dark:bg-slate-800 dark:text-foreground dark:border-slate-700">
       <CardContent className="py-5">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-4">
+            <CardSpinner />
+          </div>
+        ) : (
+        <>
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-white/70 dark:text-muted-foreground">Total Treasury</p>
-            {isLoading ? (
-              <div className="h-9 w-48 animate-pulse rounded bg-white/10 mt-1" />
-            ) : (
-              <p className="text-3xl font-bold tabular-nums tracking-tight mt-0.5 dark:text-white">{fmt(total)}</p>
-            )}
+            <p className="text-3xl font-bold tabular-nums tracking-tight mt-0.5 dark:text-white">~{fmt(total, dc)} <span className="text-lg font-semibold text-white/60 dark:text-muted-foreground">{dc} equiv.</span></p>
           </div>
-          {!isLoading && deployedUsd > 0 && (
+          {deployedValue > 0 && (
             <div className="text-right">
               <div className="flex items-center gap-1 text-green-300 dark:text-green-400">
                 <TrendingUp className="h-3.5 w-3.5" />
-                <span className="text-sm font-semibold">{fmt(deployedUsd)} earning yield</span>
+                <span className="text-sm font-semibold">{fmt(deployedValue, dc)} earning yield</span>
               </div>
             </div>
           )}
         </div>
 
-        {!isLoading && total > 0 && (
+        {total > 0 && (
           <div className="mt-4">
             <AllocationBar
               segments={[
-                { label: 'Cash', value: fiatUsd, color: 'bg-blue-400' },
-                { label: 'Stablecoin', value: availableCryptoUsd, color: 'bg-violet-400' },
-                { label: 'Deployed', value: deployedUsd, color: 'bg-green-400' },
+                { label: 'Cash', value: fiatValue, color: 'bg-blue-400' },
+                { label: 'Stablecoin', value: stablecoinValue, color: 'bg-violet-400' },
+                { label: 'Deployed', value: deployedValue, color: 'bg-green-400' },
               ]}
             />
           </div>
@@ -155,6 +162,8 @@ function TotalTreasuryCard({
             <span>{sources.join(' · ')}</span>
           </div>
         )}
+        </>
+        )}
       </CardContent>
     </Card>
   );
@@ -164,30 +173,29 @@ function TotalTreasuryCard({
 
 function CashHoldingsCard({
   fiatByCurrency,
-  totalUsd,
-  accountCount,
+  totalDisplay,
+  displayCurrency,
+  equivLabel,
+  fmtD,
   isLoading,
 }: {
   fiatByCurrency: Record<string, { usd: number; local: number }>;
-  totalUsd: number;
-  accountCount: number;
+  totalDisplay: number;
+  displayCurrency: string;
+  equivLabel: string;
+  fmtD: (usd: number) => string;
   isLoading: boolean;
 }) {
   const currencies = Object.entries(fiatByCurrency);
-  const hasNonUsd = currencies.some(([c]) => c !== 'USD');
+  const hasMultiple = currencies.length > 1 || (currencies.length === 1 && currencies[0][0] !== displayCurrency);
 
   return (
     <Card className="flex flex-col">
       <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-gray-500" />
-            Cash Holdings
-          </CardTitle>
-          {!isLoading && accountCount > 0 && (
-            <span className="text-xs text-muted-foreground">{accountCount} account{accountCount !== 1 ? 's' : ''}</span>
-          )}
-        </div>
+        <CardTitle className="flex items-center gap-2">
+          <Building2 className="h-5 w-5 text-gray-500" />
+          Cash Holdings
+        </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col pt-2">
         {isLoading ? (
@@ -196,24 +204,33 @@ function CashHoldingsCard({
           <div className="text-sm text-muted-foreground py-4">No bank accounts connected.</div>
         ) : (
           <div className="flex-1 flex flex-col">
-            <div className="space-y-2.5 flex-1">
-              {currencies.map(([currency, { usd, local }]) => (
-                <div key={currency} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
+            <div className="flex-1">
+              {/* Column headers */}
+              <div className={`grid ${hasMultiple ? 'grid-cols-[auto_1fr_1fr]' : 'grid-cols-[auto_1fr]'} gap-x-3 items-center mb-1.5 px-1`}>
+                <span className="text-[11px] text-muted-foreground uppercase tracking-wider">Currency</span>
+                <span className="text-[11px] text-muted-foreground uppercase tracking-wider text-right">Balance</span>
+                {hasMultiple && <span className="text-[11px] text-muted-foreground uppercase tracking-wider text-right">{displayCurrency} Equiv.</span>}
+              </div>
+              {/* Rows */}
+              <div className="space-y-0.5">
+                {currencies.map(([currency, { usd, local }]) => (
+                  <div key={currency} className={`grid ${hasMultiple ? 'grid-cols-[auto_1fr_1fr]' : 'grid-cols-[auto_1fr]'} gap-x-3 items-center py-1.5 px-1 rounded hover:bg-muted/30 transition-colors`}>
                     <Badge variant={(currency.toLowerCase() as 'usd' | 'eur' | 'gbp' | 'brl' | 'mxn') ?? 'default'}>
                       {currency}
                     </Badge>
-                    <span className="text-sm font-semibold tabular-nums">{fmt(local, currency)}</span>
+                    <span className="text-sm font-semibold tabular-nums text-right">{fmt(local, currency)}</span>
+                    {hasMultiple && (
+                      <span className="text-sm tabular-nums text-right text-muted-foreground">
+                        {currency !== displayCurrency ? `~${fmtD(usd)}` : ''}
+                      </span>
+                    )}
                   </div>
-                  {currency !== 'USD' && (
-                    <span className="text-xs text-muted-foreground tabular-nums">{fmt(usd)} USD</span>
-                  )}
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
             <div className="border-t pt-3 mt-3 flex justify-between items-center">
               <span className="text-sm font-semibold text-muted-foreground">Total</span>
-              <span className="text-base font-bold tabular-nums">{fmt(totalUsd)}{hasNonUsd ? ' USD' : ''}</span>
+              <span className="text-base font-bold tabular-nums">{hasMultiple ? `~${fmt(totalDisplay, displayCurrency)} ${equivLabel}` : fmt(totalDisplay, displayCurrency)}</span>
             </div>
           </div>
         )}
@@ -229,6 +246,9 @@ function StablecoinHoldingsCard({
   activePositions,
   availableUsd,
   deployedUsd,
+  displayCurrency,
+  equivLabel,
+  fmtD,
   isLoading,
 }: {
   cryptoByToken: Record<string, number>;
@@ -241,6 +261,9 @@ function StablecoinHoldingsCard({
   }>;
   availableUsd: number;
   deployedUsd: number;
+  displayCurrency: string;
+  equivLabel: string;
+  fmtD: (usd: number) => string;
   isLoading: boolean;
 }) {
   const totalStablecoin = availableUsd + deployedUsd;
@@ -265,14 +288,17 @@ function StablecoinHoldingsCard({
             {/* Available */}
             {hasTokens && (
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Available</p>
-                <div className="space-y-2">
+                <div className="flex items-center justify-between mb-1.5 px-1">
+                  <span className="text-[11px] text-muted-foreground uppercase tracking-wider">Available</span>
+                  <span className="text-[11px] text-muted-foreground uppercase tracking-wider">Amount</span>
+                </div>
+                <div className="space-y-0.5">
                   {Object.entries(cryptoByToken).map(([token, usdValue]) => (
-                    <div key={token} className="flex items-center justify-between">
+                    <div key={token} className="flex items-center justify-between py-1.5 px-1 rounded hover:bg-muted/30 transition-colors">
                       <Badge className={TOKEN_COLORS[token] ?? 'bg-gray-100 text-gray-800'}>
                         {token}
                       </Badge>
-                      <span className="text-sm font-semibold tabular-nums">{fmt(usdValue)}</span>
+                      <span className="text-sm font-semibold tabular-nums">{fmtD(usdValue)}</span>
                     </div>
                   ))}
                 </div>
@@ -282,25 +308,20 @@ function StablecoinHoldingsCard({
             {/* Deployed */}
             {hasPositions && (
               <div className={hasTokens ? 'mt-3 pt-3 border-t border-dashed' : ''}>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Deployed</p>
-                <div className="space-y-2">
+                <div className="flex items-center justify-between mb-1.5 px-1">
+                  <span className="text-[11px] text-muted-foreground uppercase tracking-wider">Deployed</span>
+                  <span className="text-[11px] text-muted-foreground uppercase tracking-wider">Amount</span>
+                </div>
+                <div className="space-y-0.5">
                   {activePositions.map((pos) => (
-                    <div key={pos.id} className="flex items-center justify-between gap-2">
+                    <div key={pos.id} className="flex items-center justify-between py-1.5 px-1 rounded hover:bg-muted/30 transition-colors">
                       <div className="flex items-center gap-2 min-w-0">
-                        {PROTOCOL_LOGOS[pos.protocol] && (
-                          <Image src={PROTOCOL_LOGOS[pos.protocol]} alt={pos.protocol} width={20} height={20} className="h-5 w-5 object-contain shrink-0" unoptimized />
-                        )}
-                        <span className="text-sm truncate">{PROTOCOL_LABELS[pos.protocol] ?? pos.protocol}</span>
+                        <span className="text-sm">{PROTOCOL_LABELS[pos.protocol] ?? pos.protocol}</span>
                         <Badge className={`${TOKEN_COLORS[pos.underlying_token] ?? 'bg-gray-100 text-gray-800'} !text-[10px] !px-1.5 !py-0`}>
                           {pos.underlying_token}
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-sm font-semibold tabular-nums">{fmt(parseFloat(pos.current_value_usd))}</span>
-                        {pos.apy_snapshot && (
-                          <span className="text-xs text-green-600 font-medium tabular-nums w-12 text-right">{parseFloat(pos.apy_snapshot).toFixed(1)}%</span>
-                        )}
-                      </div>
+                      <span className="text-sm font-semibold tabular-nums shrink-0">{fmtD(parseFloat(pos.current_value_usd))}</span>
                     </div>
                   ))}
                 </div>
@@ -310,7 +331,7 @@ function StablecoinHoldingsCard({
             {/* Total */}
             <div className="border-t pt-3 mt-3 flex justify-between items-center">
               <span className="text-sm font-semibold text-muted-foreground">Total</span>
-              <span className="text-base font-bold tabular-nums">{fmt(totalStablecoin)}</span>
+              <span className="text-base font-bold tabular-nums">~{fmtD(totalStablecoin)} {equivLabel}</span>
             </div>
           </div>
         )}
@@ -325,6 +346,15 @@ export function UnifiedBalanceCard() {
   const { data: overview, isLoading } = useTreasuryOverview();
   const { data: yieldPositions } = useYieldPositions();
   const { data: fxData } = useFxRates();
+  const { currency: displayCurrency } = useDisplayCurrency();
+
+  const fxRates = fxData?.rates ?? {};
+  const displayRate = fxRates[displayCurrency] ?? 1;
+  const dc = displayCurrency; // shorthand
+
+  // Convert USD → display currency
+  const toDisplay = (usd: number) => usd * displayRate;
+  const fmtD = (usd: number) => fmt(toDisplay(usd), dc);
 
   const activePositions = (yieldPositions ?? []).filter(p => p.is_active);
   const totalDeployedUsd = activePositions.reduce((s, p) => s + parseFloat(p.current_value_usd), 0);
@@ -334,7 +364,6 @@ export function UnifiedBalanceCard() {
 
   // Group fiat by currency
   const fiatByCurrency: Record<string, { usd: number; local: number }> = {};
-  const fxRates = fxData?.rates ?? {};
   for (const acct of overview?.bankAccounts ?? []) {
     const cur = acct.currency ?? 'USD';
     if (!fiatByCurrency[cur]) fiatByCurrency[cur] = { usd: 0, local: 0 };
@@ -349,14 +378,17 @@ export function UnifiedBalanceCard() {
     cryptoByToken[pos.token] = (cryptoByToken[pos.token] ?? 0) + pos.usdValue;
   }
 
+  const equivLabel = `${dc} equiv.`;
+
   return (
     <div className="space-y-4">
       {/* Hero — Total Treasury */}
       <TotalTreasuryCard
-        total={totalTreasury}
-        fiatUsd={fiatUsd}
-        availableCryptoUsd={availableCryptoUsd}
-        deployedUsd={totalDeployedUsd}
+        total={toDisplay(totalTreasury)}
+        fiatValue={toDisplay(fiatUsd)}
+        stablecoinValue={toDisplay(availableCryptoUsd)}
+        deployedValue={toDisplay(totalDeployedUsd)}
+        displayCurrency={dc}
         fxSource={fxData?.source}
         fxFetchedAt={fxData?.fetchedAt}
         priceSource={overview?.priceSource}
@@ -367,8 +399,10 @@ export function UnifiedBalanceCard() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
         <CashHoldingsCard
           fiatByCurrency={fiatByCurrency}
-          totalUsd={fiatUsd}
-          accountCount={overview?.bankAccounts?.length ?? 0}
+          totalDisplay={toDisplay(fiatUsd)}
+          displayCurrency={dc}
+          equivLabel={equivLabel}
+          fmtD={fmtD}
           isLoading={isLoading}
         />
         <StablecoinHoldingsCard
@@ -376,6 +410,9 @@ export function UnifiedBalanceCard() {
           activePositions={activePositions}
           availableUsd={availableCryptoUsd}
           deployedUsd={totalDeployedUsd}
+          displayCurrency={dc}
+          equivLabel={equivLabel}
+          fmtD={fmtD}
           isLoading={isLoading}
         />
       </div>
