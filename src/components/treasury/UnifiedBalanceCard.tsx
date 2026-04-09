@@ -56,9 +56,9 @@ function AllocationBar({ segments }: { segments: { label: string; value: number;
   if (total === 0) return null;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {/* Bar */}
-      <div className="flex h-2.5 rounded-full overflow-hidden bg-secondary/50">
+      <div className="flex h-2 rounded-full overflow-hidden bg-secondary/50">
         {segments.map((seg) => {
           const pct = (seg.value / total) * 100;
           if (pct < 0.5) return null;
@@ -71,14 +71,18 @@ function AllocationBar({ segments }: { segments: { label: string; value: number;
           );
         })}
       </div>
-      {/* Legend */}
-      <div className="flex flex-wrap gap-x-4 gap-y-1">
+      {/* Breakdown */}
+      <div className="grid grid-cols-3 gap-3">
         {segments.map((seg) => {
           const pct = total > 0 ? ((seg.value / total) * 100).toFixed(0) : '0';
           return (
-            <div key={seg.label} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              <div className={`h-2 w-2 rounded-full ${seg.color}`} />
-              <span>{seg.label} {pct}%</span>
+            <div key={seg.label} className="space-y-0.5">
+              <div className="flex items-center gap-1.5">
+                <div className={`h-2 w-2 rounded-full ${seg.color} shrink-0`} />
+                <span className="text-xs text-white/60 truncate">{seg.label}</span>
+              </div>
+              <p className="text-sm font-semibold tabular-nums text-white pl-3.5">{fmt(seg.value)}</p>
+              <p className="text-xs text-white/40 tabular-nums pl-3.5">{pct}%</p>
             </div>
           );
         })}
