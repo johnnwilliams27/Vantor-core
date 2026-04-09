@@ -27,7 +27,7 @@
     },
     {
       "path": "/api/cron/fx-rates",
-      "schedule": "0 6,18 * * *"
+      "schedule": "0 0,12 * * *"
     }
   ]
 }
