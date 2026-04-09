@@ -2,7 +2,7 @@
 import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Building2, Coins, Info } from 'lucide-react';
+import { Building2, Coins, Info, TrendingUp } from 'lucide-react';
 import { useTreasuryOverview } from '@/hooks/useTreasury';
 import { useYieldPositions } from '@/hooks/useYield';
 import { useFxRates } from '@/hooks/useFxRates';
@@ -33,7 +33,7 @@ const PROTOCOL_LOGOS: Record<string, string> = {
   drift: '/partners/drift_logo.svg',
 };
 
-function formatCurrency(value: number, currency: string = 'USD'): string {
+function fmt(value: number, currency: string = 'USD'): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency,
@@ -41,25 +41,298 @@ function formatCurrency(value: number, currency: string = 'USD'): string {
   }).format(value);
 }
 
-function formatUsdEquiv(value: number): string {
-  return `~${formatCurrency(value, 'USD')} USD equiv.`;
+function fmtPrecise(value: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 2,
+  }).format(value);
 }
 
-function FxAttribution({ source, fetchedAt }: { source: string; fetchedAt: string | null }) {
-  const label = source === 'mock'
-    ? 'FX rates: estimated'
-    : `FX rates via ${source}`;
-  const time = fetchedAt
-    ? `, updated ${new Date(fetchedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`
-    : '';
+// ─── Allocation Bar ───────────────────────────────────────────────
+
+function AllocationBar({ segments }: { segments: { label: string; value: number; color: string }[] }) {
+  const total = segments.reduce((s, seg) => s + seg.value, 0);
+  if (total === 0) return null;
 
   return (
-    <div className="flex items-center gap-1 text-[11px] text-muted-foreground mt-1">
-      <Info className="h-3 w-3 shrink-0" />
-      <span>{label}{time}</span>
+    <div className="space-y-2">
+      {/* Bar */}
+      <div className="flex h-2.5 rounded-full overflow-hidden bg-secondary/50">
+        {segments.map((seg) => {
+          const pct = (seg.value / total) * 100;
+          if (pct < 0.5) return null;
+          return (
+            <div
+              key={seg.label}
+              className={`${seg.color} transition-all duration-500`}
+              style={{ width: `${pct}%` }}
+            />
+          );
+        })}
+      </div>
+      {/* Legend */}
+      <div className="flex flex-wrap gap-x-4 gap-y-1">
+        {segments.map((seg) => {
+          const pct = total > 0 ? ((seg.value / total) * 100).toFixed(0) : '0';
+          return (
+            <div key={seg.label} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <div className={`h-2 w-2 rounded-full ${seg.color}`} />
+              <span>{seg.label} {pct}%</span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
+
+// ─── Total Treasury (Hero) ────────────────────────────────────────
+
+function TotalTreasuryCard({
+  total,
+  fiatUsd,
+  availableCryptoUsd,
+  deployedUsd,
+  fxSource,
+  fxFetchedAt,
+  priceSource,
+  isLoading,
+}: {
+  total: number;
+  fiatUsd: number;
+  availableCryptoUsd: number;
+  deployedUsd: number;
+  fxSource: string | undefined;
+  fxFetchedAt: string | null | undefined;
+  priceSource: string | undefined;
+  isLoading: boolean;
+}) {
+  const sources: string[] = [];
+  if (fxSource && fxSource !== 'mock') {
+    const time = fxFetchedAt
+      ? ` (${new Date(fxFetchedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })})`
+      : '';
+    sources.push(`FX via ${fxSource}${time}`);
+  }
+  if (priceSource === 'coingecko') sources.push('Stablecoin prices via CoinGecko');
+
+  return (
+    <Card className="bg-[#19595b] text-white dark:bg-slate-800 dark:text-foreground dark:border-slate-700">
+      <CardContent className="py-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-white/70 dark:text-muted-foreground">Total Treasury</p>
+            {isLoading ? (
+              <div className="h-9 w-48 animate-pulse rounded bg-white/10 mt-1" />
+            ) : (
+              <p className="text-3xl font-bold tabular-nums tracking-tight mt-0.5 dark:text-white">{fmt(total)}</p>
+            )}
+          </div>
+          {!isLoading && deployedUsd > 0 && (
+            <div className="text-right">
+              <div className="flex items-center gap-1 text-green-300 dark:text-green-400">
+                <TrendingUp className="h-3.5 w-3.5" />
+                <span className="text-sm font-semibold">{fmt(deployedUsd)} earning yield</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {!isLoading && total > 0 && (
+          <div className="[&_.bg-secondary\\/50]:bg-white/10">
+            <AllocationBar
+              segments={[
+                { label: 'Fiat', value: fiatUsd, color: 'bg-blue-400' },
+                { label: 'Available Crypto', value: availableCryptoUsd, color: 'bg-violet-400' },
+                { label: 'Deployed', value: deployedUsd, color: 'bg-green-400' },
+              ]}
+            />
+          </div>
+        )}
+
+        {sources.length > 0 && (
+          <div className="flex items-center gap-1 text-[11px] text-white/50 dark:text-muted-foreground">
+            <Info className="h-3 w-3 shrink-0" />
+            <span>{sources.join(' · ')}</span>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Fiat Holdings ────────────────────────────────────────────────
+
+function FiatHoldingsCard({
+  fiatByCurrency,
+  totalUsd,
+  accountCount,
+  isLoading,
+}: {
+  fiatByCurrency: Record<string, { usd: number; local: number }>;
+  totalUsd: number;
+  accountCount: number;
+  isLoading: boolean;
+}) {
+  const currencies = Object.entries(fiatByCurrency);
+  const hasNonUsd = currencies.some(([c]) => c !== 'USD');
+
+  return (
+    <Card className="flex flex-col">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="h-5 w-5 text-gray-500" />
+            Fiat Holdings
+          </CardTitle>
+          {!isLoading && accountCount > 0 && (
+            <span className="text-xs text-muted-foreground">{accountCount} account{accountCount !== 1 ? 's' : ''}</span>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 flex flex-col pt-2">
+        {isLoading ? (
+          <CardSpinner />
+        ) : !currencies.length ? (
+          <div className="text-sm text-muted-foreground py-4">No bank accounts connected.</div>
+        ) : (
+          <div className="flex-1 flex flex-col">
+            <div className="space-y-3 flex-1">
+              {currencies.map(([currency, { usd, local }]) => (
+                <div key={currency} className="flex items-center justify-between">
+                  <Badge variant={(currency.toLowerCase() as 'usd' | 'eur' | 'gbp' | 'brl' | 'mxn') ?? 'default'}>
+                    {currency}
+                  </Badge>
+                  <div className="text-right">
+                    <span className="text-sm font-semibold tabular-nums">{fmt(local, currency)}</span>
+                    {currency !== 'USD' && (
+                      <div className="text-[11px] text-muted-foreground tabular-nums">{fmt(usd)} USD</div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="border-t pt-3 mt-4 flex justify-between items-center">
+              <span className="text-sm font-semibold text-muted-foreground">Total</span>
+              <span className="text-base font-bold tabular-nums">{fmt(totalUsd)}{hasNonUsd ? ' USD' : ''}</span>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Stablecoin Holdings ──────────────────────────────────────────
+
+function StablecoinHoldingsCard({
+  cryptoByToken,
+  activePositions,
+  availableUsd,
+  deployedUsd,
+  isLoading,
+}: {
+  cryptoByToken: Record<string, number>;
+  activePositions: Array<{
+    id: string;
+    protocol: string;
+    current_value_usd: string;
+    apy_snapshot: string | null;
+    underlying_token: string;
+  }>;
+  availableUsd: number;
+  deployedUsd: number;
+  isLoading: boolean;
+}) {
+  const totalCrypto = availableUsd + deployedUsd;
+  const deployedPct = totalCrypto > 0 ? ((deployedUsd / totalCrypto) * 100).toFixed(0) : '0';
+  const hasTokens = Object.keys(cryptoByToken).length > 0;
+  const hasPositions = activePositions.length > 0;
+
+  return (
+    <Card className="flex flex-col">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Coins className="h-5 w-5 text-gray-500" />
+            Stablecoin Holdings
+          </CardTitle>
+          {!isLoading && deployedUsd > 0 && (
+            <span className="text-xs text-green-600 font-medium">{deployedPct}% deployed</span>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 flex flex-col pt-2">
+        {isLoading ? (
+          <CardSpinner />
+        ) : !hasTokens && !hasPositions ? (
+          <div className="text-sm text-muted-foreground py-4">No stablecoin positions found.</div>
+        ) : (
+          <div className="flex-1 flex flex-col">
+            {/* Available */}
+            {hasTokens && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Available</p>
+                  <p className="text-xs font-semibold tabular-nums text-muted-foreground">{fmt(availableUsd)}</p>
+                </div>
+                <div className="space-y-2.5">
+                  {Object.entries(cryptoByToken).map(([token, usdValue]) => (
+                    <div key={token} className="flex items-center justify-between">
+                      <Badge className={TOKEN_COLORS[token] ?? 'bg-gray-100 text-gray-800'}>
+                        {token}
+                      </Badge>
+                      <span className="text-sm font-semibold tabular-nums">{fmt(usdValue)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Deployed */}
+            {hasPositions && (
+              <div className={hasTokens ? 'mt-4 pt-3 border-t border-dashed' : ''}>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Deployed</p>
+                  <p className="text-xs font-semibold tabular-nums text-muted-foreground">{fmt(deployedUsd)}</p>
+                </div>
+                <div className="space-y-2.5">
+                  {activePositions.map((pos) => (
+                    <div key={pos.id} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {PROTOCOL_LOGOS[pos.protocol] && (
+                          <Image src={PROTOCOL_LOGOS[pos.protocol]} alt={pos.protocol} width={16} height={16} className="h-4 w-4 object-contain" unoptimized />
+                        )}
+                        <span className="text-sm">
+                          {PROTOCOL_LABELS[pos.protocol] ?? pos.protocol}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm font-semibold tabular-nums">{fmt(parseFloat(pos.current_value_usd))}</span>
+                        {pos.apy_snapshot && (
+                          <div className="text-[11px] text-green-600 font-medium tabular-nums">{parseFloat(pos.apy_snapshot).toFixed(2)}%</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Total */}
+            <div className="border-t pt-3 mt-4 flex justify-between items-center">
+              <span className="text-sm font-semibold text-muted-foreground">Total</span>
+              <span className="text-base font-bold tabular-nums">{fmt(totalCrypto)}</span>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────
 
 export function UnifiedBalanceCard() {
   const { data: overview, isLoading } = useTreasuryOverview();
@@ -68,16 +341,17 @@ export function UnifiedBalanceCard() {
 
   const activePositions = (yieldPositions ?? []).filter(p => p.is_active);
   const totalDeployedUsd = activePositions.reduce((s, p) => s + parseFloat(p.current_value_usd), 0);
-  const totalTreasury = (overview?.totalBankBalanceUsd ?? 0) + (overview?.totalCryptoBalanceUsd ?? 0) + totalDeployedUsd;
+  const fiatUsd = overview?.totalBankBalanceUsd ?? 0;
+  const availableCryptoUsd = overview?.totalCryptoBalanceUsd ?? 0;
+  const totalTreasury = fiatUsd + availableCryptoUsd + totalDeployedUsd;
 
-  // Group fiat by currency — track both USD-converted and local amounts
+  // Group fiat by currency
   const fiatByCurrency: Record<string, { usd: number; local: number }> = {};
   const fxRates = fxData?.rates ?? {};
   for (const acct of overview?.bankAccounts ?? []) {
     const cur = acct.currency ?? 'USD';
     if (!fiatByCurrency[cur]) fiatByCurrency[cur] = { usd: 0, local: 0 };
     fiatByCurrency[cur].usd += acct.currentBalanceUsd;
-    // Reconstruct local amount from USD value × FX rate
     const fxRate = fxRates[cur] ?? 1;
     fiatByCurrency[cur].local += acct.currentBalanceUsd * fxRate;
   }
@@ -90,143 +364,34 @@ export function UnifiedBalanceCard() {
 
   return (
     <div className="space-y-4">
+      {/* Hero — Total Treasury */}
+      <TotalTreasuryCard
+        total={totalTreasury}
+        fiatUsd={fiatUsd}
+        availableCryptoUsd={availableCryptoUsd}
+        deployedUsd={totalDeployedUsd}
+        fxSource={fxData?.source}
+        fxFetchedAt={fxData?.fetchedAt}
+        priceSource={overview?.priceSource}
+        isLoading={isLoading}
+      />
+
+      {/* Detail Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
-        {/* Fiat Holdings */}
-        <Card className="flex flex-col">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-gray-500" />
-              Fiat Holdings
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex-1 flex flex-col">
-            {isLoading ? (
-              <CardSpinner />
-            ) : !Object.keys(fiatByCurrency).length ? (
-              <div className="text-sm text-muted-foreground py-4">No bank accounts connected.</div>
-            ) : (
-              <div className="flex-1 flex flex-col">
-                <div className="space-y-4 flex-1">
-                  {Object.entries(fiatByCurrency).map(([currency, { usd, local }]) => (
-                    <div key={currency} className="flex items-center justify-between">
-                      <Badge variant={(currency.toLowerCase() as 'usd' | 'eur' | 'gbp' | 'brl' | 'mxn') ?? 'default'}>
-                        {currency}
-                      </Badge>
-                      <div className="text-right">
-                        <span className="text-sm font-semibold tabular-nums">{formatCurrency(local, currency)}</span>
-                        {currency !== 'USD' && (
-                          <div className="text-[11px] text-muted-foreground tabular-nums">{formatUsdEquiv(usd)}</div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="border-t pt-3 mt-4">
-                  <div className="flex justify-between items-center text-lg font-semibold">
-                    <span>Total Fiat</span>
-                    <span className="tabular-nums">{formatUsdEquiv(overview?.totalBankBalanceUsd ?? 0)}</span>
-                  </div>
-                  {fxData && Object.keys(fiatByCurrency).some(c => c !== 'USD') && (
-                    <FxAttribution source={fxData.source} fetchedAt={fxData.fetchedAt} />
-                  )}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Stablecoin Holdings */}
-        <Card className="flex flex-col">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Coins className="h-5 w-5 text-gray-500" />
-              Stablecoin Holdings
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex-1 flex flex-col">
-            {isLoading ? (
-              <CardSpinner />
-            ) : !Object.keys(cryptoByToken).length && !activePositions.length ? (
-              <div className="text-sm text-muted-foreground py-4">No stablecoin positions found.</div>
-            ) : (
-              <div className="flex-1 flex flex-col">
-                {/* Available */}
-                {Object.keys(cryptoByToken).length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Available</p>
-                    <div className="space-y-3">
-                      {Object.entries(cryptoByToken).map(([token, usdValue]) => (
-                        <div key={token} className="flex items-center justify-between">
-                          <Badge className={TOKEN_COLORS[token] ?? 'bg-gray-100 text-gray-800'}>
-                            {token}
-                          </Badge>
-                          <span className="text-sm font-semibold tabular-nums">{formatCurrency(usdValue)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Deployed */}
-                {activePositions.length > 0 && (
-                  <div className={Object.keys(cryptoByToken).length > 0 ? 'mt-4' : ''}>
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Deployed</p>
-                    <div className="space-y-3">
-                      {activePositions.map((pos) => (
-                        <div key={pos.id} className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            {PROTOCOL_LOGOS[pos.protocol] && (
-                              <Image src={PROTOCOL_LOGOS[pos.protocol]} alt={pos.protocol} width={16} height={16} className="h-4 w-4 object-contain" unoptimized />
-                            )}
-                            <span className="text-sm text-muted-foreground">
-                              {PROTOCOL_LABELS[pos.protocol] ?? pos.protocol}
-                            </span>
-                          </div>
-                          <div className="text-right">
-                            <span className="text-sm font-semibold tabular-nums">{formatCurrency(parseFloat(pos.current_value_usd))}</span>
-                            {pos.apy_snapshot && (
-                              <div className="text-[11px] text-green-600 tabular-nums">{parseFloat(pos.apy_snapshot).toFixed(2)}% APY</div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="border-t pt-3 mt-4">
-                  <div className="flex justify-between items-center text-lg font-semibold">
-                    <span>Total Crypto</span>
-                    <span className="tabular-nums">{formatUsdEquiv((overview?.totalCryptoBalanceUsd ?? 0) + totalDeployedUsd)}</span>
-                  </div>
-                  {overview?.priceSource === 'coingecko' && (
-                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground mt-1">
-                      <Info className="h-3 w-3 shrink-0" />
-                      <span>Prices via CoinGecko</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <FiatHoldingsCard
+          fiatByCurrency={fiatByCurrency}
+          totalUsd={fiatUsd}
+          accountCount={overview?.bankAccounts?.length ?? 0}
+          isLoading={isLoading}
+        />
+        <StablecoinHoldingsCard
+          cryptoByToken={cryptoByToken}
+          activePositions={activePositions}
+          availableUsd={availableCryptoUsd}
+          deployedUsd={totalDeployedUsd}
+          isLoading={isLoading}
+        />
       </div>
-
-      {/* Total Treasury */}
-      <Card className="bg-[#19595b] text-white dark:bg-slate-800 dark:text-foreground dark:border-slate-700">
-        <CardContent className="py-4">
-          <div className="flex items-center justify-between">
-            <span className="text-2xl font-semibold opacity-90 dark:opacity-100 dark:text-foreground">Total Treasury</span>
-            <span className="text-2xl font-bold tabular-nums dark:text-white">{formatUsdEquiv(totalTreasury)}</span>
-          </div>
-          {fxData && fxData.source !== 'mock' && (
-            <div className="flex items-center gap-1 text-[11px] text-white/60 mt-1">
-              <Info className="h-3 w-3 shrink-0" />
-              <span>USD equivalents via {fxData.source}, updated {fxData.fetchedAt ? new Date(fxData.fetchedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}</span>
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }
