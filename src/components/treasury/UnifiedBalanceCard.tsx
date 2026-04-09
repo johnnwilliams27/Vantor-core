@@ -1,8 +1,9 @@
 'use client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Building2, Coins } from 'lucide-react';
+import { Building2, Coins, Info } from 'lucide-react';
 import { useTreasuryOverview } from '@/hooks/useTreasury';
+import { useFxRates } from '@/hooks/useFxRates';
 import { CardSpinner } from '@/components/ui/spinner';
 
 const TOKEN_COLORS: Record<string, string> = {
@@ -22,8 +23,25 @@ function formatUsdEquiv(value: number): string {
   return `~${formatCurrency(value, 'USD')} USD equiv.`;
 }
 
+function FxAttribution({ source, fetchedAt }: { source: string; fetchedAt: string | null }) {
+  const label = source === 'mock'
+    ? 'FX rates: estimated'
+    : `FX rates via ${source}`;
+  const time = fetchedAt
+    ? `, updated ${new Date(fetchedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`
+    : '';
+
+  return (
+    <div className="flex items-center gap-1 text-[11px] text-muted-foreground mt-1">
+      <Info className="h-3 w-3 shrink-0" />
+      <span>{label}{time}</span>
+    </div>
+  );
+}
+
 export function UnifiedBalanceCard() {
   const { data: overview, isLoading } = useTreasuryOverview();
+  const { data: fxData } = useFxRates();
 
   const totalTreasury = (overview?.totalBankBalanceUsd ?? 0) + (overview?.totalCryptoBalanceUsd ?? 0);
 
@@ -61,16 +79,21 @@ export function UnifiedBalanceCard() {
                 <div className="space-y-4 flex-1">
                   {Object.entries(fiatByCurrency).map(([currency, total]) => (
                     <div key={currency} className="flex items-center justify-between">
-                      <Badge variant={(currency.toLowerCase() as 'usd' | 'eur' | 'gbp') ?? 'default'}>
+                      <Badge variant={(currency.toLowerCase() as 'usd' | 'eur' | 'gbp' | 'brl' | 'mxn') ?? 'default'}>
                         {currency}
                       </Badge>
                       <span className="text-sm font-semibold tabular-nums">{formatCurrency(total, currency)}</span>
                     </div>
                   ))}
                 </div>
-                <div className="border-t pt-3 mt-4 flex justify-between items-center text-lg font-semibold">
-                  <span>Total Fiat</span>
-                  <span className="tabular-nums">{formatUsdEquiv(overview?.totalBankBalanceUsd ?? 0)}</span>
+                <div className="border-t pt-3 mt-4">
+                  <div className="flex justify-between items-center text-lg font-semibold">
+                    <span>Total Fiat</span>
+                    <span className="tabular-nums">{formatUsdEquiv(overview?.totalBankBalanceUsd ?? 0)}</span>
+                  </div>
+                  {fxData && Object.keys(fiatByCurrency).some(c => c !== 'USD') && (
+                    <FxAttribution source={fxData.source} fetchedAt={fxData.fetchedAt} />
+                  )}
                 </div>
               </div>
             )}
@@ -114,9 +137,17 @@ export function UnifiedBalanceCard() {
 
       {/* Total Treasury */}
       <Card className="bg-[#19595b] text-white dark:bg-slate-800 dark:text-foreground dark:border-slate-700">
-        <CardContent className="py-4 flex items-center justify-between">
-          <span className="text-2xl font-semibold opacity-90 dark:opacity-100 dark:text-foreground">Total Treasury</span>
-          <span className="text-2xl font-bold tabular-nums dark:text-white">{formatUsdEquiv(totalTreasury)}</span>
+        <CardContent className="py-4">
+          <div className="flex items-center justify-between">
+            <span className="text-2xl font-semibold opacity-90 dark:opacity-100 dark:text-foreground">Total Treasury</span>
+            <span className="text-2xl font-bold tabular-nums dark:text-white">{formatUsdEquiv(totalTreasury)}</span>
+          </div>
+          {fxData && fxData.source !== 'mock' && (
+            <div className="flex items-center gap-1 text-[11px] text-white/60 mt-1">
+              <Info className="h-3 w-3 shrink-0" />
+              <span>USD equivalents via {fxData.source}, updated {fxData.fetchedAt ? new Date(fxData.fetchedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}</span>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

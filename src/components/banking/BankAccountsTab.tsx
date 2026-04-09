@@ -172,7 +172,7 @@ export function BankAccountsTab({ bankingProvider = 'stripe_fc' }: { bankingProv
                         </TableCell>
                         <TableCell className="text-sm capitalize">{account.account_type}</TableCell>
                         <TableCell>
-                          <Badge variant={(account.currency?.toLowerCase() as 'usd' | 'eur' | 'gbp') ?? 'default'}>
+                          <Badge variant={(account.currency?.toLowerCase() as 'usd' | 'eur' | 'gbp' | 'brl' | 'mxn') ?? 'default'}>
                             {account.currency}
                           </Badge>
                         </TableCell>

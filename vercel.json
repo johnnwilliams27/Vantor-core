@@ -24,6 +24,10 @@
     {
       "path": "/api/cron/yield-rates",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/fx-rates",
+      "schedule": "0 6,18 * * *"
     }
   ]
 }

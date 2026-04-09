@@ -21,6 +21,8 @@ const badgeVariants = cva(
         usd: 'border-transparent bg-green-100 text-green-800',
         eur: 'border-transparent bg-blue-100 text-blue-800',
         gbp: 'border-transparent bg-purple-100 text-purple-800',
+        brl: 'border-transparent bg-amber-100 text-amber-800',
+        mxn: 'border-transparent bg-rose-100 text-rose-800',
       },
     },
     defaultVariants: { variant: 'default' },

@@ -2,8 +2,9 @@ export const SUPPORTED_FIAT_CURRENCIES = ['USD', 'EUR', 'GBP', 'BRL', 'MXN'] as 
 export type FiatCurrency = (typeof SUPPORTED_FIAT_CURRENCIES)[number];
 
 /**
- * Mock FX rates relative to USD.
- * In production, replace with a real FX API (e.g., exchangeratesapi.io).
+ * Fallback FX rates relative to USD.
+ * Live rates are fetched from exchangeratesapi.io via /api/cron/fx-rates
+ * and cached in the fx_rate_cache table.
  */
 const MOCK_RATES: Record<FiatCurrency, number> = {
   USD: 1.0,
