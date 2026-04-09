@@ -162,7 +162,7 @@ function TotalTreasuryCard({
 
 // ─── Cash Holdings ────────────────────────────────────────────────
 
-function FiatHoldingsCard({
+function CashHoldingsCard({
   fiatByCurrency,
   totalUsd,
   accountCount,
@@ -196,22 +196,22 @@ function FiatHoldingsCard({
           <div className="text-sm text-muted-foreground py-4">No bank accounts connected.</div>
         ) : (
           <div className="flex-1 flex flex-col">
-            <div className="space-y-3 flex-1">
+            <div className="space-y-2.5 flex-1">
               {currencies.map(([currency, { usd, local }]) => (
                 <div key={currency} className="flex items-center justify-between">
-                  <Badge variant={(currency.toLowerCase() as 'usd' | 'eur' | 'gbp' | 'brl' | 'mxn') ?? 'default'}>
-                    {currency}
-                  </Badge>
-                  <div className="text-right">
+                  <div className="flex items-center gap-2.5">
+                    <Badge variant={(currency.toLowerCase() as 'usd' | 'eur' | 'gbp' | 'brl' | 'mxn') ?? 'default'}>
+                      {currency}
+                    </Badge>
                     <span className="text-sm font-semibold tabular-nums">{fmt(local, currency)}</span>
-                    {currency !== 'USD' && (
-                      <div className="text-[11px] text-muted-foreground tabular-nums">{fmt(usd)} USD</div>
-                    )}
                   </div>
+                  {currency !== 'USD' && (
+                    <span className="text-xs text-muted-foreground tabular-nums">{fmt(usd)} USD</span>
+                  )}
                 </div>
               ))}
             </div>
-            <div className="border-t pt-3 mt-4 flex justify-between items-center">
+            <div className="border-t pt-3 mt-3 flex justify-between items-center">
               <span className="text-sm font-semibold text-muted-foreground">Total</span>
               <span className="text-base font-bold tabular-nums">{fmt(totalUsd)}{hasNonUsd ? ' USD' : ''}</span>
             </div>
@@ -243,23 +243,17 @@ function StablecoinHoldingsCard({
   deployedUsd: number;
   isLoading: boolean;
 }) {
-  const totalCrypto = availableUsd + deployedUsd;
-  const deployedPct = totalCrypto > 0 ? ((deployedUsd / totalCrypto) * 100).toFixed(0) : '0';
+  const totalStablecoin = availableUsd + deployedUsd;
   const hasTokens = Object.keys(cryptoByToken).length > 0;
   const hasPositions = activePositions.length > 0;
 
   return (
     <Card className="flex flex-col">
       <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Coins className="h-5 w-5 text-gray-500" />
-            Stablecoin Holdings
-          </CardTitle>
-          {!isLoading && deployedUsd > 0 && (
-            <span className="text-xs text-green-600 font-medium">{deployedPct}% deployed</span>
-          )}
-        </div>
+        <CardTitle className="flex items-center gap-2">
+          <Coins className="h-5 w-5 text-gray-500" />
+          Stablecoin Holdings
+        </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col pt-2">
         {isLoading ? (
@@ -271,11 +265,8 @@ function StablecoinHoldingsCard({
             {/* Available */}
             {hasTokens && (
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Available</p>
-                  <p className="text-xs font-semibold tabular-nums text-muted-foreground">{fmt(availableUsd)}</p>
-                </div>
-                <div className="space-y-2.5">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Available</p>
+                <div className="space-y-2">
                   {Object.entries(cryptoByToken).map(([token, usdValue]) => (
                     <div key={token} className="flex items-center justify-between">
                       <Badge className={TOKEN_COLORS[token] ?? 'bg-gray-100 text-gray-800'}>
@@ -290,26 +281,24 @@ function StablecoinHoldingsCard({
 
             {/* Deployed */}
             {hasPositions && (
-              <div className={hasTokens ? 'mt-4 pt-3 border-t border-dashed' : ''}>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Deployed</p>
-                  <p className="text-xs font-semibold tabular-nums text-muted-foreground">{fmt(deployedUsd)}</p>
-                </div>
-                <div className="space-y-2.5">
+              <div className={hasTokens ? 'mt-3 pt-3 border-t border-dashed' : ''}>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Deployed</p>
+                <div className="space-y-2">
                   {activePositions.map((pos) => (
-                    <div key={pos.id} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                    <div key={pos.id} className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         {PROTOCOL_LOGOS[pos.protocol] && (
-                          <Image src={PROTOCOL_LOGOS[pos.protocol]} alt={pos.protocol} width={16} height={16} className="h-4 w-4 object-contain" unoptimized />
+                          <Image src={PROTOCOL_LOGOS[pos.protocol]} alt={pos.protocol} width={20} height={20} className="h-5 w-5 object-contain shrink-0" unoptimized />
                         )}
-                        <span className="text-sm">
-                          {PROTOCOL_LABELS[pos.protocol] ?? pos.protocol}
-                        </span>
+                        <span className="text-sm truncate">{PROTOCOL_LABELS[pos.protocol] ?? pos.protocol}</span>
+                        <Badge className={`${TOKEN_COLORS[pos.underlying_token] ?? 'bg-gray-100 text-gray-800'} !text-[10px] !px-1.5 !py-0`}>
+                          {pos.underlying_token}
+                        </Badge>
                       </div>
-                      <div className="text-right">
+                      <div className="flex items-center gap-2 shrink-0">
                         <span className="text-sm font-semibold tabular-nums">{fmt(parseFloat(pos.current_value_usd))}</span>
                         {pos.apy_snapshot && (
-                          <div className="text-[11px] text-green-600 font-medium tabular-nums">{parseFloat(pos.apy_snapshot).toFixed(2)}%</div>
+                          <span className="text-xs text-green-600 font-medium tabular-nums w-12 text-right">{parseFloat(pos.apy_snapshot).toFixed(1)}%</span>
                         )}
                       </div>
                     </div>
@@ -319,9 +308,9 @@ function StablecoinHoldingsCard({
             )}
 
             {/* Total */}
-            <div className="border-t pt-3 mt-4 flex justify-between items-center">
+            <div className="border-t pt-3 mt-3 flex justify-between items-center">
               <span className="text-sm font-semibold text-muted-foreground">Total</span>
-              <span className="text-base font-bold tabular-nums">{fmt(totalCrypto)}</span>
+              <span className="text-base font-bold tabular-nums">{fmt(totalStablecoin)}</span>
             </div>
           </div>
         )}
@@ -376,7 +365,7 @@ export function UnifiedBalanceCard() {
 
       {/* Detail Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
-        <FiatHoldingsCard
+        <CashHoldingsCard
           fiatByCurrency={fiatByCurrency}
           totalUsd={fiatUsd}
           accountCount={overview?.bankAccounts?.length ?? 0}
