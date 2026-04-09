@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth/nextauth.config';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { buildTreasurySnapshot } from '@/lib/treasury/rules-engine';
+import { getStablecoinPrices } from '@/lib/treasury/oracle';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 
 export async function GET(_req: NextRequest) {
@@ -17,7 +18,8 @@ export async function GET(_req: NextRequest) {
   const supabase = createAdminClient();
 
   try {
-    const snapshot = await buildTreasurySnapshot(supabase, session.user.id, undefined, enterpriseId);
+    const { prices, source: priceSource } = await getStablecoinPrices();
+    const snapshot = await buildTreasurySnapshot(supabase, session.user.id, prices, enterpriseId);
 
     // Also fetch pending recommendations count
     const { data: pendingRecs } = await supabase
@@ -33,6 +35,7 @@ export async function GET(_req: NextRequest) {
     return NextResponse.json({
       data: {
         ...snapshot,
+        priceSource,
         pendingRecommendations: pendingRecs ?? [],
       },
     });

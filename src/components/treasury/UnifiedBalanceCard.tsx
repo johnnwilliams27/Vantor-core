@@ -135,9 +135,17 @@ export function UnifiedBalanceCard() {
                     </div>
                   ))}
                 </div>
-                <div className="border-t pt-3 mt-4 flex justify-between items-center text-lg font-semibold">
-                  <span>Total Crypto</span>
-                  <span className="tabular-nums">{formatUsdEquiv(overview?.totalCryptoBalanceUsd ?? 0)}</span>
+                <div className="border-t pt-3 mt-4">
+                  <div className="flex justify-between items-center text-lg font-semibold">
+                    <span>Total Crypto</span>
+                    <span className="tabular-nums">{formatUsdEquiv(overview?.totalCryptoBalanceUsd ?? 0)}</span>
+                  </div>
+                  {overview?.priceSource === 'coingecko' && (
+                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground mt-1">
+                      <Info className="h-3 w-3 shrink-0" />
+                      <span>Prices via CoinGecko</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

@@ -31,6 +31,7 @@ export interface TreasuryOverview {
     balance: number;
     usdValue: number;
   }>;
+  priceSource: 'mock' | 'coingecko';
   pendingRecommendations: Array<{
     id: string;
     action: string;
