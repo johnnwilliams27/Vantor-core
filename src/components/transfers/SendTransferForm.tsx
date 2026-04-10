@@ -19,6 +19,7 @@ import { formatCurrency } from '@/lib/utils';
 import { VANTOR_FEE_RATE } from '@/lib/billing/tiers';
 import { useOnChainTransfer, type TransferStep } from '@/hooks/useOnChainTransfer';
 import { useSolanaTransfer, type SolanaTransferStep } from '@/hooks/useSolanaTransfer';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { ErpConfiguration } from '@/types/database';
 
 const schema = z.object({
@@ -44,6 +45,8 @@ const EVM_STEP_LABELS: Record<TransferStep, string> = {
 
 const SOL_STEP_LABELS: Record<SolanaTransferStep, string> = {
   idle: 'Send Transfer',
+  checking: 'Checking recipient…',
+  needs_ata_confirmation: 'Waiting for confirmation…',
   building: 'Preparing transaction…',
   signing: 'Sign in wallet…',
   confirming: 'Confirming on-chain…',
@@ -278,6 +281,23 @@ export function SendTransferForm() {
           </Button>
         </form>
       </CardContent>
+
+      <ConfirmDialog
+        open={!!solTransfer.pendingAtaConfirmation}
+        onOpenChange={(open) => {
+          if (!open) solTransfer.cancelAta();
+        }}
+        title={`Recipient needs a ${solTransfer.pendingAtaConfirmation?.token ?? ''} account`}
+        description={
+          `The recipient has never received ${solTransfer.pendingAtaConfirmation?.token ?? 'this token'} on Solana, so we need to create a token account for them. ` +
+          `This is a one-time Solana rent fee of ~${(solTransfer.pendingAtaConfirmation?.rentSol ?? 0).toFixed(6)} SOL (≈$${((solTransfer.pendingAtaConfirmation?.rentSol ?? 0) * 150).toFixed(2)}) ` +
+          `paid from your wallet in addition to normal network fees. Continue?`
+        }
+        confirmLabel="Continue & Sign"
+        cancelLabel="Cancel"
+        variant="default"
+        onConfirm={() => solTransfer.confirmAta()}
+      />
     </Card>
   );
 }

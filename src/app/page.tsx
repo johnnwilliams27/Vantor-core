@@ -455,7 +455,16 @@ function Navbar() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-400 mb-1.5">Password</label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-medium text-gray-400">Password</label>
+                    <Link
+                      href="/forgot-password"
+                      className="text-xs text-teal-400 hover:text-teal-300 transition-colors"
+                      onClick={() => setLoginOpen(false)}
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
                   <input
                     name="password"
                     type="password"
@@ -533,6 +542,12 @@ function Navbar() {
                 className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.05] border border-white/[0.08] text-white text-sm placeholder-gray-500 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all duration-300"
                 placeholder="••••••••"
               />
+              <Link
+                href="/forgot-password"
+                className="block text-right text-xs text-teal-400 hover:text-teal-300 transition-colors"
+              >
+                Forgot password?
+              </Link>
               {loginError && (
                 <div className="rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 text-xs text-red-400">
                   {loginError}
