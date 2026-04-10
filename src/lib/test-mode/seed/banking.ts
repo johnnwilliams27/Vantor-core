@@ -37,6 +37,7 @@ export async function seedBanking(ctx: SeedContext): Promise<BankIds> {
     balance_as_of: now,
     is_active: true,
     verified_at: now,
+    banking_provider: 'manual',
   }));
 
   const latamBankRows = LATAM_BANKS.map(b => ({

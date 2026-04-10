@@ -268,7 +268,7 @@ export function SwapForm() {
             )}
             {quote.vantor_fee != null && quote.vantor_fee > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Vantor fee (0.1%)</span>
+                <span className="text-muted-foreground">Vantor fee (0.25%)</span>
                 <span className="text-muted-foreground">${Number(quote.vantor_fee).toFixed(2)}</span>
               </div>
             )}

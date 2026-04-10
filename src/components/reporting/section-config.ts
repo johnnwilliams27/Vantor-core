@@ -84,7 +84,7 @@ export const SECTION_REGISTRY: SectionConfig[] = [
   {
     id: 'compliance',
     label: 'Compliance',
-    description: 'Sanctions screenings, KYT alerts, travel rule status',
+    description: 'Sanctions screenings and KYT alerts',
     icon: ShieldAlert,
     defaultEnabled: false,
   },

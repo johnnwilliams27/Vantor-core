@@ -9,7 +9,6 @@ import { actionNotificationEmail } from '@/lib/notifications/email-templates';
 import { updateBalancesAfterSwap } from '@/lib/balances/update-after-movement';
 import { z } from 'zod';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
-import { isTestMode } from '@/lib/test-mode/helpers';
 import { recordUsageFee } from '@/lib/billing/usage';
 import { requirePaidTier, tierGateResponse, TierGateError } from '@/lib/auth/tier-gate';
 
@@ -77,14 +76,12 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  if (!isTestMode()) {
-    await recordUsageFee({
-      enterpriseId,
-      transactionType: 'swap',
-      transactionId: swap.id,
-      notionalAmountUsd: parseFloat(parsed.data.fromAmount),
-    });
-  }
+  await recordUsageFee({
+    enterpriseId,
+    transactionType: 'swap',
+    transactionId: swap.id,
+    notionalAmountUsd: parseFloat(parsed.data.fromAmount),
+  });
 
   // Update wallet balances (mock fallback — real balances sync from chain)
   await updateBalancesAfterSwap({

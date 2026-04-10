@@ -6,7 +6,6 @@ import { getBankingAdapter } from '@/lib/banking/factory';
 import { getIntegrationMode } from '@/lib/env/integration-mode';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
-import { isTestMode } from '@/lib/test-mode/helpers';
 import { calculateVantorFee } from '@/lib/billing/usage';
 import { z } from 'zod';
 
@@ -50,8 +49,7 @@ export async function POST(req: NextRequest) {
       walletAddress,
     });
 
-    const testMode = isTestMode();
-    const vantorFee = testMode ? 0 : calculateVantorFee(parseFloat(quote.fromAmount));
+    const vantorFee = calculateVantorFee(parseFloat(quote.fromAmount));
 
     await writeAuditLog({
       userId: session.user.id,

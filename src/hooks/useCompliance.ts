@@ -5,7 +5,6 @@ import type {
   SanctionsScreening,
   KytTransfer,
   KytAlert,
-  TravelRuleTransfer,
   KytAlertStatus,
   KytAlertSeverity,
 } from '@/types/database';
@@ -17,7 +16,6 @@ export interface ComplianceOverview {
   sanctionedHits24h: number;
   openAlerts: { low: number; medium: number; high: number; severe: number };
   totalOpenAlerts: number;
-  pendingTravelRule: number;
   highRiskTransfers: Array<{
     id: string;
     external_id: string;
@@ -156,58 +154,3 @@ export function useUpdateKytAlert() {
   });
 }
 
-// ---- Travel Rule ----
-
-export function useTravelRuleTransfers(status?: string) {
-  const { data: session } = useSession();
-  return useQuery<TravelRuleTransfer[]>({
-    queryKey: ['travel-rule-transfers', session?.user?.id, status],
-    queryFn: async () => {
-      const params = status ? `?status=${status}` : '';
-      const res = await fetch(`/api/compliance/travel-rule${params}`);
-      if (!res.ok) throw new Error('Failed to fetch travel rule transfers');
-      const { data } = await res.json();
-      return data ?? [];
-    },
-    enabled: !!session?.user?.id,
-    staleTime: 15_000,
-  });
-}
-
-export function useCreateTravelRule() {
-  const queryClient = useQueryClient();
-  const { data: session } = useSession();
-
-  return useMutation({
-    mutationFn: async (payload: {
-      paymentId?: string;
-      direction: 'outgoing' | 'incoming';
-      amountUsd: number;
-      originatorName: string;
-      originatorAddress?: string;
-      originatorWallet: string;
-      originatorChain: 'ethereum' | 'solana';
-      originatorVasp?: string;
-      beneficiaryName: string;
-      beneficiaryAddress?: string;
-      beneficiaryWallet: string;
-      beneficiaryChain: 'ethereum' | 'solana';
-      beneficiaryVasp?: string;
-    }) => {
-      const res = await fetch('/api/compliance/travel-rule', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const json = await res.json();
-        throw new Error(json.error ?? 'Failed to create travel rule transfer');
-      }
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['travel-rule-transfers', session?.user?.id] });
-      queryClient.invalidateQueries({ queryKey: ['compliance-overview', session?.user?.id] });
-    },
-  });
-}

@@ -3,8 +3,6 @@ import type {
   SanctionsScreenResult,
   KytRegisterParams,
   KytTransferResult,
-  TravelRuleCreateParams,
-  TravelRuleResult,
 } from '../interface';
 
 function delay(ms: number) {
@@ -104,28 +102,4 @@ export class ChainalysisMockAdapter implements IComplianceAdapter {
     };
   }
 
-  async submitTravelRule(params: TravelRuleCreateParams): Promise<TravelRuleResult> {
-    await delay(350);
-
-    return {
-      providerRef: `tr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      status: 'sent',
-      rawResponse: {
-        mock: true,
-        direction: params.direction,
-        amountUsd: params.amountUsd,
-        submittedAt: new Date().toISOString(),
-      },
-    };
-  }
-
-  async getTravelRuleStatus(providerRef: string): Promise<TravelRuleResult> {
-    await delay(150);
-
-    return {
-      providerRef,
-      status: 'accepted',
-      rawResponse: { mock: true },
-    };
-  }
 }

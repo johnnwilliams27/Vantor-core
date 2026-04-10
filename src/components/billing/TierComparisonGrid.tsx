@@ -84,9 +84,10 @@ export function TierComparisonGrid({ currentTier, onSelectTier, pendingDowngrade
               <FeatureRow enabled={tier.liveMode} label="Live mode" />
               <FeatureRow
                 enabled={true}
-                label={tier.assetCapUsd ? `$${(tier.assetCapUsd / 1_000_000).toFixed(0)}M cap` : 'Unlimited'}
+                label={tier.assetCapUsd ? `Up to $${(tier.assetCapUsd / 1_000_000).toFixed(0)}M AUM` : 'Unlimited AUM'}
               />
               <FeatureRow enabled={tier.liveMode} label={`${tier.includedErps} live ERP`} />
+              <FeatureRow enabled={tier.liveMode} label="0.25% per transaction" />
             </ul>
 
             <div className="mt-3">

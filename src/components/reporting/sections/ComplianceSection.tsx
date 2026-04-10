@@ -1,11 +1,10 @@
 'use client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShieldCheck, AlertTriangle, Eye, Plane } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, Eye } from 'lucide-react';
 
 interface ComplianceOverview {
   screenings?: { total?: number; sanctioned?: number; clean?: number };
   kytAlerts?: { total?: number; open?: number; high?: number; medium?: number; low?: number };
-  travelRule?: { total?: number; pending?: number; completed?: number };
   [key: string]: unknown;
 }
 
@@ -31,7 +30,6 @@ function StatCard({ label, value, icon: Icon, variant = 'default' }: {
 export function ComplianceSection({ data }: { data: ComplianceOverview }) {
   const screenings = data.screenings ?? {};
   const alerts = data.kytAlerts ?? {};
-  const travel = data.travelRule ?? {};
 
   return (
     <Card>
@@ -61,16 +59,6 @@ export function ComplianceSection({ data }: { data: ComplianceOverview }) {
           </div>
         </div>
 
-        {/* Travel Rule */}
-        <div>
-          <div className="text-xs font-medium text-muted-foreground mb-2">Travel Rule</div>
-          <div className="grid grid-cols-3 gap-3">
-            <StatCard label="Total Transfers" value={travel.total ?? 0} icon={Plane} />
-            <StatCard label="Pending" value={travel.pending ?? 0} icon={Plane}
-              variant={(travel.pending ?? 0) > 0 ? 'warning' : 'default'} />
-            <StatCard label="Completed" value={travel.completed ?? 0} icon={Plane} variant="success" />
-          </div>
-        </div>
       </CardContent>
     </Card>
   );

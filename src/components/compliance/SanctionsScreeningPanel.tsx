@@ -89,7 +89,6 @@ export function SanctionsScreeningPanel() {
                   <th className="px-4 py-2 font-medium">Address</th>
                   <th className="px-4 py-2 font-medium">Chain</th>
                   <th className="px-4 py-2 font-medium">Result</th>
-                  <th className="px-4 py-2 font-medium">Risk Score</th>
                   <th className="px-4 py-2 font-medium">Screened</th>
                 </tr>
               </thead>
@@ -113,7 +112,6 @@ export function SanctionsScreeningPanel() {
                           {badge.label}
                         </span>
                       </td>
-                      <td className="px-4 py-2">{s.risk_score ?? '-'}</td>
                       <td className="px-4 py-2 text-muted-foreground">
                         {new Date(s.screened_at).toLocaleString()}
                       </td>

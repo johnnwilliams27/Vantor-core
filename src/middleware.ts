@@ -43,6 +43,15 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Allow service-role key auth for admin API endpoints (reseed, etc.)
+  if (pathname.startsWith('/api/test-mode/reseed')) {
+    const authHeader = req.headers.get('authorization');
+    const bearer = authHeader?.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
+    if (bearer && bearer === process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return NextResponse.next();
+    }
+  }
+
   // JWT auth check
   const token = await getToken({
     req,

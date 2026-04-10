@@ -567,12 +567,12 @@ const PARTNERS = [
   { name: 'MetaMask', src: '/partners/MetaMask_Logo_0.svg', className: 'h-11' },
   { name: 'Phantom', src: '/partners/Phantom_Logo_0.svg', className: 'h-11' },
   { name: 'WalletConnect', src: '/partners/walletconnect-white.svg', className: 'h-8' },
-  { name: 'Bridge', src: '/partners/bridge-white.png', className: 'h-11' },
+  { name: 'Bridge', src: '/partners/bridge-white.png', className: 'h-9' },
   { name: 'Aave', src: '/partners/Aave_idWRQ7YLO7_0.svg', className: 'h-11' },
   { name: 'Kamino', src: '/partners/kamino-logo.svg', className: 'h-8' },
   { name: 'Ondo', src: '/partners/Ondo_Logo_0.svg', className: 'h-11' },
   { name: 'Morpho', src: '/partners/morpho-white.svg', className: 'h-11' },
-  { name: 'Compound', src: '/partners/compound-white.png', className: 'h-[104px]' },
+  { name: 'Compound', src: '/partners/compound-white.png', className: 'h-11' },
 ];
 
 function PartnerScroll() {
@@ -877,11 +877,6 @@ function Security() {
       icon: AlertTriangle,
       title: 'AML & Sanctions Screening',
       desc: 'Automated anti-money laundering checks and real-time sanctions screening against OFAC, EU, and UN lists on every transaction.',
-    },
-    {
-      icon: Globe,
-      title: 'Travel Rule Compliance',
-      desc: 'Built-in Travel Rule compliance for cross-border digital asset transfers. Automatic originator and beneficiary data collection and transmission.',
     },
     {
       icon: Eye,

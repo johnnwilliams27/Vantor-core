@@ -1,7 +1,7 @@
 'use client';
 import { useComplianceOverview } from '@/hooks/useCompliance';
 import { CardSpinner } from '@/components/ui/spinner';
-import { ShieldCheck, ShieldAlert, Eye, Plane } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, Eye } from 'lucide-react';
 
 export function ComplianceOverviewCard() {
   const { data, isLoading } = useComplianceOverview();
@@ -31,18 +31,12 @@ export function ComplianceOverviewCard() {
       icon: Eye,
       color: data.totalOpenAlerts > 0 ? 'text-amber-500' : 'text-green-500',
     },
-    {
-      label: 'Pending Travel Rule',
-      value: data.pendingTravelRule,
-      icon: Plane,
-      color: data.pendingTravelRule > 0 ? 'text-amber-500' : 'text-green-500',
-    },
   ];
 
   return (
     <div className="rounded-lg border bg-card p-6">
       <h2 className="text-lg font-semibold mb-4">Compliance Overview</h2>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {cards.map((card) => (
           <div
             key={card.label}

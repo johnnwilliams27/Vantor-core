@@ -9,7 +9,6 @@ export async function seedAudit(ctx: SeedContext): Promise<void> {
     { action: 'wallet_connect', entity_type: 'wallet', details: { chain: 'ethereum', label: 'Treasury Main' } },
     { action: 'wallet_connect', entity_type: 'wallet', details: { chain: 'solana', label: 'Solana Treasury' } },
     { action: 'transfer_create', entity_type: 'transfer', details: { amount: '45000', token: 'USDC' } },
-    { action: 'transfer_approve', entity_type: 'transfer', details: { amount: '45000', token: 'USDC' } },
     { action: 'transfer_execute', entity_type: 'transfer', details: { amount: '45000', token: 'USDC', tx_hash: '0xabc...' } },
     { action: 'swap_execute', entity_type: 'swap', details: { from: 'USDT', to: 'USDC', amount: '100000' } },
     { action: 'invoice_sync', entity_type: 'invoice', details: { erp: 'SAP', count: 5 } },
@@ -30,8 +29,10 @@ export async function seedAudit(ctx: SeedContext): Promise<void> {
     { action: 'bank_balance_refresh', entity_type: 'bank_account', details: { count: 6 } },
     { action: 'transfer_execute', entity_type: 'transfer', details: { amount: '80000', token: 'USDT' } },
     { action: 'invoice_sync', entity_type: 'invoice', details: { erp: 'Oracle', count: 3 } },
-    { action: 'fiat_payment_create', entity_type: 'fiat_payment', details: { amount: '25000', currency: 'USD' } },
-    { action: 'fiat_payment_settle', entity_type: 'fiat_payment', details: { amount: '25000', currency: 'USD' } },
+    { action: 'yield_deposit', entity_type: 'yield_position', details: { protocol: 'aave_v3', amount: '250000', token: 'USDC' } },
+    { action: 'yield_withdraw', entity_type: 'yield_position', details: { protocol: 'morpho', amount: '50000', token: 'USDT' } },
+    { action: 'treasury_forecast_generate', entity_type: 'treasury_forecast', details: { horizon_days: 30 } },
+    { action: 'compliance_sanctions_screen', entity_type: 'wallet', details: { address: '0x1234...', result: 'clear' } },
   ];
 
   const auditRows = actions.map((a, i) => ({
@@ -42,5 +43,6 @@ export async function seedAudit(ctx: SeedContext): Promise<void> {
     created_at: daysAgo(Math.floor((i / actions.length) * 85) + randInt(0, 2)),
   }));
 
-  await supabase.from('audit_logs').insert(auditRows);
+  const { error } = await supabase.from('audit_logs').insert(auditRows);
+  if (error) console.error('seedAudit insert failed:', error.message);
 }

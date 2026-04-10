@@ -15,7 +15,8 @@ export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
+  const realEnterpriseId = session.user.enterprise_id;
+  const effectiveEnterpriseId = await getEffectiveEnterpriseId(realEnterpriseId);
 
   const { searchParams } = new URL(req.url);
   const parsed = querySchema.safeParse({
@@ -38,9 +39,13 @@ export async function GET(req: NextRequest) {
 
   if (isAppAdmin) {
     // App admins can see all audit logs across enterprises (no financial data)
-  } else if (enterpriseId) {
-    // Enterprise-scoped: treasury managers see all within enterprise, others see own
-    query = query.eq('enterprise_id', enterpriseId);
+  } else if (effectiveEnterpriseId) {
+    // Include both real and test enterprise audit entries
+    const enterpriseIds = [effectiveEnterpriseId];
+    if (realEnterpriseId && realEnterpriseId !== effectiveEnterpriseId) {
+      enterpriseIds.push(realEnterpriseId);
+    }
+    query = query.in('enterprise_id', enterpriseIds);
     if (role !== 'treasury_manager') {
       query = query.eq('user_id', session.user.id);
     }

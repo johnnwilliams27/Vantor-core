@@ -29,22 +29,22 @@ export const TIERS: Record<TierSlug, TierDefinition> = {
   starter: {
     slug: 'starter',
     name: 'Starter',
-    price: 95000,               // $950.00
-    displayPrice: '$950/mo',
+    price: 0,                   // Free
+    displayPrice: 'Free',
     liveMode: true,
-    assetCapUsd: 2_000_000,
+    assetCapUsd: 10_000_000,
     includedErps: 1,
     kycRequired: true,
     kybRequired: true,
-    creditCardRequired: true,
+    creditCardRequired: false,
   },
   growth: {
     slug: 'growth',
     name: 'Growth',
-    price: 200000,              // $2,000.00
-    displayPrice: '$2,000/mo',
+    price: 150000,              // $1,500.00
+    displayPrice: '$1,500/mo',
     liveMode: true,
-    assetCapUsd: 10_000_000,
+    assetCapUsd: 30_000_000,
     includedErps: 1,
     kycRequired: true,
     kybRequired: true,
@@ -53,10 +53,10 @@ export const TIERS: Record<TierSlug, TierDefinition> = {
   scale: {
     slug: 'scale',
     name: 'Scale',
-    price: 500000,              // $5,000.00
-    displayPrice: '$5,000/mo',
+    price: 350000,              // $3,500.00
+    displayPrice: '$3,500/mo',
     liveMode: true,
-    assetCapUsd: 20_000_000,
+    assetCapUsd: 70_000_000,
     includedErps: 1,
     kycRequired: true,
     kybRequired: true,
@@ -80,7 +80,7 @@ export const TIER_ORDER: TierSlug[] = ['lite', 'starter', 'growth', 'scale', 'en
 
 export const ERP_ADDON_PRICE_CENTS = 150000; // $1,500.00/mo
 
-export const VANTOR_FEE_RATE = 0.001; // 0.1%
+export const VANTOR_FEE_RATE = 0.0025; // 25 BPS (0.25%)
 
 /** Returns true if `to` is a higher tier than `from` */
 export function isUpgrade(from: TierSlug, to: TierSlug): boolean {

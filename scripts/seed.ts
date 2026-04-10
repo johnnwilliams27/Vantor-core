@@ -149,7 +149,43 @@ async function cleanUserData(userId: string) {
 async function main() {
   console.log('\n🌱 crypto-treasury seed script\n');
 
-  const { userId, enterpriseId } = await resolveUser();
+  const { userId, enterpriseId: realEnterpriseId } = await resolveUser();
+
+  // ALWAYS seed into the test enterprise (Lite test mode data only).
+  // Seed data must NEVER go to paid test or paid live enterprises.
+  let enterpriseId: string | null = null;
+  if (realEnterpriseId) {
+    const { data: ent } = await sb
+      .from('enterprises')
+      .select('test_enterprise_id')
+      .eq('id', realEnterpriseId)
+      .single();
+    if (!ent?.test_enterprise_id) {
+      throw new Error(
+        `No test enterprise found for enterprise ${realEnterpriseId}.\n` +
+        `  Seed data only goes to the Lite test enterprise.\n` +
+        `  Set test_enterprise_id on the enterprise first.`
+      );
+    }
+    enterpriseId = ent.test_enterprise_id;
+
+    // Verify the target is actually a Lite/test enterprise, not a paid one
+    const { data: testEnt } = await sb
+      .from('subscriptions')
+      .select('tier')
+      .eq('enterprise_id', enterpriseId)
+      .single();
+    if (testEnt && testEnt.tier !== 'lite') {
+      throw new Error(
+        `Test enterprise ${enterpriseId} is on the '${testEnt.tier}' tier, not 'lite'.\n` +
+        `  Seed data can ONLY go to Lite test enterprises.\n` +
+        `  This is a safety check to prevent dummy data in paid environments.`
+      );
+    }
+
+    console.log(`  → Seeding into test enterprise: ${enterpriseId} (lite tier verified)`);
+  }
+
   // Shorthand for inserting enterprise_id on every row
   const eid = enterpriseId ? { enterprise_id: enterpriseId } : {};
 
@@ -268,8 +304,8 @@ async function main() {
       balance_as_of: ts(new Date()),
       is_active: true,
       verified_at: ts(daysAgo(30)),
-      plaid_item_id: 'mock-item-chase-001',
-      plaid_account_id: 'mock-acct-chase-001',
+      banking_provider: 'stripe_fc',
+      stripe_fc_account_id: 'fca_mock_chase_001',
     },
     {
       user_id: userId,
@@ -285,8 +321,8 @@ async function main() {
       balance_as_of: ts(new Date()),
       is_active: true,
       verified_at: ts(daysAgo(45)),
-      plaid_item_id: 'mock-item-svb-001',
-      plaid_account_id: 'mock-acct-svb-001',
+      banking_provider: 'stripe_fc',
+      stripe_fc_account_id: 'fca_mock_svb_001',
     },
     {
       user_id: userId,
@@ -302,8 +338,8 @@ async function main() {
       balance_as_of: ts(new Date()),
       is_active: true,
       verified_at: ts(daysAgo(15)),
-      plaid_item_id: 'mock-item-mercury-001',
-      plaid_account_id: 'mock-acct-mercury-001',
+      banking_provider: 'stripe_fc',
+      stripe_fc_account_id: 'fca_mock_mercury_001',
     },
     {
       user_id: userId,
@@ -318,6 +354,8 @@ async function main() {
       balance_as_of: ts(new Date()),
       is_active: true,
       verified_at: ts(daysAgo(20)),
+      banking_provider: 'stripe_fc',
+      stripe_fc_account_id: 'fca_mock_barclays_001',
     },
     {
       user_id: userId,
@@ -332,6 +370,55 @@ async function main() {
       balance_as_of: ts(new Date()),
       is_active: true,
       verified_at: ts(daysAgo(10)),
+      banking_provider: 'manual',
+    },
+    {
+      user_id: userId,
+      ...eid,
+      institution_name: 'Itaú Unibanco',
+      account_name: 'Conta Corrente',
+      account_type: 'checking',
+      last4: '7823',
+      currency: 'BRL',
+      current_balance: 1_415_400,
+      balance_currency: 'BRL',
+      balance_as_of: ts(new Date()),
+      is_active: true,
+      verified_at: ts(daysAgo(12)),
+      nickname: 'Itaú BRL Primary',
+      banking_provider: 'belvo',
+    },
+    {
+      user_id: userId,
+      ...eid,
+      institution_name: 'Nubank',
+      account_name: 'Conta PJ',
+      account_type: 'checking',
+      last4: '3491',
+      currency: 'BRL',
+      current_balance: 479_775,
+      balance_currency: 'BRL',
+      balance_as_of: ts(new Date()),
+      is_active: true,
+      verified_at: ts(daysAgo(8)),
+      nickname: 'Nubank BRL Operations',
+      banking_provider: 'belvo',
+    },
+    {
+      user_id: userId,
+      ...eid,
+      institution_name: 'BBVA México',
+      account_name: 'Cuenta Empresarial',
+      account_type: 'checking',
+      last4: '6102',
+      currency: 'MXN',
+      current_balance: 25_707_500,
+      balance_currency: 'MXN',
+      balance_as_of: ts(new Date()),
+      is_active: true,
+      verified_at: ts(daysAgo(5)),
+      nickname: 'BBVA MXN Treasury',
+      banking_provider: 'belvo',
     },
   ]).select();
 
@@ -1312,7 +1399,7 @@ async function main() {
   console.log('\n' + '═'.repeat(60));
   console.log('✅  Seed complete!\n');
   console.log('  Wallets          :', wallets.length, '(3 Ethereum + 2 Solana)');
-  console.log('  Bank accounts    :', banks.length, '(Chase, SVB, Mercury, Barclays EUR, HSBC GBP)');
+  console.log('  Bank accounts    :', banks.length, '(Chase, SVB, Mercury, Barclays EUR, HSBC GBP, Itaú BRL, Nubank BRL, BBVA MXN)');
   console.log('  ERP configs      :', allErp.length);
   console.log('  ERP vendors      :', vendors?.length ?? 0);
   console.log('  Invoices         :', invoices?.length ?? 0);

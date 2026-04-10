@@ -54,7 +54,7 @@ export function TransactionDetailModal({ transaction, onClose }: TransactionDeta
             <Row label="Partner fee" value={`$${transaction.partnerFee.toFixed(2)}`} />
           )}
           {transaction.vantorFee !== undefined && transaction.vantorFee > 0 && (
-            <Row label="Vantor fee (0.1%)" value={`$${transaction.vantorFee.toFixed(2)}`} />
+            <Row label="Vantor fee (0.25%)" value={`$${transaction.vantorFee.toFixed(2)}`} />
           )}
           {totalFees > 0 && (
             <Row label="Total fees" value={`$${totalFees.toFixed(2)}`} bold />

@@ -21,7 +21,7 @@ export default function PrivacyPage() {
 
       <main className="max-w-4xl mx-auto px-6 py-16">
         <h1 className="text-3xl font-bold text-white mb-2">Privacy Policy</h1>
-        <p className="text-sm text-gray-500 mb-10">Last updated: March 11, 2026</p>
+        <p className="text-sm text-gray-500 mb-10">Last updated: April 4, 2026</p>
 
         <div className="space-y-8 text-sm leading-relaxed">
           <section>
@@ -117,27 +117,84 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white mb-3">8. Cookies and Tracking</h2>
+            <h2 className="text-lg font-semibold text-white mb-3">8. GDPR — European Economic Area</h2>
+            <p>If you are located in the European Economic Area (EEA), the United Kingdom, or Switzerland, the following additional provisions apply:</p>
+
+            <h3 className="text-base font-medium text-gray-200 mt-4 mb-2">8.1 Legal Basis for Processing</h3>
+            <p className="text-gray-400">We process your personal data on the following legal bases:</p>
+            <ul className="list-disc list-inside mt-2 space-y-1 text-gray-400">
+              <li><strong className="text-gray-200">Contract performance:</strong> Processing necessary to provide the Service you requested (account management, transaction processing, treasury operations)</li>
+              <li><strong className="text-gray-200">Legitimate interests:</strong> Analytics, fraud prevention, security monitoring, and Service improvement, where these interests are not overridden by your rights</li>
+              <li><strong className="text-gray-200">Legal obligation:</strong> Compliance screening, regulatory reporting, and record-keeping required by applicable law</li>
+              <li><strong className="text-gray-200">Consent:</strong> Where required, such as for optional communications — you may withdraw consent at any time</li>
+            </ul>
+
+            <h3 className="text-base font-medium text-gray-200 mt-4 mb-2">8.2 Your GDPR Rights</h3>
+            <p className="text-gray-400">In addition to the rights listed in Section 7, you have the right to:</p>
+            <ul className="list-disc list-inside mt-2 space-y-1 text-gray-400">
+              <li>Lodge a complaint with your local data protection supervisory authority</li>
+              <li>Request restriction of processing while a complaint is being resolved</li>
+              <li>Object to processing based on legitimate interests</li>
+            </ul>
+
+            <h3 className="text-base font-medium text-gray-200 mt-4 mb-2">8.3 International Transfers</h3>
+            <p className="text-gray-400">When we transfer personal data outside the EEA, we rely on Standard Contractual Clauses approved by the European Commission or other legally recognized transfer mechanisms to ensure adequate protection of your data.</p>
+
+            <h3 className="text-base font-medium text-gray-200 mt-4 mb-2">8.4 Contact</h3>
+            <p className="text-gray-400">For GDPR-related inquiries, contact our data protection team at <a href="mailto:privacy@vantor.xyz" className="text-teal-400 hover:text-teal-300 transition-colors">privacy@vantor.xyz</a>.</p>
+          </section>
+
+          <section id="ccpa">
+            <h2 className="text-lg font-semibold text-white mb-3">9. CCPA — California Residents</h2>
+            <p>If you are a California resident, the California Consumer Privacy Act (CCPA) and the California Privacy Rights Act (CPRA) provide you with additional rights regarding your personal information.</p>
+
+            <h3 className="text-base font-medium text-gray-200 mt-4 mb-2">9.1 Do Not Sell or Share My Personal Information</h3>
+            <p className="text-gray-400">Vantor does not sell your personal information to third parties. We do not share your personal information for cross-context behavioral advertising. Because we do not engage in these activities, there is no need to opt out — however, if you have questions or wish to submit a formal request, contact us at <a href="mailto:privacy@vantor.xyz" className="text-teal-400 hover:text-teal-300 transition-colors">privacy@vantor.xyz</a>.</p>
+
+            <h3 className="text-base font-medium text-gray-200 mt-4 mb-2">9.2 Categories of Personal Information Collected</h3>
+            <p className="text-gray-400">In the preceding 12 months, we have collected the following categories of personal information:</p>
+            <ul className="list-disc list-inside mt-2 space-y-1 text-gray-400">
+              <li><strong className="text-gray-200">Identifiers:</strong> Name, email address, IP address, wallet addresses</li>
+              <li><strong className="text-gray-200">Financial information:</strong> Bank account details, transaction records, digital asset holdings</li>
+              <li><strong className="text-gray-200">Commercial information:</strong> Invoice data, payment history, ERP records</li>
+              <li><strong className="text-gray-200">Internet activity:</strong> Usage data, pages visited, feature interactions</li>
+              <li><strong className="text-gray-200">Professional information:</strong> Organization name, role, business details</li>
+            </ul>
+
+            <h3 className="text-base font-medium text-gray-200 mt-4 mb-2">9.3 Your CCPA Rights</h3>
+            <p className="text-gray-400">As a California resident, you have the right to:</p>
+            <ul className="list-disc list-inside mt-2 space-y-1 text-gray-400">
+              <li>Know what personal information we collect, use, and disclose</li>
+              <li>Request deletion of your personal information</li>
+              <li>Request correction of inaccurate personal information</li>
+              <li>Not be discriminated against for exercising your privacy rights</li>
+              <li>Designate an authorized agent to submit requests on your behalf</li>
+            </ul>
+            <p className="mt-2 text-gray-400">To exercise these rights, contact us at <a href="mailto:privacy@vantor.xyz" className="text-teal-400 hover:text-teal-300 transition-colors">privacy@vantor.xyz</a>. We will verify your identity before processing any request and respond within 45 days as required by law.</p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-3">10. Cookies and Tracking</h2>
             <p>We use essential cookies for authentication and session management. We use Sentry for error tracking and performance monitoring. We do not use third-party advertising cookies or trackers. You can manage cookie preferences through your browser settings.</p>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white mb-3">9. International Data Transfers</h2>
+            <h2 className="text-lg font-semibold text-white mb-3">11. International Data Transfers</h2>
             <p>Your information may be transferred to and processed in countries other than your country of residence. We ensure appropriate safeguards are in place for such transfers in compliance with applicable data protection laws.</p>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white mb-3">10. Children&apos;s Privacy</h2>
+            <h2 className="text-lg font-semibold text-white mb-3">12. Children&apos;s Privacy</h2>
             <p>The Service is not intended for individuals under the age of 18. We do not knowingly collect personal information from children. If we become aware that we have collected data from a child, we will take steps to delete it promptly.</p>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white mb-3">11. Changes to This Policy</h2>
+            <h2 className="text-lg font-semibold text-white mb-3">13. Changes to This Policy</h2>
             <p>We may update this Privacy Policy from time to time. We will notify you of material changes by posting the updated policy on the Service and updating the &quot;Last updated&quot; date. Your continued use of the Service after changes constitutes acceptance of the updated policy.</p>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white mb-3">12. Contact Us</h2>
+            <h2 className="text-lg font-semibold text-white mb-3">14. Contact Us</h2>
             <p>If you have questions or concerns about this Privacy Policy or our data practices, please contact us at:</p>
             <div className="mt-3 text-gray-400">
               <p>Vantor Treasury, Inc.</p>

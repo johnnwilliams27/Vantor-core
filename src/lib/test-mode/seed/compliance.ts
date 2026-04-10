@@ -98,34 +98,4 @@ export async function seedCompliance(ctx: SeedContext, walletIds: WalletIds, txI
     await supabase.from('kyt_alerts').insert(alertRows);
   }
 
-  // Travel rule transfers
-  const travelRuleStatuses = ['accepted', 'sent', 'received', 'rejected', 'pending', 'accepted'];
-  const travelRuleRows = travelRuleStatuses.map((status, i) => {
-    const isOutgoing = i % 2 === 0;
-    const transferId = txIds.transferIds.length > i ? txIds.transferIds[i] : null;
-
-    return {
-      user_id: userId, enterprise_id: enterpriseId,
-      transfer_id: transferId,
-      direction: isOutgoing ? 'outgoing' : 'incoming',
-      amount_usd: rand(15000, 300000).toFixed(2),
-      originator_name: isOutgoing ? 'Test Enterprise LLC' : `External Corp ${i}`,
-      originator_address: isOutgoing ? '123 Test St, New York, NY' : `${randInt(1, 999)} External Ave, London, UK`,
-      originator_wallet: isOutgoing ? pick(walletIds.ethWallets).address : `0xEXT${ethHash().slice(4)}`,
-      originator_chain: 'ethereum',
-      originator_vasp: isOutgoing ? 'vantor' : pick(['fireblocks', 'circle', 'coinbase']),
-      beneficiary_name: isOutgoing ? `Vendor ${i + 1} GmbH` : 'Test Enterprise LLC',
-      beneficiary_address: isOutgoing ? `${randInt(1, 999)} Vendor Str, Berlin, DE` : '123 Test St, New York, NY',
-      beneficiary_wallet: isOutgoing ? `0xEXT${ethHash().slice(4)}` : pick(walletIds.ethWallets).address,
-      beneficiary_chain: 'ethereum',
-      beneficiary_vasp: isOutgoing ? pick(['fireblocks', 'circle', 'binance']) : 'vantor',
-      status,
-      provider_ref: `tr-test-${String(i + 1).padStart(3, '0')}`,
-      error_message: status === 'rejected' ? 'Beneficiary VASP rejected — incomplete originator data' : null,
-      sent_at: ['sent', 'accepted', 'received'].includes(status) ? daysAgo(randInt(1, 60)) : null,
-      received_at: ['accepted', 'received'].includes(status) ? daysAgo(randInt(0, 55)) : null,
-    };
-  });
-
-  await supabase.from('travel_rule_transfers').insert(travelRuleRows);
 }
