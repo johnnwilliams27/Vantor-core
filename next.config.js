@@ -7,6 +7,9 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  experimental: {
+    serverComponentsExternalPackages: ['@kamino-finance/klend-sdk', '@drift-labs/sdk'],
+  },
   webpack: (config) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,
@@ -18,6 +21,10 @@ const nextConfig = {
     config.resolve.alias = {
       ...config.resolve.alias,
       '@react-native-async-storage/async-storage': false,
+    };
+    config.experiments = {
+      ...config.experiments,
+      asyncWebAssembly: true,
     };
     return config;
   },
