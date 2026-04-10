@@ -53,9 +53,11 @@ export function useSolanaDeposit() {
         let tx: import('@solana/web3.js').Transaction;
 
         if (protocol === 'kamino' || protocol === 'kamino_multiply') {
+          // Kamino: always mainnet (no public devnet market available)
           const { buildKaminoDepositTx } = await import('@/lib/yield/contracts/solana/kamino');
-          tx = await buildKaminoDepositTx(connection, publicKey, token, parseFloat(amount), cluster);
+          tx = await buildKaminoDepositTx(connection, publicKey, token, parseFloat(amount), 'mainnet-beta');
         } else if (protocol === 'drift') {
+          // Drift: supports devnet via SDK when test mode is on
           const { buildDriftDepositTx } = await import('@/lib/yield/contracts/solana/drift');
           tx = await buildDriftDepositTx(connection, publicKey, token, parseFloat(amount), cluster);
         } else {

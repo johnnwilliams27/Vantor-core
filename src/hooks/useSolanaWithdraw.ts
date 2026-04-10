@@ -54,9 +54,11 @@ export function useSolanaWithdraw() {
         let tx: import('@solana/web3.js').Transaction;
 
         if (protocol === 'kamino' || protocol === 'kamino_multiply') {
+          // Kamino: always mainnet (no public devnet market available)
           const { buildKaminoWithdrawTx } = await import('@/lib/yield/contracts/solana/kamino');
-          tx = await buildKaminoWithdrawTx(connection, publicKey, token, parseFloat(amount), isFullWithdrawal, cluster);
+          tx = await buildKaminoWithdrawTx(connection, publicKey, token, parseFloat(amount), isFullWithdrawal, 'mainnet-beta');
         } else if (protocol === 'drift') {
+          // Drift: supports devnet via SDK when test mode is on
           const { buildDriftWithdrawTx } = await import('@/lib/yield/contracts/solana/drift');
           tx = await buildDriftWithdrawTx(connection, publicKey, token, parseFloat(amount), isFullWithdrawal, cluster);
         } else {
