@@ -32,24 +32,32 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const { data: kyc } = await supabaseAdmin
-    .from('kyc_verifications')
-    .select('status, persona_inquiry_id')
-    .eq('user_id', session.user.id)
-    .single();
+  // KYC check is gated on Persona being configured. If Persona isn't set up
+  // in this environment we skip the check entirely (matches the KYB pattern
+  // above). When Persona is wired up in prod, set PERSONA_API_KEY in Vercel
+  // env vars to enforce this gate.
+  if (process.env.PERSONA_API_KEY) {
+    const { data: kyc } = await supabaseAdmin
+      .from('kyc_verifications')
+      .select('status, persona_inquiry_id')
+      .eq('user_id', session.user.id)
+      .single();
 
-  // Allow checkout if KYC is completed OR if an inquiry was started
-  // (webhook may not have fired yet — Persona confirms async)
-  if (!kyc?.persona_inquiry_id) {
-    return NextResponse.json({ error: 'KYC required' }, { status: 400 });
+    // Allow checkout if KYC is completed OR if an inquiry was started
+    // (webhook may not have fired yet — Persona confirms async)
+    if (!kyc?.persona_inquiry_id) {
+      return NextResponse.json({ error: 'KYC required' }, { status: 400 });
+    }
   }
 
-  // Get or create Stripe customer
+  // Get or create Stripe customer. Uses upsert so a missing subscriptions row
+  // for edge-case users (registered before the auto-insert, or manually created)
+  // doesn't silently drop the customer ID on the floor.
   const { data: sub } = await supabaseAdmin
     .from('subscriptions')
     .select('*')
     .eq('enterprise_id', session.user.enterprise_id)
-    .single();
+    .maybeSingle();
 
   let stripeCustomerId = sub?.stripe_customer_id;
 
@@ -68,10 +76,18 @@ export async function POST(req: NextRequest) {
 
     stripeCustomerId = customer.id;
 
+    // Upsert so this works whether or not a subscriptions row already exists.
     await supabaseAdmin
       .from('subscriptions')
-      .update({ stripe_customer_id: stripeCustomerId })
-      .eq('enterprise_id', session.user.enterprise_id);
+      .upsert(
+        {
+          enterprise_id: session.user.enterprise_id,
+          tier: sub?.tier ?? 'lite',
+          status: sub?.status ?? 'active',
+          stripe_customer_id: stripeCustomerId,
+        },
+        { onConflict: 'enterprise_id' },
+      );
   }
 
   // Look up the Stripe price for target tier
@@ -81,11 +97,17 @@ export async function POST(req: NextRequest) {
   }
 
   // Create Stripe Checkout session
+  //
+  // payment_method_collection: 'always' is critical for the Starter tier —
+  // Stripe's default ('if_required') would skip card collection on a $0
+  // subscription, leaving no card on file to charge when monthly usage fees
+  // (0.25% of transfer notional) land on the invoice.
   const checkoutSession = await stripe.checkout.sessions.create({
     customer: stripeCustomerId,
     mode: 'subscription',
     payment_method_types: ['card'],
     line_items: [{ price: priceId, quantity: 1 }],
+    payment_method_collection: 'always',
     subscription_data: {
       billing_cycle_anchor: getNextFirstOfMonth(),
     },
