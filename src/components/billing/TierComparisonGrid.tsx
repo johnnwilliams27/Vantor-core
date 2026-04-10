@@ -2,6 +2,10 @@
 
 import { TIERS, TIER_ORDER, TierSlug } from '@/lib/billing/tiers';
 import { Check, X, Sparkles, Zap, TrendingUp, Rocket, Building2, ArrowRight, MessageSquare } from 'lucide-react';
+import { InfoTooltip } from '@/components/ui/info-tooltip';
+
+const TRANSACTION_TOOLTIP =
+  'A transaction is any on-chain or off-chain movement of funds billed through Vantor: Payments, Transfers, Swaps, Bridges, and Ramps. The 0.25% fee applies per event.';
 
 const TIER_CONFIG: Record<TierSlug, {
   icon: typeof Sparkles;
@@ -87,7 +91,11 @@ export function TierComparisonGrid({ currentTier, onSelectTier, pendingDowngrade
                 label={tier.assetCapUsd ? `Up to $${(tier.assetCapUsd / 1_000_000).toFixed(0)}M AUM` : 'Unlimited AUM'}
               />
               <FeatureRow enabled={tier.liveMode} label={`${tier.includedErps} live ERP`} />
-              <FeatureRow enabled={tier.liveMode} label="0.25% per transaction" />
+              <FeatureRow
+                enabled={tier.liveMode}
+                label="0.25% per transaction"
+                tooltip={TRANSACTION_TOOLTIP}
+              />
             </ul>
 
             <div className="mt-3">
@@ -131,7 +139,15 @@ export function TierComparisonGrid({ currentTier, onSelectTier, pendingDowngrade
   );
 }
 
-function FeatureRow({ enabled, label }: { enabled: boolean; label: string }) {
+function FeatureRow({
+  enabled,
+  label,
+  tooltip,
+}: {
+  enabled: boolean;
+  label: string;
+  tooltip?: string;
+}) {
   return (
     <li className="flex items-center gap-1.5">
       {enabled ? (
@@ -140,6 +156,7 @@ function FeatureRow({ enabled, label }: { enabled: boolean; label: string }) {
         <X className="w-3.5 h-3.5 text-muted-foreground/30 flex-shrink-0" />
       )}
       <span className={enabled ? 'text-foreground' : 'text-muted-foreground/50'}>{label}</span>
+      {tooltip && <InfoTooltip content={tooltip} />}
     </li>
   );
 }
