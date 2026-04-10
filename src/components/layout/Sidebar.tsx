@@ -19,7 +19,6 @@ import {
   Settings,
   Users,
   ChevronLeft,
-  ChevronRight,
   BrainCircuit,
   Plug,
   ShieldCheck,
@@ -140,53 +139,82 @@ export function Sidebar() {
 
   return (
     <>
-    {/* Mobile overlay backdrop */}
-    {mobileSidebarOpen && (
-      <div
-        className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden"
-        onClick={() => setMobileSidebarOpen(false)}
-      />
-    )}
+    {/* Mobile overlay backdrop — fades in/out */}
+    <div
+      className={cn(
+        'fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden transition-opacity duration-300 ease-out',
+        mobileSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
+      )}
+      onClick={() => setMobileSidebarOpen(false)}
+      aria-hidden={!mobileSidebarOpen}
+    />
     <aside
       className={cn(
-        'flex flex-col bg-gray-900 text-white transition-all duration-300 shrink-0',
-        // Desktop: static sidebar
-        'hidden lg:flex',
-        sidebarOpen ? 'w-56' : 'w-16',
-        // Mobile: fixed overlay
-        mobileSidebarOpen && '!fixed inset-y-0 left-0 z-50 !flex w-56',
+        'flex flex-col bg-gray-900 text-white shrink-0 overflow-hidden',
+        // Spring-like easing for width (desktop collapse) and transform (mobile slide)
+        'transition-[width,transform] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',
+        // Mobile (< lg): fixed overlay that slides in from the left
+        'fixed inset-y-0 left-0 z-50 w-56',
+        mobileSidebarOpen
+          ? 'translate-x-0 shadow-[0_0_40px_rgba(0,0,0,0.5)]'
+          : '-translate-x-full',
+        // Desktop (≥ lg): static sidebar, width collapses, no translate or shadow
+        'lg:static lg:translate-x-0 lg:shadow-none',
+        sidebarOpen ? 'lg:w-56' : 'lg:w-16',
       )}
     >
-      {/* Logo */}
-      <div className="flex h-16 items-center justify-center px-3 border-b border-white/10">
-        {sidebarOpen ? (
+      {/* Logo — cross-fade between full logo and compact mark */}
+      <div className="relative flex h-16 items-center justify-center px-3 border-b border-white/10">
+        <div
+          className={cn(
+            'absolute inset-0 flex items-center justify-center transition-opacity duration-200',
+            sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none',
+          )}
+        >
           <Image src={logoSrc} alt="Vantor" width={140} height={46} className="object-contain" style={{ height: 'auto' }} priority unoptimized />
-        ) : (
-          <span className="text-lg font-bold text-white">V</span>
-        )}
+        </div>
+        <span
+          className={cn(
+            'text-lg font-bold text-white transition-opacity duration-200',
+            sidebarOpen ? 'opacity-0' : 'opacity-100',
+          )}
+          aria-hidden={sidebarOpen}
+        >
+          V
+        </span>
       </div>
 
       {/* Enterprise name */}
       {enterpriseName && (
         <div className={cn(
-          'flex items-center border-b border-white/10 px-3 py-2',
-          sidebarOpen ? 'gap-2' : 'justify-center'
+          'flex items-center border-b border-white/10 px-3 py-2 gap-2',
+          !sidebarOpen && 'justify-center',
         )}>
           <Building2 className="h-4 w-4 shrink-0 text-teal-400" />
-          {sidebarOpen && (
-            <span className="text-xs font-medium text-white/70 truncate">{enterpriseName}</span>
-          )}
+          <span
+            className={cn(
+              'text-xs font-medium text-white/70 truncate whitespace-nowrap transition-opacity duration-200',
+              sidebarOpen ? 'opacity-100' : 'opacity-0',
+            )}
+          >
+            {enterpriseName}
+          </span>
         </div>
       )}
       {isAppAdmin && (
         <div className={cn(
-          'flex items-center border-b border-white/10 px-3 py-2',
-          sidebarOpen ? 'gap-2' : 'justify-center'
+          'flex items-center border-b border-white/10 px-3 py-2 gap-2',
+          !sidebarOpen && 'justify-center',
         )}>
           <ShieldCheck className="h-4 w-4 shrink-0 text-amber-400" />
-          {sidebarOpen && (
-            <span className="text-xs font-medium text-amber-400/80 truncate">App Admin</span>
-          )}
+          <span
+            className={cn(
+              'text-xs font-medium text-amber-400/80 truncate whitespace-nowrap transition-opacity duration-200',
+              sidebarOpen ? 'opacity-100' : 'opacity-0',
+            )}
+          >
+            App Admin
+          </span>
         </div>
       )}
 
@@ -199,8 +227,14 @@ export function Sidebar() {
           if (!visibleItems.length) return null;
           return (
             <div key={gi}>
-              {group.heading && sidebarOpen && (
-                <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-white/40">
+              {group.heading && (
+                <p
+                  className={cn(
+                    'px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-white/40 whitespace-nowrap transition-opacity duration-200',
+                    sidebarOpen ? 'opacity-100' : 'opacity-0',
+                  )}
+                  aria-hidden={!sidebarOpen}
+                >
                   {group.heading}
                 </p>
               )}
@@ -220,7 +254,14 @@ export function Sidebar() {
                       title={!sidebarOpen ? item.label : undefined}
                     >
                       <item.icon className="h-5 w-5 shrink-0" />
-                      {sidebarOpen && <span>{item.label}</span>}
+                      <span
+                        className={cn(
+                          'whitespace-nowrap transition-opacity duration-200',
+                          sidebarOpen ? 'opacity-100' : 'opacity-0',
+                        )}
+                      >
+                        {item.label}
+                      </span>
                     </Link>
                   );
                 })}
@@ -230,30 +271,37 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Upgrade CTA for Lite users */}
-      {sidebarOpen && session?.user?.subscription_tier === 'lite' && (
+      {/* Upgrade CTA for Lite users — fades with sidebar state */}
+      {session?.user?.subscription_tier === 'lite' && (
         <Link
           href="/settings/billing"
-          className="group mx-3 mb-3 px-4 py-3 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-400 text-white text-sm font-semibold text-center shadow-[0_0_20px_rgba(45,212,191,0.25)] hover:shadow-[0_0_30px_rgba(45,212,191,0.45)] transition-all duration-300 flex items-center justify-center gap-2"
+          aria-hidden={!sidebarOpen}
+          tabIndex={sidebarOpen ? 0 : -1}
+          className={cn(
+            'group mx-3 mb-3 px-4 py-3 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-400 text-white text-sm font-semibold text-center shadow-[0_0_20px_rgba(45,212,191,0.25)] hover:shadow-[0_0_30px_rgba(45,212,191,0.45)] flex items-center justify-center gap-2 whitespace-nowrap transition-[opacity,box-shadow] duration-300',
+            sidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
+          )}
         >
           <span>Upgrade to Unlock Live Mode</span>
           <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
         </Link>
       )}
 
-      {/* Toggle — on mobile closes overlay, on desktop collapses sidebar */}
+      {/* Toggle — mobile closes overlay, desktop collapses sidebar. Chevron rotates 180°. */}
       <button
         onClick={() => {
           if (mobileSidebarOpen) setMobileSidebarOpen(false);
           else toggleSidebar();
         }}
-        className="flex items-center justify-center h-10 border-t border-white/10 hover:bg-white/10 transition-colors"
+        className="group flex items-center justify-center h-10 border-t border-white/10 hover:bg-white/10 transition-colors"
+        aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
       >
-        {sidebarOpen ? (
-          <ChevronLeft className="h-4 w-4 text-white/40" />
-        ) : (
-          <ChevronRight className="h-4 w-4 text-white/40" />
-        )}
+        <ChevronLeft
+          className={cn(
+            'h-4 w-4 text-white/40 group-hover:text-white/70 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',
+            !sidebarOpen && 'rotate-180',
+          )}
+        />
       </button>
     </aside>
     </>
