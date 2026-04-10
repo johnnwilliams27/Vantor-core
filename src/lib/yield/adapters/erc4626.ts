@@ -20,7 +20,7 @@ export async function getErc4626OnChainValue(protocol: YieldProtocolId, walletAd
     args: [walletAddress as `0x${string}`],
   });
 
-  if (shares === 0n) return { currentValueUsd: 0, yieldTokenBalance: 0 };
+  if (Number(shares) === 0) return { currentValueUsd: 0, yieldTokenBalance: 0 };
 
   const assets = await ethereumClient.readContract({
     address: config.address, abi: ERC4626_ABI, functionName: 'convertToAssets',
