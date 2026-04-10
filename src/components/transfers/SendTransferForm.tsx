@@ -11,12 +11,14 @@ import { useToast } from '@/components/ui/toast';
 import { useWallets } from '@/hooks/useWallets';
 import { useWalletTokenBalance } from '@/hooks/useBalances';
 import { BalanceHint } from '@/components/ui/balance-hint';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Loader2, Send } from 'lucide-react';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { useInvoices } from '@/hooks/useInvoices';
 import { formatCurrency } from '@/lib/utils';
 import { VANTOR_FEE_RATE } from '@/lib/billing/tiers';
+import { useOnChainTransfer, type TransferStep } from '@/hooks/useOnChainTransfer';
+import { useSolanaTransfer, type SolanaTransferStep } from '@/hooks/useSolanaTransfer';
 import type { ErpConfiguration } from '@/types/database';
 
 const schema = z.object({
@@ -30,6 +32,25 @@ const schema = z.object({
 });
 
 type FormData = z.infer<typeof schema>;
+
+const EVM_STEP_LABELS: Record<TransferStep, string> = {
+  idle: 'Send Transfer',
+  signing: 'Sign in wallet…',
+  confirming: 'Confirming on-chain…',
+  recording: 'Finalizing…',
+  done: 'Sent',
+  error: 'Try again',
+};
+
+const SOL_STEP_LABELS: Record<SolanaTransferStep, string> = {
+  idle: 'Send Transfer',
+  building: 'Preparing transaction…',
+  signing: 'Sign in wallet…',
+  confirming: 'Confirming on-chain…',
+  recording: 'Finalizing…',
+  done: 'Sent',
+  error: 'Try again',
+};
 
 export function SendTransferForm() {
   const { data: wallets } = useWallets();
@@ -45,14 +66,15 @@ export function SendTransferForm() {
     staleTime: 60_000,
   });
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const evmTransfer = useOnChainTransfer();
+  const solTransfer = useSolanaTransfer();
   const {
     register,
     handleSubmit,
     reset,
     watch,
     setValue,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
   const selectedWalletId = watch('fromWalletId');
@@ -62,28 +84,77 @@ export function SendTransferForm() {
   const balance = useWalletTokenBalance(selectedWalletId, selectedToken);
   const exceeds = balance !== null && amount ? parseFloat(amount) > balance : false;
 
+  const isEvmWallet = selectedWallet?.chain === 'ethereum';
+  const activeStep = isEvmWallet ? evmTransfer.step : solTransfer.step;
+  const isProcessing = activeStep !== 'idle' && activeStep !== 'done' && activeStep !== 'error';
+  const stepLabel = isEvmWallet
+    ? EVM_STEP_LABELS[evmTransfer.step]
+    : SOL_STEP_LABELS[solTransfer.step];
+
   const onSubmit = async (data: FormData) => {
     if (exceeds) {
-      toast({ title: 'Insufficient balance', description: `You don't have enough ${data.token} in this wallet.`, variant: 'destructive' });
+      toast({
+        title: 'Insufficient balance',
+        description: `You don't have enough ${data.token} in this wallet.`,
+        variant: 'destructive',
+      });
       return;
     }
-    const wallet = wallets?.find((w) => w.id === data.fromWalletId);
-    if (!wallet) return;
+    if (!selectedWallet) return;
+
+    // Reset any previous state so UI doesn't show stale step labels
+    evmTransfer.reset();
+    solTransfer.reset();
+
+    // Step 1: create a pending transfer row on the server
+    let transferId: string;
     try {
       const res = await fetch('/api/transfers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...data, chain: wallet.chain, invoiceId: data.invoiceId || undefined }),
+        body: JSON.stringify({
+          ...data,
+          chain: selectedWallet.chain,
+          invoiceId: data.invoiceId || undefined,
+          erpConfigId: data.erpConfigId || undefined,
+        }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error);
-      toast({ title: 'Transfer sent', description: `TX: ${json.data?.tx_hash?.slice(0, 12)}…`, variant: 'success' });
-      reset();
-      queryClient.invalidateQueries({ queryKey: ['transfers'] });
-      queryClient.invalidateQueries({ queryKey: ['transfers-volume'] });
-      queryClient.invalidateQueries({ queryKey: ['balances'] });
+      if (!res.ok) throw new Error(json.error ?? 'Failed to create transfer');
+      transferId = json.data.id;
     } catch (err) {
-      toast({ title: 'Transfer failed', description: (err as Error).message, variant: 'destructive' });
+      toast({
+        title: 'Transfer failed',
+        description: (err as Error).message,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Step 2: drive client-side execution via the user's connected wallet
+    if (selectedWallet.chain === 'ethereum') {
+      await evmTransfer.execute({
+        transferId,
+        token: data.token,
+        amount: data.amount,
+        toAddress: data.toAddress,
+        fromAddress: selectedWallet.address as `0x${string}`,
+      });
+    } else {
+      await solTransfer.execute({
+        transferId,
+        token: data.token,
+        amount: data.amount,
+        toAddress: data.toAddress,
+      });
+    }
+
+    // If the hook reached 'done', reset the form. 'error' leaves the form for retry.
+    if (
+      (selectedWallet.chain === 'ethereum' && evmTransfer.step === 'done') ||
+      (selectedWallet.chain === 'solana' && solTransfer.step === 'done')
+    ) {
+      reset();
     }
   };
 
@@ -93,7 +164,7 @@ export function SendTransferForm() {
         <CardTitle className="flex items-center gap-2">
           <Send className="h-5 w-5" />
           Send Transfer
-          <InfoTooltip content="Send stablecoins (USDC/USDT) from your wallet to another wallet address." />
+          <InfoTooltip content="Send stablecoins (USDC/USDT) from your wallet to another wallet address. You'll sign the transaction directly in your connected wallet." />
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -191,11 +262,18 @@ export function SendTransferForm() {
             </div>
           )}
 
-          <Button type="submit" className="w-full" disabled={isSubmitting || exceeds || !selectedWalletId || !watch('toAddress') || !amount}>
-            {isSubmitting ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sending…</>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={isProcessing || exceeds || !selectedWalletId || !watch('toAddress') || !amount}
+          >
+            {isProcessing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {stepLabel}
+              </>
             ) : (
-              'Send Transfer'
+              stepLabel || 'Send Transfer'
             )}
           </Button>
         </form>

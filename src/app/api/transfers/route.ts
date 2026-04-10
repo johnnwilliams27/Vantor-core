@@ -3,10 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/nextauth.config';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
-import { executeTransfer } from '@/lib/transfers/executor';
 import { writeAuditLog } from '@/lib/audit/logger';
-import { NotificationService } from '@/lib/notifications/service';
-import { actionNotificationEmail } from '@/lib/notifications/email-templates';
 import { screenAddressWithCache } from '@/lib/compliance/screening';
 import { checkTransferEligibility } from '@/lib/sanctions/eligibility';
 import { z } from 'zod';
@@ -136,9 +133,17 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const isScheduled = !!parsed.data.scheduledFor;
+  // Scheduled transfers are not supported yet — they require server-side signing
+  // which we haven't implemented. Block them with a clear error.
+  if (parsed.data.scheduledFor) {
+    return NextResponse.json(
+      { error: 'Scheduled transfers are not yet supported. Send the transfer immediately or check back soon.' },
+      { status: 400 },
+    );
+  }
 
-  // Create transfer record
+  // Create pending transfer record — the client will drive on-chain execution
+  // via the user's connected wallet and call /api/transfers/confirm when done.
   const { data: transfer, error: pErr } = await supabase
     .from('transfers')
     .insert({
@@ -155,7 +160,7 @@ export async function POST(req: NextRequest) {
       invoice_id: parsed.data.invoiceId ?? null,
       erp_config_id: parsed.data.erpConfigId ?? null,
       counterparty_id: parsed.data.counterpartyId ?? null,
-      scheduled_for: parsed.data.scheduledFor ?? null,
+      scheduled_for: null,
       status: 'pending',
     })
     .select()
@@ -165,49 +170,15 @@ export async function POST(req: NextRequest) {
 
   await writeAuditLog({
     userId: session.user.id,
-    action: isScheduled ? 'transfer_schedule' : 'transfer_create',
+    action: 'transfer_create',
     entityType: 'transfer',
     entityId: transfer.id,
     details: {
       chain: transfer.chain,
       token: transfer.token,
       amount: transfer.amount,
-      scheduledFor: transfer.scheduled_for,
     },
   });
-
-  if (!isScheduled && enterpriseId) {
-    const emailHtml = actionNotificationEmail({
-      title: 'Transfer Completed',
-      details: [
-        { label: 'Amount', value: `${transfer.amount} ${transfer.token}` },
-        { label: 'To', value: transfer.to_address },
-        { label: 'Chain', value: transfer.chain },
-      ],
-      ctaLabel: 'View Transaction',
-      ctaHref: '/transactions',
-    });
-
-    await NotificationService.notify({
-      eventType: 'transfer_completed',
-      enterpriseId: session.user.enterprise_id!,
-      title: 'Transfer Completed',
-      body: `Sent ${transfer.amount} ${transfer.token} on ${transfer.chain}`,
-      link: '/transactions',
-      metadata: {
-        transferId: transfer.id,
-        _emailSubject: 'Transfer Completed',
-        _emailHtml: emailHtml,
-      },
-      actorId: session.user.id,
-    }).catch(() => {});
-  }
-
-  // Execute immediately if not scheduled
-  if (!isScheduled) {
-    const result = await executeTransfer(transfer);
-    return NextResponse.json({ data: { ...transfer, ...result } });
-  }
 
   return NextResponse.json({ data: transfer }, { status: 201 });
 }

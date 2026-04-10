@@ -6,7 +6,6 @@ import { buildTreasurySnapshot, collectObligations } from '@/lib/treasury/rules-
 import { getBankingAdapter } from '@/lib/banking/factory';
 import { getIntegrationMode } from '@/lib/env/integration-mode';
 import { getERPAdapter, decryptCredentials } from '@/lib/erp/factory';
-import { executeTransfer } from '@/lib/transfers/executor';
 import { writeAuditLog } from '@/lib/audit/logger';
 
 export interface ToolContext {
@@ -335,7 +334,10 @@ const createInvoice: AgentTool = {
 
 const createTransfer: AgentTool = {
   name: 'create_transfer',
-  description: 'Create and execute a crypto transfer. Always confirm with the user before calling this tool.',
+  description:
+    'Draft a crypto transfer for the user to review and sign. The agent CANNOT execute transfers — ' +
+    'the user must open the transfer form and sign the transaction with their connected wallet. ' +
+    'Always confirm amount, recipient, and intent with the user before calling this tool.',
   input_schema: {
     type: 'object',
     properties: {
@@ -351,7 +353,8 @@ const createTransfer: AgentTool = {
   },
   minRole: 'treasury_manager',
   async handler(input, ctx) {
-    // Insert transfer record
+    // Draft a pending transfer — the user must sign and submit on-chain themselves
+    // via their connected wallet. The agent never holds signing keys.
     const { data: transfer, error } = await ctx.supabase
       .from('transfers')
       .insert({
@@ -369,10 +372,12 @@ const createTransfer: AgentTool = {
       .single();
     if (error) throw new Error(error.message);
 
-    // Execute the transfer
-    const result = await executeTransfer(transfer as any);
-    if (result.error) throw new Error(result.error);
-    return { transferId: transfer.id, txHash: result.txHash, status: 'completed' };
+    return {
+      transferId: transfer.id,
+      status: 'pending_signature',
+      message:
+        'Transfer drafted. The user must open the Transfers page and sign the transaction with their connected wallet to execute it.',
+    };
   },
 };
 
