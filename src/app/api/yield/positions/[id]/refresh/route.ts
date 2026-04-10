@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { getYieldAdapter } from '@/lib/yield/factory';
+import { computeAccruedYield } from '@/lib/yield/position-accounting';
 import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
 import type { YieldProtocolId } from '@/lib/yield/interface';
 import type { TokenSymbol } from '@/types/database';
@@ -50,12 +51,23 @@ export async function POST(
   }
 
   const adapter = getYieldAdapter(position.protocol as YieldProtocolId);
-  const posInfo = await adapter.getPosition(walletAddress, position.underlying_token as TokenSymbol);
   const rate = await adapter.getAPY(position.underlying_token as TokenSymbol);
 
+  // Get current on-chain value
+  const onChain = await adapter.getOnChainValue(
+    walletAddress,
+    position.underlying_token as TokenSymbol,
+    position.yield_token,
+  );
+
+  const currentValue = onChain.currentValueUsd;
+  const depositedAmount = parseFloat(position.deposited_amount);
+  const accruedYield = computeAccruedYield(currentValue, depositedAmount);
+
   const updatedFields = {
-    current_value_usd: posInfo?.currentValueUsd ?? parseFloat(position.deposited_amount),
-    accrued_yield_usd: posInfo?.accruedYieldUsd ?? 0,
+    current_value_usd: currentValue,
+    accrued_yield_usd: accruedYield,
+    yield_token_balance: onChain.yieldTokenBalance,
     apy_snapshot: rate.totalAPY,
     last_refreshed_at: new Date().toISOString(),
   };
