@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { canAccessRoute } from '@/lib/auth/rbac';
 import type { UserRole } from '@/types/database';
 
-const PUBLIC_PATHS = ['/login', '/register', '/api/auth', '/api/contact', '/api/integrations/slack/callback', '/api/webhooks/stripe', '/opengraph-image', '/terms', '/privacy', '/robots.txt', '/sitemap.xml', '/api/indexnow'];
+const PUBLIC_PATHS = ['/login', '/register', '/forgot-password', '/reset-password', '/api/auth', '/api/contact', '/api/integrations/slack/callback', '/api/webhooks/stripe', '/opengraph-image', '/terms', '/privacy', '/robots.txt', '/sitemap.xml', '/api/indexnow'];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
