@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useYieldWithdraw, useSlippageCheck } from '@/hooks/useYield';
+import { useOnChainWithdraw, type WithdrawStep } from '@/hooks/useOnChainWithdraw';
+import { PROTOCOL_ADDRESSES } from '@/lib/yield/contracts/addresses';
 import { useWallets } from '@/hooks/useWallets';
 import { useToast } from '@/components/ui/toast';
 import { SlippageWarning } from './SlippageWarning';
@@ -26,6 +28,7 @@ interface Props {
 
 export function YieldWithdrawForm({ position, onBack }: Props) {
   const withdraw = useYieldWithdraw();
+  const onChainWithdraw = useOnChainWithdraw();
   const slippageCheck = useSlippageCheck();
   const { data: wallets } = useWallets();
   const { toast } = useToast();
@@ -36,24 +39,50 @@ export function YieldWithdrawForm({ position, onBack }: Props) {
   const maxAmount = parseFloat(position.deposited_amount);
   const chainWallets = wallets?.filter((w) => w.chain === position.chain) ?? [];
   const selectedWallet = chainWallets.find((w) => w.id === walletId);
+  const isOnChainProtocol = !!PROTOCOL_ADDRESSES[position.protocol as keyof typeof PROTOCOL_ADDRESSES];
+
+  const stepLabels: Record<WithdrawStep, string> = {
+    idle: 'Withdraw',
+    withdrawing: 'Sign in wallet...',
+    confirming: 'Confirming on-chain...',
+    done: 'Confirmed!',
+    error: 'Try again',
+  };
+  const isProcessing = !['idle', 'done', 'error'].includes(onChainWithdraw.step);
 
   const executeWithdraw = async () => {
     if (!amount || !selectedWallet) return;
-    try {
-      await withdraw.mutateAsync({
+
+    if (isOnChainProtocol && position.chain === 'ethereum') {
+      await onChainWithdraw.execute({
         positionId: position.id,
+        protocol: position.protocol as Parameters<typeof onChainWithdraw.execute>[0]['protocol'],
+        token: position.underlying_token,
         amount,
-        walletAddress: selectedWallet.address,
+        walletAddress: selectedWallet.address as `0x${string}`,
+        isFullWithdrawal: parseFloat(amount) >= parseFloat(position.current_value_usd),
       });
-      setSlippageEstimate(null);
-      toast({ title: 'Withdrawal successful', variant: 'success' });
-      onBack();
-    } catch (err) {
-      toast({
-        title: 'Withdrawal failed',
-        description: (err as Error).message,
-        variant: 'destructive',
-      });
+      if (onChainWithdraw.step === 'done') {
+        setSlippageEstimate(null);
+        onBack();
+      }
+    } else {
+      try {
+        await withdraw.mutateAsync({
+          positionId: position.id,
+          amount,
+          walletAddress: selectedWallet.address,
+        });
+        setSlippageEstimate(null);
+        toast({ title: 'Withdrawal successful', variant: 'success' });
+        onBack();
+      } catch (err) {
+        toast({
+          title: 'Withdrawal failed',
+          description: (err as Error).message,
+          variant: 'destructive',
+        });
+      }
     }
   };
 
@@ -165,16 +194,25 @@ export function YieldWithdrawForm({ position, onBack }: Props) {
             />
           )}
 
+          {onChainWithdraw.error && (
+            <p className="text-xs text-red-500 text-center">{onChainWithdraw.error}</p>
+          )}
+
           {!slippageEstimate && (
             <Button
               type="submit"
               className="w-full"
-              disabled={withdraw.isPending || slippageCheck.isPending || !amount || !walletId}
+              disabled={isProcessing || withdraw.isPending || slippageCheck.isPending || !amount || !walletId}
             >
               {slippageCheck.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Checking liquidity…
+                </>
+              ) : isProcessing ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  {stepLabels[onChainWithdraw.step]}
                 </>
               ) : withdraw.isPending ? (
                 <>

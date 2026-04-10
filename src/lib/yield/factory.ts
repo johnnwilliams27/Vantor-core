@@ -6,6 +6,7 @@ import { getCompoundOnChainValue } from './adapters/compound-v3';
 import { getErc4626OnChainValue } from './adapters/erc4626';
 import { getOndoOnChainValue } from './adapters/ondo';
 import { getKaminoOnChainValue, getDriftOnChainValue } from './adapters/solana-stubs';
+import { getMorphoBlueOnChainValue } from './adapters/morpho-blue';
 
 export function getYieldAdapter(protocol: YieldProtocolId): IYieldProtocol {
   return new MockYieldAdapter(protocol);
@@ -40,6 +41,7 @@ export async function getOnChainValue(
       case 'drift':
         return await getDriftOnChainValue(walletAddress, token, storedValue, storedTokenBalance);
       case 'morpho':
+        return await getMorphoBlueOnChainValue(walletAddress, token);
       default:
         return { currentValueUsd: storedValue, yieldTokenBalance: storedTokenBalance };
     }

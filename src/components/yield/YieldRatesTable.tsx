@@ -10,6 +10,8 @@ import { Select } from '@/components/ui/select';
 import { ArrowUpRight, ArrowLeft, Shield, Lock, Loader2, CheckCircle2, X } from 'lucide-react';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { useYieldProtocols, useYieldDeposit, useSlippageCheck } from '@/hooks/useYield';
+import { useOnChainDeposit, type DepositStep } from '@/hooks/useOnChainDeposit';
+import { PROTOCOL_ADDRESSES } from '@/lib/yield/contracts/addresses';
 import { SlippageWarning } from './SlippageWarning';
 import type { SlippageEstimate } from '@/lib/yield/slippage';
 import { useWallets } from '@/hooks/useWallets';
@@ -245,6 +247,7 @@ function InlineDepositForm({
 }) {
   const { data: wallets, isLoading: walletsLoading } = useWallets();
   const deposit = useYieldDeposit();
+  const onChainDeposit = useOnChainDeposit();
   const slippageCheck = useSlippageCheck();
   const { toast } = useToast();
   const [token, setToken] = useState<string>(protocol.supportedTokens[0] ?? 'USDC');
@@ -258,29 +261,61 @@ function InlineDepositForm({
   const selectedRate = protocol.rates.find((r) => r.token === token);
   const balance = useWalletTokenBalance(walletId || undefined, token || undefined);
   const exceeds = balance !== null && amount ? parseFloat(amount) > balance : false;
+  const isOnChainProtocol = !!PROTOCOL_ADDRESSES[protocol.id as keyof typeof PROTOCOL_ADDRESSES];
+
+  const stepLabels: Record<DepositStep, string> = {
+    idle: 'Deposit',
+    checking: 'Checking allowance...',
+    approving: 'Approve in wallet...',
+    approved: 'Approved',
+    depositing: 'Sign in wallet...',
+    confirming: 'Confirming on-chain...',
+    done: 'Confirmed!',
+    error: 'Try again',
+  };
+  const isProcessing = !['idle', 'done', 'error'].includes(onChainDeposit.step);
 
   const executeDeposit = async () => {
     if (!amount || !selectedWallet) return;
-    try {
-      await deposit.mutateAsync({
-        protocol: protocol.id,
+
+    if (isOnChainProtocol && protocol.chain === 'ethereum') {
+      await onChainDeposit.execute({
+        protocol: protocol.id as Parameters<typeof onChainDeposit.execute>[0]['protocol'],
         token,
         amount,
-        walletAddress: selectedWallet.address,
+        walletAddress: selectedWallet.address as `0x${string}`,
         chain: protocol.chain,
       });
-      setSlippageEstimate(null);
-      setSuccess({
-        amount,
-        token,
-        apy: selectedRate ? formatAPY(selectedRate.totalAPY) : '—',
-      });
-    } catch (err) {
-      toast({
-        title: 'Deposit failed',
-        description: (err as Error).message,
-        variant: 'destructive',
-      });
+      if (onChainDeposit.step === 'done') {
+        setSlippageEstimate(null);
+        setSuccess({
+          amount,
+          token,
+          apy: selectedRate ? formatAPY(selectedRate.totalAPY) : '—',
+        });
+      }
+    } else {
+      try {
+        await deposit.mutateAsync({
+          protocol: protocol.id,
+          token,
+          amount,
+          walletAddress: selectedWallet.address,
+          chain: protocol.chain,
+        });
+        setSlippageEstimate(null);
+        setSuccess({
+          amount,
+          token,
+          apy: selectedRate ? formatAPY(selectedRate.totalAPY) : '—',
+        });
+      } catch (err) {
+        toast({
+          title: 'Deposit failed',
+          description: (err as Error).message,
+          variant: 'destructive',
+        });
+      }
     }
   };
 
@@ -441,17 +476,26 @@ function InlineDepositForm({
             />
           )}
 
+          {onChainDeposit.error && (
+            <p className="text-xs text-red-500 text-center">{onChainDeposit.error}</p>
+          )}
+
           {!slippageEstimate && (
             <Button
               type="submit"
               className="w-full"
               size="sm"
-              disabled={deposit.isPending || slippageCheck.isPending || !amount || !walletId || exceeds}
+              disabled={isProcessing || deposit.isPending || slippageCheck.isPending || !amount || !walletId || exceeds}
             >
               {slippageCheck.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Checking liquidity…
+                </>
+              ) : isProcessing ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  {stepLabels[onChainDeposit.step]}
                 </>
               ) : deposit.isPending ? (
                 <>
@@ -563,7 +607,7 @@ export function YieldRatesTable() {
                 {PROTOCOL_LOGOS[p.id] ? (
                   <div className="flex items-center gap-2">
                     <div className="h-[38px] flex items-center">
-                      <Image src={PROTOCOL_LOGOS[p.id]} alt={p.name} width={p.id === 'compound_v3' ? 180 : 64} height={p.id === 'compound_v3' ? 60 : 38} className={`${p.id === 'compound_v3' ? 'h-[60px]' : 'h-[38px]'} w-auto object-contain`} unoptimized />
+                      <Image src={PROTOCOL_LOGOS[p.id]} alt={p.name} width={64} height={38} className="h-[38px] w-auto object-contain" unoptimized />
                     </div>
                     {p.kycRequired && (
                       p.id === 'ondo' && ondoKycVerified ? (
