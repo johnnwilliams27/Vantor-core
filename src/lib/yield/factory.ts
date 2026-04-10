@@ -5,7 +5,6 @@ import { getAaveOnChainValue } from './adapters/aave-v3';
 import { getCompoundOnChainValue } from './adapters/compound-v3';
 import { getErc4626OnChainValue } from './adapters/erc4626';
 import { getOndoOnChainValue } from './adapters/ondo';
-import { getKaminoOnChainValue, getDriftOnChainValue } from './adapters/solana-stubs';
 import { getMorphoBlueOnChainValue } from './adapters/morpho-blue';
 
 export function getYieldAdapter(protocol: YieldProtocolId): IYieldProtocol {
@@ -36,10 +35,18 @@ export async function getOnChainValue(
       case 'ondo':
         return await getOndoOnChainValue(walletAddress, token);
       case 'kamino':
-      case 'kamino_multiply':
-        return await getKaminoOnChainValue(walletAddress, token, storedValue, storedTokenBalance);
-      case 'drift':
-        return await getDriftOnChainValue(walletAddress, token, storedValue, storedTokenBalance);
+      case 'kamino_multiply': {
+        const { getKaminoPosition } = await import('./contracts/solana/kamino');
+        const { Connection, PublicKey } = await import('@solana/web3.js');
+        const conn = new Connection(process.env.SOLANA_RPC_URL ?? 'https://api.mainnet-beta.solana.com', 'confirmed');
+        return await getKaminoPosition(conn, new PublicKey(walletAddress), token);
+      }
+      case 'drift': {
+        const { getDriftPosition } = await import('./contracts/solana/drift');
+        const { Connection, PublicKey } = await import('@solana/web3.js');
+        const conn = new Connection(process.env.SOLANA_RPC_URL ?? 'https://api.mainnet-beta.solana.com', 'confirmed');
+        return await getDriftPosition(conn, new PublicKey(walletAddress), token);
+      }
       case 'morpho':
         return await getMorphoBlueOnChainValue(walletAddress, token);
       default:

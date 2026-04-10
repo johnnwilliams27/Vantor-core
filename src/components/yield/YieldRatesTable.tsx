@@ -11,6 +11,7 @@ import { ArrowUpRight, ArrowLeft, Shield, Lock, Loader2, CheckCircle2, X } from 
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { useYieldProtocols, useYieldDeposit, useSlippageCheck } from '@/hooks/useYield';
 import { useOnChainDeposit, type DepositStep } from '@/hooks/useOnChainDeposit';
+import { useSolanaDeposit, type SolanaDepositStep } from '@/hooks/useSolanaDeposit';
 import { PROTOCOL_ADDRESSES } from '@/lib/yield/contracts/addresses';
 import { SlippageWarning } from './SlippageWarning';
 import type { SlippageEstimate } from '@/lib/yield/slippage';
@@ -248,6 +249,8 @@ function InlineDepositForm({
   const { data: wallets, isLoading: walletsLoading } = useWallets();
   const deposit = useYieldDeposit();
   const onChainDeposit = useOnChainDeposit();
+  const solanaDeposit = useSolanaDeposit();
+  const isSolanaProtocol = protocol.chain === 'solana';
   const slippageCheck = useSlippageCheck();
   const { toast } = useToast();
   const [token, setToken] = useState<string>(protocol.supportedTokens[0] ?? 'USDC');
@@ -275,8 +278,28 @@ function InlineDepositForm({
   };
   const isProcessing = !['idle', 'done', 'error'].includes(onChainDeposit.step);
 
+  const solanaStepLabels: Record<SolanaDepositStep, string> = {
+    idle: 'Deposit', building: 'Building transaction...', signing: 'Sign in wallet...', confirming: 'Confirming on Solana...', recording: 'Recording...', done: 'Confirmed!', error: 'Try again',
+  };
+  const isSolanaProcessing = !['idle', 'done', 'error'].includes(solanaDeposit.step);
+
   const executeDeposit = async () => {
     if (!amount || !selectedWallet) return;
+
+    if (isSolanaProtocol) {
+      await solanaDeposit.execute({
+        protocol: protocol.id as any,
+        token,
+        amount,
+        walletAddress: selectedWallet.address,
+        chain: 'solana',
+      });
+      if (solanaDeposit.step === 'done') {
+        setSlippageEstimate(null);
+        setSuccess({ amount, token, apy: selectedRate ? formatAPY(selectedRate.totalAPY) : '—' });
+      }
+      return;
+    }
 
     if (isOnChainProtocol && protocol.chain === 'ethereum') {
       await onChainDeposit.execute({
@@ -480,17 +503,26 @@ function InlineDepositForm({
             <p className="text-xs text-red-500 text-center">{onChainDeposit.error}</p>
           )}
 
+          {solanaDeposit.error && (
+            <p className="text-xs text-red-500 text-center">{solanaDeposit.error}</p>
+          )}
+
           {!slippageEstimate && (
             <Button
               type="submit"
               className="w-full"
               size="sm"
-              disabled={isProcessing || deposit.isPending || slippageCheck.isPending || !amount || !walletId || exceeds}
+              disabled={isProcessing || isSolanaProcessing || deposit.isPending || slippageCheck.isPending || !amount || !walletId || exceeds}
             >
               {slippageCheck.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Checking liquidity…
+                </>
+              ) : isSolanaProcessing ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  {solanaStepLabels[solanaDeposit.step]}
                 </>
               ) : isProcessing ? (
                 <>

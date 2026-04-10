@@ -7,6 +7,7 @@ import { Select } from '@/components/ui/select';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useYieldWithdraw, useSlippageCheck } from '@/hooks/useYield';
 import { useOnChainWithdraw, type WithdrawStep } from '@/hooks/useOnChainWithdraw';
+import { useSolanaWithdraw, type SolanaWithdrawStep } from '@/hooks/useSolanaWithdraw';
 import { PROTOCOL_ADDRESSES } from '@/lib/yield/contracts/addresses';
 import { useWallets } from '@/hooks/useWallets';
 import { useToast } from '@/components/ui/toast';
@@ -29,6 +30,8 @@ interface Props {
 export function YieldWithdrawForm({ position, onBack }: Props) {
   const withdraw = useYieldWithdraw();
   const onChainWithdraw = useOnChainWithdraw();
+  const solanaWithdraw = useSolanaWithdraw();
+  const isSolanaProtocol = position.chain === 'solana';
   const slippageCheck = useSlippageCheck();
   const { data: wallets } = useWallets();
   const { toast } = useToast();
@@ -50,8 +53,29 @@ export function YieldWithdrawForm({ position, onBack }: Props) {
   };
   const isProcessing = !['idle', 'done', 'error'].includes(onChainWithdraw.step);
 
+  const solanaStepLabels: Record<SolanaWithdrawStep, string> = {
+    idle: 'Withdraw', building: 'Building transaction...', signing: 'Sign in wallet...', confirming: 'Confirming on Solana...', recording: 'Recording...', done: 'Confirmed!', error: 'Try again',
+  };
+  const isSolanaProcessing = !['idle', 'done', 'error'].includes(solanaWithdraw.step);
+
   const executeWithdraw = async () => {
     if (!amount || !selectedWallet) return;
+
+    if (isSolanaProtocol) {
+      await solanaWithdraw.execute({
+        positionId: position.id,
+        protocol: position.protocol as any,
+        token: position.underlying_token,
+        amount,
+        walletAddress: selectedWallet.address,
+        isFullWithdrawal: parseFloat(amount) >= parseFloat(position.current_value_usd),
+      });
+      if (solanaWithdraw.step === 'done') {
+        setSlippageEstimate(null);
+        onBack();
+      }
+      return;
+    }
 
     if (isOnChainProtocol && position.chain === 'ethereum') {
       await onChainWithdraw.execute({
@@ -198,16 +222,25 @@ export function YieldWithdrawForm({ position, onBack }: Props) {
             <p className="text-xs text-red-500 text-center">{onChainWithdraw.error}</p>
           )}
 
+          {solanaWithdraw.error && (
+            <p className="text-xs text-red-500 text-center">{solanaWithdraw.error}</p>
+          )}
+
           {!slippageEstimate && (
             <Button
               type="submit"
               className="w-full"
-              disabled={isProcessing || withdraw.isPending || slippageCheck.isPending || !amount || !walletId}
+              disabled={isProcessing || isSolanaProcessing || withdraw.isPending || slippageCheck.isPending || !amount || !walletId}
             >
               {slippageCheck.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Checking liquidity…
+                </>
+              ) : isSolanaProcessing ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  {solanaStepLabels[solanaWithdraw.step]}
                 </>
               ) : isProcessing ? (
                 <>
