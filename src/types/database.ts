@@ -562,6 +562,7 @@ export interface YieldPosition {
   underlying_token: TokenSymbol;
   yield_token: string;
   deposited_amount: string;
+  yield_token_balance: string;
   current_value_usd: string;
   accrued_yield_usd: string;
   apy_snapshot: string | null;
