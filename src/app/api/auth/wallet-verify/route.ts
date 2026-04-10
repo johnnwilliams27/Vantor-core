@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/nextauth.config';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { writeAuditLog } from '@/lib/audit/logger';
+import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 import { z } from 'zod';
 import nacl from 'tweetnacl';
 import bs58 from 'bs58';
@@ -57,12 +58,18 @@ export async function POST(req: NextRequest) {
 
   const supabase = createAdminClient();
 
+  // Scope the wallet to the user's current effective enterprise so it shows
+  // up under the right workspace (test or live). Without this the wallet
+  // ends up with enterprise_id=NULL and is invisible in the UI.
+  const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
+
   // Upsert wallet
   const { data: wallet, error } = await supabase
     .from('wallets')
     .upsert(
       {
         user_id: session.user.id,
+        enterprise_id: enterpriseId,
         chain,
         address,
         label: label ?? null,
