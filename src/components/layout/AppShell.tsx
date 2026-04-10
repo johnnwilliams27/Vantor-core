@@ -103,7 +103,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return <PageSpinner />;
   }
 
-  const needsKyc = session?.user &&
+  // KYC enforcement only kicks in when Persona is configured in this
+  // environment. Without NEXT_PUBLIC_PERSONA_KYC_ENABLED, the Persona SDK
+  // can't run and the modal would be a dead end. Matches the same pattern
+  // used in UpgradeFlow and /api/billing/checkout.
+  const kycConfigured = !!process.env.NEXT_PUBLIC_PERSONA_KYC_ENABLED;
+  const needsKyc = kycConfigured &&
+    session?.user &&
     isPaidTier(session.user.subscription_tier as TierSlug) &&
     session.user.kyc_status !== 'completed' &&
     !session.user.is_app_admin;
