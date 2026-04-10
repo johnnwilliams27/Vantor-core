@@ -1,6 +1,7 @@
 import { parseUnits, maxUint256 } from 'viem';
 import type { YieldProtocolId } from '../interface';
 import { AAVE_V3_POOL_ABI, COMPOUND_V3_COMET_ABI, ERC4626_VAULT_ABI } from './abis';
+import { buildMorphoWithdrawArgs, CURATED_MARKETS } from './morpho-blue';
 import {
   TOKEN_ADDRESSES,
   TOKEN_DECIMALS,
@@ -96,6 +97,12 @@ export function buildWithdrawTx(
         functionName: 'requestRedemption',
         args: [ondoAmount],
       };
+    }
+
+    case 'morpho_blue': {
+      const market = CURATED_MARKETS.find(m => m.token === token);
+      if (!market) throw new Error(`No curated Morpho Blue market for ${token}`);
+      return buildMorphoWithdrawArgs(market.params, token, amount, walletAddress, isFullWithdrawal);
     }
 
     default: {
