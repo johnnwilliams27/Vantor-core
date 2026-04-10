@@ -37,13 +37,15 @@ export const authOptions: NextAuthOptions = {
         }
 
         let enterpriseName: string | null = null;
+        let enterpriseCountry: string | null = null;
         if (profile?.enterprise_id) {
           const { data: ent } = await supabase
             .from('enterprises')
-            .select('name')
+            .select('name, country')
             .eq('id', profile.enterprise_id)
             .single();
           enterpriseName = ent?.name ?? null;
+          enterpriseCountry = ent?.country ?? null;
         }
 
         let subscriptionTier = 'lite';
@@ -81,6 +83,7 @@ export const authOptions: NextAuthOptions = {
           onboarding_done: profile?.onboarding_done ?? false,
           enterprise_id: profile?.enterprise_id ?? null,
           enterprise_name: enterpriseName,
+          enterprise_country: enterpriseCountry,
           is_app_admin: profile?.is_app_admin ?? false,
           subscription_tier: subscriptionTier,
           kyc_status: kycStatus,
@@ -100,6 +103,8 @@ export const authOptions: NextAuthOptions = {
           (user as { enterprise_id?: string | null }).enterprise_id ?? null;
         token.enterprise_name =
           (user as { enterprise_name?: string | null }).enterprise_name ?? null;
+        token.enterprise_country =
+          (user as { enterprise_country?: string | null }).enterprise_country ?? null;
         token.is_app_admin =
           (user as { is_app_admin?: boolean }).is_app_admin ?? false;
         token.subscription_tier = (user as any).subscription_tier ?? 'lite';
@@ -125,12 +130,14 @@ export const authOptions: NextAuthOptions = {
           if (profile.enterprise_id) {
             const { data: ent } = await supabase
               .from('enterprises')
-              .select('name')
+              .select('name, country')
               .eq('id', profile.enterprise_id)
               .single();
             token.enterprise_name = ent?.name ?? null;
+            token.enterprise_country = ent?.country ?? null;
           } else {
             token.enterprise_name = null;
+            token.enterprise_country = null;
           }
 
           if (profile.enterprise_id) {
@@ -171,6 +178,7 @@ export const authOptions: NextAuthOptions = {
         session.user.onboarding_done = token.onboarding_done as boolean;
         session.user.enterprise_id = token.enterprise_id as string | null;
         session.user.enterprise_name = token.enterprise_name as string | null;
+        session.user.enterprise_country = token.enterprise_country as string | null;
         session.user.is_app_admin = token.is_app_admin as boolean;
         session.user.subscription_tier = token.subscription_tier as string;
         session.user.subscription_status = token.subscription_status as string;
@@ -193,6 +201,7 @@ declare module 'next-auth' {
       onboarding_done: boolean;
       enterprise_id: string | null;
       enterprise_name: string | null;
+      enterprise_country: string | null;
       is_app_admin: boolean;
       subscription_tier: string;
       subscription_status: string;
@@ -209,6 +218,7 @@ declare module 'next-auth/jwt' {
     onboarding_done: boolean;
     enterprise_id: string | null;
     enterprise_name: string | null;
+    enterprise_country: string | null;
     is_app_admin: boolean;
     subscription_tier: string;
     subscription_status: string;
