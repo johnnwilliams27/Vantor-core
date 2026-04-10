@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import nodemailer from 'nodemailer';
+import { sendEmail } from '@/lib/email/send';
 
 interface SentryIssue {
   title: string;
@@ -117,23 +117,7 @@ export async function GET(req: NextRequest) {
       </div>
     `;
 
-    if (process.env.SMTP_USE_MOCK === 'true') {
-      console.log(`[MOCK SMTP] Would send error digest: ${recentIssues.length} issues, ${totalEvents} events`);
-      return NextResponse.json({ sent: false, mock: true, issues: recentIssues.length, events: totalEvents });
-    }
-
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: Number(process.env.SMTP_PORT) || 587,
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER || 'john@vantor.xyz',
-        pass: process.env.SMTP_PASS,
-      },
-    });
-
-    await transporter.sendMail({
-      from: `"Vantor Monitoring" <${process.env.SMTP_USER || 'john@vantor.xyz'}>`,
+    await sendEmail({
       to: 'john@vantor.xyz',
       subject: `[Vantor] ${recentIssues.length} error${recentIssues.length !== 1 ? 's' : ''} in the last 24h (${totalEvents} events)`,
       html,
