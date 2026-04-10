@@ -1,6 +1,6 @@
 import type { StablecoinPrices } from '@/types/database';
 
-const MOCK_MODE = process.env.COINGECKO_USE_MOCK !== 'false';
+const MOCK_MODE = process.env.COINGECKO_USE_MOCK === 'true';
 
 const MOCK_PRICES: StablecoinPrices = {
   USDC: 1.0,

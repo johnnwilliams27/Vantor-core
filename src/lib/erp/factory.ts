@@ -9,7 +9,7 @@ export function getERPAdapter(
   provider: ErpProvider,
   credentials: ERPCredentials
 ): IERPAdapter {
-  const useMock = process.env.ERP_USE_MOCK !== 'false';
+  const useMock = process.env.ERP_USE_MOCK === 'true';
 
   if (useMock) {
     switch (provider) {
