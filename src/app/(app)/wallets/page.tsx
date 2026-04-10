@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { EthWalletConnect } from '@/components/wallets/EthWalletConnect';
 import { SolWalletConnect } from '@/components/wallets/SolWalletConnect';
 import { useWallets, useUnlinkWallet } from '@/hooks/useWallets';
@@ -15,12 +15,6 @@ import { Trash2, CheckCircle, Clock, Pencil, Check, X, Copy } from 'lucide-react
 import { useToast } from '@/components/ui/toast';
 import { CardSpinner } from '@/components/ui/spinner';
 import { useQueryClient } from '@tanstack/react-query';
-import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
-import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
-import { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom';
-import { SolflareWalletAdapter } from '@solana/wallet-adapter-solflare';
-import { LedgerWalletAdapter } from '@solana/wallet-adapter-ledger';
-import '@solana/wallet-adapter-react-ui/styles.css';
 
 function formatUsd(n: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(n);
@@ -244,24 +238,5 @@ function CryptoWalletsTab() {
 }
 
 export default function WalletsPage() {
-  const wallets = useMemo(() => [
-    new PhantomWalletAdapter(),
-    new SolflareWalletAdapter(),
-    new LedgerWalletAdapter(),
-  ], []);
-
-  // Solana wallet adapter types are incompatible with React 18 — cast to suppress
-  const SolConnectionProvider = ConnectionProvider as any;
-  const SolWalletProvider = WalletProvider as any;
-  const SolWalletModalProvider = WalletModalProvider as any;
-
-  return (
-    <SolConnectionProvider endpoint={process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? 'https://api.mainnet-beta.solana.com'}>
-      <SolWalletProvider wallets={wallets} autoConnect>
-        <SolWalletModalProvider>
-          <CryptoWalletsTab />
-        </SolWalletModalProvider>
-      </SolWalletProvider>
-    </SolConnectionProvider>
-  );
+  return <CryptoWalletsTab />;
 }

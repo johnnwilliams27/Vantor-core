@@ -3,9 +3,18 @@ import { ThemeProvider } from 'next-themes';
 import { SessionProvider } from 'next-auth/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ToastProvider } from '@/components/ui/toast';
 import { WagmiConfig } from './wagmi-config';
+import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
+import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
+import { PhantomWalletAdapter, SolflareWalletAdapter, LedgerWalletAdapter } from '@solana/wallet-adapter-wallets';
+import '@solana/wallet-adapter-react-ui/styles.css';
+
+// Solana wallet adapter types are incompatible with React 18 — cast to suppress
+const SolConnectionProvider = ConnectionProvider as any;
+const SolWalletProvider = WalletProvider as any;
+const SolWalletModalProvider = WalletModalProvider as any;
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -23,14 +32,27 @@ export function Providers({ children }: { children: React.ReactNode }) {
       })
   );
 
+  const solanaWallets = useMemo(() => [
+    new PhantomWalletAdapter(),
+    new SolflareWalletAdapter(),
+    new LedgerWalletAdapter(),
+  ], []);
+  const solanaEndpoint = process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? 'https://api.mainnet-beta.solana.com';
+
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem storageKey="vantor-theme">
       <SessionProvider>
         <QueryClientProvider client={queryClient}>
           <WagmiConfig>
-            <ToastProvider>
-              {children}
-            </ToastProvider>
+            <SolConnectionProvider endpoint={solanaEndpoint}>
+              <SolWalletProvider wallets={solanaWallets} autoConnect>
+                <SolWalletModalProvider>
+                  <ToastProvider>
+                    {children}
+                  </ToastProvider>
+                </SolWalletModalProvider>
+              </SolWalletProvider>
+            </SolConnectionProvider>
           </WagmiConfig>
           <ReactQueryDevtools initialIsOpen={false} />
         </QueryClientProvider>
