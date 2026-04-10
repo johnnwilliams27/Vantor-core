@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { getYieldAdapter } from '@/lib/yield/factory';
+import { applyWithdrawal } from '@/lib/yield/position-accounting';
 import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
 import type { YieldProtocolId } from '@/lib/yield/interface';
 import type { TokenSymbol } from '@/types/database';
@@ -55,8 +56,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Position not found' }, { status: 404 });
   }
 
-  if (parseFloat(amount) > parseFloat(position.deposited_amount)) {
-    return NextResponse.json({ error: 'Insufficient position balance' }, { status: 400 });
+  if (parseFloat(amount) > parseFloat(position.current_value_usd)) {
+    return NextResponse.json({ error: 'Withdrawal amount exceeds position value' }, { status: 400 });
   }
 
   // Create pending transaction
@@ -89,19 +90,39 @@ export async function POST(req: NextRequest) {
       yieldToken: position.yield_token,
     });
 
-    // Update position
-    const remaining = parseFloat(position.deposited_amount) - parseFloat(amount);
-    if (remaining <= 0) {
-      await supabase
-        .from('yield_positions')
-        .update({ is_active: false, deposited_amount: 0, current_value_usd: 0 })
-        .eq('id', positionId);
-    } else {
+    const withdrawResult = applyWithdrawal(
+      parseFloat(position.deposited_amount),
+      parseFloat(position.yield_token_balance || '0'),
+      parseFloat(position.current_value_usd),
+      parseFloat(amount),
+      result.tokensRedeemed,
+    );
+
+    if (withdrawResult.isFullWithdrawal) {
       await supabase
         .from('yield_positions')
         .update({
-          deposited_amount: remaining,
-          current_value_usd: remaining,
+          is_active: false,
+          deposited_amount: 0,
+          yield_token_balance: 0,
+          current_value_usd: 0,
+          accrued_yield_usd: 0,
+          metadata: {
+            ...(typeof position.metadata === 'object' ? position.metadata : {}),
+            realized_yield_usd: withdrawResult.realizedYield,
+            closed_at: new Date().toISOString(),
+          },
+        })
+        .eq('id', positionId);
+    } else {
+      const newCurrentValue = parseFloat(position.current_value_usd) - parseFloat(amount);
+      await supabase
+        .from('yield_positions')
+        .update({
+          deposited_amount: withdrawResult.newDepositedAmount,
+          yield_token_balance: withdrawResult.newYieldTokenBalance,
+          current_value_usd: newCurrentValue,
+          accrued_yield_usd: Math.max(0, newCurrentValue - withdrawResult.newDepositedAmount),
           last_refreshed_at: new Date().toISOString(),
         })
         .eq('id', positionId);
@@ -114,7 +135,12 @@ export async function POST(req: NextRequest) {
         tx_hash: result.txHash,
         status: 'completed',
         executed_at: new Date().toISOString(),
-        metadata: { providerRef: result.providerRef, receivedAmount: result.receivedAmount },
+        metadata: {
+          providerRef: result.providerRef,
+          receivedAmount: result.receivedAmount,
+          realizedYield: withdrawResult.realizedYield,
+          isFullWithdrawal: withdrawResult.isFullWithdrawal,
+        },
       })
       .eq('id', tx.id);
 
