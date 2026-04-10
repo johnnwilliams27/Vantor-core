@@ -4,8 +4,9 @@ import crypto from 'crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { seedTestEnterprise } from '@/lib/test-mode/helpers';
 import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/api/rate-limit';
-import { sendEmail } from '@/lib/email/send';
+import { sendEmail, sendNotificationEmail } from '@/lib/email/send';
 import { verifyEmailHtml } from '@/lib/email/templates/verify-email';
+import { newSignupAlertHtml } from '@/lib/email/templates/new-signup-alert';
 
 const schema = z.object({
   email: z.string().email().max(254),
@@ -134,6 +135,21 @@ export async function POST(req: NextRequest) {
       to: email,
       subject: 'Verify your email — Vantor',
       html: verifyEmailHtml({ fullName, verifyUrl }),
+    });
+
+    // Internal notification to the founder — never block signup if this fails.
+    sendNotificationEmail({
+      to: 'john@vantor.xyz',
+      subject: `New Vantor signup: ${fullName} (${companyName})`,
+      html: newSignupAlertHtml({
+        fullName,
+        email,
+        companyName,
+        enterpriseId: enterprise.id,
+        viaInvite: !!inviteToken,
+      }),
+    }).catch((err) => {
+      process.stdout.write('[register] signup alert failed: ' + (err?.message ?? String(err)) + '\n');
     });
 
     return NextResponse.json({ message: 'Account created. Please check your email to verify your account.' }, { status: 201 });
