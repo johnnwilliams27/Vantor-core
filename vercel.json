@@ -32,10 +32,6 @@
     {
       "path": "/api/cron/rescreen-counterparties",
       "schedule": "0 2 * * 1"
-    },
-    {
-      "path": "/api/cron/ga-daily-traffic",
-      "schedule": "0 13 * * *"
     }
   ]
 }
