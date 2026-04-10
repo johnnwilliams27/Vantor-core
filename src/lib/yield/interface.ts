@@ -68,6 +68,7 @@ export interface DepositResult {
   providerRef?: string;
   yieldToken: string;
   yieldTokenAmount: string;
+  tokensReceived: number;
   estimatedAPY: number;
 }
 
@@ -84,6 +85,7 @@ export interface WithdrawResult {
   txHash: string | null;
   providerRef?: string;
   receivedAmount: string;
+  tokensRedeemed: number;
   fee?: string;
 }
 
@@ -99,10 +101,16 @@ export interface PositionInfo {
   metadata: Record<string, unknown>;
 }
 
+export interface OnChainValue {
+  currentValueUsd: number;
+  yieldTokenBalance: number;
+}
+
 export interface IYieldProtocol {
   getInfo(): YieldProtocolInfo;
   getAPY(token: TokenSymbol): Promise<YieldRate>;
   getPosition(walletAddress: string, token: TokenSymbol): Promise<PositionInfo | null>;
+  getOnChainValue(walletAddress: string, token: TokenSymbol, yieldToken: string): Promise<OnChainValue>;
   deposit(params: DepositParams): Promise<DepositResult>;
   withdraw(params: WithdrawParams): Promise<WithdrawResult>;
 }
