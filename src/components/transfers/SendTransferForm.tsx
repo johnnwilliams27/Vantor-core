@@ -16,6 +16,7 @@ import { Loader2, Send } from 'lucide-react';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { useInvoices } from '@/hooks/useInvoices';
 import { formatCurrency } from '@/lib/utils';
+import { VANTOR_FEE_RATE } from '@/lib/billing/tiers';
 import type { ErpConfiguration } from '@/types/database';
 
 const schema = z.object({
@@ -173,6 +174,22 @@ export function SendTransferForm() {
             <Label>Memo (optional)</Label>
             <Input placeholder="Transfer reference…" {...register('memo')} />
           </div>
+
+          {amount && parseFloat(amount) > 0 && (
+            <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-1.5 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Amount</span>
+                <span className="font-mono">{parseFloat(amount).toFixed(2)} {selectedToken ?? 'USDC'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Vantor fee (0.25%)</span>
+                <span className="font-mono">${(parseFloat(amount) * VANTOR_FEE_RATE).toFixed(2)}</span>
+              </div>
+              <div className="text-xs text-muted-foreground pt-1 border-t border-border/50">
+                Vantor fees are aggregated and billed monthly to your card on file.
+              </div>
+            </div>
+          )}
 
           <Button type="submit" className="w-full" disabled={isSubmitting || exceeds || !selectedWalletId || !watch('toAddress') || !amount}>
             {isSubmitting ? (

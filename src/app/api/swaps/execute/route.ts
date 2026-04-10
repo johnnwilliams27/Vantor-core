@@ -81,6 +81,7 @@ export async function POST(req: NextRequest) {
     transactionType: 'swap',
     transactionId: swap.id,
     notionalAmountUsd: parseFloat(parsed.data.fromAmount),
+    collectedVia: 'bridge',
   });
 
   // Update wallet balances (mock fallback — real balances sync from chain)

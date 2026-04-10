@@ -38,6 +38,16 @@ export function UsageTab() {
         <SummaryCard label="Subscription" value={`$${subscriptionCost.toLocaleString()}`} />
         <SummaryCard label="ERP Add-ons" value={`$${erpAddonCost.toLocaleString()}`} detail={`${usage?.erpAddons || 0} additional ERPs`} />
         <SummaryCard
+          label="Transfer Fees"
+          value={`$${(usage?.transactionFees?.transfer?.total || 0).toFixed(2)}`}
+          detail={`${usage?.transactionFees?.transfer?.count || 0} transfers`}
+        />
+        <SummaryCard
+          label="Payment Fees"
+          value={`$${(usage?.transactionFees?.fiat_payment?.total || 0).toFixed(2)}`}
+          detail={`${usage?.transactionFees?.fiat_payment?.count || 0} payments`}
+        />
+        <SummaryCard
           label="Ramp Fees"
           value={`$${(usage?.transactionFees?.ramp?.total || 0).toFixed(2)}`}
           detail={`${usage?.transactionFees?.ramp?.count || 0} transactions`}

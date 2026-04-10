@@ -166,11 +166,13 @@ async function handleInvoiceCreated(invoice: Stripe.Invoice) {
     .toISOString()
     .split('T')[0];
 
+  // Only invoice fees that are NOT collected at the rail (Bridge auto-deducts those).
   const { data: fees } = await supabaseAdmin
     .from('usage_fees')
     .select('transaction_type, fee_amount')
     .eq('enterprise_id', sub.enterprise_id)
-    .eq('billing_period', billingPeriod);
+    .eq('billing_period', billingPeriod)
+    .eq('collected_via', 'stripe_invoice');
 
   if (fees && fees.length > 0) {
     const byType: Record<string, { count: number; total: number }> = {};
@@ -182,8 +184,15 @@ async function handleInvoiceCreated(invoice: Stripe.Invoice) {
       byType[fee.transaction_type].total += Number(fee.fee_amount);
     }
 
+    const TYPE_LABELS: Record<string, string> = {
+      ramp: 'Ramp',
+      swap: 'Swap',
+      bridge: 'Bridge',
+      transfer: 'Transfer',
+      fiat_payment: 'Payment',
+    };
     for (const [type, { count, total }] of Object.entries(byType)) {
-      const label = type.charAt(0).toUpperCase() + type.slice(1);
+      const label = TYPE_LABELS[type] ?? type;
       await stripe.invoiceItems.create({
         customer: invoice.customer as string,
         invoice: invoice.id,
@@ -234,16 +243,20 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
     .toISOString()
     .split('T')[0];
 
+  // PDF receipt: Only show fees that were actually billed via Stripe (not Bridge-collected).
   const { data: fees } = await supabaseAdmin
     .from('usage_fees')
     .select('transaction_type, fee_amount')
     .eq('enterprise_id', sub.enterprise_id)
-    .eq('billing_period', billingPeriod);
+    .eq('billing_period', billingPeriod)
+    .eq('collected_via', 'stripe_invoice');
 
   const byType: Record<string, { count: number; total: number }> = {
     ramp: { count: 0, total: 0 },
     swap: { count: 0, total: 0 },
     bridge: { count: 0, total: 0 },
+    transfer: { count: 0, total: 0 },
+    fiat_payment: { count: 0, total: 0 },
   };
   for (const fee of fees || []) {
     if (byType[fee.transaction_type]) {
@@ -286,11 +299,16 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
     swapFees: byType.swap.total,
     bridgeCount: byType.bridge.count,
     bridgeFees: byType.bridge.total,
+    transferCount: byType.transfer.count,
+    transferFees: byType.transfer.total,
+    paymentCount: byType.fiat_payment.count,
+    paymentFees: byType.fiat_payment.total,
     cardLast4: pm?.card_last4,
   });
 
   const totalAmount = subscriptionCost + (erpAddons || 0) * 1500 +
-    byType.ramp.total + byType.swap.total + byType.bridge.total;
+    byType.ramp.total + byType.swap.total + byType.bridge.total +
+    byType.transfer.total + byType.fiat_payment.total;
 
   // Send email with PDF
   await sendEmail({

@@ -118,6 +118,7 @@ async function executeSwapOp(
       transactionType: 'swap',
       transactionId: swap.id,
       notionalAmountUsd: parseFloat(params.amount),
+      collectedVia: 'bridge',
     });
   }
 
@@ -190,6 +191,7 @@ async function executeBridgeOp(
       transactionType: 'bridge',
       transactionId: bridge.id,
       notionalAmountUsd: parseFloat(params.amount),
+      collectedVia: 'bridge',
     });
   }
 
@@ -270,6 +272,7 @@ async function executeRampOp(
       transactionType: 'ramp',
       transactionId: fiatTx.id,
       notionalAmountUsd: (quote.fiatAmount as number) ?? params.fiatAmount ?? 0,
+      collectedVia: 'bridge',
     });
   }
 

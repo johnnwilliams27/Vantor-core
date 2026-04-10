@@ -3,8 +3,8 @@ import type { ChainType, TokenSymbol } from '@/types/database';
 export type YieldProtocolId =
   | 'aave_v3'
   | 'compound_v3'
-  | 'morpho'
   | 'morpho_steakhouse'
+  | 'morpho_reservoir'
   | 'kamino'
   | 'kamino_multiply'
   | 'ondo'

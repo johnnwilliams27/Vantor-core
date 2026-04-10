@@ -18,25 +18,35 @@ export async function GET() {
 
   const { data: fees } = await supabaseAdmin
     .from('usage_fees')
-    .select('transaction_type, fee_amount')
+    .select('transaction_type, fee_amount, collected_via')
     .eq('enterprise_id', session.user.enterprise_id)
     .eq('billing_period', billingPeriod);
 
   // Aggregate by type
-  const summary: Record<string, { count: number; total: number }> = {
-    ramp: { count: 0, total: 0 },
-    swap: { count: 0, total: 0 },
-    bridge: { count: 0, total: 0 },
+  const summary: Record<string, { count: number; total: number; collected_via: string }> = {
+    ramp: { count: 0, total: 0, collected_via: 'bridge' },
+    swap: { count: 0, total: 0, collected_via: 'bridge' },
+    bridge: { count: 0, total: 0, collected_via: 'bridge' },
+    transfer: { count: 0, total: 0, collected_via: 'stripe_invoice' },
+    fiat_payment: { count: 0, total: 0, collected_via: 'bridge' },
   };
+
+  let bridgeCollected = 0;
+  let stripeInvoiced = 0;
 
   for (const fee of fees || []) {
     if (summary[fee.transaction_type]) {
       summary[fee.transaction_type].count++;
       summary[fee.transaction_type].total += Number(fee.fee_amount);
     }
+    if (fee.collected_via === 'bridge') {
+      bridgeCollected += Number(fee.fee_amount);
+    } else {
+      stripeInvoiced += Number(fee.fee_amount);
+    }
   }
 
-  const totalFees = Object.values(summary).reduce((s, v) => s + v.total, 0);
+  const totalFees = bridgeCollected + stripeInvoiced;
 
   // Get ERP add-on count
   const { count: erpAddons } = await supabaseAdmin
@@ -49,6 +59,8 @@ export async function GET() {
     billingPeriod,
     transactionFees: summary,
     totalTransactionFees: totalFees,
+    bridgeCollected,
+    stripeInvoiced,
     erpAddons: erpAddons || 0,
     erpAddonCost: (erpAddons || 0) * 1500,
   });

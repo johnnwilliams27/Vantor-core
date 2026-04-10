@@ -10,7 +10,7 @@ export const TOKEN_DECIMALS: Record<string, number> = { USDC: 6, USDT: 6 };
 export interface ProtocolAddresses {
   router: `0x${string}`;
   spender: `0x${string}`;
-  type: 'aave' | 'compound' | 'erc4626' | 'ondo' | 'morpho_blue';
+  type: 'aave' | 'compound' | 'erc4626' | 'ondo';
 }
 
 export const PROTOCOL_ADDRESSES: Partial<Record<YieldProtocolId, ProtocolAddresses>> = {
@@ -44,10 +44,10 @@ export const PROTOCOL_ADDRESSES: Partial<Record<YieldProtocolId, ProtocolAddress
     spender: '0x96F6eF951840721AdBF46Ac996b59E0235CB985C',
     type: 'ondo',
   },
-  morpho: {
-    router: '0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb',
-    spender: '0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb',
-    type: 'morpho_blue',
+  morpho_reservoir: {
+    router: '0xbeEF346d7099865208Ff331e4f648f4154DDAa05',
+    spender: '0xbeEF346d7099865208Ff331e4f648f4154DDAa05',
+    type: 'erc4626',
   },
 };
 

@@ -9,6 +9,7 @@ import { actionNotificationEmail, fmtUsd } from '@/lib/notifications/email-templ
 import { getBankingAdapter } from '@/lib/banking/factory';
 import { getIntegrationMode } from '@/lib/env/integration-mode';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
+import { recordUsageFee } from '@/lib/billing/usage';
 import { z } from 'zod';
 import { requirePaidTier, tierGateResponse, TierGateError } from '@/lib/auth/tier-gate';
 
@@ -144,6 +145,18 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (insertErr) return NextResponse.json({ error: insertErr.message }, { status: 500 });
+
+  // --- Record Vantor fee on immediate payments (scheduled payments record at execution time) ---
+  // Bridge auto-deducts via developer_fee_percent; we track for visibility only.
+  if (!isScheduled && enterpriseId) {
+    await recordUsageFee({
+      enterpriseId,
+      transactionType: 'fiat_payment',
+      transactionId: payment.id,
+      notionalAmountUsd: parseFloat(parsed.data.amount),
+      collectedVia: 'bridge',
+    });
+  }
 
   await writeAuditLog({
     userId: session.user.id,

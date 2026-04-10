@@ -132,6 +132,7 @@ export async function POST(req: NextRequest) {
       transactionType: 'bridge',
       transactionId: bridge.id,
       notionalAmountUsd: parseFloat(amount),
+      collectedVia: 'bridge',
     });
 
     // Update balances: decrease on source, increase on destination

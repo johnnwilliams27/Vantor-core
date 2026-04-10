@@ -148,6 +148,7 @@ export interface Invoice {
 export interface Transfer {
   id: string;
   user_id: string;
+  enterprise_id: string | null;
   erp_config_id: string | null;
   invoice_id: string | null;
   direction: 'sent' | 'received';

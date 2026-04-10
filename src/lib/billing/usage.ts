@@ -5,11 +5,24 @@ export function calculateVantorFee(notionalAmountUsd: number): number {
   return notionalAmountUsd * VANTOR_FEE_RATE;
 }
 
+export type UsageFeeTransactionType = 'ramp' | 'swap' | 'bridge' | 'transfer' | 'fiat_payment';
+export type CollectedVia = 'bridge' | 'stripe_invoice';
+
+/**
+ * Records a Vantor fee for visibility/reconciliation.
+ *
+ * Collection paths (hybrid model):
+ * - 'bridge'         → Bridge auto-deducts at the rail; we just track it for the dashboard.
+ *                      The Stripe webhook does NOT bill these (no double-charge).
+ * - 'stripe_invoice' → On-chain transfers and other off-rail flows. The Stripe webhook
+ *                      adds these as line items on the monthly invoice.
+ */
 export async function recordUsageFee(params: {
   enterpriseId: string;
-  transactionType: 'ramp' | 'swap' | 'bridge';
+  transactionType: UsageFeeTransactionType;
   transactionId: string;
   notionalAmountUsd: number;
+  collectedVia: CollectedVia;
 }): Promise<void> {
   const supabase = createAdminClient();
   const feeAmount = calculateVantorFee(params.notionalAmountUsd);
@@ -26,5 +39,6 @@ export async function recordUsageFee(params: {
     fee_rate: VANTOR_FEE_RATE,
     fee_amount: feeAmount,
     billing_period: billingPeriod,
+    collected_via: params.collectedVia,
   });
 }

@@ -6,8 +6,19 @@ import type {
   FiatPaymentParams, FiatPaymentResult, FiatPaymentStatusResult,
 } from './interface';
 import { getCredential, type IntegrationMode } from '@/lib/env/integration-mode';
+import { VANTOR_FEE_RATE } from '@/lib/billing/tiers';
 
-const BRIDGE_API_URL = 'https://api.bridge.xyz';
+const BRIDGE_API_URL_SANDBOX = 'https://api.sandbox.bridge.xyz';
+const BRIDGE_API_URL_LIVE = 'https://api.bridge.xyz';
+
+function getBaseUrl(mode: IntegrationMode): string {
+  return mode === 'live' ? BRIDGE_API_URL_LIVE : BRIDGE_API_URL_SANDBOX;
+}
+
+// Bridge supports a developer fee that's auto-deducted at the rail and routed
+// to the payout destination configured in the Bridge dashboard.
+// VANTOR_FEE_RATE is 0.0025 (25 BPS); Bridge expects a percentage as a string.
+const VANTOR_DEVELOPER_FEE_PCT = (VANTOR_FEE_RATE * 100).toFixed(4); // "0.2500"
 
 function getApiKey(mode: IntegrationMode): string {
   return getCredential(
@@ -23,7 +34,8 @@ async function bridgeFetch(
   options: RequestInit = {},
 ): Promise<any> {
   const apiKey = getApiKey(mode);
-  const res = await fetch(`${BRIDGE_API_URL}${path}`, {
+  const baseUrl = getBaseUrl(mode);
+  const res = await fetch(`${baseUrl}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -78,6 +90,7 @@ export class BridgeAdapter implements IBankingAdapter {
         amount: params.fiatAmount,
         crypto_amount: params.cryptoAmount,
         source_payment_rail: params.bankAccountRef,
+        developer_fee_percent: VANTOR_DEVELOPER_FEE_PCT,
       }),
     });
 
@@ -124,6 +137,7 @@ export class BridgeAdapter implements IBankingAdapter {
         amount: params.fromAmount,
         wallet_address: params.walletAddress,
         quote_id: params.quoteData.quoteId,
+        developer_fee_percent: VANTOR_DEVELOPER_FEE_PCT,
       }),
     });
 
@@ -170,6 +184,7 @@ export class BridgeAdapter implements IBankingAdapter {
         destination_chain: params.toChain,
         wallet_address: params.walletAddress,
         quote_id: params.quoteData.quoteId,
+        developer_fee_percent: VANTOR_DEVELOPER_FEE_PCT,
       }),
     });
 
@@ -195,6 +210,7 @@ export class BridgeAdapter implements IBankingAdapter {
         amount: params.amount,
         currency: params.currency,
         memo: params.memo,
+        developer_fee_percent: VANTOR_DEVELOPER_FEE_PCT,
       }),
     });
 

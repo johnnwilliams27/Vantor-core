@@ -29,14 +29,14 @@ export const TIERS: Record<TierSlug, TierDefinition> = {
   starter: {
     slug: 'starter',
     name: 'Starter',
-    price: 0,                   // Free
+    price: 0,                   // No subscription fee — billed monthly for 0.25% transaction fees
     displayPrice: 'Free',
     liveMode: true,
     assetCapUsd: 10_000_000,
     includedErps: 1,
     kycRequired: true,
     kybRequired: true,
-    creditCardRequired: false,
+    creditCardRequired: true,
   },
   growth: {
     slug: 'growth',

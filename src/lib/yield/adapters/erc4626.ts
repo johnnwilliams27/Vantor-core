@@ -1,5 +1,5 @@
 import { ethereumClient } from '../rates/client';
-import { ERC4626_ABI, MORPHO_STEAKHOUSE_VAULT, SKY_SUSDS, ETHENA_SUSDE } from './constants';
+import { ERC4626_ABI, MORPHO_STEAKHOUSE_VAULT, MORPHO_RESERVOIR_VAULT, SKY_SUSDS, ETHENA_SUSDE } from './constants';
 import type { OnChainValue, YieldProtocolId } from '../interface';
 import type { TokenSymbol } from '@/types/database';
 
@@ -7,6 +7,7 @@ interface VaultConfig { address: `0x${string}`; shareDecimals: number; assetDeci
 
 const VAULT_MAP: Partial<Record<YieldProtocolId, VaultConfig>> = {
   morpho_steakhouse: { address: MORPHO_STEAKHOUSE_VAULT, shareDecimals: 18, assetDecimals: 6 },
+  morpho_reservoir: { address: MORPHO_RESERVOIR_VAULT, shareDecimals: 18, assetDecimals: 6 },
   sky: { address: SKY_SUSDS, shareDecimals: 18, assetDecimals: 18 },
   ethena: { address: ETHENA_SUSDE, shareDecimals: 18, assetDecimals: 18 },
 };

@@ -3,6 +3,7 @@ import { writeAuditLog } from '@/lib/audit/logger';
 import { requireClearScreening } from '@/lib/compliance/screening';
 import { getComplianceAdapter } from '@/lib/compliance/factory';
 import { updateBalancesAfterTransfer } from '@/lib/balances/update-after-movement';
+import { recordUsageFee } from '@/lib/billing/usage';
 import type { Transfer } from '@/types/database';
 
 /**
@@ -89,6 +90,19 @@ export async function executeTransfer(transfer: Transfer): Promise<{
       entityId: transfer.id,
       details: { txHash: fakeTxHash, chain: transfer.chain, amount: transfer.amount },
     });
+
+    // --- Record Vantor fee (0.25% of notional, billed monthly via Stripe) ---
+    // On-chain transfers can't use Bridge's developer fee — there's no rail to deduct from.
+    // These get added to the customer's monthly Stripe invoice as line items.
+    if (transfer.enterprise_id) {
+      await recordUsageFee({
+        enterpriseId: transfer.enterprise_id,
+        transactionType: 'transfer',
+        transactionId: transfer.id,
+        notionalAmountUsd: Number(transfer.amount), // stablecoin amount ≈ USD
+        collectedVia: 'stripe_invoice',
+      });
+    }
 
     // --- KYT: register transfer for monitoring (non-blocking) ---
     getComplianceAdapter()

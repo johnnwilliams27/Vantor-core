@@ -96,6 +96,7 @@ export async function POST(req: NextRequest) {
       transactionType: 'ramp',
       transactionId: fiatTx.id,
       notionalAmountUsd: parsed.data.fiatAmount,
+      collectedVia: 'bridge',
     });
 
     // Update balances (mock fallback — real balances sync from bank/chain)

@@ -34,11 +34,15 @@ export interface InvoiceData {
   swapFees: number;
   bridgeCount: number;
   bridgeFees: number;
+  transferCount: number;
+  transferFees: number;
+  paymentCount: number;
+  paymentFees: number;
   cardLast4?: string;
 }
 
 function InvoicePdf({ data }: { data: InvoiceData }) {
-  const total = data.subscriptionCost + data.erpAddonCost + data.rampFees + data.swapFees + data.bridgeFees;
+  const total = data.subscriptionCost + data.erpAddonCost + data.rampFees + data.swapFees + data.bridgeFees + data.transferFees + data.paymentFees;
   const fmt = (n: number) => `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
@@ -96,6 +100,20 @@ function InvoicePdf({ data }: { data: InvoiceData }) {
             <View style={styles.tableRow}>
               <Text style={styles.colDesc}>Bridge fees ({data.bridgeCount} transactions)</Text>
               <Text style={styles.colAmount}>{fmt(data.bridgeFees)}</Text>
+            </View>
+          )}
+
+          {data.transferCount > 0 && (
+            <View style={styles.tableRow}>
+              <Text style={styles.colDesc}>Transfer fees ({data.transferCount} transactions)</Text>
+              <Text style={styles.colAmount}>{fmt(data.transferFees)}</Text>
+            </View>
+          )}
+
+          {data.paymentCount > 0 && (
+            <View style={styles.tableRow}>
+              <Text style={styles.colDesc}>Payment fees ({data.paymentCount} transactions)</Text>
+              <Text style={styles.colAmount}>{fmt(data.paymentFees)}</Text>
             </View>
           )}
 
