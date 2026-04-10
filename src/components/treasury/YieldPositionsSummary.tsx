@@ -10,14 +10,14 @@ import { cn } from '@/lib/utils';
 import type { YieldPosition } from '@/types/database';
 
 const PROTOCOL_LABELS: Record<string, string> = {
-  aave_v3: 'Aave V3', morpho: 'Morpho', morpho_steakhouse: 'Morpho Steakhouse',
+  aave_v3: 'Aave V3', morpho_reservoir: 'Morpho Reservoir', morpho_steakhouse: 'Morpho Steakhouse',
   kamino: 'Kamino', kamino_multiply: 'Kamino Multiply', ondo: 'Ondo (USDY)',
   sky: 'Sky sUSDS', ethena: 'Ethena sUSDe', drift: 'Drift',
 };
 
 const PROTOCOL_LOGOS: Record<string, string> = {
   aave_v3: '/partners/Aave_idWRQ7YLO7_0.svg',
-  morpho: '/partners/morpho-white.svg',
+  morpho_reservoir: '/partners/morpho-white.svg',
   morpho_steakhouse: '/partners/morpho-white.svg',
   kamino: '/partners/kamino-logo.svg',
   kamino_multiply: '/partners/kamino-logo.svg',

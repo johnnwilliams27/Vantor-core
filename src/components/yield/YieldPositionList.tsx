@@ -7,7 +7,7 @@ import { RefreshCw, TrendingUp, ArrowDownRight } from 'lucide-react';
 
 const PROTOCOL_LOGOS: Record<string, string> = {
   aave_v3: '/partners/Aave_idWRQ7YLO7_0.svg',
-  morpho: '/partners/morpho-white.svg',
+  morpho_reservoir: '/partners/morpho-white.svg',
   morpho_steakhouse: '/partners/morpho-white.svg',
   kamino: '/partners/kamino-logo.svg',
   kamino_multiply: '/partners/kamino-logo.svg',
@@ -25,7 +25,7 @@ import { UpgradeGate } from '@/components/ui/upgrade-gate';
 
 const PROTOCOL_LABELS: Record<string, string> = {
   aave_v3: 'Aave V3',
-  morpho: 'Morpho',
+  morpho_reservoir: 'Morpho Reservoir',
   kamino: 'Kamino',
   ondo: 'Ondo (USDY)',
 };

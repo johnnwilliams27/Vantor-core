@@ -30,7 +30,7 @@ export async function seedAudit(ctx: SeedContext): Promise<void> {
     { action: 'transfer_execute', entity_type: 'transfer', details: { amount: '80000', token: 'USDT' } },
     { action: 'invoice_sync', entity_type: 'invoice', details: { erp: 'Oracle', count: 3 } },
     { action: 'yield_deposit', entity_type: 'yield_position', details: { protocol: 'aave_v3', amount: '250000', token: 'USDC' } },
-    { action: 'yield_withdraw', entity_type: 'yield_position', details: { protocol: 'morpho', amount: '50000', token: 'USDT' } },
+    { action: 'yield_withdraw', entity_type: 'yield_position', details: { protocol: 'morpho_reservoir', amount: '50000', token: 'USDC' } },
     { action: 'treasury_forecast_generate', entity_type: 'treasury_forecast', details: { horizon_days: 30 } },
     { action: 'compliance_sanctions_screen', entity_type: 'wallet', details: { address: '0x1234...', result: 'clear' } },
   ];

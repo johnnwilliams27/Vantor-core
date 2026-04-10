@@ -17,7 +17,7 @@ function formatUsd(value: number): string {
 
 const PROTOCOL_LABELS: Record<string, string> = {
   aave_v3: 'Aave V3',
-  morpho: 'Morpho Blue',
+  morpho_reservoir: 'Morpho Reservoir USDC',
   morpho_steakhouse: 'Morpho Steakhouse',
   kamino: 'Kamino Lend',
   kamino_multiply: 'Kamino Multiply',
@@ -29,7 +29,7 @@ const PROTOCOL_LABELS: Record<string, string> = {
 
 const PROTOCOL_COLORS: Record<string, string> = {
   aave_v3: '#6366f1',
-  morpho: '#3b82f6',
+  morpho_reservoir: '#3b82f6',
   morpho_steakhouse: '#1d4ed8',
   kamino: '#8b5cf6',
   kamino_multiply: '#7c3aed',

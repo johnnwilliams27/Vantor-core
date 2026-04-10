@@ -13,7 +13,6 @@ import { useYieldProtocols, useYieldDeposit, useSlippageCheck } from '@/hooks/us
 import { useOnChainDeposit, type DepositStep } from '@/hooks/useOnChainDeposit';
 import { useSolanaDeposit, type SolanaDepositStep } from '@/hooks/useSolanaDeposit';
 import { PROTOCOL_ADDRESSES } from '@/lib/yield/contracts/addresses';
-import { CURATED_MARKETS } from '@/lib/yield/contracts/morpho-blue';
 import { SlippageWarning } from './SlippageWarning';
 import type { SlippageEstimate } from '@/lib/yield/slippage';
 import { useWallets } from '@/hooks/useWallets';
@@ -32,7 +31,7 @@ const CHAIN_LABELS: Record<string, string> = {
 
 const PROTOCOL_LOGOS: Record<string, string> = {
   aave_v3: '/partners/Aave_idWRQ7YLO7_0.svg',
-  morpho: '/partners/morpho-white.svg',
+  morpho_reservoir: '/partners/morpho-white.svg',
   morpho_steakhouse: '/partners/morpho-white.svg',
   kamino: '/partners/kamino-logo.svg',
   kamino_multiply: '/partners/kamino-logo.svg',
@@ -260,16 +259,6 @@ function InlineDepositForm({
   const [success, setSuccess] = useState<{ amount: string; token: string; apy: string } | null>(null);
   const [slippageEstimate, setSlippageEstimate] = useState<SlippageEstimate | null>(null);
 
-  const isMorphoBlue = protocol.id === 'morpho';
-  const morphoMarkets = isMorphoBlue ? CURATED_MARKETS.filter(m => m.token === token) : [];
-  const [selectedMarketId, setSelectedMarketId] = useState<string>('');
-
-  useEffect(() => {
-    if (isMorphoBlue && morphoMarkets.length === 1 && !selectedMarketId) {
-      setSelectedMarketId(morphoMarkets[0].id);
-    }
-  }, [isMorphoBlue, morphoMarkets, selectedMarketId]);
-
   const chainWallets = wallets?.filter((w) => w.chain === protocol.chain) ?? [];
   const selectedWallet = chainWallets.find((w) => w.id === walletId);
   const selectedRate = protocol.rates.find((r) => r.token === token);
@@ -456,22 +445,6 @@ function InlineDepositForm({
             </div>
           )}
 
-          {isMorphoBlue && morphoMarkets.length > 0 && (
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground font-medium">Market</label>
-              <select
-                value={selectedMarketId}
-                onChange={(e) => setSelectedMarketId(e.target.value)}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-              >
-                <option value="">Select a market...</option>
-                {morphoMarkets.map((m) => (
-                  <option key={m.id} value={m.id}>{m.label}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
           <div>
             <label className="text-xs font-medium mb-1 block">Amount</label>
             <Input
@@ -539,7 +512,7 @@ function InlineDepositForm({
               type="submit"
               className="w-full"
               size="sm"
-              disabled={isProcessing || isSolanaProcessing || deposit.isPending || slippageCheck.isPending || !amount || !walletId || exceeds || (isMorphoBlue && !selectedMarketId)}
+              disabled={isProcessing || isSolanaProcessing || deposit.isPending || slippageCheck.isPending || !amount || !walletId || exceeds}
             >
               {slippageCheck.isPending ? (
                 <>

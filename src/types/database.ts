@@ -552,7 +552,7 @@ export interface SimulationRun {
 
 // ---- Yield Protocols ----
 
-export type YieldProtocolId = 'aave_v3' | 'morpho' | 'kamino' | 'ondo';
+export type YieldProtocolId = 'aave_v3' | 'morpho_reservoir' | 'kamino' | 'ondo';
 export type YieldTxType = 'deposit' | 'withdraw';
 export type YieldTxStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
 

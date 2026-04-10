@@ -13,7 +13,7 @@ export type { RateResult, RateFetcher };
 export const ALL_RATE_FETCHERS: { name: string; fetcher: RateFetcher }[] = [
   { name: 'aave', fetcher: aaveFetcher },
   { name: 'compound', fetcher: compoundFetcher },
-  { name: 'morpho', fetcher: morphoFetcher },
+  { name: 'morpho_reservoir', fetcher: morphoFetcher },
   { name: 'sky', fetcher: skyFetcher },
   { name: 'ondo', fetcher: ondoFetcher },
   { name: 'ethena', fetcher: ethenaFetcher },

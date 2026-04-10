@@ -2,26 +2,7 @@ import type { RateFetcher, RateResult } from './types';
 
 const GRAPHQL_URL = 'https://blue-api.morpho.org/graphql';
 const STEAKHOUSE_VAULT = '0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB';
-
-const USDC_ADDRESS = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48';
-const USDT_ADDRESS = '0xdac17f958d2ee523a2206206994597c13d831ec7';
-
-const MARKETS_QUERY = `
-  query MarketsQuery {
-    markets(first: 50, where: { whitelisted: true }) {
-      items {
-        uniqueKey
-        loanAsset {
-          address
-          symbol
-        }
-        state {
-          supplyApy
-        }
-      }
-    }
-  }
-`;
+const RESERVOIR_VAULT = '0xbeEF346d7099865208Ff331e4f648f4154DDAa05';
 
 const VAULT_QUERY = `
   query VaultQuery($address: String!) {
@@ -34,20 +15,6 @@ const VAULT_QUERY = `
     }
   }
 `;
-
-interface MorphoMarketItem {
-  uniqueKey: string;
-  loanAsset: { address: string; symbol: string };
-  state: { supplyApy: number | null } | null;
-}
-
-interface MorphoMarketsResponse {
-  data?: {
-    markets?: {
-      items?: MorphoMarketItem[];
-    };
-  };
-}
 
 interface MorphoVaultResponse {
   data?: {
@@ -72,58 +39,33 @@ export const morphoFetcher: RateFetcher = {
   async fetchRates(): Promise<RateResult[]> {
     const results: RateResult[] = [];
 
-    // Fetch Blue markets for USDC and USDT
-    const marketsData = await gql<MorphoMarketsResponse>(MARKETS_QUERY);
-    const items = marketsData?.data?.markets?.items ?? [];
-
-    const usdcMarkets = items.filter(
-      (m) => m.loanAsset?.address?.toLowerCase() === USDC_ADDRESS,
-    );
-    const usdtMarkets = items.filter(
-      (m) => m.loanAsset?.address?.toLowerCase() === USDT_ADDRESS,
-    );
-
-    // Pick highest supply APY per token among whitelisted markets
-    const bestUsdc = usdcMarkets.reduce<MorphoMarketItem | null>((best, m) => {
-      const apy = m.state?.supplyApy ?? 0;
-      return best === null || apy > (best.state?.supplyApy ?? 0) ? m : best;
-    }, null);
-
-    const bestUsdt = usdtMarkets.reduce<MorphoMarketItem | null>((best, m) => {
-      const apy = m.state?.supplyApy ?? 0;
-      return best === null || apy > (best.state?.supplyApy ?? 0) ? m : best;
-    }, null);
-
-    if (bestUsdc) {
-      results.push({
-        protocol: 'morpho',
-        token: 'USDC',
-        chain: 'ethereum',
-        supplyAPY: bestUsdc.state?.supplyApy ?? 0,
-        rewardAPY: 0,
-      });
-    }
-
-    if (bestUsdt) {
-      results.push({
-        protocol: 'morpho',
-        token: 'USDT',
-        chain: 'ethereum',
-        supplyAPY: bestUsdt.state?.supplyApy ?? 0,
-        rewardAPY: 0,
-      });
-    }
-
     // Fetch Steakhouse vault (USDC)
-    const vaultData = await gql<MorphoVaultResponse>(VAULT_QUERY, {
+    const steakhouseData = await gql<MorphoVaultResponse>(VAULT_QUERY, {
       address: STEAKHOUSE_VAULT,
     });
 
-    const vault = vaultData?.data?.vaultByAddress;
-    if (vault) {
-      const vaultAPY = vault.state?.netApy ?? vault.state?.apy ?? 0;
+    const steakhouseVault = steakhouseData?.data?.vaultByAddress;
+    if (steakhouseVault) {
+      const vaultAPY = steakhouseVault.state?.netApy ?? steakhouseVault.state?.apy ?? 0;
       results.push({
         protocol: 'morpho_steakhouse',
+        token: 'USDC',
+        chain: 'ethereum',
+        supplyAPY: vaultAPY,
+        rewardAPY: 0,
+      });
+    }
+
+    // Fetch Reservoir vault (USDC)
+    const reservoirData = await gql<MorphoVaultResponse>(VAULT_QUERY, {
+      address: RESERVOIR_VAULT,
+    });
+
+    const reservoirVault = reservoirData?.data?.vaultByAddress;
+    if (reservoirVault) {
+      const vaultAPY = reservoirVault.state?.netApy ?? reservoirVault.state?.apy ?? 0;
+      results.push({
+        protocol: 'morpho_reservoir',
         token: 'USDC',
         chain: 'ethereum',
         supplyAPY: vaultAPY,

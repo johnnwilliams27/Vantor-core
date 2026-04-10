@@ -7,7 +7,7 @@ export async function seedYield(ctx: SeedContext, walletIds: WalletIds): Promise
 
   const positions = [
     { protocol: 'aave_v3', chain: 'ethereum', token: 'USDC', yieldToken: 'aUSDC', deposited: 250000, apy: 4.8, wallets: walletIds.ethWallets },
-    { protocol: 'morpho', chain: 'ethereum', token: 'USDT', yieldToken: 'mUSDT', deposited: 150000, apy: 5.2, wallets: walletIds.ethWallets },
+    { protocol: 'morpho_reservoir', chain: 'ethereum', token: 'USDC', yieldToken: 'bbqUSDCreservoir', deposited: 150000, apy: 7.0, wallets: walletIds.ethWallets },
     { protocol: 'kamino', chain: 'solana', token: 'USDC', yieldToken: 'kUSDC', deposited: 100000, apy: 6.1, wallets: walletIds.solWallets },
     { protocol: 'ondo', chain: 'ethereum', token: 'USDC', yieldToken: 'OUSG', deposited: 500000, apy: 4.5, wallets: walletIds.ethWallets },
   ];

@@ -32,13 +32,13 @@ const PROTOCOL_META: Record<YieldProtocolId, Omit<YieldProtocolInfo, 'id'>> = {
     riskFactors: { smartContract: 1, counterparty: 1, liquidity: 1, regulatory: 2 },
     kycRequired: false,
   },
-  morpho: {
-    name: 'Morpho Blue',
+  morpho_reservoir: {
+    name: 'Morpho Reservoir USDC',
     chain: 'ethereum',
-    supportedTokens: ['USDC', 'USDT'],
-    description: 'Permissionless lending markets with isolated risk. Supply to curated vaults for optimized yield.',
+    supportedTokens: ['USDC'],
+    description: 'Steakhouse-curated Morpho vault for high-yield USDC supply across optimized markets.',
     riskLevel: 'medium',
-    riskFactors: { smartContract: 2, counterparty: 1, liquidity: 2, regulatory: 2 },
+    riskFactors: { smartContract: 2, counterparty: 2, liquidity: 2, regulatory: 2 },
     kycRequired: false,
   },
   morpho_steakhouse: {
@@ -109,7 +109,7 @@ const PROTOCOL_META: Record<YieldProtocolId, Omit<YieldProtocolInfo, 'id'>> = {
 const MOCK_APYS: Record<YieldProtocolId, { supply: number; reward: number }> = {
   aave_v3:           { supply: 0.0485, reward: 0.0020 },
   compound_v3:       { supply: 0.0440, reward: 0.0035 },
-  morpho:            { supply: 0.0620, reward: 0.0080 },
+  morpho_reservoir:  { supply: 0.0700, reward: 0.0000 },
   morpho_steakhouse: { supply: 0.1150, reward: 0.0200 },
   kamino:            { supply: 0.0710, reward: 0.0050 },
   kamino_multiply:   { supply: 0.1480, reward: 0.0120 },
@@ -122,7 +122,7 @@ const MOCK_APYS: Record<YieldProtocolId, { supply: number; reward: number }> = {
 const YIELD_TOKENS: Record<YieldProtocolId, string> = {
   aave_v3: 'aUSDC',
   compound_v3: 'cUSDCv3',
-  morpho: 'mUSDC',
+  morpho_reservoir: 'bbqUSDCreservoir',
   morpho_steakhouse: 'mshUSDC',
   kamino: 'kUSDC',
   kamino_multiply: 'kmUSDC',

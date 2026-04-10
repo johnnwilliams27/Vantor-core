@@ -15,7 +15,7 @@ import type { PoolLiquidity, ILiquidityProvider } from './interface';
 const MOCK_POOL_DATA: Record<YieldProtocolId, { tvl: number; utilization: number; poolType: 'stablecoin' | 'volatile' }> = {
   aave_v3:            { tvl: 2_500_000_000, utilization: 0.82, poolType: 'stablecoin' },
   compound_v3:        { tvl: 1_800_000_000, utilization: 0.80, poolType: 'stablecoin' },
-  morpho:             { tvl: 450_000_000,   utilization: 0.75, poolType: 'stablecoin' },
+  morpho_reservoir:   { tvl: 105_000_000,   utilization: 0.75, poolType: 'stablecoin' },
   morpho_steakhouse:  { tvl: 85_000_000,    utilization: 0.88, poolType: 'stablecoin' },
   kamino:             { tvl: 320_000_000,   utilization: 0.70, poolType: 'stablecoin' },
   kamino_multiply:    { tvl: 45_000_000,    utilization: 0.65, poolType: 'volatile' },
