@@ -41,7 +41,31 @@ export async function POST(req: NextRequest) {
   }
 
   const { protocol, token, amount, walletAddress, chain, txHash, yieldToken, tokensReceived } = parsed.data;
+
+  const COMING_SOON_PROTOCOLS = ['sky', 'ethena'];
+  if (COMING_SOON_PROTOCOLS.includes(protocol)) {
+    return NextResponse.json(
+      { error: 'This protocol is coming soon and not yet available for deposits' },
+      { status: 503 },
+    );
+  }
+
   const supabase = createAdminClient();
+
+  // Geo-gate: Ondo USDY is only available to non-US enterprises
+  if (protocol === 'ondo') {
+    const { data: ent } = await supabase
+      .from('enterprises')
+      .select('country')
+      .eq('id', enterpriseId)
+      .single();
+    if (!ent?.country || ent.country === 'US') {
+      return NextResponse.json(
+        { error: 'Ondo USDY is not available in your jurisdiction' },
+        { status: 403 },
+      );
+    }
+  }
 
   // Check for duplicate txHash
   const { data: existingTx } = await supabase

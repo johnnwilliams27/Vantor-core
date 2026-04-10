@@ -24,6 +24,8 @@ import type { RiskFactors } from '@/lib/yield/interface';
 import type { YieldProtocolWithRates } from '@/hooks/useYield';
 import { UpgradeGate } from '@/components/ui/upgrade-gate';
 
+const COMING_SOON_PROTOCOLS = new Set(['sky', 'ethena']);
+
 const CHAIN_LABELS: Record<string, string> = {
   ethereum: 'Ethereum',
   solana: 'Solana',
@@ -633,6 +635,8 @@ export function YieldRatesTable() {
             );
           }
 
+          const comingSoon = COMING_SOON_PROTOCOLS.has(p.id);
+
           return (
             <Card key={p.id} className="relative overflow-hidden">
               <div className="flex items-center justify-between px-5 pt-5 pb-3">
@@ -641,6 +645,11 @@ export function YieldRatesTable() {
                     <div className="h-[38px] flex items-center">
                       <Image src={PROTOCOL_LOGOS[p.id]} alt={p.name} width={64} height={38} className="h-[38px] w-auto object-contain" unoptimized />
                     </div>
+                    {comingSoon && (
+                      <span className="ml-2 inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-500/20 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">
+                        Coming Soon
+                      </span>
+                    )}
                     {p.kycRequired && (
                       p.id === 'ondo' && ondoKycVerified ? (
                         <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-[10px]">
@@ -727,12 +736,22 @@ export function YieldRatesTable() {
                 })()}
 
                 <div className="flex items-center justify-end pt-1">
-                  <UpgradeGate feature="Deposit into Yield">
-                    <Button size="sm" className="gap-1" onClick={() => handleOndoDeposit(p.id)}>
-                      <ArrowUpRight className="h-3.5 w-3.5" />
-                      Deposit
-                    </Button>
-                  </UpgradeGate>
+                  {comingSoon ? (
+                    <button
+                      type="button"
+                      disabled
+                      className="w-full px-4 py-2 rounded-lg text-sm font-medium bg-muted/50 text-muted-foreground cursor-not-allowed border border-border"
+                    >
+                      Coming Soon
+                    </button>
+                  ) : (
+                    <UpgradeGate feature="Deposit into Yield">
+                      <Button size="sm" className="gap-1" onClick={() => handleOndoDeposit(p.id)}>
+                        <ArrowUpRight className="h-3.5 w-3.5" />
+                        Deposit
+                      </Button>
+                    </UpgradeGate>
+                  )}
                 </div>
               </CardContent>
             </Card>
