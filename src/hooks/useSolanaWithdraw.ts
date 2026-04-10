@@ -6,6 +6,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { useToast } from '@/components/ui/toast';
 import type { YieldProtocolId } from '@/lib/yield/interface';
+import { useTestMode } from '@/hooks/useTestMode';
+import type { SolanaCluster } from '@/lib/yield/contracts/solana/cluster';
 
 export type SolanaWithdrawStep =
   | 'idle'
@@ -35,6 +37,8 @@ export function useSolanaWithdraw() {
   const queryClient = useQueryClient();
   const { data: session } = useSession();
   const { toast } = useToast();
+  const { testMode } = useTestMode();
+  const cluster: SolanaCluster = testMode ? 'devnet' : 'mainnet-beta';
 
   const execute = useCallback(
     async ({ positionId, protocol, token, amount, walletAddress, isFullWithdrawal }: SolanaWithdrawParams) => {
@@ -51,10 +55,10 @@ export function useSolanaWithdraw() {
 
         if (protocol === 'kamino' || protocol === 'kamino_multiply') {
           const { buildKaminoWithdrawTx } = await import('@/lib/yield/contracts/solana/kamino');
-          tx = await buildKaminoWithdrawTx(connection, publicKey, token, parseFloat(amount));
+          tx = await buildKaminoWithdrawTx(connection, publicKey, token, parseFloat(amount), isFullWithdrawal, cluster);
         } else if (protocol === 'drift') {
           const { buildDriftWithdrawTx } = await import('@/lib/yield/contracts/solana/drift');
-          tx = await buildDriftWithdrawTx(connection, publicKey, token, parseFloat(amount));
+          tx = await buildDriftWithdrawTx(connection, publicKey, token, parseFloat(amount), isFullWithdrawal, cluster);
         } else {
           throw new Error(`Unsupported Solana protocol: ${protocol}`);
         }
@@ -107,7 +111,7 @@ export function useSolanaWithdraw() {
         toast({ title: 'Withdrawal failed', description: message, variant: 'destructive' });
       }
     },
-    [connection, publicKey, sendTransaction, queryClient, session?.user?.id, toast]
+    [connection, publicKey, sendTransaction, queryClient, session?.user?.id, toast, cluster]
   );
 
   const reset = useCallback(() => {

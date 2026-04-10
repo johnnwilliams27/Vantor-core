@@ -23,20 +23,15 @@ import {
   AccountMeta as Web3AccountMeta,
 } from '@solana/web3.js';
 import { BN } from '@coral-xyz/anchor';
+import type { SolanaCluster } from './cluster';
+import { getKaminoMarket, getTokenMints } from './cluster';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
-
-const KAMINO_MAIN_MARKET = '7u3HeHxYDLhnCoErrtycNokbQYbWGzLs6JSDqGAv5PfF';
 
 /** Decimals for each supported token (used to convert UI amounts → lamports). */
 const TOKEN_DECIMALS: Record<string, number> = {
   USDC: 6,
   USDT: 6,
-};
-
-const TOKEN_MINTS: Record<string, string> = {
-  USDC: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-  USDT: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
 };
 
 const KAMINO_API_BASE = 'https://api.kamino.finance';
@@ -178,15 +173,18 @@ function createRpcFromConnection(connection: Connection) {
  * @param walletPubkey  Depositor's public key.
  * @param token  "USDC" | "USDT" (must exist in TOKEN_MINTS).
  * @param amount  Amount in token units (e.g. 100 for 100 USDC).
+ * @param cluster  Target cluster — 'mainnet-beta' (default) or 'devnet' (test mode).
  * @returns An unsigned legacy Transaction ready to be signed and sent.
  */
 export async function buildKaminoDepositTx(
   connection: Connection,
   walletPubkey: PublicKey,
   token: string,
-  amount: number
+  amount: number,
+  cluster: SolanaCluster = 'mainnet-beta'
 ): Promise<Transaction> {
   try {
+    const TOKEN_MINTS = getTokenMints(cluster);
     const mint = TOKEN_MINTS[token];
     if (!mint) throw new Error(`Unsupported token: ${token}`);
 
@@ -199,7 +197,7 @@ export async function buildKaminoDepositTx(
     const rpc = createRpcFromConnection(connection);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const marketAddr = KAMINO_MAIN_MARKET as any;
+    const marketAddr = getKaminoMarket(cluster) as any;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const programAddr = PROGRAM_ID as any;
 
@@ -249,6 +247,7 @@ export async function buildKaminoDepositTx(
  * @param token  "USDC" | "USDT".
  * @param amount  Amount in token units (ignored when isFullWithdrawal=true).
  * @param isFullWithdrawal  When true, withdraws the entire position (u64 max).
+ * @param cluster  Target cluster — 'mainnet-beta' (default) or 'devnet' (test mode).
  * @returns An unsigned legacy Transaction.
  */
 export async function buildKaminoWithdrawTx(
@@ -256,9 +255,11 @@ export async function buildKaminoWithdrawTx(
   walletPubkey: PublicKey,
   token: string,
   amount: number,
-  isFullWithdrawal = false
+  isFullWithdrawal = false,
+  cluster: SolanaCluster = 'mainnet-beta'
 ): Promise<Transaction> {
   try {
+    const TOKEN_MINTS = getTokenMints(cluster);
     const mint = TOKEN_MINTS[token];
     if (!mint) throw new Error(`Unsupported token: ${token}`);
 
@@ -275,7 +276,7 @@ export async function buildKaminoWithdrawTx(
     const rpc = createRpcFromConnection(connection);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const marketAddr2 = KAMINO_MAIN_MARKET as any;
+    const marketAddr2 = getKaminoMarket(cluster) as any;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const programAddr2 = PROGRAM_ID as any;
 
@@ -327,19 +328,24 @@ export async function buildKaminoWithdrawTx(
  *   GET https://api.kamino.finance/kamino-market/{market}/users/{wallet}
  *
  * Falls back to zero values on any error.
+ *
+ * @param cluster  Target cluster — 'mainnet-beta' (default) or 'devnet' (test mode).
  */
 export async function getKaminoPosition(
   _connection: Connection,
   walletPubkey: PublicKey,
-  token: string
+  token: string,
+  cluster: SolanaCluster = 'mainnet-beta'
 ): Promise<KaminoPosition> {
   const zero: KaminoPosition = { currentValueUsd: 0, yieldTokenBalance: 0 };
 
   try {
+    const TOKEN_MINTS = getTokenMints(cluster);
     const mint = TOKEN_MINTS[token];
     if (!mint) return zero;
 
-    const url = `${KAMINO_API_BASE}/kamino-market/${KAMINO_MAIN_MARKET}/users/${walletPubkey.toBase58()}`;
+    const market = getKaminoMarket(cluster);
+    const url = `${KAMINO_API_BASE}/kamino-market/${market}/users/${walletPubkey.toBase58()}`;
     const res = await fetch(url, { next: { revalidate: 30 } } as RequestInit);
     if (!res.ok) return zero;
 

@@ -6,6 +6,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { useToast } from '@/components/ui/toast';
 import type { YieldProtocolId } from '@/lib/yield/interface';
+import { useTestMode } from '@/hooks/useTestMode';
+import type { SolanaCluster } from '@/lib/yield/contracts/solana/cluster';
 
 export type SolanaDepositStep =
   | 'idle'
@@ -34,6 +36,8 @@ export function useSolanaDeposit() {
   const queryClient = useQueryClient();
   const { data: session } = useSession();
   const { toast } = useToast();
+  const { testMode } = useTestMode();
+  const cluster: SolanaCluster = testMode ? 'devnet' : 'mainnet-beta';
 
   const execute = useCallback(
     async ({ protocol, token, amount, walletAddress, chain }: SolanaDepositParams) => {
@@ -50,10 +54,10 @@ export function useSolanaDeposit() {
 
         if (protocol === 'kamino' || protocol === 'kamino_multiply') {
           const { buildKaminoDepositTx } = await import('@/lib/yield/contracts/solana/kamino');
-          tx = await buildKaminoDepositTx(connection, publicKey, token, parseFloat(amount));
+          tx = await buildKaminoDepositTx(connection, publicKey, token, parseFloat(amount), cluster);
         } else if (protocol === 'drift') {
           const { buildDriftDepositTx } = await import('@/lib/yield/contracts/solana/drift');
-          tx = await buildDriftDepositTx(connection, publicKey, token, parseFloat(amount));
+          tx = await buildDriftDepositTx(connection, publicKey, token, parseFloat(amount), cluster);
         } else {
           throw new Error(`Unsupported Solana protocol: ${protocol}`);
         }
@@ -105,7 +109,7 @@ export function useSolanaDeposit() {
         toast({ title: 'Deposit failed', description: message, variant: 'destructive' });
       }
     },
-    [connection, publicKey, sendTransaction, queryClient, session?.user?.id, toast]
+    [connection, publicKey, sendTransaction, queryClient, session?.user?.id, toast, cluster]
   );
 
   const reset = useCallback(() => {

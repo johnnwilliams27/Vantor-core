@@ -47,6 +47,13 @@ export function useTestMode() {
     queryClient.clear();
     await queryClient.invalidateQueries();
     await queryClient.refetchQueries();
+    // NOTE: The Solana ConnectionProvider's RPC endpoint is set at mount time
+    // based on the test-mode-status query. A full page reload is required for
+    // the wallet adapter to pick up the new RPC URL (devnet vs mainnet-beta)
+    // when test mode is toggled. If seamless switching is needed in future,
+    // refactor ConnectionProvider to be rendered below QueryClientProvider and
+    // re-key it when cluster changes.
+    // window.location.reload(); // Uncomment to force RPC reconnect on toggle.
   };
 
   return { testMode, toggleTestMode };

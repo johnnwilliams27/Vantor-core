@@ -27,6 +27,7 @@ import {
   TransactionInstruction,
 } from '@solana/web3.js';
 import { BN } from '@coral-xyz/anchor';
+import type { SolanaCluster } from './cluster';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -42,7 +43,10 @@ const TOKEN_DECIMALS: Record<string, number> = {
   USDT: 6,
 };
 
-const DRIFT_REST_BASE = 'https://mainnet-beta.api.drift.trade';
+const DRIFT_REST_BASE: Record<SolanaCluster, string> = {
+  'mainnet-beta': 'https://mainnet-beta.api.drift.trade',
+  'devnet': 'https://master.api.drift.trade',
+};
 
 // ─── Return types ────────────────────────────────────────────────────────────
 
@@ -84,8 +88,16 @@ function makeReadOnlyWallet(pubkey: PublicKey) {
  * - `programID` must be a PublicKey from the SDK's own web3.js copy.
  * - Polling subscription requires a BulkAccountLoader; we instantiate one
  *   with a 1-second polling frequency.
+ *
+ * @param cluster  Target cluster — 'mainnet-beta' or 'devnet'. The Drift SDK
+ *                 has a built-in `env` config that selects devnet program IDs
+ *                 and markets automatically when set to 'devnet'.
  */
-async function buildDriftClient(connection: Connection, walletPubkey: PublicKey) {
+async function buildDriftClient(
+  connection: Connection,
+  walletPubkey: PublicKey,
+  cluster: SolanaCluster = 'mainnet-beta'
+) {
   const {
     DriftClient,
     DRIFT_PROGRAM_ID,
@@ -106,7 +118,9 @@ async function buildDriftClient(connection: Connection, walletPubkey: PublicKey)
     // DRIFT_PROGRAM_ID is a string constant; DriftClient also accepts a string.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     programID: DRIFT_PROGRAM_ID as any,
-    env: 'mainnet-beta',
+    // The Drift SDK uses `env` to select the correct program addresses and
+    // spot market configs for mainnet-beta vs devnet automatically.
+    env: cluster,
     accountSubscription: {
       type: 'polling',
       accountLoader,
@@ -122,10 +136,11 @@ async function buildDriftClient(connection: Connection, walletPubkey: PublicKey)
 /**
  * Build a Drift deposit transaction.
  *
- * @param connection  web3.js Connection to mainnet-beta.
+ * @param connection  web3.js Connection to the Solana cluster.
  * @param walletPubkey  Depositor's public key.
  * @param token  "USDC" | "USDT".
  * @param amount  Amount in token units (e.g. 100 for 100 USDC).
+ * @param cluster  Target cluster — 'mainnet-beta' (default) or 'devnet' (test mode).
  * @returns An unsigned legacy Transaction containing the deposit instruction
  *          (preceded by any setup instructions the SDK emits).
  */
@@ -133,7 +148,8 @@ export async function buildDriftDepositTx(
   connection: Connection,
   walletPubkey: PublicKey,
   token: string,
-  amount: number
+  amount: number,
+  cluster: SolanaCluster = 'mainnet-beta'
 ): Promise<Transaction> {
   const tx = new Transaction();
 
@@ -148,9 +164,11 @@ export async function buildDriftDepositTx(
     // the given mint. We derive it here; the UI layer should ensure the ATA
     // exists before broadcasting.
     const { getAssociatedTokenAddress } = await import('@solana/spl-token');
-    const { MainnetSpotMarkets } = await import('@drift-labs/sdk');
+    // Use devnet spot markets on devnet, mainnet otherwise.
+    const { MainnetSpotMarkets, DevnetSpotMarkets } = await import('@drift-labs/sdk');
+    const spotMarkets = cluster === 'devnet' ? DevnetSpotMarkets : MainnetSpotMarkets;
 
-    const mintConfig = MainnetSpotMarkets.find(
+    const mintConfig = spotMarkets.find(
       (m) => m.marketIndex === marketIndex
     );
     if (!mintConfig) throw new Error('Mint config not found for market index');
@@ -161,7 +179,7 @@ export async function buildDriftDepositTx(
       false
     );
 
-    const client = await buildDriftClient(connection, walletPubkey);
+    const client = await buildDriftClient(connection, walletPubkey, cluster);
     try {
       const ix: TransactionInstruction = await client.getDepositInstruction(
         lamports,
@@ -189,6 +207,7 @@ export async function buildDriftDepositTx(
  * @param token  "USDC" | "USDT".
  * @param amount  Amount in token units (ignored when isFullWithdrawal=true).
  * @param isFullWithdrawal  When true, uses u64 max to signal full withdrawal.
+ * @param cluster  Target cluster — 'mainnet-beta' (default) or 'devnet' (test mode).
  * @returns An unsigned legacy Transaction.
  */
 export async function buildDriftWithdrawTx(
@@ -196,7 +215,8 @@ export async function buildDriftWithdrawTx(
   walletPubkey: PublicKey,
   token: string,
   amount: number,
-  isFullWithdrawal = false
+  isFullWithdrawal = false,
+  cluster: SolanaCluster = 'mainnet-beta'
 ): Promise<Transaction> {
   const tx = new Transaction();
 
@@ -211,9 +231,11 @@ export async function buildDriftWithdrawTx(
       : new BN(Math.round(amount * 10 ** decimals));
 
     const { getAssociatedTokenAddress } = await import('@solana/spl-token');
-    const { MainnetSpotMarkets } = await import('@drift-labs/sdk');
+    // Use devnet spot markets on devnet, mainnet otherwise.
+    const { MainnetSpotMarkets, DevnetSpotMarkets } = await import('@drift-labs/sdk');
+    const spotMarkets = cluster === 'devnet' ? DevnetSpotMarkets : MainnetSpotMarkets;
 
-    const mintConfig = MainnetSpotMarkets.find(
+    const mintConfig = spotMarkets.find(
       (m) => m.marketIndex === marketIndex
     );
     if (!mintConfig) throw new Error('Mint config not found for market index');
@@ -224,7 +246,7 @@ export async function buildDriftWithdrawTx(
       false
     );
 
-    const client = await buildDriftClient(connection, walletPubkey);
+    const client = await buildDriftClient(connection, walletPubkey, cluster);
     try {
       // getWithdrawIx returns a single instruction; getWithdrawalIxs (plural)
       // returns an array — use the singular form for a simple withdrawal.
@@ -254,11 +276,15 @@ export async function buildDriftWithdrawTx(
  *
  * REST endpoint:
  *   GET https://mainnet-beta.api.drift.trade/userPositions?userPublicKey={wallet}
+ *   GET https://master.api.drift.trade/userPositions?userPublicKey={wallet}  (devnet)
+ *
+ * @param cluster  Target cluster — 'mainnet-beta' (default) or 'devnet' (test mode).
  */
 export async function getDriftPosition(
   connection: Connection,
   walletPubkey: PublicKey,
-  token: string
+  token: string,
+  cluster: SolanaCluster = 'mainnet-beta'
 ): Promise<DriftPosition> {
   const zero: DriftPosition = { currentValueUsd: 0, yieldTokenBalance: 0 };
 
@@ -268,7 +294,7 @@ export async function getDriftPosition(
 
     // ── Try REST API first ────────────────────────────────────────────────
     try {
-      const url = `${DRIFT_REST_BASE}/userPositions?userPublicKey=${walletPubkey.toBase58()}`;
+      const url = `${DRIFT_REST_BASE[cluster]}/userPositions?userPublicKey=${walletPubkey.toBase58()}`;
       const res = await fetch(url, { next: { revalidate: 30 } } as RequestInit);
 
       if (res.ok) {
@@ -318,7 +344,7 @@ export async function getDriftPosition(
     }
 
     // ── SDK fallback ──────────────────────────────────────────────────────
-    const client = await buildDriftClient(connection, walletPubkey);
+    const client = await buildDriftClient(connection, walletPubkey, cluster);
     try {
       const spotPos = client.getSpotPosition(marketIndex, 0);
       if (!spotPos) return zero;

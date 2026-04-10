@@ -36,12 +36,18 @@ export async function getOnChainValue(
         return await getOndoOnChainValue(walletAddress, token);
       case 'kamino':
       case 'kamino_multiply': {
+        // TODO: Pass test mode cluster through from the server-side caller so
+        // devnet positions can be queried in test mode. For now we always use
+        // mainnet — test mode positions have no on-chain state on mainnet anyway.
+        // To fix: read the vantor_test_mode cookie in the position refresh route
+        // and pass cluster: SolanaCluster down to getOnChainValue.
         const { getKaminoPosition } = await import('./contracts/solana/kamino');
         const { Connection, PublicKey } = await import('@solana/web3.js');
         const conn = new Connection(process.env.SOLANA_RPC_URL ?? 'https://api.mainnet-beta.solana.com', 'confirmed');
         return await getKaminoPosition(conn, new PublicKey(walletAddress), token);
       }
       case 'drift': {
+        // TODO: same as above — pass cluster from caller once cookie is read server-side.
         const { getDriftPosition } = await import('./contracts/solana/drift');
         const { Connection, PublicKey } = await import('@solana/web3.js');
         const conn = new Connection(process.env.SOLANA_RPC_URL ?? 'https://api.mainnet-beta.solana.com', 'confirmed');
