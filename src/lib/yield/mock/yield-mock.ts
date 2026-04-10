@@ -95,15 +95,6 @@ const PROTOCOL_META: Record<YieldProtocolId, Omit<YieldProtocolInfo, 'id'>> = {
     riskFactors: { smartContract: 2, counterparty: 3, liquidity: 2, regulatory: 3 },
     kycRequired: false,
   },
-  maple: {
-    name: 'Maple Finance',
-    chain: 'ethereum',
-    supportedTokens: ['USDC'],
-    description: 'Institutional lending marketplace. Earn yield from undercollateralized loans to vetted crypto institutions.',
-    riskLevel: 'medium',
-    riskFactors: { smartContract: 2, counterparty: 3, liquidity: 2, regulatory: 1 },
-    kycRequired: true,
-  },
   drift: {
     name: 'Drift Earn',
     chain: 'solana',
@@ -125,7 +116,6 @@ const MOCK_APYS: Record<YieldProtocolId, { supply: number; reward: number }> = {
   ondo:              { supply: 0.0475, reward: 0 },
   sky:               { supply: 0.0625, reward: 0 },
   ethena:            { supply: 0.1720, reward: 0.0380 },
-  maple:             { supply: 0.0890, reward: 0 },
   drift:             { supply: 0.1250, reward: 0.0150 },
 };
 
@@ -139,7 +129,6 @@ const YIELD_TOKENS: Record<YieldProtocolId, string> = {
   ondo: 'USDY',
   sky: 'sUSDS',
   ethena: 'sUSDe',
-  maple: 'mpUSDC',
   drift: 'dUSDC',
 };
 
@@ -228,7 +217,7 @@ export class MockYieldAdapter implements IYieldProtocol {
       metadata: { tokenBalance: newTokenBalance },
     });
 
-    const needsProviderRef = ['ondo', 'maple'].includes(this.protocol);
+    const needsProviderRef = ['ondo'].includes(this.protocol);
     return {
       txHash: needsProviderRef ? null : `0xmock_${randomUUID().replace(/-/g, '').slice(0, 40)}`,
       providerRef: needsProviderRef ? `${this.protocol.toUpperCase()}-${randomUUID().slice(0, 8).toUpperCase()}` : undefined,
@@ -277,7 +266,7 @@ export class MockYieldAdapter implements IYieldProtocol {
       }
     }
 
-    const needsProviderRef = ['ondo', 'maple'].includes(this.protocol);
+    const needsProviderRef = ['ondo'].includes(this.protocol);
     return {
       txHash: needsProviderRef ? null : `0xmock_${randomUUID().replace(/-/g, '').slice(0, 40)}`,
       providerRef: needsProviderRef ? `${this.protocol.toUpperCase()}-${randomUUID().slice(0, 8).toUpperCase()}` : undefined,

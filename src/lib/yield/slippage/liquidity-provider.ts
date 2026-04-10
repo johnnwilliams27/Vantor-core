@@ -22,7 +22,6 @@ const MOCK_POOL_DATA: Record<YieldProtocolId, { tvl: number; utilization: number
   ondo:               { tvl: 600_000_000,   utilization: 0.55, poolType: 'stablecoin' },
   sky:                { tvl: 1_200_000_000, utilization: 0.60, poolType: 'stablecoin' },
   ethena:             { tvl: 3_800_000_000, utilization: 0.78, poolType: 'volatile' },
-  maple:              { tvl: 180_000_000,   utilization: 0.85, poolType: 'stablecoin' },
   drift:              { tvl: 95_000_000,    utilization: 0.72, poolType: 'volatile' },
 };
 

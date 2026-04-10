@@ -35,8 +35,8 @@ const PROTOCOL_LOGOS: Record<string, string> = {
   ondo: '/partners/Ondo_Logo_0.svg',
   sky: '/partners/sky_logo.png',
   ethena: '/partners/ethena_logo.png',
-  maple: '/partners/maple_logo.svg',
   drift: '/partners/drift_logo.svg',
+  compound_v3: '/partners/compound-white.png',
 };
 
 const RISK_COLORS: Record<string, string> = {
@@ -562,12 +562,21 @@ export function YieldRatesTable() {
               <div className="flex items-center justify-between px-5 pt-5 pb-3">
                 {PROTOCOL_LOGOS[p.id] ? (
                   <div className="flex items-center gap-2">
-                    <Image src={PROTOCOL_LOGOS[p.id]} alt={p.name} width={64} height={38} className="h-[38px] w-auto object-contain" unoptimized />
-                    {p.id === 'ondo' && ondoKycVerified && (
-                      <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-[10px]">
-                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                        KYC Verified
-                      </Badge>
+                    <div className="h-[38px] flex items-center">
+                      <Image src={PROTOCOL_LOGOS[p.id]} alt={p.name} width={p.id === 'compound_v3' ? 180 : 64} height={p.id === 'compound_v3' ? 60 : 38} className={`${p.id === 'compound_v3' ? 'h-[60px]' : 'h-[38px]'} w-auto object-contain`} unoptimized />
+                    </div>
+                    {p.kycRequired && (
+                      p.id === 'ondo' && ondoKycVerified ? (
+                        <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-[10px]">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          KYC Verified
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px] text-yellow-500 border-yellow-500/30">
+                          <Lock className="h-3 w-3 mr-1" />
+                          KYC Required
+                        </Badge>
+                      )
                     )}
                   </div>
                 ) : (
@@ -628,15 +637,20 @@ export function YieldRatesTable() {
                   </table>
                 </div>
 
-                <div className="flex items-center justify-between pt-1">
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    {p.kycRequired && (
-                      <>
-                        <Lock className="h-3 w-3" />
-                        KYC Required
-                      </>
-                    )}
-                  </div>
+                {(() => {
+                  const latestFetch = p.rates
+                    .map((r) => (r as unknown as { fetchedAt?: string }).fetchedAt)
+                    .filter(Boolean)
+                    .sort()
+                    .pop();
+                  return latestFetch ? (
+                    <p className="text-[10px] text-muted-foreground">
+                      Last updated: {new Date(latestFetch).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'medium' })} ({formatRelativeTime(latestFetch)})
+                    </p>
+                  ) : null;
+                })()}
+
+                <div className="flex items-center justify-end pt-1">
                   <UpgradeGate feature="Deposit into Yield">
                     <Button size="sm" className="gap-1" onClick={() => handleOndoDeposit(p.id)}>
                       <ArrowUpRight className="h-3.5 w-3.5" />

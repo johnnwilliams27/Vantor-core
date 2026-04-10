@@ -10,7 +10,6 @@ export type YieldProtocolId =
   | 'ondo'
   | 'sky'
   | 'ethena'
-  | 'maple'
   | 'drift';
 export type YieldRiskLevel = 'low' | 'medium' | 'high';
 

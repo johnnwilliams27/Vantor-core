@@ -40,7 +40,6 @@ export async function getOnChainValue(
       case 'drift':
         return await getDriftOnChainValue(walletAddress, token, storedValue, storedTokenBalance);
       case 'morpho':
-      case 'maple':
       default:
         return { currentValueUsd: storedValue, yieldTokenBalance: storedTokenBalance };
     }
@@ -52,5 +51,5 @@ export async function getOnChainValue(
 
 export const ALL_YIELD_PROTOCOLS: YieldProtocolId[] = [
   'aave_v3', 'compound_v3', 'sky', 'ondo', 'morpho', 'morpho_steakhouse',
-  'kamino', 'kamino_multiply', 'maple', 'ethena', 'drift',
+  'kamino', 'kamino_multiply', 'ethena', 'drift',
 ];

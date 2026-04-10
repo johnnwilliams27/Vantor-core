@@ -24,7 +24,6 @@ const PROTOCOL_LABELS: Record<string, string> = {
   ondo: 'Ondo',
   sky: 'Sky sUSDS',
   ethena: 'Ethena',
-  maple: 'Maple',
   drift: 'Drift',
 };
 
@@ -37,7 +36,6 @@ const PROTOCOL_COLORS: Record<string, string> = {
   ondo: '#06b6d4',
   sky: '#0ea5e9',
   ethena: '#f43f5e',
-  maple: '#f59e0b',
   drift: '#a855f7',
 };
 
@@ -93,8 +91,8 @@ export function YieldEarned() {
     fill: PROTOCOL_COLORS[protocol] ?? '#94a3b8',
   }));
 
-  // Total deposited
-  const totalDeposited = (positions ?? []).reduce(
+  // Total deployed
+  const totalDeployed = (positions ?? []).reduce(
     (sum, p) => sum + (p.current_value_usd ? parseFloat(p.current_value_usd) : 0),
     0,
   );
@@ -126,7 +124,7 @@ export function YieldEarned() {
       <CardContent>
         <div className="space-y-4">
           <div className="flex justify-between text-sm text-foreground">
-            <span>Total Deposited: {formatUsd(totalDeposited)}</span>
+            <span>Total Deployed: {formatUsd(totalDeployed)}</span>
             <span>{positions.length} active position{positions.length !== 1 ? 's' : ''}</span>
           </div>
           {chartData.length > 0 && (

@@ -18,7 +18,7 @@ const TOKEN_COLORS: Record<string, string> = {
 const PROTOCOL_LABELS: Record<string, string> = {
   aave_v3: 'Aave V3', morpho: 'Morpho', morpho_steakhouse: 'Morpho Steakhouse',
   kamino: 'Kamino', kamino_multiply: 'Kamino Multiply', ondo: 'Ondo (USDY)',
-  sky: 'Sky sUSDS', ethena: 'Ethena sUSDe', maple: 'Maple', drift: 'Drift',
+  sky: 'Sky sUSDS', ethena: 'Ethena sUSDe', drift: 'Drift',
   compound_v3: 'Compound V3',
 };
 
@@ -31,7 +31,6 @@ const PROTOCOL_LOGOS: Record<string, string> = {
   ondo: '/partners/Ondo_Logo_0.svg',
   sky: '/partners/sky_logo.png',
   ethena: '/partners/ethena_logo.png',
-  maple: '/partners/maple_logo.svg',
   drift: '/partners/drift_logo.svg',
 };
 
