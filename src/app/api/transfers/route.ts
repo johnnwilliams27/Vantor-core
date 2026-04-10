@@ -8,7 +8,7 @@ import { writeAuditLog } from '@/lib/audit/logger';
 import { NotificationService } from '@/lib/notifications/service';
 import { actionNotificationEmail } from '@/lib/notifications/email-templates';
 import { screenAddressWithCache } from '@/lib/compliance/screening';
-import { isAboveTravelRuleThreshold, createTravelRuleTransfer } from '@/lib/compliance/travel-rule';
+import { checkTransferEligibility } from '@/lib/sanctions/eligibility';
 import { z } from 'zod';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 import { requirePaidTier, tierGateResponse, TierGateError } from '@/lib/auth/tier-gate';
@@ -25,14 +25,7 @@ const schema = z.object({
   invoiceId: z.string().uuid().optional(),
   erpConfigId: z.string().uuid().optional(),
   scheduledFor: z.string().datetime().optional(),
-  // Travel Rule fields (required when amount >= threshold)
-  travelRule: z.object({
-    originatorName: z.string().min(1),
-    originatorAddress: z.string().optional(),
-    beneficiaryName: z.string().min(1),
-    beneficiaryAddress: z.string().optional(),
-    beneficiaryVasp: z.string().optional(),
-  }).optional(),
+  counterpartyId: z.string().uuid().optional(),
 });
 
 export async function GET(req: NextRequest) {
@@ -121,13 +114,26 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // --- Travel Rule check ---
-  const amountUsd = Number(parsed.data.amount);
-  if (isAboveTravelRuleThreshold(amountUsd) && !parsed.data.travelRule) {
-    return NextResponse.json(
-      { error: 'Travel Rule data required for transfers above threshold', requiresTravelRule: true },
-      { status: 400 }
-    );
+  // --- Counterparty eligibility check (OpenSanctions) ---
+  if (parsed.data.counterpartyId && enterpriseId) {
+    try {
+      const eligibility = await checkTransferEligibility(
+        parsed.data.counterpartyId,
+        enterpriseId,
+        session.user.id,
+      );
+      if (!eligibility.eligible) {
+        return NextResponse.json(
+          { error: `Transfer blocked: counterparty ${eligibility.reason}`, eligibility },
+          { status: 403 },
+        );
+      }
+    } catch (err) {
+      return NextResponse.json(
+        { error: `Counterparty eligibility check failed: ${(err as Error).message}` },
+        { status: 500 },
+      );
+    }
   }
 
   const isScheduled = !!parsed.data.scheduledFor;
@@ -148,6 +154,7 @@ export async function POST(req: NextRequest) {
       memo: parsed.data.memo ?? null,
       invoice_id: parsed.data.invoiceId ?? null,
       erp_config_id: parsed.data.erpConfigId ?? null,
+      counterparty_id: parsed.data.counterpartyId ?? null,
       scheduled_for: parsed.data.scheduledFor ?? null,
       status: 'pending',
     })
@@ -194,28 +201,6 @@ export async function POST(req: NextRequest) {
       },
       actorId: session.user.id,
     }).catch(() => {});
-  }
-
-  // --- Submit Travel Rule data if applicable ---
-  if (parsed.data.travelRule && isAboveTravelRuleThreshold(amountUsd)) {
-    try {
-      await createTravelRuleTransfer(session.user.id, transfer.id, {
-        direction: 'outgoing',
-        amountUsd,
-        originatorName: parsed.data.travelRule.originatorName,
-        originatorAddress: parsed.data.travelRule.originatorAddress,
-        originatorWallet: transfer.from_address ?? '',
-        originatorChain: parsed.data.chain,
-        beneficiaryName: parsed.data.travelRule.beneficiaryName,
-        beneficiaryAddress: parsed.data.travelRule.beneficiaryAddress,
-        beneficiaryWallet: parsed.data.toAddress,
-        beneficiaryChain: parsed.data.chain,
-        beneficiaryVasp: parsed.data.travelRule.beneficiaryVasp,
-      });
-    } catch (err) {
-      console.error('[TravelRule] Submission failed:', err);
-      // Non-blocking: transfer proceeds, travel rule recorded as failed
-    }
   }
 
   // Execute immediately if not scheduled

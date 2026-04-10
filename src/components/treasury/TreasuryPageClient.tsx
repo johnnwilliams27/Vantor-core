@@ -4,6 +4,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { TreasuryRulesForm } from './TreasuryRulesForm';
 import { RecommendationList } from './RecommendationList';
 import { ForecastingPageClient } from './ForecastingPageClient';
+import { TreasuryHealthCard } from './TreasuryHealthCard';
 import { YieldPositionsSummary } from './YieldPositionsSummary';
 import { TabNav } from '@/components/ui/tab-nav';
 import { ReviewRecommendationModal } from './ReviewRecommendationModal';
@@ -34,6 +35,7 @@ export function TreasuryPageClient() {
 
       {tab === 'overview' && (
         <div className="space-y-6">
+          <TreasuryHealthCard />
           <YieldPositionsSummary />
           <RecommendationList />
         </div>

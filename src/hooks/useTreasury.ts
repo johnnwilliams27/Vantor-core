@@ -12,6 +12,24 @@ import type {
 
 // ---- Overview ----
 
+export interface TreasuryHealthAnalysis {
+  status: 'healthy' | 'warning' | 'critical';
+  signal: 'surplus' | 'shortage' | 'balanced';
+  totalObligationsUsd: number;
+  safetyBufferTargetUsd: number;
+  surplusUsd: number;
+  lookaheadDays: number;
+  obligationCount: number;
+  nearestObligation: {
+    id: string;
+    source: string;
+    label: string;
+    amountUsd: number;
+    dueDate: string;
+  } | null;
+  ruleLabel: string;
+}
+
 export interface TreasuryOverview {
   totalBankBalanceUsd: number;
   totalCryptoBalanceUsd: number;
@@ -32,6 +50,8 @@ export interface TreasuryOverview {
     usdValue: number;
   }>;
   priceSource: 'mock' | 'coingecko';
+  healthAnalysis: TreasuryHealthAnalysis | null;
+  lastRecommendationAt: string | null;
   pendingRecommendations: Array<{
     id: string;
     action: string;

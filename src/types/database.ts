@@ -47,7 +47,11 @@ export type AuditAction =
   | 'scheduled_operation_execute' | 'scheduled_operation_deviation'
   | 'bridge_execute'
   | 'fiat_payment_create' | 'fiat_payment_execute'
-  | 'fiat_payment_cancel' | 'fiat_payment_settle';
+  | 'fiat_payment_cancel' | 'fiat_payment_settle'
+  | 'counterparty_create' | 'counterparty_screen'
+  | 'screening_case_open' | 'screening_case_clear' | 'screening_case_escalate'
+  | 'screening_case_block' | 'screening_case_reassign' | 'screening_case_note'
+  | 'screening_adhoc_lookup';
 
 export interface UserProfile {
   id: string;

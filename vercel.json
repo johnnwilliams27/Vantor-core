@@ -28,6 +28,10 @@
     {
       "path": "/api/cron/fx-rates",
       "schedule": "0 0,12 * * *"
+    },
+    {
+      "path": "/api/cron/rescreen-counterparties",
+      "schedule": "0 2 * * 1"
     }
   ]
 }
