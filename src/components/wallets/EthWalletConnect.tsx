@@ -38,7 +38,19 @@ export function EthWalletConnect() {
       }
 
       setLinked(true);
-      queryClient.invalidateQueries({ queryKey: ['wallets'] });
+
+      // Trigger an immediate balance refresh so the newly-linked wallet
+      // isn't stuck showing "—" in the UI. Fire-and-forget — if it fails
+      // the nightly cron will pick it up, and the user can always refresh
+      // manually.
+      fetch('/api/balances/refresh', { method: 'POST' })
+        .catch((err) => console.warn('[EthWalletConnect] balance refresh failed', err))
+        .finally(() => {
+          queryClient.invalidateQueries({ queryKey: ['wallets'] });
+          queryClient.invalidateQueries({ queryKey: ['treasury-overview'] });
+          queryClient.invalidateQueries({ queryKey: ['balances'] });
+        });
+
       toast({ title: 'Wallet linked', description: `${address.slice(0, 8)}… linked successfully`, variant: 'success' });
     } catch (err) {
       toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });

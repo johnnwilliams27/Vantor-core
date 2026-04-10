@@ -30,7 +30,17 @@ export function SolWalletConnect() {
       setLinked(true);
       setAddress('');
       setLabel('');
-      queryClient.invalidateQueries({ queryKey: ['wallets'] });
+
+      // Trigger an immediate balance refresh so the newly-linked wallet
+      // isn't stuck showing "—" in the UI. Fire-and-forget.
+      fetch('/api/balances/refresh', { method: 'POST' })
+        .catch((err) => console.warn('[SolWalletConnect] balance refresh failed', err))
+        .finally(() => {
+          queryClient.invalidateQueries({ queryKey: ['wallets'] });
+          queryClient.invalidateQueries({ queryKey: ['treasury-overview'] });
+          queryClient.invalidateQueries({ queryKey: ['balances'] });
+        });
+
       toast({ title: 'Wallet linked', description: 'Solana wallet added successfully', variant: 'success' });
     } catch (err) {
       toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
