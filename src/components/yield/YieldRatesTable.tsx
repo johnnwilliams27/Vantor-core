@@ -7,7 +7,7 @@ import { CardSpinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { ArrowUpRight, ArrowLeft, Shield, Lock, Loader2, CheckCircle2, X } from 'lucide-react';
+import { ArrowUpRight, ArrowLeft, Shield, Lock, Loader2, CheckCircle2, X, Info } from 'lucide-react';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { useYieldProtocols, useYieldDeposit, useSlippageCheck } from '@/hooks/useYield';
 import { useOnChainDeposit, type DepositStep } from '@/hooks/useOnChainDeposit';
@@ -42,6 +42,23 @@ const PROTOCOL_LOGOS: Record<string, string> = {
   ethena: '/partners/ethena_logo.png',
   drift: '/partners/drift_logo.svg',
   compound_v3: '/partners/compound-white.png',
+};
+
+/**
+ * Attribution for where each protocol's APY data is sourced from.
+ * Shown below the rates table on each protocol card.
+ */
+const PROTOCOL_RATE_SOURCE: Record<string, string> = {
+  aave_v3: 'On-chain: Aave V3 Pool.getReserveData()',
+  compound_v3: 'On-chain: Compound V3 Comet.getSupplyRate()',
+  morpho_steakhouse: 'Morpho Blue API (blue-api.morpho.org)',
+  morpho_reservoir: 'Morpho Blue API (blue-api.morpho.org)',
+  sky: 'On-chain: sUSDS.ssr() (Sky Savings Rate)',
+  ethena: 'Ethena API (ethena.fi)',
+  ondo: 'Ondo Finance (fixed rate)',
+  kamino: 'Kamino API (api.kamino.finance)',
+  kamino_multiply: 'Kamino API (api.kamino.finance)',
+  drift: 'Drift API (drift.trade)',
 };
 
 const RISK_COLORS: Record<string, string> = {
@@ -728,11 +745,22 @@ export function YieldRatesTable() {
                     .filter(Boolean)
                     .sort()
                     .pop();
-                  return latestFetch ? (
-                    <p className="text-[10px] text-muted-foreground">
-                      Last updated: {new Date(latestFetch).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'medium' })} ({formatRelativeTime(latestFetch)})
-                    </p>
-                  ) : null;
+                  const source = PROTOCOL_RATE_SOURCE[p.id];
+                  return (
+                    <div className="text-[10px] text-muted-foreground space-y-0.5">
+                      {source && (
+                        <p className="flex items-center gap-1">
+                          <Info className="h-2.5 w-2.5 shrink-0" />
+                          Rate source: {source}
+                        </p>
+                      )}
+                      {latestFetch && (
+                        <p>
+                          Last updated: {new Date(latestFetch).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'medium' })} ({formatRelativeTime(latestFetch)})
+                        </p>
+                      )}
+                    </div>
+                  );
                 })()}
 
                 <div className="flex items-center justify-end pt-1">
