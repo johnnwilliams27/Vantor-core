@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth/nextauth.config';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
-import { getYieldAdapter } from '@/lib/yield/factory';
+import { getYieldAdapter, getOnChainValue } from '@/lib/yield/factory';
 import { computeAccruedYield } from '@/lib/yield/position-accounting';
 import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
 import type { YieldProtocolId } from '@/lib/yield/interface';
@@ -54,10 +54,12 @@ export async function POST(
   const rate = await adapter.getAPY(position.underlying_token as TokenSymbol);
 
   // Get current on-chain value
-  const onChain = await adapter.getOnChainValue(
+  const onChain = await getOnChainValue(
+    position.protocol as YieldProtocolId,
     walletAddress,
     position.underlying_token as TokenSymbol,
-    position.yield_token,
+    parseFloat(position.current_value_usd),
+    parseFloat(position.yield_token_balance || '0'),
   );
 
   const currentValue = onChain.currentValueUsd;
