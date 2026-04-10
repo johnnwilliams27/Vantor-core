@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
 
   const { protocol, token, amount, walletAddress, chain, txHash, yieldToken, tokensReceived } = parsed.data;
 
-  const COMING_SOON_PROTOCOLS = ['sky', 'ethena', 'ondo'];
+  const COMING_SOON_PROTOCOLS = ['sky', 'ethena', 'ondo', 'drift'];
   if (COMING_SOON_PROTOCOLS.includes(protocol)) {
     return NextResponse.json(
       { error: 'This protocol is coming soon and not yet available for deposits' },

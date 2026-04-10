@@ -24,7 +24,7 @@ import type { RiskFactors } from '@/lib/yield/interface';
 import type { YieldProtocolWithRates } from '@/hooks/useYield';
 import { UpgradeGate } from '@/components/ui/upgrade-gate';
 
-const COMING_SOON_PROTOCOLS = new Set(['sky', 'ethena', 'ondo']);
+const COMING_SOON_PROTOCOLS = new Set(['sky', 'ethena', 'ondo', 'drift']);
 
 const CHAIN_LABELS: Record<string, string> = {
   ethereum: 'Ethereum',
