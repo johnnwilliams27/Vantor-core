@@ -35,18 +35,22 @@ export function UpgradeFlow({ targetTier, onCancel }: UpgradeFlowProps) {
   const [mounted, setMounted] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
 
-  // KYB requires a Persona template — skip if not configured or already completed
-  // PERSONA_KYB_TEMPLATE_ID is set server-side; expose via a public flag
+  // Persona KYB + KYC are both gated on their respective public env flags.
+  // If Persona isn't configured in this environment (or the user has already
+  // completed it), skip the step. Set NEXT_PUBLIC_PERSONA_KYB_ENABLED /
+  // NEXT_PUBLIC_PERSONA_KYC_ENABLED when wiring up Persona in prod.
   const kybConfigured = !!process.env.NEXT_PUBLIC_PERSONA_KYB_ENABLED;
+  const kycConfigured = !!process.env.NEXT_PUBLIC_PERSONA_KYC_ENABLED;
   const kybDone = session?.user?.kyb_status === 'completed';
   const kycDone = session?.user?.kyc_status === 'completed';
   const skipKyb = !kybConfigured || kybDone;
+  const skipKyc = !kycConfigured || kycDone;
   const isLite = session?.user?.subscription_tier === 'lite' || !session?.user?.subscription_tier;
 
   // Compute initial step ONCE
   // Sandbox warning only shows when upgrading from Lite (first paid upgrade)
   const initialStepRef = useRef<UpgradeStep>(
-    !skipKyb ? 'kyb' : !kycDone ? 'kyc' : (isLite ? 'sandbox_warning' : 'checkout')
+    !skipKyb ? 'kyb' : !skipKyc ? 'kyc' : (isLite ? 'sandbox_warning' : 'checkout')
   );
   const [step, setStep] = useState<UpgradeStep>(initialStepRef.current);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
@@ -66,7 +70,8 @@ export function UpgradeFlow({ targetTier, onCancel }: UpgradeFlowProps) {
     }, 250);
   };
 
-  const handleKybComplete = () => animateToStep('kyc');
+  const handleKybComplete = () =>
+    animateToStep(!skipKyc ? 'kyc' : isLite ? 'sandbox_warning' : 'checkout');
   const handleKycComplete = () => animateToStep(isLite ? 'sandbox_warning' : 'checkout');
   const handleSandboxAcknowledged = () => animateToStep('checkout');
 
@@ -105,7 +110,7 @@ export function UpgradeFlow({ targetTier, onCancel }: UpgradeFlowProps) {
   const progressSteps = (() => {
     const steps: { key: UpgradeStep; label: string; icon: typeof Shield }[] = [];
     if (!skipKyb) steps.push({ key: 'kyb', label: 'Verify Business', icon: Shield });
-    if (!kycDone) steps.push({ key: 'kyc', label: 'Verify Identity', icon: Shield });
+    if (!skipKyc) steps.push({ key: 'kyc', label: 'Verify Identity', icon: Shield });
     if (isLite) steps.push({ key: 'sandbox_warning', label: 'Sandbox Notice', icon: AlertTriangle });
     steps.push({ key: 'checkout', label: 'Payment', icon: CreditCard });
     return steps;
