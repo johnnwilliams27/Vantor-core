@@ -95,11 +95,16 @@ export async function POST(req: NextRequest) {
 
     if (existingPos) {
       const newDeposited = parseFloat(existingPos.deposited_amount) + parseFloat(amount);
+      const newCurrentValue = parseFloat(existingPos.current_value_usd) + parseFloat(amount);
+      const newYieldTokenBalance = parseFloat(existingPos.yield_token_balance || '0') + result.tokensReceived;
+      const newAccruedYield = Math.max(0, newCurrentValue - newDeposited);
       const { data: updated } = await supabase
         .from('yield_positions')
         .update({
           deposited_amount: newDeposited,
-          current_value_usd: newDeposited,
+          yield_token_balance: newYieldTokenBalance,
+          current_value_usd: newCurrentValue,
+          accrued_yield_usd: newAccruedYield,
           apy_snapshot: result.estimatedAPY,
           last_refreshed_at: new Date().toISOString(),
         })
@@ -118,8 +123,10 @@ export async function POST(req: NextRequest) {
           chain,
           underlying_token: token,
           yield_token: result.yieldToken,
+          yield_token_balance: result.tokensReceived,
           deposited_amount: parseFloat(amount),
           current_value_usd: parseFloat(amount),
+          accrued_yield_usd: 0,
           apy_snapshot: result.estimatedAPY,
           last_refreshed_at: new Date().toISOString(),
         })
