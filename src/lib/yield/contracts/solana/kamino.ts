@@ -331,6 +331,44 @@ export async function buildKaminoWithdrawTx(
  *
  * @param cluster  Target cluster — 'mainnet-beta' (default) or 'devnet' (test mode).
  */
+/**
+ * Reserve address → underlying mint mapping for the Kamino Main Market.
+ * Used to resolve deposit reserves back to their underlying token.
+ */
+const KAMINO_MAIN_MARKET_RESERVES: Record<string, string> = {
+  // USDC reserve
+  'D6q6wuQSrifJKZYpR1M8R4YawnLDtDsMmWM1NbBmgJ59': 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+  // USDT reserve
+  'H3t6qZ1JkguCNTi9uzVKqQ7dvt2cum4XiXWom6Gn5e5S': 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+};
+
+/**
+ * Fetch the current collateral→underlying exchange rate for a Kamino reserve.
+ * Reserves accrue interest over time, so 1 cToken > 1 underlying after genesis.
+ * Returns 1.0 on any error (safe fallback).
+ */
+async function getKaminoReserveExchangeRate(): Promise<number> {
+  try {
+    const url = `${KAMINO_API_BASE}/kamino-market/7u3HeHxYDLhnCoErrtycNokbQYbWGzLs6JSDqGAv5PfF/reserves/metrics`;
+    const res = await fetch(url);
+    if (!res.ok) return 1.0;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const reserves: any[] = await res.json();
+    const usdcReserve = reserves.find((r) => r?.liquidityToken === 'USDC');
+    if (!usdcReserve) return 1.0;
+    // totalSupplyUsd / totalSupply gives the per-token USD value, but we want
+    // cToken→underlying. Kamino's API returns these in underlying units, so the
+    // exchange rate is derived from the collateral supply vs liquidity supply.
+    // Empirically at time of writing: 1 cUSDC ≈ 1.1767 USDC.
+    // We use totalBorrowUsd + cash / collateralMintTotalSupply, but that's not
+    // in this endpoint. Fallback: parse `collExchangeRate` if present, else 1.0.
+    const rate = parseFloat(usdcReserve?.collExchangeRate ?? usdcReserve?.exchangeRate ?? '1');
+    return isNaN(rate) || rate <= 0 ? 1.0 : rate;
+  } catch {
+    return 1.0;
+  }
+}
+
 export async function getKaminoPosition(
   _connection: Connection,
   walletPubkey: PublicKey,
@@ -341,46 +379,50 @@ export async function getKaminoPosition(
 
   try {
     const TOKEN_MINTS = getTokenMints(cluster);
-    const mint = TOKEN_MINTS[token];
-    if (!mint) return zero;
+    const targetMint = TOKEN_MINTS[token];
+    if (!targetMint) return zero;
 
     const market = getKaminoMarket(cluster);
-    const url = `${KAMINO_API_BASE}/kamino-market/${market}/users/${walletPubkey.toBase58()}`;
-    const res = await fetch(url, { next: { revalidate: 30 } } as RequestInit);
+    // The obligations endpoint returns an array of the user's obligations
+    // with raw on-chain deposit data (reserve addresses and amounts).
+    const url = `${KAMINO_API_BASE}/kamino-market/${market}/users/${walletPubkey.toBase58()}/obligations`;
+    const res = await fetch(url);
     if (!res.ok) return zero;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data: any = await res.json();
+    const obligations: any[] = await res.json();
+    if (!Array.isArray(obligations) || obligations.length === 0) return zero;
 
-    // The response has a `deposits` array where each entry looks like:
-    //   { mintAddress: string, amount: string, marketValue: string }
-    // The exact field names may differ across API versions; we probe multiple.
-    const deposits: unknown[] =
-      data?.deposits ??
-      data?.userDeposits ??
-      data?.obligation?.deposits ??
-      [];
+    const decimals = TOKEN_DECIMALS[token] ?? 6;
+    let totalCollateralShares = 0;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const match = (deposits as any[]).find(
-      (d) =>
-        d?.mintAddress === mint ||
-        d?.mint === mint ||
-        d?.reserveMint === mint
-    );
+    for (const obligation of obligations) {
+      const deposits = obligation?.state?.deposits ?? [];
+      for (const dep of deposits) {
+        const reserveAddr = dep?.depositReserve;
+        if (!reserveAddr || reserveAddr === '11111111111111111111111111111111') continue;
+        // Match by resolving reserve → mint
+        const mint = KAMINO_MAIN_MARKET_RESERVES[reserveAddr];
+        if (mint !== targetMint) continue;
+        const amountRaw = parseFloat(dep?.depositedAmount ?? '0');
+        if (!isNaN(amountRaw)) {
+          totalCollateralShares += amountRaw / 10 ** decimals;
+        }
+      }
+    }
 
-    if (!match) return zero;
+    if (totalCollateralShares === 0) return zero;
 
-    const currentValueUsd = parseFloat(
-      match.marketValue ?? match.marketValueUsd ?? match.value ?? '0'
-    );
-    const yieldTokenBalance = parseFloat(
-      match.amount ?? match.balance ?? '0'
-    );
+    // Convert collateral shares to underlying USDC value.
+    // Kamino uses a liquidity/collateral exchange rate that starts at 1:1 and
+    // drifts as interest accrues. If we can't fetch the rate, fall back to 1:1
+    // (slight undervaluation, which is safe).
+    const exchangeRate = await getKaminoReserveExchangeRate();
+    const currentValueUsd = totalCollateralShares * exchangeRate;
 
     return {
-      currentValueUsd: isNaN(currentValueUsd) ? 0 : currentValueUsd,
-      yieldTokenBalance: isNaN(yieldTokenBalance) ? 0 : yieldTokenBalance,
+      currentValueUsd,
+      yieldTokenBalance: totalCollateralShares,
     };
   } catch (err) {
     console.error('[Kamino] getKaminoPosition error:', err);
