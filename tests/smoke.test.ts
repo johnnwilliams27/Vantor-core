@@ -11,8 +11,8 @@ describe('vitest smoke test', () => {
   });
 
   it('supports the @/ path alias', async () => {
-    // Import something trivial from src to confirm alias works
-    const { oracle } = await import('@/lib/treasury/oracle').then(m => ({ oracle: m.getStablecoinPrices }));
-    expect(typeof oracle).toBe('function');
+    // Import from src/ to confirm the @/ alias resolves correctly
+    const mod = await import('@/lib/treasury/oracle');
+    expect(typeof mod.getStablecoinPrices).toBe('function');
   });
 });
