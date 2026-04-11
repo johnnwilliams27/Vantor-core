@@ -127,6 +127,7 @@ export interface ForecastQueryMetadata {
   mode: 'stub' | 'real';
   snapshot_taken_at: Date;
   source: string;
+  freshness_ms?: number;
   warnings: string[];
 }
 
