@@ -59,8 +59,34 @@ export function composeVerdict(
     };
   }
 
-  // Step 3: lowest-privilege wins among matching rules
+  // Step 3: lowest-privilege wins among matching rules.
+  // The !r.failure filter is redundant (step 2 already returned on any
+  // failed rule), but kept as defense in depth — if a future refactor
+  // moves the failure check, this filter prevents silent approval.
   const matchingRules = ruleTraces.filter((r) => r.matched && !r.failure);
+
+  // Fail-closed on unknown verdict_contribution values: if a rule somehow
+  // carries a contribution that's none of the 4 known Verdict values plus
+  // null, treat it as block. The schema should prevent this at authoring
+  // time, but runtime corruption or a future enum addition must not
+  // silently fall through to allow_auto.
+  for (const rule of matchingRules) {
+    const c = rule.verdict_contribution;
+    if (
+      c !== null &&
+      c !== 'block' &&
+      c !== 'block_hard_limit' &&
+      c !== 'require_approval' &&
+      c !== 'allow_auto'
+    ) {
+      return {
+        verdict: 'block',
+        source: 'user_rule',
+        invariants_applied: invariants,
+      };
+    }
+  }
+
   let composed: Verdict | null = null;
 
   // 'block' and 'block_hard_limit' from a user rule are both treated as

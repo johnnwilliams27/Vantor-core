@@ -218,6 +218,58 @@ describe('composeVerdict — default deny for non-humans', () => {
   });
 });
 
+describe('composeVerdict — edge cases and hardening', () => {
+  it('hard limit breach wins even when combined with failed rules and ai_recommendation initiator', () => {
+    const rules = [
+      mkRuleTrace(null, false, {
+        reason_code: 'forecast_unavailable',
+        human_readable: 'Forecast down',
+        details: {},
+        affected_condition_path: [],
+      }),
+    ];
+    const result = composeVerdict(mkMovement('ai_recommendation'), rules, true);
+    expect(result.verdict).toBe('block_hard_limit');
+    expect(result.source).toBe('hard_limit');
+  });
+
+  it('schedule + matching allow_auto: no invariants applied (not default_deny, not AI floor)', () => {
+    const rules = [mkRuleTrace('allow_auto', true)];
+    const result = composeVerdict(mkMovement('schedule'), rules, false);
+    expect(result.verdict).toBe('allow_auto');
+    expect(result.invariants_applied).toHaveLength(0);
+  });
+
+  it('schedule + matching block: returns block with source user_rule (not default_deny)', () => {
+    const rules = [mkRuleTrace('block', true)];
+    const result = composeVerdict(mkMovement('schedule'), rules, false);
+    expect(result.verdict).toBe('block');
+    expect(result.source).toBe('user_rule');
+    expect(result.invariants_applied).toHaveLength(0);
+  });
+
+  it('all matching rules with verdict_contribution=null (matched but no-op) falls through to defaults', () => {
+    const rules = [mkRuleTrace(null, true), mkRuleTrace(null, true)];
+    // Human: should fall through to allow_auto
+    const humanResult = composeVerdict(mkMovement('human'), rules, false);
+    expect(humanResult.verdict).toBe('allow_auto');
+
+    // AI: should fall through to default_deny → require_approval
+    const aiResult = composeVerdict(mkMovement('ai_recommendation'), rules, false);
+    expect(aiResult.verdict).toBe('require_approval');
+    expect(aiResult.invariants_applied.some((i) => i.invariant === 'default_deny')).toBe(true);
+  });
+
+  it('defense-in-depth: unknown verdict_contribution value on a matched rule → block', () => {
+    // Runtime data corruption or type bypass produces an unknown Verdict
+    // value. Must not fall through to allow_auto for humans.
+    const rules = [mkRuleTrace('mystery_verdict' as unknown as Verdict, true)];
+    const result = composeVerdict(mkMovement('human'), rules, false);
+    expect(result.verdict).toBe('block');
+    expect(result.source).toBe('user_rule');
+  });
+});
+
 describe('composeVerdict — human default allow', () => {
   it('defaults to allow_auto for human initiator with no matching rules', () => {
     const result = composeVerdict(mkMovement('human'), [], false);
