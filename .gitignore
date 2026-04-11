@@ -17,6 +17,11 @@
 .env.development.local
 .env.test.local
 .env.production.local
+# catch-all for any env file pulled from Vercel or sibling environments
+# (e.g. `vercel env pull .env.vercel-check`) — must come after the explicit
+# rules above so they still take precedence
+.env.vercel*
+.env.*.local
 
 # debug
 npm-debug.log*

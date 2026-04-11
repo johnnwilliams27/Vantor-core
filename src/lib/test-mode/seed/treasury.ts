@@ -33,6 +33,7 @@ export async function seedTreasury(ctx: SeedContext): Promise<void> {
         user_id: userId,
         enterprise_id: enterpriseId,
         label: item.label,
+        amount: item.amount,
         amount_usd: item.amount,
         due_date: dateDaysFromNow(m * 30 + randInt(1, 5)),
         recurrence: 'monthly',
@@ -47,6 +48,7 @@ export async function seedTreasury(ctx: SeedContext): Promise<void> {
       user_id: userId,
       enterprise_id: enterpriseId,
       label: 'Biweekly Payroll',
+      amount: '180000',
       amount_usd: '180000',
       due_date: dateDaysFromNow(i * 14 + randInt(0, 2)),
       recurrence: 'biweekly',
@@ -67,13 +69,15 @@ export async function seedTreasury(ctx: SeedContext): Promise<void> {
       user_id: userId,
       enterprise_id: enterpriseId,
       label: oneTimeItems[i].label,
+      amount: oneTimeItems[i].amount,
       amount_usd: oneTimeItems[i].amount,
       due_date: dateDaysFromNow(randInt(15, 82)),
       is_active: true,
     });
   }
 
-  await supabase.from('manual_obligations').insert(obligations);
+  // Table renamed from manual_obligations → obligations in migration 0041.
+  await supabase.from('obligations').insert(obligations);
 
   // AI recommendations
   const recommendations = [
@@ -127,24 +131,12 @@ export async function seedTreasury(ctx: SeedContext): Promise<void> {
   await supabase.from('ai_recommendations').insert(recommendations);
 
   // Treasury forecast
-  const forecastData: any[] = [];
-  let runningBalance = 2150000;
-  for (let d = 0; d < 90; d++) {
-    const dailyChange = rand(-30000, 25000);
-    runningBalance += dailyChange;
-    forecastData.push({
-      day: d, date: dateDaysFromNow(d),
-      projected_balance: Math.round(runningBalance),
-      obligations_due: d % 14 === 0 ? 180000 : d % 30 < 5 ? rand(5000, 25000) : 0,
-    });
-  }
-
-  await supabase.from('treasury_forecasts').insert({
-    user_id: userId, enterprise_id: enterpriseId,
-    lookahead_days: 90, forecast_data: forecastData,
-    ai_summary: 'Projected cash flow remains healthy over the 90-day window. Key pressure points: biweekly payroll cycles and the annual audit fee due in ~45 days. Recommend maintaining current onramp cadence. Risk level: LOW.',
-    generated_at: new Date().toISOString(),
-  });
+  // T20: treasury_forecasts seed removed. The table was dropped after
+  // the Phase A cutover; forecasts are now computed live via the
+  // /api/treasury/forecast GET route (which reads through
+  // ForecastService). The Treasury AI > Forecasting tab will render on
+  // demand against whatever obligations the seed has already planted
+  // into the obligations table above.
 
   // Simulation run
   await supabase.from('simulation_runs').insert({

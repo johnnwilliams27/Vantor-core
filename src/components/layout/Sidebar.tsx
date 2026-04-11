@@ -219,7 +219,7 @@ export function Sidebar() {
       )}
 
       {/* Nav */}
-      <nav className="flex-1 py-4 px-2 space-y-4 overflow-y-auto">
+      <nav className="flex-1 py-4 px-2 space-y-4 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {navGroups.map((group, gi) => {
           const visibleItems = isAppAdmin
             ? group.items

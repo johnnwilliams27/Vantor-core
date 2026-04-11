@@ -21,7 +21,20 @@ export async function buildSystemPrompt(
 
   try {
     const snapshot = await buildTreasurySnapshot(supabase, userId, undefined, enterpriseId);
-    const totalAum = snapshot.totalBankBalanceUsd + snapshot.totalCryptoBalanceUsd;
+    // Total AUM sums every bucket so the headline number reconciles against
+    // the dashboard's Total Treasury card. Each bucket is reported
+    // separately below so the model can reason about liquidity class.
+    const totalAum =
+      snapshot.totalBankBalanceUsd +
+      snapshot.totalCryptoBalanceUsd +
+      snapshot.totalMmfPositionsUsd +
+      snapshot.totalDefiPositionsUsd +
+      snapshot.totalOtherYieldUsd;
+
+    // Cash equivalents = bank + tokenized MMFs. This matches the Cash
+    // card on the dashboard; MMFs are treasurer-mental-model cash.
+    const cashEquivalents =
+      snapshot.totalBankBalanceUsd + snapshot.totalMmfPositionsUsd;
 
     const bankDetails = snapshot.bankAccounts.map((a) => {
       const currency = (a as any).nativeCurrency ?? 'USD';
@@ -29,11 +42,16 @@ export async function buildSystemPrompt(
       return `  - ${a.institutionName ?? 'Account'} (${currency}): ${formatFiatAmount(nativeBalance, currency)}${currency !== 'USD' ? ` (~$${a.currentBalanceUsd.toLocaleString()})` : ''}`;
     }).join('\n');
 
+    const fmt = (n: number) =>
+      n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
     snapshotSummary = [
-      `Total AUM: $${totalAum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-      `Bank balances: $${snapshot.totalBankBalanceUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} across ${snapshot.bankAccounts.length} account(s)`,
+      `Total AUM: $${fmt(totalAum)}`,
+      `Cash & cash equivalents: $${fmt(cashEquivalents)} (bank $${fmt(snapshot.totalBankBalanceUsd)} + tokenized MMFs $${fmt(snapshot.totalMmfPositionsUsd)})`,
+      `Bank balances: $${fmt(snapshot.totalBankBalanceUsd)} across ${snapshot.bankAccounts.length} account(s)`,
       bankDetails,
-      `Crypto positions: $${snapshot.totalCryptoBalanceUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} across ${snapshot.cryptoPositions.length} position(s)`,
+      `Idle stablecoin wallets (USDC/USDT): $${fmt(snapshot.totalCryptoBalanceUsd)} across ${snapshot.cryptoPositions.length} wallet position(s)`,
+      `DeFi positions: $${fmt(snapshot.totalDefiPositionsUsd)} (instantly-liquid yield only NOT covered here — see Yield positions below for protocol-level detail)`,
     ].join('\n');
   } catch {
     // Non-fatal — proceed without snapshot

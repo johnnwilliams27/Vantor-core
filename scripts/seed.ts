@@ -110,9 +110,15 @@ async function resolveUser(): Promise<{ userId: string; enterpriseId: string | n
 async function cleanUserData(userId: string) {
   console.log('\n🧹 Wiping previous seed data...');
 
-  // Must delete in FK-safe order
-  for (const t of ['simulation_runs', 'treasury_forecasts', 'ai_recommendations',
-    'manual_obligations', 'treasury_rules', 'fiat_transactions', 'gl_postings',
+  // Must delete in FK-safe order.
+  // forecast_snapshots has a NOT NULL FK to treasury_state_snapshots so
+  // the child goes first. obligations (formerly manual_obligations)
+  // replaces the legacy table name per migration 0041 (renumbered from
+  // 0036 post-merge). treasury_forecasts was dropped in migration 0044
+  // (renumbered from 0039). treasury_insights is the insights engine
+  // feed from migration 0037 (feature/proactive-ai).
+  for (const t of ['simulation_runs', 'forecast_snapshots', 'treasury_state_snapshots',
+    'ai_recommendations', 'obligations', 'treasury_rules', 'fiat_transactions', 'gl_postings',
     'kyt_alerts', 'kyt_transfers', 'sanctions_screenings', 'travel_rule_transfers',
     'notifications', 'treasury_insights']) {
     await sb.from(t).delete().eq('user_id', userId);
@@ -913,6 +919,13 @@ async function main() {
     { label: 'SaaS Subscriptions',       amount: 7_200,   dayOfMonth: 28 },
   ];
 
+  // Schema note: migration 0036_obligations_v2 renamed manual_obligations
+  // to `obligations` and added direction/currency/amount/confidence/source/
+  // status/recurrence as NOT NULL columns. `amount` has no DEFAULT and is
+  // enforced NOT NULL post-backfill, so every row MUST populate it. The
+  // legacy `amount_usd` / `is_recurring` / `recurrence_days` / `is_active`
+  // columns are still present for one release but marked DEPRECATED; we
+  // populate both shapes during the migration window.
   for (const ob of monthlyObligations) {
     // Find the next 3 occurrences within 90 days
     for (let monthOffset = 0; monthOffset < 3; monthOffset++) {
@@ -926,10 +939,18 @@ async function main() {
           label: ob.label,
           description: `Monthly recurring — due on the ${ob.dayOfMonth}${ob.dayOfMonth === 1 ? 'st' : ob.dayOfMonth === 15 ? 'th' : 'th'}`,
           amount_usd: ob.amount,
+          amount: ob.amount,
+          currency: 'USD',
+          direction: 'outflow',
+          confidence: 'confirmed',
+          source: 'recurring_rule',
+          status: 'upcoming',
+          recurrence: 'monthly',
           due_date: dateStr(d),
           is_recurring: true,
           recurrence_days: 30,
           is_active: true,
+          tags: ['operating'],
         });
       }
     }
@@ -945,21 +966,30 @@ async function main() {
         label: 'Payroll Processing',
         description: 'Bi-weekly payroll via USDC',
         amount_usd: 180_000,
+        amount: 180_000,
+        currency: 'USD',
+        asset: 'USDC',
+        direction: 'outflow',
+        confidence: 'confirmed',
+        source: 'recurring_rule',
+        status: 'upcoming',
+        recurrence: 'biweekly',
         due_date: dateStr(d),
         is_recurring: true,
         recurrence_days: 14,
         is_active: true,
+        tags: ['payroll'],
       });
     }
   }
 
   // One-time future obligations
   const oneTimeFuture = [
-    { label: 'Q1 Software License Renewal', amount: 35_000,  days: 22 },
-    { label: 'Marketing Campaign — Q2',      amount: 45_000,  days: 38 },
-    { label: 'Infrastructure Upgrade',       amount: 120_000, days: 55 },
-    { label: 'Consulting Services Contract', amount: 50_000,  days: 67 },
-    { label: 'Annual Audit Fee',             amount: 28_000,  days: 82 },
+    { label: 'Q1 Software License Renewal', amount: 35_000,  days: 22, conf: 'confirmed' as const },
+    { label: 'Marketing Campaign — Q2',      amount: 45_000,  days: 38, conf: 'expected'  as const },
+    { label: 'Infrastructure Upgrade',       amount: 120_000, days: 55, conf: 'expected'  as const },
+    { label: 'Consulting Services Contract', amount: 50_000,  days: 67, conf: 'estimated' as const },
+    { label: 'Annual Audit Fee',             amount: 28_000,  days: 82, conf: 'confirmed' as const },
   ];
 
   for (const ob of oneTimeFuture) {
@@ -969,13 +999,26 @@ async function main() {
       label: ob.label,
       description: `One-time payment due in ${ob.days} days`,
       amount_usd: ob.amount,
+      amount: ob.amount,
+      currency: 'USD',
+      direction: 'outflow',
+      confidence: ob.conf,
+      source: 'manual',
+      status: 'upcoming',
+      recurrence: 'once',
       due_date: dateStr(daysFromNow(ob.days)),
       is_recurring: false,
       is_active: true,
+      tags: ['one_time'],
     });
   }
 
-  await sb.from('manual_obligations').insert(obligationRows);
+  const { data: insertedObligations, error: obErr } = await sb
+    .from('obligations')
+    .insert(obligationRows)
+    .select('id');
+  if (obErr) throw obErr;
+  const obligationIds: string[] = (insertedObligations ?? []).map((o) => o.id);
   console.log(`✓ ${obligationRows.length} obligations (monthly recurring + bi-weekly payroll + one-time)`);
 
   // ════════════════════════════════════════════════════════
@@ -1595,6 +1638,249 @@ async function main() {
   }
 
   // ════════════════════════════════════════════════════════
+  // 13d. POLICY ENGINE (config tables — draft version)
+  // ════════════════════════════════════════════════════════
+  // Seeds a full policy hierarchy so the policy engine has something to
+  // evaluate end-to-end on a fresh install:
+  //   policy_policies → policy_versions (draft) → policy_rules +
+  //   policy_hard_limits + policy_approval_chains
+  //
+  // The version is intentionally left in 'draft' status:
+  //   1. Children (rules, hard_limits, chains) can only be mutated while
+  //      the parent version is 'draft' (trigger
+  //      `policy_child_frozen_when_parent_not_draft`). Once 'active' they
+  //      cannot be re-seeded on a subsequent `npm run seed` because the
+  //      cascade delete from policy_policies hits the row-level trigger.
+  //   2. Demo users can click "Activate" in the UI to exercise the full
+  //      end-to-end evaluation path.
+  //
+  // Runtime/audit tables (policy_evaluations, policy_approval_requests,
+  // policy_activation_events) are deliberately NOT seeded — they are
+  // append-only via `_no_delete` rewrite rules and would poison re-seeds.
+  // Schema: supabase/migrations/0034_policy_engine_schema.sql
+  if (enterpriseId) {
+    console.log('\n🛡️  Seeding policy engine (config tables)...');
+
+    // Cascade delete through policy_policies (CASCADE FK on policy_versions,
+    // which in turn cascades to rules/hard_limits/approval_chains).
+    // Triggers allow these DELETEs because the version is draft.
+    await sb.from('policy_policies').delete().eq('enterprise_id', enterpriseId);
+
+    const { data: policyRow, error: policyErr } = await sb
+      .from('policy_policies')
+      .insert({
+        enterprise_id: enterpriseId,
+        name: 'Standard Treasury Policy',
+        active_version_id: null, // set below after version exists
+      })
+      .select('id')
+      .single();
+    if (policyErr) throw policyErr;
+
+    const { data: versionRow, error: versionErr } = await sb
+      .from('policy_versions')
+      .insert({
+        enterprise_id: enterpriseId,
+        version_number: 1,
+        status: 'draft',
+        name: 'Standard Policy v1 (draft)',
+        created_by: userId,
+      })
+      .select('id')
+      .single();
+    if (versionErr) throw versionErr;
+    const versionId = versionRow.id;
+
+    // ── Approval chains ───────────────────────────────────────────
+    const { data: chains, error: chainErr } = await sb
+      .from('policy_approval_chains')
+      .insert([
+        {
+          version_id: versionId,
+          name: 'Single-approver (under $100K)',
+          slots: [{ slot_index: 0, minimum_role: 'treasury_manager', label: 'Treasury Manager' }],
+          trigger_condition: null,
+          priority: 10,
+          expiration_hours: 24,
+          created_by: userId,
+        },
+        {
+          version_id: versionId,
+          name: 'Dual approval (over $100K)',
+          slots: [
+            { slot_index: 0, minimum_role: 'treasury_manager', label: 'Treasury Manager' },
+            { slot_index: 1, minimum_role: 'cfo', label: 'CFO or delegate' },
+          ],
+          trigger_condition: {
+            kind: 'amount_compare',
+            attr: 'transfer.amount',
+            op: '>=',
+            value: { amount: '100000', currency: 'USD' },
+          },
+          priority: 20,
+          expiration_hours: 48,
+          created_by: userId,
+        },
+      ])
+      .select('id, name');
+    if (chainErr) throw chainErr;
+    const singleChain = chains.find((c) => c.name.startsWith('Single'))!;
+    const dualChain   = chains.find((c) => c.name.startsWith('Dual'))!;
+
+    // ── Hard limits ──────────────────────────────────────────────
+    // Typed structural limits — NOT condition-DSL rules. One per limit_type.
+    const { error: hlErr } = await sb.from('policy_hard_limits').insert([
+      {
+        version_id: versionId,
+        limit_type: 'min_cash_reserve_usd',
+        name: 'Minimum cash reserve (fiat + stablecoin)',
+        limit_value: '500000',
+        limit_currency: 'USD',
+        scope: {},
+        created_by: userId,
+      },
+      {
+        version_id: versionId,
+        limit_type: 'max_single_asset_concentration_pct',
+        name: 'Max single-asset concentration',
+        limit_value: '75',
+        limit_currency: null,
+        scope: {},
+        created_by: userId,
+      },
+      {
+        version_id: versionId,
+        limit_type: 'max_daily_outflow_usd',
+        name: 'Max 24h outflow',
+        limit_value: '500000',
+        limit_currency: 'USD',
+        scope: {},
+        created_by: userId,
+      },
+      {
+        version_id: versionId,
+        limit_type: 'max_30day_outflow_usd',
+        name: 'Max 30-day outflow',
+        limit_value: '5000000',
+        limit_currency: 'USD',
+        scope: {},
+        created_by: userId,
+      },
+      {
+        version_id: versionId,
+        limit_type: 'obligation_coverage_days',
+        name: 'Minimum obligation coverage window',
+        limit_value: '30',
+        limit_currency: null,
+        scope: {},
+        created_by: userId,
+      },
+    ]);
+    if (hlErr) throw hlErr;
+
+    // ── Rules (condition IR — must match schemas/ir.schema.ts) ───
+    const { error: rulesErr } = await sb.from('policy_rules').insert([
+      // 1. Low-value auto-approval — allow transfers under $10K
+      {
+        version_id: versionId,
+        rule_type: 'approval_threshold',
+        name: 'Auto-approve transfers under $10K',
+        rationale: 'Low-value day-to-day vendor payments do not need manual review. Keeps treasurer focused on material movements.',
+        condition: {
+          kind: 'amount_compare',
+          attr: 'transfer.amount',
+          op: '<',
+          value: { amount: '10000', currency: 'USD' },
+        },
+        verdict: 'allow_auto',
+        verdict_chain_id: null,
+        priority: 10,
+        created_by: userId,
+      },
+      // 2. Mid-value single approver — transfers $10K–$100K
+      {
+        version_id: versionId,
+        rule_type: 'approval_threshold',
+        name: 'Single-approver review for $10K–$100K',
+        rationale: 'Everyday operational payments above the auto-approve floor still need a human eye.',
+        condition: {
+          kind: 'amount_compare',
+          attr: 'transfer.amount',
+          op: 'between',
+          value: { amount: '10000', currency: 'USD' },
+          value_upper: { amount: '100000', currency: 'USD' },
+        },
+        verdict: 'require_approval',
+        verdict_chain_id: singleChain.id,
+        priority: 20,
+        created_by: userId,
+      },
+      // 3. High-value dual approver — transfers $100K+
+      {
+        version_id: versionId,
+        rule_type: 'approval_threshold',
+        name: 'Dual approval for transfers $100K+',
+        rationale: 'Material movements require treasurer + CFO sign-off. Mirrors SOX-style segregation of duties for large outflows.',
+        condition: {
+          kind: 'amount_compare',
+          attr: 'transfer.amount',
+          op: '>=',
+          value: { amount: '100000', currency: 'USD' },
+        },
+        verdict: 'require_approval',
+        verdict_chain_id: dualChain.id,
+        priority: 30,
+        created_by: userId,
+      },
+      // 4. Sanctions block — any transfer with sanctioned counterparty
+      {
+        version_id: versionId,
+        rule_type: 'counterparty',
+        name: 'Block sanctioned counterparties',
+        rationale: 'Transfers to or from counterparties flagged as sanctioned or partial-match must be blocked unconditionally.',
+        condition: {
+          kind: 'sanctions_status',
+          op: 'in',
+          values: ['sanctioned', 'partial_match'],
+        },
+        verdict: 'block',
+        verdict_chain_id: null,
+        priority: 5, // evaluates before approval-threshold rules
+        created_by: userId,
+      },
+      // 5. AI-initiated floor — every AI-initiated movement requires approval
+      {
+        version_id: versionId,
+        rule_type: 'approval_threshold',
+        name: 'AI-initiated movements always require approval',
+        rationale: 'Vantor invariant: AI-initiated money movement never auto-executes, regardless of amount. Reinforces the system-level default-deny for non-human initiators.',
+        condition: {
+          kind: 'string_compare',
+          attr: 'transfer.initiator_type',
+          op: 'in',
+          value: 'ai_recommendation',
+        },
+        verdict: 'require_approval',
+        verdict_chain_id: singleChain.id,
+        priority: 40,
+        created_by: userId,
+      },
+    ]);
+    if (rulesErr) throw rulesErr;
+
+    // Point the policy at its draft version
+    const { error: updErr } = await sb
+      .from('policy_policies')
+      .update({ active_version_id: versionId })
+      .eq('id', policyRow.id);
+    if (updErr) throw updErr;
+
+    console.log('✓ policy v1 (draft) with 5 rules, 5 hard limits, 2 approval chains');
+  } else {
+    console.log('\n⏭  Skipping policy engine seed (no enterprise_id)');
+  }
+
+  // ════════════════════════════════════════════════════════
   // 14. TREASURY FORECAST (90-day forward projection)
   // ════════════════════════════════════════════════════════
   console.log('\n📈 Seeding treasury forecast...');
@@ -1642,23 +1928,118 @@ async function main() {
     });
   }
 
-  const { error: fcErr } = await sb.from('treasury_forecasts').upsert({
-    user_id: userId,
-    ...eid,
-    lookahead_days: 90,
-    forecast_data: forecastData,
-    ai_summary: [
-      `Treasury forecast over the next 90 days shows a projected balance starting at $${(totalCrypto / 1_000_000).toFixed(2)}M.`,
-      `Key obligations include bi-weekly payroll ($180K), upcoming vendor invoices ($443K), and one-time infrastructure spend ($120K).`,
-      `A pending onramp of $350K is scheduled to maintain the safety buffer. The position remains healthy throughout the forecast window,`,
-      `with balance projected to stay above the $780K safety threshold except for brief dips around major payroll dates.`,
-      `Recommend approving the pending onramp recommendation to ensure comfortable coverage.`,
-    ].join(' '),
-    generated_at: ts(new Date()),
-  }, { onConflict: 'user_id,lookahead_days' });
+  // treasury_forecasts was dropped in migration 0039. It is replaced by
+  // a treasury_state_snapshots row (frozen positions + fx rates) plus a
+  // forecast_snapshots row (projection + scenario) that FK-links back to
+  // the state snapshot. Only seeded when the test enterprise is set —
+  // both tables have NOT NULL enterprise_id.
+  if (enterpriseId) {
+    const currentFiatUsd = totalBank;
+    const currentStableUsd = totalCrypto; // all USDC per seed
+    const currentDefiUsd = 0;             // none yet in seed
+    const totalValueUsd = currentFiatUsd + currentStableUsd + currentDefiUsd;
 
-  if (fcErr) console.error('  Forecast error:', fcErr.message);
-  else console.log(`✓ Treasury forecast (${forecastData.length} data points)`);
+    const positions = [
+      // Stablecoin positions (one per seeded wallet label, approximate)
+      { assetSymbol: 'USDC', chain: 'ethereum', venueKind: 'wallet', venueId: wallets[0].id, amount: 850_000, unitPriceUsd: 1, valueUsd: 850_000 },
+      { assetSymbol: 'USDC', chain: 'ethereum', venueKind: 'wallet', venueId: wallets[1].id, amount: 150_000, unitPriceUsd: 1, valueUsd: 150_000 },
+      { assetSymbol: 'USDC', chain: 'ethereum', venueKind: 'wallet', venueId: wallets[2].id, amount: 50_000,  unitPriceUsd: 1, valueUsd: 50_000  },
+      { assetSymbol: 'USDC', chain: 'solana',   venueKind: 'wallet', venueId: wallets[3].id, amount: 125_000, unitPriceUsd: 1, valueUsd: 125_000 },
+      { assetSymbol: 'USDC', chain: 'solana',   venueKind: 'wallet', venueId: wallets[4].id, amount: 25_000,  unitPriceUsd: 1, valueUsd: 25_000  },
+      // Fiat positions (one per seeded bank)
+      { assetSymbol: 'USD', chain: null, venueKind: 'bank', venueId: chaseBank.id,   amount: 450_000,   unitPriceUsd: 1, valueUsd: 450_000 },
+      { assetSymbol: 'USD', chain: null, venueKind: 'bank', venueId: svbBank.id,     amount: 1_200_000, unitPriceUsd: 1, valueUsd: 1_200_000 },
+      { assetSymbol: 'USD', chain: null, venueKind: 'bank', venueId: mercuryBank.id, amount: 85_000,    unitPriceUsd: 1, valueUsd: 85_000 },
+    ];
+
+    const { data: stateSnap, error: ssErr } = await sb
+      .from('treasury_state_snapshots')
+      .insert({
+        enterprise_id: enterpriseId,
+        taken_at: ts(new Date()),
+        taken_by: userId,
+        trigger: 'scheduled',
+        base_currency: 'USD',
+        total_value_base_usd: totalValueUsd,
+        total_fiat_base_usd: currentFiatUsd,
+        total_stablecoin_base_usd: currentStableUsd,
+        total_defi_base_usd: currentDefiUsd,
+        positions,
+        fx_rates: { 'USD/USD': 1.0 },
+      })
+      .select('id')
+      .single();
+    if (ssErr) throw ssErr;
+
+    // Three scenarios off the same state snapshot so the Forecasting tab
+    // can render scenario comparisons out of the box.
+    const forecastSummary =
+      `Treasury forecast over the next 90 days starts at $${(totalValueUsd / 1_000_000).toFixed(2)}M total value. ` +
+      `Key obligations include bi-weekly payroll ($180K), upcoming vendor invoices ($443K), and one-time infrastructure spend ($120K). ` +
+      `A pending $350K onramp keeps the safety buffer intact; balance stays above $780K except for brief dips around payroll dates.`;
+
+    const forecastSnapshots = [
+      {
+        enterprise_id: enterpriseId,
+        computed_at: ts(new Date()),
+        computed_by: userId,
+        treasury_state_snapshot_id: stateSnap.id,
+        scenario: 'base',
+        scenario_params: { obligation_confidence_floor: 'confirmed' },
+        window_days: 90,
+        obligation_ids: obligationIds,
+        obligation_count: obligationIds.length,
+        projection: { timeline: forecastData, summary: forecastSummary, breaches: [] },
+        correlation_id: null,
+        consumer: 'treasurer_view',
+        is_hypothetical: false,
+      },
+      {
+        enterprise_id: enterpriseId,
+        computed_at: ts(new Date()),
+        computed_by: userId,
+        treasury_state_snapshot_id: stateSnap.id,
+        scenario: 'conservative',
+        scenario_params: { obligation_confidence_floor: 'expected', inflow_haircut_pct: 25 },
+        window_days: 90,
+        obligation_ids: obligationIds,
+        obligation_count: obligationIds.length,
+        projection: {
+          timeline: forecastData.map((d) => ({ ...d, projectedBalanceUsd: fmt2(d.projectedBalanceUsd * 0.92) })),
+          summary: 'Conservative scenario applies a 25% haircut to expected inflows; projected min balance dips to $560K on day 11 before recovering.',
+          breaches: [{ date: forecastData[10]?.date, minBalance: 560_000 }],
+        },
+        correlation_id: null,
+        consumer: 'treasurer_view',
+        is_hypothetical: false,
+      },
+      {
+        enterprise_id: enterpriseId,
+        computed_at: ts(new Date()),
+        computed_by: userId,
+        treasury_state_snapshot_id: stateSnap.id,
+        scenario: 'stress',
+        scenario_params: { obligation_confidence_floor: 'estimated', inflow_haircut_pct: 50, payroll_acceleration_days: 3 },
+        window_days: 90,
+        obligation_ids: obligationIds,
+        obligation_count: obligationIds.length,
+        projection: {
+          timeline: forecastData.map((d) => ({ ...d, projectedBalanceUsd: fmt2(d.projectedBalanceUsd * 0.78) })),
+          summary: 'Stress scenario zeroes discretionary inflows and accelerates payroll by 3 days. Treasury drops below safety buffer from day 8-18 without corrective action.',
+          breaches: [{ date: forecastData[7]?.date, minBalance: 340_000 }],
+        },
+        correlation_id: null,
+        consumer: 'alert_eval',
+        is_hypothetical: false,
+      },
+    ];
+
+    const { error: fsErr } = await sb.from('forecast_snapshots').insert(forecastSnapshots);
+    if (fsErr) throw fsErr;
+    console.log(`✓ Treasury state snapshot + ${forecastSnapshots.length} forecast snapshots (base/conservative/stress)`);
+  } else {
+    console.log('⏭  Skipping treasury_state_snapshots + forecast_snapshots (no enterprise_id)');
+  }
 
   // ════════════════════════════════════════════════════════
   // 10. COMPLIANCE — Sanctions, KYT, Travel Rule
@@ -1892,6 +2273,8 @@ async function main() {
   console.log('  Obligations      :', obligationRows.length, '(next 90 days)');
   console.log('  AI recommendations:', aiRows.length, `(${aiRows.filter(r => r.status === 'pending_approval').length} pending approval)`);
   console.log('  Treasury insights :', insightRows.length, `(${insightRows.filter(i => i.state === 'new' && i.severity === 'critical').length} critical new)`);
+  console.log('  Forecast snapshots: 3 scenarios (base / conservative / stress) off 1 state snapshot');
+  console.log('  Policy engine    : v1 draft (5 rules, 5 hard limits, 2 approval chains)');
   console.log('  Forecast         : 90-day projection');
   console.log('  Sanctions screens:', sanctionsRows.length);
   console.log('  KYT transfers    :', kytTransferRows.length);

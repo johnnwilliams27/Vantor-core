@@ -10,7 +10,7 @@ import { Select } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
 import { useWallets } from '@/hooks/useWallets';
-import { useWalletTokenBalance } from '@/hooks/useBalances';
+import { useWalletTokenBalance, useWalletTokenHoldings, formatWalletTokensLabel } from '@/hooks/useBalances';
 import { BalanceHint } from '@/components/ui/balance-hint';
 import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, ArrowLeftRight, ArrowRight } from 'lucide-react';
@@ -37,6 +37,7 @@ type FormData = z.infer<typeof schema>;
 
 export function SwapForm() {
   const { data: wallets } = useWallets();
+  const walletHoldings = useWalletTokenHoldings();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const slippageCheck = useSlippageCheck();
@@ -183,9 +184,15 @@ export function SwapForm() {
               <option value="">Select wallet…</option>
               {wallets?.map((w) => {
                 const chain = w.chain.charAt(0).toUpperCase() + w.chain.slice(1);
+                const base = w.label
+                  ? `${w.label} · ${chain} (${w.address.slice(0, 6)}…${w.address.slice(-4)})`
+                  : `${chain} · ${w.address.slice(0, 6)}…${w.address.slice(-4)}`;
+                const holdings = walletHoldings.get(w.id);
+                const label = formatWalletTokensLabel(holdings);
+                const suffix = label ? ` · ${label}` : '';
                 return (
                   <option key={w.id} value={w.id}>
-                    {w.label ? `${w.label} · ${chain} (${w.address.slice(0, 6)}…${w.address.slice(-4)})` : `${chain} · ${w.address.slice(0, 6)}…${w.address.slice(-4)}`}
+                    {base}{suffix}
                   </option>
                 );
               })}

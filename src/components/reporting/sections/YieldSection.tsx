@@ -6,13 +6,7 @@ import { TablePagination } from '@/components/ui/table-pagination';
 import { useTableFilter } from '@/hooks/useTableFilter';
 import { formatCurrency, capitalize } from '@/lib/utils';
 import type { YieldTransaction } from '@/types/database';
-
-const PROTOCOL_LABELS: Record<string, string> = {
-  aave_v3: 'Aave V3',
-  morpho_reservoir: 'Morpho Reservoir',
-  kamino: 'Kamino',
-  ondo_usdy: 'Ondo (USDY)',
-};
+import { getVenueDisplayName } from '@/lib/yield/venues';
 
 const FILTER_CONFIG = {
   searchFields: ['protocol' as const, 'underlying_token' as const],
@@ -54,7 +48,7 @@ export function YieldSection({ data }: { data: YieldTransaction[] }) {
           </div>
           {Object.entries(summary.byProtocol).map(([protocol, count]) => (
             <div key={protocol} className="rounded-lg border bg-muted/30 px-3 py-2">
-              <div className="text-xs text-muted-foreground">{PROTOCOL_LABELS[protocol] ?? protocol}</div>
+              <div className="text-xs text-muted-foreground">{getVenueDisplayName(protocol)}</div>
               <div className="text-sm font-bold">{count} tx{count !== 1 ? 's' : ''}</div>
             </div>
           ))}
@@ -90,7 +84,7 @@ export function YieldSection({ data }: { data: YieldTransaction[] }) {
                 <tr key={tx.id} className={`border-b ${i % 2 === 0 ? '' : 'bg-muted/20'}`}>
                   <td className="px-3 py-2 font-mono">{(tx.executed_at ?? tx.created_at).split('T')[0]}</td>
                   <td className="px-3 py-2 capitalize">{tx.tx_type}</td>
-                  <td className="px-3 py-2">{PROTOCOL_LABELS[tx.protocol] ?? tx.protocol}</td>
+                  <td className="px-3 py-2">{getVenueDisplayName(tx.protocol)}</td>
                   <td className="px-3 py-2 font-semibold">{formatCurrency(tx.amount)}</td>
                   <td className="px-3 py-2">{tx.underlying_token}</td>
                   <td className="px-3 py-2 capitalize">{tx.chain}</td>

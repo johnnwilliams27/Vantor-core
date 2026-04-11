@@ -98,8 +98,11 @@ src/lib/yield/venues/
    - `MOCK_APYS` and `YIELD_TOKENS` in `src/lib/yield/mock/yield-mock.ts`
    - `FALLBACK_TVL`, `POOL_TYPE`, `PROTOCOL_ID_TO_CACHE_SLUG` in
      `src/lib/yield/slippage/liquidity-provider.ts`
-   - `PROTOCOL_LABELS` and `PROTOCOL_LOGOS` in any UI file that displays
-     per-protocol data (`YieldRatesTable`, `UnifiedBalanceCard`, etc.)
+   - Display name and logo are handled automatically via
+     `getVenueDisplayName()` and `getVenueLogoPath()` in `display.ts` —
+     no per-component maps anymore. If you have a partner logo, drop
+     the file in `public/partners/` and add the row to `VENUE_LOGOS`
+     in `display.ts`.
 
 5. **Run `npx tsc --noEmit`.** The exhaustive `Record<YieldProtocolId, ...>`
    types will tell you exactly which maps are missing the new entry.

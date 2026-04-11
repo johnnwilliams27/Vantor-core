@@ -9,7 +9,7 @@ import { Select } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
 import { useWallets } from '@/hooks/useWallets';
-import { useWalletTokenBalance } from '@/hooks/useBalances';
+import { useWalletTokenBalance, useWalletTokenHoldings, formatWalletTokensLabel } from '@/hooks/useBalances';
 import { BalanceHint } from '@/components/ui/balance-hint';
 import { Loader2, Calendar } from 'lucide-react';
 import { DateTimePicker } from '@/components/ui/datetime-picker';
@@ -32,6 +32,7 @@ type FormData = z.infer<typeof schema>;
 
 export function ScheduleSwapForm() {
   const { data: wallets } = useWallets();
+  const walletHoldings = useWalletTokenHoldings();
   const { toast } = useToast();
   const createOp = useCreateScheduledOperation();
 
@@ -89,7 +90,7 @@ export function ScheduleSwapForm() {
         <CardTitle className="flex items-center gap-2">
           <Calendar className="h-5 w-5" />
           Schedule Swap
-          <InfoTooltip content="Exchange one stablecoin for another on the same blockchain. Scheduled for a future date." />
+          <InfoTooltip content="Exchange one stablecoin for another on the same blockchain. Scheduled for a future date. Auto-executes within 10bps of quoted rate; you'll be asked to approve if it deviates further." />
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -100,9 +101,15 @@ export function ScheduleSwapForm() {
               <option value="">Select wallet…</option>
               {wallets?.map((w) => {
                 const chain = w.chain.charAt(0).toUpperCase() + w.chain.slice(1);
+                const base = w.label
+                  ? `${w.label} · ${chain} (${w.address.slice(0, 6)}…${w.address.slice(-4)})`
+                  : `${chain} · ${w.address.slice(0, 6)}…${w.address.slice(-4)}`;
+                const holdings = walletHoldings.get(w.id);
+                const label = formatWalletTokensLabel(holdings);
+                const suffix = label ? ` · ${label}` : '';
                 return (
                   <option key={w.id} value={w.id}>
-                    {w.label ? `${w.label} · ${chain} (${w.address.slice(0, 6)}…${w.address.slice(-4)})` : `${chain} · ${w.address.slice(0, 6)}…${w.address.slice(-4)}`}
+                    {base}{suffix}
                   </option>
                 );
               })}
@@ -154,10 +161,6 @@ export function ScheduleSwapForm() {
             <Label>Memo (optional)</Label>
             <Input placeholder="Swap reference…" {...register('memo')} />
           </div>
-
-          <p className="text-xs text-muted-foreground rounded-md bg-muted/50 p-3">
-            Auto-executes within 10bps of quoted rate. If rate deviates further, you&apos;ll be asked to approve.
-          </p>
 
           <Button type="submit" className="w-full" disabled={createOp.isPending || exceeds || !selectedWalletId || !amount || !watch('scheduledFor')}>
             {isSubmitting ? (

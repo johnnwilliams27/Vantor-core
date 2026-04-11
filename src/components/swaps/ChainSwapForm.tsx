@@ -10,7 +10,7 @@ import { Select } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
 import { useWallets } from '@/hooks/useWallets';
-import { useWalletTokenBalance } from '@/hooks/useBalances';
+import { useWalletTokenBalance, useWalletTokenHoldings, formatWalletTokensLabel } from '@/hooks/useBalances';
 import { BalanceHint } from '@/components/ui/balance-hint';
 import { SlippageWarning } from '@/components/yield/SlippageWarning';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
@@ -37,6 +37,7 @@ const PROVIDER_LABELS: Record<string, string> = { bridge: 'Bridge.xyz', cctp: 'C
 
 export function ChainSwapForm() {
   const { data: wallets } = useWallets();
+  const walletHoldings = useWalletTokenHoldings();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const slippageCheck = useSlippageCheck();
@@ -226,16 +227,22 @@ export function ChainSwapForm() {
             </Select>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label>From Wallet</Label>
               <Select {...register('fromWalletId')}>
                 <option value="">Select source...</option>
-                {wallets?.map((w) => (
-                  <option key={w.id} value={w.id}>
-                    {`${w.label ? `${w.label} · ` : ''}${CHAIN_LABELS[w.chain]} (${w.address.slice(0, 6)}…${w.address.slice(-4)})`}
-                  </option>
-                ))}
+                {wallets?.map((w) => {
+                  const base = `${w.label ? `${w.label} · ` : ''}${CHAIN_LABELS[w.chain]} (${w.address.slice(0, 6)}…${w.address.slice(-4)})`;
+                  const holdings = walletHoldings.get(w.id);
+                  const label = formatWalletTokensLabel(holdings);
+                  const suffix = label ? ` · ${label}` : '';
+                  return (
+                    <option key={w.id} value={w.id}>
+                      {base}{suffix}
+                    </option>
+                  );
+                })}
               </Select>
               {errors.fromWalletId && <p className="text-sm text-red-500">{errors.fromWalletId.message}</p>}
             </div>
@@ -244,11 +251,17 @@ export function ChainSwapForm() {
               <Label>To Wallet</Label>
               <Select {...register('toWalletId')}>
                 <option value="">Select destination...</option>
-                {destWallets.map((w) => (
-                  <option key={w.id} value={w.id}>
-                    {`${w.label ? `${w.label} · ` : ''}${CHAIN_LABELS[w.chain]} (${w.address.slice(0, 6)}…${w.address.slice(-4)})`}
-                  </option>
-                ))}
+                {destWallets.map((w) => {
+                  const base = `${w.label ? `${w.label} · ` : ''}${CHAIN_LABELS[w.chain]} (${w.address.slice(0, 6)}…${w.address.slice(-4)})`;
+                  const holdings = walletHoldings.get(w.id);
+                  const label = formatWalletTokensLabel(holdings);
+                  const suffix = label ? ` · ${label}` : '';
+                  return (
+                    <option key={w.id} value={w.id}>
+                      {base}{suffix}
+                    </option>
+                  );
+                })}
               </Select>
               {errors.toWalletId && <p className="text-sm text-red-500">{errors.toWalletId.message}</p>}
               {sameChain && <p className="text-sm text-red-500">Destination must be on a different chain.</p>}

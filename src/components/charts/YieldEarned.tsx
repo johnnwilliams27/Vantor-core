@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useYieldPositions, useYieldTransactions } from '@/hooks/useYield';
 import { TrendingUp } from 'lucide-react';
 import { CardSpinner } from '@/components/ui/spinner';
+import { getVenueDisplayName, getVenue } from '@/lib/yield/venues';
+import type { YieldProtocolId } from '@/lib/yield/interface';
 
 function formatUsd(value: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -15,27 +17,50 @@ function formatUsd(value: number): string {
   }).format(value);
 }
 
-const PROTOCOL_LABELS: Record<string, string> = {
-  aave_v3: 'Aave V3',
-  morpho_reservoir: 'Morpho Reservoir USDC',
-  morpho_steakhouse: 'Morpho Steakhouse',
-  kamino: 'Kamino Lend',
-  kamino_multiply: 'Kamino Multiply',
-  ondo_usdy: 'Ondo',
-  sky: 'Sky sUSDS',
-  ethena: 'Ethena',
+/**
+ * Chart colors per protocol. Intentionally kept local to this chart
+ * (not in the venue registry) — they're rendering concerns, not venue
+ * metadata.
+ *
+ * For unknown protocols, `getProtocolColor` falls back to a category-
+ * based palette via the venue registry, so newly added MMFs show up
+ * with a warm Treasury-style color instead of grey even before they
+ * earn an explicit entry here.
+ */
+const PROTOCOL_COLORS: Record<string, string> = {
+  aave_v3:           '#6366f1',
+  compound_v3:       '#10b981',
+  morpho_reservoir:  '#3b82f6',
+  morpho_steakhouse: '#1d4ed8',
+  kamino:            '#8b5cf6',
+  kamino_multiply:   '#7c3aed',
+  ondo_usdy:         '#06b6d4',
+  sky:               '#0ea5e9',
+  ethena:            '#f43f5e',
+  // Tokenized MMFs — warmer palette to visually distinguish from DeFi
+  buidl:             '#eab308',
+  ousg:              '#f97316',
+  ustb:              '#ea580c',
+  benji:             '#dc2626',
+  usyc:              '#d97706',
+  spiko_usd:         '#ca8a04',
 };
 
-const PROTOCOL_COLORS: Record<string, string> = {
-  aave_v3: '#6366f1',
-  morpho_reservoir: '#3b82f6',
-  morpho_steakhouse: '#1d4ed8',
-  kamino: '#8b5cf6',
-  kamino_multiply: '#7c3aed',
-  ondo_usdy: '#06b6d4',
-  sky: '#0ea5e9',
-  ethena: '#f43f5e',
+// Category-based fallback palette — used when a protocol ID has no
+// explicit color above. Keeps MMFs warm and DeFi cool.
+const CATEGORY_FALLBACK_COLORS: Record<string, string> = {
+  tokenized_mmf:        '#f59e0b', // amber
+  defi_vault:           '#3b82f6', // blue
+  defi_lending_market:  '#6366f1', // indigo
 };
+
+function getProtocolColor(protocolId: string): string {
+  const explicit = PROTOCOL_COLORS[protocolId];
+  if (explicit) return explicit;
+  const venue = getVenue(protocolId as YieldProtocolId);
+  if (venue) return CATEGORY_FALLBACK_COLORS[venue.category] ?? '#94a3b8';
+  return '#94a3b8';
+}
 
 function CustomTooltip({ active, payload }: any) {
   if (!active || !payload?.length) return null;
@@ -84,9 +109,9 @@ export function YieldEarned() {
   }
 
   const chartData = Object.entries(yieldByProtocol).map(([protocol, earned]) => ({
-    protocol: PROTOCOL_LABELS[protocol] ?? protocol,
+    protocol: getVenueDisplayName(protocol),
     earned,
-    fill: PROTOCOL_COLORS[protocol] ?? '#94a3b8',
+    fill: getProtocolColor(protocol),
   }));
 
   // Total deployed

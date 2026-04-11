@@ -34,3 +34,8 @@ export {
   MMF_YIELDS_AS_OF,
   getVenue,
 } from './registry';
+
+export {
+  getVenueDisplayName,
+  getVenueLogoPath,
+} from './display';

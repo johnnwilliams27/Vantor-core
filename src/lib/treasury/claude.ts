@@ -143,7 +143,14 @@ export async function generateTreasuryReasoning(
 
   const contextBlock = JSON.stringify({
     bankBalanceUsd: snapshot.totalBankBalanceUsd,
+    // Wallet USDC/USDT only — instantly liquid, ready to offramp.
     cryptoBalanceUsd: snapshot.totalCryptoBalanceUsd,
+    // Tokenized money market funds (BUIDL, OUSG, etc.) — treat as cash
+    // equivalents with T+0 or T+1 redemption.
+    mmfPositionsUsd: snapshot.totalMmfPositionsUsd,
+    // DeFi protocol positions (Aave, Kamino, Morpho, etc.) — earn yield
+    // but require an unwinding step before they can cover fiat obligations.
+    defiPositionsUsd: snapshot.totalDefiPositionsUsd,
     obligationsInWindowUsd: totalObligationsUsd,
     obligationCount: obligationsInWindow.length,
     safetyBufferTargetUsd,
