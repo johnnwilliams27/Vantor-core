@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { canonicalizeToUsd, buildCanonicalizationResult } from './canonicalizer';
 import { CoingeckoPolicyRateProvider } from './coingecko-provider';
 import { CanonicalizationError } from '../errors/classes';
+import type { PolicyRateProvider } from './interface';
 
 describe('canonicalizeToUsd', () => {
   const makeProvider = (prices: Record<string, number>) =>
@@ -65,6 +66,21 @@ describe('canonicalizeToUsd', () => {
     expect(result.failure).toBeDefined();
     expect(result.failure?.reason_code).toBe('canonicalization_failed');
   });
+
+  it('wraps unexpected (non-CanonicalizationError) provider errors as canonicalization_failed', async () => {
+    const hostileProvider: PolicyRateProvider = {
+      getRateAsOf: vi.fn().mockRejectedValue(new TypeError('something completely unexpected')),
+    };
+    const result = await canonicalizeToUsd(
+      { amount: '1000', asset: 'USDC' },
+      hostileProvider,
+      new Date(),
+    );
+    expect(result.failure).toBeDefined();
+    expect(result.failure?.reason_code).toBe('canonicalization_failed');
+    expect(result.failure?.human_readable).toContain('Unexpected error');
+    expect(result.canonical_amount).toBe('');
+  });
 });
 
 describe('buildCanonicalizationResult', () => {
@@ -97,5 +113,82 @@ describe('buildCanonicalizationResult', () => {
     expect(result.canonical_amount).toBe('');
     expect(result.failure).toBeDefined();
     expect(result.failure?.reason_code).toBe('canonicalization_failed');
+  });
+
+  it('returns fixed-point notation for very small canonical amounts (no scientific notation)', () => {
+    const result = buildCanonicalizationResult({
+      nativeAmount: '0.0000001',
+      nativeAsset: 'USDC',
+      rateReading: {
+        rate: '1',
+        source: 'coingecko',
+        asOfRate: new Date(),
+        maxAgeMs: 60_000,
+      },
+    });
+    expect(result.canonical_amount).toBe('0.0000001');
+    expect(result.canonical_amount).not.toMatch(/e/i);
+  });
+
+  it('returns fixed-point notation for extremely small canonical amounts (well below big.js NE threshold)', () => {
+    const result = buildCanonicalizationResult({
+      nativeAmount: '0.00000001',
+      nativeAsset: 'USDC',
+      rateReading: {
+        rate: '1',
+        source: 'coingecko',
+        asOfRate: new Date(),
+        maxAgeMs: 60_000,
+      },
+    });
+    expect(result.canonical_amount).not.toMatch(/e/i);
+    expect(result.canonical_amount).toMatch(/^\d+(\.\d+)?$/);
+  });
+
+  it('returns fixed-point notation for very large canonical amounts (no scientific notation)', () => {
+    const result = buildCanonicalizationResult({
+      nativeAmount: '1000000000000000', // 1e15
+      nativeAsset: 'USDC',
+      rateReading: {
+        rate: '1.0001',
+        source: 'coingecko',
+        asOfRate: new Date(),
+        maxAgeMs: 60_000,
+      },
+    });
+    expect(result.canonical_amount).not.toMatch(/e/i);
+    expect(result.canonical_amount).toMatch(/^\d+(\.\d+)?$/);
+  });
+
+  it('returns a failure result when nativeAmount is "NaN" (big.js throws)', () => {
+    const result = buildCanonicalizationResult({
+      nativeAmount: 'NaN',
+      nativeAsset: 'USDC',
+      rateReading: {
+        rate: '1',
+        source: 'coingecko',
+        asOfRate: new Date(),
+        maxAgeMs: 60_000,
+      },
+    });
+    expect(result.failure).toBeDefined();
+    expect(result.failure?.reason_code).toBe('canonicalization_failed');
+    expect(result.canonical_amount).toBe('');
+  });
+
+  it('returns a failure result when nativeAmount is "garbage" (big.js throws)', () => {
+    const result = buildCanonicalizationResult({
+      nativeAmount: 'garbage',
+      nativeAsset: 'USDC',
+      rateReading: {
+        rate: '1',
+        source: 'coingecko',
+        asOfRate: new Date(),
+        maxAgeMs: 60_000,
+      },
+    });
+    expect(result.failure).toBeDefined();
+    expect(result.failure?.reason_code).toBe('canonicalization_failed');
+    expect(result.canonical_amount).toBe('');
   });
 });

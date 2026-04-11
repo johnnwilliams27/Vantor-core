@@ -129,7 +129,7 @@ describe('getStablecoinPricesStrict', () => {
     await expect(getStablecoinPricesStrict()).rejects.toThrow(/invalid prices/);
   });
 
-  it('fetchedAt is a finite Date set before fetch resolves', async () => {
+  it('fetchedAt is a finite Date within the sync mock window', async () => {
     delete process.env.COINGECKO_USE_MOCK;
     vi.stubGlobal(
       'fetch',
@@ -149,5 +149,92 @@ describe('getStablecoinPricesStrict', () => {
     expect(Number.isFinite(result.fetchedAt.getTime())).toBe(true);
     expect(result.fetchedAt.getTime()).toBeGreaterThanOrEqual(before);
     expect(result.fetchedAt.getTime()).toBeLessThanOrEqual(after);
+  });
+
+  it('calls fetch with cache: "no-store" and the correct CoinGecko URL', async () => {
+    delete process.env.COINGECKO_USE_MOCK;
+    const fetchMock = vi.fn().mockResolvedValue(
+      mockFetchResponse({
+        'usd-coin': { usd: 1.0001 },
+        tether: { usd: 0.9999 },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await getStablecoinPricesStrict();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('coingecko.com'),
+      expect.objectContaining({ cache: 'no-store' }),
+    );
+  });
+
+  it('captures fetchedAt after the response body is parsed (not before fetch starts)', async () => {
+    delete process.env.COINGECKO_USE_MOCK;
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-11T10:00:00.000Z'));
+
+    // Build a response whose json() resolves to the valid payload, but we
+    // control when by bumping the system clock after fetch resolves and
+    // before json() resolves.
+    let resolveFetch: (v: unknown) => void;
+    const fetchPromise = new Promise((resolve) => {
+      resolveFetch = resolve;
+    });
+    const fetchMock = vi.fn().mockReturnValue(fetchPromise);
+    vi.stubGlobal('fetch', fetchMock);
+
+    const resultPromise = getStablecoinPricesStrict();
+
+    // Advance clock by 5 seconds while "fetch is in flight"
+    vi.setSystemTime(new Date('2026-04-11T10:00:05.000Z'));
+
+    resolveFetch!(
+      mockFetchResponse({
+        'usd-coin': { usd: 1.0001 },
+        tether: { usd: 0.9999 },
+      }),
+    );
+
+    const result = await resultPromise;
+
+    // fetchedAt should be the post-fetch time (10:00:05), not the pre-fetch
+    // time (10:00:00). Any value >= 10:00:05 proves we captured after the
+    // request, not before.
+    expect(result.fetchedAt.getTime()).toBeGreaterThanOrEqual(
+      new Date('2026-04-11T10:00:05.000Z').getTime(),
+    );
+
+    vi.useRealTimers();
+  });
+
+  it('times out after 5 seconds when CoinGecko hangs (AbortController)', async () => {
+    delete process.env.COINGECKO_USE_MOCK;
+
+    const fetchMock = vi.fn().mockImplementation(
+      (_url: string, init?: { signal?: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          // Honor the abort signal: reject with an AbortError when the
+          // controller fires. This mirrors the real fetch contract.
+          init?.signal?.addEventListener('abort', () => {
+            const err = new Error('The operation was aborted');
+            err.name = 'AbortError';
+            reject(err);
+          });
+        }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    vi.useFakeTimers();
+    const resultPromise = getStablecoinPricesStrict();
+    // Attach rejection handler before advancing timers so the rejection
+    // doesn't surface as an unhandled promise.
+    const assertion = expect(resultPromise).rejects.toThrow(/timed out/);
+    await vi.advanceTimersByTimeAsync(5_000);
+    await assertion;
+
+    vi.useRealTimers();
   });
 });

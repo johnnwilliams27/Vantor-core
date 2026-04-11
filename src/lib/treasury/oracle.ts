@@ -78,9 +78,13 @@ export interface OraclePricesStrictResult {
  * Differences from getStablecoinPrices:
  *   - Refuses mock mode (throws if COINGECKO_USE_MOCK=true) — strict callers
  *     must wire mock data through the policy provider's acceptMockSource path.
- *   - cache: 'no-store' — every call hits the network, so fetchedAt reflects
- *     the actual fetch time. The existing helper uses a 5-minute Next.js
- *     cache which would lie about freshness.
+ *   - cache: 'no-store' — every call hits the network.
+ *   - 5-second AbortController timeout — a hung CoinGecko fetch would
+ *     otherwise block policy evaluation indefinitely.
+ *   - fetchedAt is captured after the response body is parsed, so it reflects
+ *     when fresh data became available — not when the request was sent. This
+ *     is the strictest reasonable interpretation and matches the freshness
+ *     contract the policy engine relies on.
  *   - Validates response shape: refuses partial/missing/non-numeric prices.
  *   - Validates prices are positive finite numbers: refuses 0, negative, NaN,
  *     Infinity. (The existing helper accepts whatever CoinGecko sends.)
@@ -93,17 +97,25 @@ export async function getStablecoinPricesStrict(): Promise<OraclePricesStrictRes
     );
   }
 
-  const fetchedAt = new Date();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5_000);
   let res: Response;
   try {
     res = await fetch(
       'https://api.coingecko.com/api/v3/simple/price?ids=usd-coin,tether&vs_currencies=usd',
-      { cache: 'no-store' },
+      { cache: 'no-store', signal: controller.signal },
     );
   } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error(
+        'getStablecoinPricesStrict: CoinGecko request timed out after 5000ms',
+      );
+    }
     throw new Error(
       `getStablecoinPricesStrict: CoinGecko fetch failed: ${err instanceof Error ? err.message : String(err)}`,
     );
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   if (!res.ok) {
@@ -120,6 +132,10 @@ export async function getStablecoinPricesStrict(): Promise<OraclePricesStrictRes
       `getStablecoinPricesStrict: CoinGecko response was not valid JSON: ${err instanceof Error ? err.message : String(err)}`,
     );
   }
+
+  // Captured after the response body is parsed, so it reflects when fresh
+  // data became available — not when the request was sent.
+  const fetchedAt = new Date();
 
   // Validate response shape defensively — refuse partial data
   const root = json as Record<string, unknown> | null | undefined;
