@@ -9,7 +9,7 @@
 
 ## 1. Goal
 
-Replace the current `src/app/page.tsx` (1123 lines, all sections inlined) with the v5.6 geometric-editorial direction approved across two brainstorming sessions, extracted into focused components under `src/components/landing/`. Make every section work cleanly on mobile from 360px up — mobile is a first-class requirement, not a downgrade pass.
+Replace the current `src/app/page.tsx` (1123 lines, all sections inlined) with the v5.6 geometric-editorial direction approved across two brainstorming sessions, extracted into focused components under `src/components/landing/`. Desktop is the showcase — mesh canvas, blob backdrop, particle-flow diagram, the full motion budget. Mobile must be **considerate, not constraining**: every section legible and usable on a phone, but the desktop animation richness is not capped to what mobile can do. Where a desktop motion doesn't translate, mobile gets a graceful, simpler fallback.
 
 The page has **one** memorable motion moment: the AI Flow section (orb + flowing particles + rotating insight feed + 4-step narrative). Everything else is scenery whose job is to let that beat land.
 
@@ -144,9 +144,18 @@ All motion **must** respect `prefers-reduced-motion: reduce`. Already wired in v
 - Decorative SVGs and canvas elements get `aria-hidden="true"`.
 - Insight feed needs `aria-live="polite"` so screen readers announce rotations without hijacking focus.
 
-## 7. Mobile responsiveness — first-class requirement
+## 7. Mobile — considerate, not constraining
 
-This is the new layer compared to v5.6. The current mockup has exactly one breakpoint at 900px and does the bare minimum (collapse grids to 1 column, hide nav links). That's not enough.
+This is the new layer compared to v5.6. The current mockup has exactly one breakpoint at 900px and does the bare minimum (collapse grids to 1 column, hide nav links). That's not enough — but the answer is **not** to flatten desktop to mobile's constraints. Desktop keeps its full motion budget. Mobile gets a graceful version of each section, with simpler fallbacks where the desktop treatment doesn't translate.
+
+**The mobile floor (non-negotiable):**
+- No horizontal scroll at any width ≥ 360px
+- Every section legible — type sized to read, not just scaled
+- Every CTA reachable and tappable (≥ 44×44px hit area)
+- Forms work without iOS auto-zoom on focus
+- The page loads and stays interactive on a mid-tier Android (Lighthouse mobile gates in §9)
+
+**Above the floor:** desktop is allowed to be the showcase. If a motion or layout doesn't reflow cleanly to mobile, the spec calls out a simpler mobile fallback rather than forcing the desktop version to compromise.
 
 ### 7.1 Breakpoint system
 
@@ -160,7 +169,7 @@ Use Tailwind's defaults — **no custom breakpoints**:
 | `lg` | 1024px | Tablets landscape, small laptops |
 | `xl` | 1280px | Desktop |
 
-Author **mobile-first**: base styles target 360px, then `sm:` / `md:` / `lg:` add desktop polish. Do **not** write desktop styles and override down with `max-width` queries.
+Mobile-first as a *CSS authoring technique* (base styles + `sm:`/`md:`/`lg:` upgrades) is fine when it's the cleanest way to write a given component — but it's a tactic, not a philosophy. Where the cleanest expression is desktop styles with a `lg:`-down override, that's allowed too. Don't elevate authoring direction to a constraint on the design.
 
 ### 7.2 Section-by-section mobile behavior
 
@@ -177,10 +186,15 @@ Author **mobile-first**: base styles target 360px, then `sm:` / `md:` / `lg:` ad
 - **NetworkCanvas + BlobBackground:** keep on mobile but cap density. NetworkCanvas particle count drops from ~80 to ~30 below `md`. BlobBackground uses smaller blur radius below `md` (heavy `filter: blur(120px)` is the single biggest paint cost on mobile Safari).
 - Auto-disable NetworkCanvas only if `prefers-reduced-motion: reduce` is set. BlobBackground stays, just with the smaller blur radius from §7.5. Do not gate either on device memory — `navigator.deviceMemory` is unreliable cross-browser and the density caps in §7.5 already handle the perf budget.
 
-**AI Flow — diagram (row 1)**
-- Desktop: `inputs column → orb → outputs column` horizontal layout with SVG paths flowing left→right.
-- Mobile: vertical stack — inputs row (4 chips wrapping in a 2×2 grid), orb centered, outputs row (4 chips wrapping in a 2×2 grid). SVG paths re-flow vertical: top chips fan into the orb, orb fans into bottom chips. **Particle animation runs along the new vertical paths** — do not just hide them on mobile.
-- If reflowing the SVG paths is too complex: fall back to a simplified mobile layout where the orb sits center, chips are arranged in a 2×4 grid above and below, and a single subtle teal beam pulses between input grid → orb → output grid.
+**AI Flow — diagram (row 1)** *(the section that benefits most from "considerate, not constraining")*
+- Desktop: full treatment — `inputs column → orb → outputs column` horizontal layout, SVG paths flowing left→right, multiple particles per path, orb pulse, the works. This is the moment. Do not water it down.
+- Mobile: a **simpler reframe** is acceptable and preferred over forcing the desktop SVG to reflow. The mobile version is:
+  - Inputs as a 2×2 grid above the orb
+  - Orb centered (still pulses — orb pulse is a CSS keyframe and translates fine)
+  - Outputs as a 2×2 grid below the orb
+  - A single subtle teal beam (or two — one above, one below) pulsing between the input grid → orb → output grid as the connective motion
+  - No per-path particle animation on mobile. The orb pulse + beam pulse carries the "intelligence in motion" feel without trying to recreate the desktop diagram.
+- This is a deliberate downgrade. The desktop diagram is the showcase; the mobile version's job is to communicate the same idea (inputs → AI → outputs) without breaking on a phone.
 
 **AI Flow — insight feed (row 2)**
 - Desktop: 3 cards visible at once, opacities 1.0 / 0.85 / 0.6.
@@ -253,7 +267,9 @@ The page already lazy-loads nothing — every section ships in the initial bundl
 - The five locked insight strings — same on mobile.
 - The capability grid copy — same on mobile.
 - The hero copy — same on mobile.
-- The motion philosophy — particles still run on the AI Flow on mobile (just along reflowed paths). The "memorable moment" must still land on a phone.
+- The page structure and section order — same on mobile.
+
+What **is** allowed to be different on mobile (deliberately): the AI Flow diagram (simpler beam-and-orb instead of per-path particles), NetworkCanvas density, BlobBackground blur radius, insight feed card count (1 instead of 3), carousel arrows (hidden, swipe instead). Desktop is the showcase; mobile is the considerate version.
 
 ## 8. Component breakdown
 
@@ -329,10 +345,10 @@ These are the hard gates the implementation plan must pass before the PR can mer
 
 1. **Build is green:** `next build` with zero TypeScript errors and zero new lint warnings.
 2. **Visual parity at 1440px:** rendered page matches `landing-v5-preview.html` within reasonable tolerance — same beats, same density rhythm, same gradients, same motion. Spot-checked side-by-side.
-3. **Mobile parity at 360 / 414 / 768:**
-   - 360px (iPhone SE) — every section legible, no horizontal scroll, all CTAs reachable, hero headline ≤ 4 lines, AI Flow particles still animating, insight feed showing 1 card, carousel swipeable, trust band stacking cleanly.
+3. **Mobile considerate at 360 / 414 / 768:**
+   - 360px (iPhone SE) — every section legible, no horizontal scroll, all CTAs reachable, hero headline ≤ 4 lines, AI Flow showing the simpler beam-and-orb mobile layout (orb pulsing, beam pulsing), insight feed showing 1 card, carousel swipeable, trust band stacking cleanly.
    - 414px (iPhone 14 Pro Max) — same as 360 but with the type one step larger.
-   - 768px (iPad portrait) — capability grid 2×3, trust band 2×3, AI Flow narrative 2×2.
+   - 768px (iPad portrait) — capability grid 2×3, trust band 2×3, AI Flow narrative 2×2. The desktop AI Flow diagram (with particles) kicks in at `lg:` (1024px), so iPad portrait still shows the simpler mobile layout — that's intentional.
 4. **Touch targets:** every interactive element ≥44×44px hit area on a touch device. Quick spot check via DevTools touch emulation.
 5. **`prefers-reduced-motion`:** with the OS toggle on, NetworkCanvas hides, BlobBackground stops animating, orb pulse stops, insight feed becomes static, carousel transitions become instant.
 6. **Lighthouse mobile (Moto G Power, 4G):** Performance ≥ 85, Accessibility ≥ 95, Best Practices ≥ 95. SEO unmeasured for now.
@@ -361,7 +377,7 @@ None at the design-framing stage. All seven design decisions from session 1+2 ar
 
 The two things that **could** still slip during implementation:
 
-- **AI Flow vertical SVG paths on mobile** — if reflowing the `offset-path` particle animation is genuinely hard, fall back to the simplified mobile layout described in §7.2 (single beam between input/output grids and the orb). The decision is mine to make at implementation time as long as the "particles still run on mobile" intent is preserved.
+- **Where the AI Flow diagram switches between desktop and mobile layouts** — spec currently says `lg:` (1024px). If the desktop diagram looks cramped at 1024px, the switch can move to `xl:` (1280px) without coming back to ask. The mobile beam-and-orb fallback is the floor; the desktop full-particle diagram is the ceiling.
 - **NetworkCanvas density tuning** — particle counts in §7.5 are starting points. If real-device profiling shows them too aggressive, halve them. If mobile holds 60fps comfortably, stay there.
 
 Both are implementation tactics, not design decisions.
