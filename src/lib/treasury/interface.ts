@@ -1,4 +1,5 @@
-import type { RecommendationAction } from '@/types/database';
+import type { RecommendationAction, ChainType } from '@/types/database';
+import type { VenueCategory } from '@/lib/yield/venues';
 
 export interface UpcomingObligation {
   id: string;
@@ -6,6 +7,46 @@ export interface UpcomingObligation {
   label: string;
   amountUsd: number;
   dueDate: string;
+}
+
+/**
+ * Venue type discriminator for unified position iteration.
+ * Used by the insights engine to iterate across all positions
+ * (bank accounts, wallets, yield positions) uniformly without
+ * knowing which table they came from.
+ */
+export type VenueType = 'bank_account' | 'wallet' | 'yield_position';
+
+/**
+ * A single active yield position — a customer's deposit into a yield
+ * venue (DeFi vault, DeFi lending market, tokenized MMF). Consumed by
+ * the insights engine's concentration + yield rebalance detectors.
+ */
+export interface YieldPositionSnapshot {
+  id: string;
+  /** Protocol identifier matching src/lib/yield/venues registry. */
+  protocol: string;
+  chain: ChainType;
+  underlyingToken: string;
+  /** Yield-bearing token symbol if the protocol mints one, else null. */
+  yieldToken: string | null;
+  /** Venue category from the venues registry — drives detector logic. */
+  venueCategory: VenueCategory | null;
+  /** Amount of underlying token originally deposited. */
+  depositedAmount: number;
+  /**
+   * Balance of the yield-bearing token held. Populated when the adapter
+   * has access to it; 0 otherwise. The concentration detector relies on
+   * `currentValueUsd` for sizing, not this field.
+   */
+  yieldTokenBalance: number;
+  /** Current USD value of the position. */
+  currentValueUsd: number;
+  /** Realized + unrealized yield in USD. */
+  accruedYieldUsd: number;
+  /** APY snapshot at last refresh (decimal, e.g. 0.0485). */
+  apySnapshot: number | null;
+  lastRefreshedAt: string | null;
 }
 
 /**
@@ -57,6 +98,14 @@ export interface TreasurySnapshot {
    */
   totalOtherYieldUsd: number;
 
+  /**
+   * Convenience aggregate = totalMmfPositionsUsd + totalDefiPositionsUsd
+   * + totalOtherYieldUsd. Populated by `buildTreasurySnapshot`. The
+   * insights engine reads this so detectors don't have to sum the three
+   * sub-buckets themselves.
+   */
+  totalYieldBalanceUsd: number;
+
   bankAccounts: Array<{
     id: string;
     institutionName: string;
@@ -73,6 +122,8 @@ export interface TreasurySnapshot {
     balance: number;
     usdValue: number;
   }>;
+  /** Active yield positions — empty array if the customer has none. */
+  yieldPositions: YieldPositionSnapshot[];
 }
 
 export interface RulesEngineResult {

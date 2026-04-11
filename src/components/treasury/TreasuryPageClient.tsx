@@ -6,6 +6,7 @@ import { RecommendationList } from './RecommendationList';
 import { ForecastingPageClient } from './ForecastingPageClient';
 import { TreasuryHealthCard } from './TreasuryHealthCard';
 import { YieldPositionsSummary } from './YieldPositionsSummary';
+import { InsightFeed } from './InsightFeed';
 import { TabNav } from '@/components/ui/tab-nav';
 import { ReviewRecommendationModal } from './ReviewRecommendationModal';
 
@@ -36,6 +37,7 @@ export function TreasuryPageClient() {
       {tab === 'overview' && (
         <div className="space-y-6">
           <TreasuryHealthCard />
+          <InsightFeed />
           <YieldPositionsSummary />
           <RecommendationList />
         </div>

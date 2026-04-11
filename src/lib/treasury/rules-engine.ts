@@ -1,16 +1,18 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { TreasuryRule } from '@/types/database';
-import type { StablecoinPrices } from '@/types/database';
+import type { StablecoinPrices, ChainType } from '@/types/database';
+import type { YieldProtocolId } from '@/lib/yield/interface';
 import type {
   TreasurySnapshot,
   UpcomingObligation,
   RulesEngineResult,
+  YieldPositionSnapshot,
 } from './interface';
 import { getStablecoinPrices } from './oracle';
 import { TreasuryStateService } from './state/service';
 import { createForecastService } from '@/lib/forecast/service';
 import { getHoldingCardPlacement } from './holdings-category';
-import type { YieldProtocolId } from '@/lib/yield/interface';
+import { getVenue } from '@/lib/yield/venues';
 
 export async function getActiveTreasuryRule(
   supabase: SupabaseClient,
@@ -78,8 +80,10 @@ export async function buildTreasurySnapshot(
       totalMmfPositionsUsd: 0,
       totalDefiPositionsUsd: 0,
       totalOtherYieldUsd: 0,
+      totalYieldBalanceUsd: 0,
       bankAccounts: [],
       cryptoPositions: [],
+      yieldPositions: [],
     };
   }
 
@@ -103,6 +107,35 @@ export async function buildTreasurySnapshot(
     else otherTotal += p.currentValueBaseUsd;
   }
 
+  // Build YieldPositionSnapshot[] for the insights engine. DefiPosition
+  // from TreasuryStateSnapshot doesn't carry the venue category, so we
+  // look it up against the canonical venues registry here. Detectors
+  // then apply category-specific logic (MMF vs DeFi vault vs lending
+  // market) without re-querying.
+  const yieldPositions: YieldPositionSnapshot[] = snap.positions.defiPositions.map((p) => {
+    const venue = getVenue(p.protocol as YieldProtocolId);
+    return {
+      id: p.positionId,
+      protocol: p.protocol,
+      chain: p.chain as ChainType,
+      underlyingToken: p.underlyingToken,
+      // DefiPosition in the new state service doesn't expose the
+      // yield-bearing token separately. Insights detectors size
+      // positions via currentValueUsd, so leaving these two as
+      // null/0 is safe for v1.
+      yieldToken: null,
+      venueCategory: venue?.category ?? null,
+      depositedAmount: p.depositedAmount,
+      yieldTokenBalance: 0,
+      currentValueUsd: p.currentValueBaseUsd,
+      accruedYieldUsd: p.accruedYieldBaseUsd,
+      apySnapshot: p.apySnapshot,
+      lastRefreshedAt: p.lastRefreshedAt,
+    };
+  });
+
+  const totalYieldBalanceUsd = mmfTotal + defiTotal + otherTotal;
+
   return {
     totalBankBalanceUsd: snap.totalFiatBaseUsd,
     // Wallet stablecoins ONLY — no yield conflation.
@@ -110,6 +143,7 @@ export async function buildTreasurySnapshot(
     totalMmfPositionsUsd: mmfTotal,
     totalDefiPositionsUsd: defiTotal,
     totalOtherYieldUsd: otherTotal,
+    totalYieldBalanceUsd,
     bankAccounts: snap.positions.bankAccounts.map((b) => ({
       id: b.accountId,
       institutionName: b.institutionName,
@@ -126,6 +160,7 @@ export async function buildTreasurySnapshot(
       balance: w.balanceNative,
       usdValue: w.balanceBaseUsd,
     })),
+    yieldPositions,
   };
 }
 
