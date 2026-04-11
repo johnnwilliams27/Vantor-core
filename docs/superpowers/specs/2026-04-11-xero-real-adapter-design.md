@@ -44,13 +44,13 @@ Everything Xero-specific lives under `src/lib/erp/real/xero/`. Nine net-new file
 2. **`schemas.ts`** — Zod schemas for every consumed Xero response: `TokenResponse`, `ConnectionsResponse`, `ContactsResponse`, `InvoicesResponse`, `PaymentResponse`. Unknown keys ignored; required-field drift fails parsing.
 3. **`mapper.ts`** — Pure functions converting Zod-parsed Xero shapes into Vantor shapes (`ERPVendorRaw`, `ERPInvoiceRaw`, `ERPBillPaymentResult`). No I/O. Trivially unit-testable.
 4. **`adapter.ts`** — `XeroRealAdapter implements IERPAdapter`. Thin — each method 5–10 lines: call client, pipe through mapper, wrap errors from `errors.ts`.
-5. **`tokens.ts`** — Token persistence. Loads + decrypts from `erp_connections`, persists rotated refresh tokens atomically, owns the in-process refresh mutex keyed by `connection_id`.
+5. **`tokens.ts`** — Token persistence. Loads + decrypts from `erp_configurations`, persists rotated refresh tokens atomically, owns the in-process refresh mutex keyed by `connection_id`.
 6. **`errors.ts`** — `XeroError` factory. One file, one constructor per reason code. Every Xero-originated error in the adapter comes from here. See §Error Handling for the complete reason-code list.
 
 ### Auth surface (`src/app/api/erp/xero/`)
 
-7. **`authorize/route.ts`** — GET handler. Generates 43-byte PKCE verifier + SHA-256 challenge, 32-byte state token, sets a signed HTTP-only `xero_oauth` cookie (10 min TTL) carrying `{ verifier, state, org_id }`, and 302s to Xero's authorize URL.
-8. **`callback/route.ts`** — GET handler. Validates state against cookie, exchanges code for tokens, resolves the tenant via `GET /connections`, auto-picks the first `tenantType === 'ORGANISATION'` (logs others), encrypts and persists tokens to `erp_connections`, clears the cookie, 302s to `/settings/erp?xero=connected`.
+7. **`authorize/route.ts`** — GET handler. Generates 43-byte PKCE verifier + SHA-256 challenge, 32-byte state token, sets a signed HTTP-only `xero_oauth` cookie (10 min TTL) carrying `{ verifier, state, user_id, enterprise_id }`, and 302s to Xero's authorize URL.
+8. **`callback/route.ts`** — GET handler. Validates state against cookie, exchanges code for tokens, resolves the tenant via `GET /connections`, auto-picks the first `tenantType === 'ORGANISATION'` (logs others), encrypts and persists tokens to `erp_configurations`, clears the cookie, 302s to `/settings/erp?xero=connected`.
 
 ### Factory wire-up
 
@@ -58,7 +58,7 @@ Everything Xero-specific lives under `src/lib/erp/real/xero/`. Nine net-new file
 
 ### Database
 
-10. **Supabase migration** — add columns to `erp_connections`:
+10. **Supabase migration** — add columns to `erp_configurations`:
     - `xero_tenant_id` (text) — the Xero tenant UUID
     - `xero_bank_account_id` (text) — the Xero bank account ID payments are recorded against
     - `access_token_expires_at` (timestamptz)
@@ -107,7 +107,7 @@ Because `postGLEntry` is being removed from `IERPAdapter`, this dormant surface 
 
 ### Database (continued)
 
-In addition to the `erp_connections` column additions above, this slice adds a `bill_payments` table — the `recordBillPayment` results table, replacing the dropped `gl_postings` table. Columns:
+In addition to the `erp_configurations` column additions above, this slice adds a `bill_payments` table — the `recordBillPayment` results table, replacing the dropped `gl_postings` table. Columns:
 
 - `id uuid primary key`
 - `user_id uuid references auth.users`
@@ -162,7 +162,7 @@ User clicks "Connect Xero" on /settings/erp
 GET /api/erp/xero/authorize
   • generate 43-byte PKCE verifier + SHA-256 challenge
   • generate 32-byte state token
-  • set signed HTTP-only cookie `xero_oauth` { verifier, state, org_id } — 10 min TTL
+  • set signed HTTP-only cookie `xero_oauth` { verifier, state, user_id, enterprise_id } — 10 min TTL
   • 302 → https://login.xero.com/identity/connect/authorize?
            response_type=code
           &client_id=$CLIENT_ID
@@ -186,12 +186,13 @@ GET /api/erp/xero/callback?code=…&state=…
   • GET https://api.xero.com/api.xro/2.0/Accounts?where=Type=="BANK" → resolve xero_bank_account_id
       (MVP: first BANK account; future: user picker)
   • encrypt { access_token, refresh_token, client_id, client_secret } via encryptCredentials
-  • UPSERT erp_connections:
-      org_id, provider='xero', credentials_encrypted,
+  • UPSERT erp_configurations ON CONFLICT (user_id, provider):
+      user_id, enterprise_id, provider='xero', credentials=<encrypted>,
       xero_tenant_id, xero_bank_account_id,
       access_token_expires_at = now() + expires_in,
       refresh_token_rotated_at = now(),
-      status = 'active'
+      status = 'active',
+      is_active = true
   • clear `xero_oauth` cookie
   • 302 → /settings/erp?xero=connected
 ```
@@ -202,7 +203,7 @@ GET /api/erp/xero/callback?code=…&state=…
 Existing sync endpoint (POST /api/erp/sync)
   │
   ▼
-Load erp_connections row for org → decrypt credentials
+Load erp_configurations row for (user_id, enterprise_id, provider='xero') → decrypt credentials
   │
   ▼
 getERPAdapter('xero', credentials) → XeroRealAdapter
@@ -285,7 +286,7 @@ Two concurrent API calls on an expired token could both trigger refresh in paral
 Two layered defenses:
 
 1. **In-process mutex** — `Map<connection_id, Promise<TokenResponse>>` inside `tokens.ts`. If request A is already refreshing connection X, request B awaits A's promise instead of starting its own.
-2. **Reload-before-refresh** — before POSTing to `/connect/token`, re-read the `erp_connections` row. If the refresh token in the DB doesn't match the one we started with, some *other* Node process already refreshed. Use the DB's current tokens and skip the refresh entirely.
+2. **Reload-before-refresh** — before POSTing to `/connect/token`, re-read the `erp_configurations` row. If the refresh token in the DB doesn't match the one we started with, some *other* Node process already refreshed. Use the DB's current tokens and skip the refresh entirely.
 
 Defense 1 handles concurrent requests inside one Vercel lambda. Defense 2 handles concurrent requests across different lambdas — optimistic concurrency via row-read, not true mutual exclusion, but sufficient for the realistic QPS profile. Postgres advisory locks via `pg_try_advisory_lock` would close the remaining race entirely at the cost of a DB round-trip per refresh; deferred until we see `invalid_grant` in logs indicating the race is actually firing.
 
@@ -319,14 +320,14 @@ Defense 1 handles concurrent requests inside one Vercel lambda. Defense 2 handle
 
 ```
 1. acquireMutex(connection_id)                                  // in-process
-2. reload erp_connections row
+2. reload erp_configurations row
    if row.refresh_token !== oldRefreshToken:
      releaseMutex()
      return { access_token: row.access_token, refresh_token: row.refresh_token }
 3. POST https://identity.xero.com/connect/token
    grant_type=refresh_token, refresh_token=oldRefreshToken, client_id, client_secret
 4. on 400 invalid_grant:
-     UPDATE erp_connections SET status='expired' WHERE id = connection_id
+     UPDATE erp_configurations SET status='expired' WHERE id = connection_id
      releaseMutex()
      throw ERP_XERO_AUTH_EXPIRED
 5. on 5xx / network error:
@@ -334,7 +335,7 @@ Defense 1 handles concurrent requests inside one Vercel lambda. Defense 2 handle
      throw ERP_XERO_UPSTREAM_FAILURE
 6. on 200:
      parse TokenResponse via Zod
-     UPDATE erp_connections SET
+     UPDATE erp_configurations SET
        credentials_encrypted = encrypt({ ...new tokens, client_id, client_secret }),
        access_token_expires_at = now() + expires_in,
        refresh_token_rotated_at = now()
@@ -364,7 +365,7 @@ Every error that leaves `src/lib/erp/real/xero/` is a `XeroError` built by the `
 | Reason code | When it fires | Next step shown to user |
 |---|---|---|
 | `ERP_XERO_STATE_MISMATCH` | OAuth callback `state` ≠ signed cookie. CSRF defense. | "Restart the Xero connection from Settings → ERP." |
-| `ERP_XERO_NOT_CONNECTED` | Caller requests adapter for an org with no `erp_connections` row. | "Connect Xero from Settings → ERP." |
+| `ERP_XERO_NOT_CONNECTED` | Caller requests adapter for a user+enterprise with no `erp_configurations` row for provider='xero'. | "Connect Xero from Settings → ERP." |
 | `ERP_XERO_AUTH_EXPIRED` | Refresh returned `invalid_grant`, OR retried API call still 401s. Connection is dead. | "Reconnect Xero from Settings → ERP." |
 | `ERP_XERO_REFRESH_PERSIST_FAILURE` | Xero refresh succeeded but 3 consecutive DB writes failed. New tokens in memory, unsaved. | "Try the action again in a moment. If it keeps failing, contact support with this trace ID." |
 | `ERP_XERO_RATE_LIMITED` | 429. Fields carry `retry_after_seconds`, `daily_limit_remaining`. | "Xero is throttling this connection. Vantor will resume automatically in N seconds." |
@@ -385,7 +386,7 @@ Minimum on every `XeroError`:
 Per-code extras:
 - `ERP_XERO_RATE_LIMITED`: `retry_after_seconds`, `daily_limit_remaining`
 - `ERP_XERO_VALIDATION`: `zod_issues[]`, `body_prefix` (200 bytes, redacted of tokens)
-- `ERP_XERO_AUTH_EXPIRED`: `last_successful_refresh_at` — immediately distinguishes "broke 45 days ago" from "broke one second ago"
+- `ERP_XERO_AUTH_EXPIRED`: `refresh_token_rotated_at` (last successful refresh) — immediately distinguishes "broke 45 days ago" from "broke one second ago"
 
 ### Logs vs. user response
 
@@ -419,7 +420,7 @@ Covers:
 
 Exercises the full `XeroClient` → `XeroRealAdapter` stack with:
 - **MSW** intercepting every outbound `fetch` to `*.xero.com` and serving recorded fixtures from `tests/fixtures/xero/*.json`.
-- **Testcontainers** spinning up a real Postgres instance for `erp_connections` state. Migrations applied at test start; container torn down at test end. Implemented via `tests/helpers/testcontainers-postgres.ts`.
+- **Testcontainers** spinning up a real Postgres instance for `erp_configurations` state. Migrations applied at test start; container torn down at test end. Implemented via `tests/helpers/testcontainers-postgres.ts`.
 
 Covers:
 - **Auth state machine**: token valid (normal path), token expired (proactive refresh), 401 on API call (reactive refresh + retry), 401 after retry (give up → `ERP_XERO_AUTH_EXPIRED`), 429 (→ `ERP_XERO_RATE_LIMITED` with parsed `Retry-After`), 5xx (→ `ERP_XERO_UPSTREAM_FAILURE`), `invalid_grant` on refresh (→ connection marked expired).
