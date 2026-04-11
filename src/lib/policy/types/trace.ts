@@ -4,6 +4,7 @@ import type { Verdict } from './verdict';
 import { ReasonCode, WarningCode } from '../errors/reason-codes';
 import { HardLimitCheckResult } from './hard-limit';
 import { Condition } from './ir';
+import type { PolicyRule } from './policy-version';
 
 /**
  * Full evaluation trace persisted to policy_evaluations. Every rule
@@ -47,7 +48,7 @@ export interface CanonicalizationTrace {
 export interface RuleEvaluationTrace {
   rule_id: string;
   rule_name: string;
-  rule_type: string;
+  rule_type: PolicyRule['rule_type'];
   priority: number;
   condition_result: ConditionEvaluationTrace;
   matched: boolean;

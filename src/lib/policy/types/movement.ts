@@ -16,25 +16,23 @@ export type MovementKind =
   | 'bridge'
   | 'payment';
 
-export type InitiatorType = 'human' | 'agent' | 'ai_recommendation' | 'schedule';
-
 /**
- * Who initiated this movement. Exactly one of the identity fields should be
- * populated based on `type`:
- *   - type='human' → user_id
- *   - type='agent' → agent_id (+ optional recommendation_id)
- *   - type='ai_recommendation' → recommendation_id
- *   - type='schedule' → scheduled_op_id
+ * Who initiated this movement. Discriminated union — TypeScript narrows
+ * the identity field by `type` so downstream code cannot accidentally
+ * conflate an agent movement with an ai_recommendation movement (the
+ * Vantor invariant "AI-initiated money movement never auto-executes"
+ * depends on this distinction).
  *
- * Validation is enforced by the zod schema, not by TypeScript narrowing.
+ * Validation of structural well-formedness is still enforced by the
+ * zod schema (Task 5) at API boundaries.
  */
-export interface Initiator {
-  type: InitiatorType;
-  user_id?: string;
-  agent_id?: string;
-  recommendation_id?: string;
-  scheduled_op_id?: string;
-}
+export type Initiator =
+  | { type: 'human'; user_id: string }
+  | { type: 'agent'; agent_id: string; recommendation_id?: string }
+  | { type: 'ai_recommendation'; recommendation_id: string }
+  | { type: 'schedule'; scheduled_op_id: string };
+
+export type InitiatorType = Initiator['type'];
 
 /**
  * One end of a movement (source or destination). At least one of

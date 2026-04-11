@@ -25,9 +25,9 @@ export interface EvaluationContext {
  * fields are canonicalized at load time.
  */
 export interface TreasuryState {
-  positions_by_asset: Record<AssetCode, string>;              // native amounts
+  positions_by_asset: Partial<Record<AssetCode, string>>;     // native amounts
   positions_by_asset_venue: Record<string, string>;           // key: "asset:venue"
-  positions_usd_by_asset: Record<AssetCode, string>;          // USD-equivalent per asset
+  positions_usd_by_asset: Partial<Record<AssetCode, string>>; // USD-equivalent per asset
   total_treasury_usd: string;                                 // sum of all positions_usd
   cash_equivalent_usd: string;                                // sum of USD + stablecoin positions
   loaded_at: Date;
@@ -37,7 +37,7 @@ export interface TreasuryState {
 export interface TreasuryStateFailure {
   asset?: AssetCode;
   venue?: VenueId;
-  reason_code: string;
+  reason_code: 'treasury_state_unavailable' | 'scope_resolution_failed';
   human_readable: string;
 }
 
@@ -55,10 +55,10 @@ export interface CanonicalizationResult {
   rate_source: string;            // e.g., 'coingecko' | 'manual_override'
   rate_as_of: Date;               // when the underlying rate was read
   max_age_ms: number;             // policy engine's staleness threshold
-  failure?: CanonicalizationResultFailure;
+  failure?: CanonicalizationFailure;
 }
 
-export interface CanonicalizationResultFailure {
+export interface CanonicalizationFailure {
   reason_code: 'canonicalization_failed' | 'canonicalization_source_unavailable' | 'canonicalization_rate_stale';
   human_readable: string;
   details: Record<string, unknown>;
@@ -81,7 +81,7 @@ export interface AggregateWindowResult {
   window_start: Date;
   window_end: Date;
   sum_amount_usd: string;
-  sum_amount_by_asset: Record<AssetCode, string>;
+  sum_amount_by_asset: Partial<Record<AssetCode, string>>;
   count: number;
   distinct_destinations: number;
   distinct_counterparties: number;

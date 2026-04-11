@@ -2,16 +2,21 @@
 
 /**
  * Asset codes the policy engine recognizes in phase 1.
- * Expansion requires adding here AND adding a rate source in the
- * canonicalizer's PolicyRateProvider implementation (for USD-comparable
- * assets) OR leaving as native-only.
+ *
+ * CLOSED UNION — expansion requires:
+ *   1. Add the new code to this union.
+ *   2. Add a rate source in the canonicalizer's PolicyRateProvider
+ *      implementation (for USD-comparable assets), OR document that
+ *      the new asset is native-only.
+ *   3. Update zod schemas that reference AssetCode.
+ *
+ * Keeping this union closed gives us literal autocomplete, typo-safe
+ * switch exhaustiveness, and Record<AssetCode, ...> lookup semantics.
  */
 export type AssetCode =
   | 'USD'
   | 'USDC'
-  | 'USDT'
-  // Future: 'EUR', 'GBP', 'BTC', 'ETH', 'DAI', 'PYUSD', etc.
-  | (string & { readonly __brand?: 'AssetCode' });  // open-ended brand for extensibility
+  | 'USDT';
 
 /**
  * Stable identifier for a venue (chain, exchange, bank).
