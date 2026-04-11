@@ -125,6 +125,7 @@ describe('CanonicalizationSourceUnavailableError', () => {
     });
 
     expect(err).toBeInstanceOf(PolicyError);
+    expect(err).toBeInstanceOf(CanonicalizationError);
     expect(err.reason_code).toBe('canonicalization_source_unavailable');
     expect(err.module).toBe('canonicalizer');
     expect(err.name).toBe('CanonicalizationSourceUnavailableError');
@@ -141,6 +142,7 @@ describe('CanonicalizationRateStaleError', () => {
     });
 
     expect(err).toBeInstanceOf(PolicyError);
+    expect(err).toBeInstanceOf(CanonicalizationError);
     expect(err.reason_code).toBe('canonicalization_rate_stale');
     expect(err.module).toBe('canonicalizer');
     expect(err.name).toBe('CanonicalizationRateStaleError');

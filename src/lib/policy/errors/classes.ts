@@ -70,32 +70,30 @@ export interface PolicyErrorEnvelope {
 
 /** Canonicalization failed for any reason — rate stale, source down, unsupported asset. */
 export class CanonicalizationError extends PolicyError {
-  constructor(init: Omit<PolicyErrorInit, 'reason_code' | 'module'>) {
-    super({ ...init, reason_code: REASON_CODES.canonicalization_failed, module: 'canonicalizer' });
+  constructor(
+    init: Omit<PolicyErrorInit, 'reason_code' | 'module'> & { reason_code?: ReasonCode },
+  ) {
+    super({
+      ...init,
+      reason_code: init.reason_code ?? REASON_CODES.canonicalization_failed,
+      module: 'canonicalizer',
+    });
     this.name = 'CanonicalizationError';
   }
 }
 
 /** Canonicalization failed because the rate source is unreachable, mock, or unconfigured. */
-export class CanonicalizationSourceUnavailableError extends PolicyError {
+export class CanonicalizationSourceUnavailableError extends CanonicalizationError {
   constructor(init: Omit<PolicyErrorInit, 'reason_code' | 'module'>) {
-    super({
-      ...init,
-      reason_code: REASON_CODES.canonicalization_source_unavailable,
-      module: 'canonicalizer',
-    });
+    super({ ...init, reason_code: REASON_CODES.canonicalization_source_unavailable });
     this.name = 'CanonicalizationSourceUnavailableError';
   }
 }
 
 /** Canonicalization failed because the rate reading is older than POLICY_RATE_MAX_AGE_MS. */
-export class CanonicalizationRateStaleError extends PolicyError {
+export class CanonicalizationRateStaleError extends CanonicalizationError {
   constructor(init: Omit<PolicyErrorInit, 'reason_code' | 'module'>) {
-    super({
-      ...init,
-      reason_code: REASON_CODES.canonicalization_rate_stale,
-      module: 'canonicalizer',
-    });
+    super({ ...init, reason_code: REASON_CODES.canonicalization_rate_stale });
     this.name = 'CanonicalizationRateStaleError';
   }
 }

@@ -151,4 +151,168 @@ describe('CoingeckoPolicyRateProvider', () => {
       details: { reason: 'fetched_at_in_future' },
     });
   });
+
+  it('throws canonicalization_source_unavailable when fetchedAt is an Invalid Date', async () => {
+    // `new Date('not-a-date')` is a Date instance whose .getTime() returns NaN.
+    // Both the future and stale comparisons short-circuit on NaN, so without a
+    // dedicated guard the Invalid Date would flow into asOfRate and defeat the
+    // staleness guard entirely.
+    const provider = new CoingeckoPolicyRateProvider({
+      fetchStablecoinPrices: vi.fn().mockResolvedValue({
+        prices: { USDC: 1.0002, USDT: 1.0001 },
+        source: 'coingecko',
+        fetchedAt: new Date('not-a-date'),
+      }),
+    });
+
+    await expect(provider.getRateAsOf('USDC', 'USD', new Date())).rejects.toMatchObject({
+      reason_code: 'canonicalization_source_unavailable',
+      details: { reason: 'fetched_at_invalid' },
+    });
+  });
+
+  it('throws canonicalization_source_unavailable when fetchedAt is a string (non-Date)', async () => {
+    // A future JSON cache/RPC layer could return fetchedAt as a string without
+    // revival. Calling .getTime() on a string throws TypeError, escaping the
+    // structured-error contract — must be caught as a shape issue.
+    const provider = new CoingeckoPolicyRateProvider({
+      fetchStablecoinPrices: vi.fn().mockResolvedValue({
+        prices: { USDC: 1.0002, USDT: 1.0001 },
+        source: 'coingecko',
+        fetchedAt: '2026-04-10T14:22:33.000Z' as unknown as Date,
+      }),
+    });
+
+    await expect(provider.getRateAsOf('USDC', 'USD', new Date())).rejects.toMatchObject({
+      reason_code: 'canonicalization_source_unavailable',
+      details: { reason: 'fetched_at_not_date' },
+    });
+  });
+
+  it('throws canonicalization_source_unavailable when prices payload is null', async () => {
+    const provider = new CoingeckoPolicyRateProvider({
+      fetchStablecoinPrices: vi.fn().mockResolvedValue({
+        prices: null as unknown as Record<string, number>,
+        source: 'coingecko',
+        fetchedAt: new Date(),
+      }),
+    });
+
+    await expect(provider.getRateAsOf('USDC', 'USD', new Date())).rejects.toMatchObject({
+      reason_code: 'canonicalization_source_unavailable',
+      details: { reason: 'prices_malformed' },
+    });
+  });
+
+  it('throws canonicalization_failed when the requested asset rate value is null', async () => {
+    // prices is a valid object but the specific asset's rate is null — hits the
+    // `rateNumber == null` branch after shape validation passes.
+    const provider = new CoingeckoPolicyRateProvider({
+      fetchStablecoinPrices: vi.fn().mockResolvedValue({
+        prices: { USDC: null as unknown as number, USDT: 1.0 },
+        source: 'coingecko',
+        fetchedAt: new Date(),
+      }),
+    });
+
+    await expect(provider.getRateAsOf('USDC', 'USD', new Date())).rejects.toMatchObject({
+      reason_code: 'canonicalization_failed',
+    });
+  });
+
+  it('throws canonicalization_failed when rate is exactly zero (defense in depth)', async () => {
+    // `String(0)` is `'0'`, which matches the non-negative-decimal regex. Without
+    // the `<= 0` guard, a buggy oracle returning zero would silently neutralize
+    // every USD-denominated threshold check (multiplied by zero rate).
+    const provider = new CoingeckoPolicyRateProvider({
+      fetchStablecoinPrices: vi.fn().mockResolvedValue({
+        prices: { USDC: 0, USDT: 1.0 },
+        source: 'coingecko',
+        fetchedAt: new Date(),
+      }),
+    });
+
+    await expect(provider.getRateAsOf('USDC', 'USD', new Date())).rejects.toMatchObject({
+      reason_code: 'canonicalization_failed',
+    });
+  });
+
+  it('throws canonicalization_failed when rate is negative (-0.5)', async () => {
+    const provider = new CoingeckoPolicyRateProvider({
+      fetchStablecoinPrices: vi.fn().mockResolvedValue({
+        prices: { USDC: -0.5, USDT: 1.0 },
+        source: 'coingecko',
+        fetchedAt: new Date(),
+      }),
+    });
+
+    await expect(provider.getRateAsOf('USDC', 'USD', new Date())).rejects.toMatchObject({
+      reason_code: 'canonicalization_failed',
+    });
+  });
+
+  it('throws canonicalization_failed when rate is negative (-1)', async () => {
+    const provider = new CoingeckoPolicyRateProvider({
+      fetchStablecoinPrices: vi.fn().mockResolvedValue({
+        prices: { USDC: -1, USDT: 1.0 },
+        source: 'coingecko',
+        fetchedAt: new Date(),
+      }),
+    });
+
+    await expect(provider.getRateAsOf('USDC', 'USD', new Date())).rejects.toMatchObject({
+      reason_code: 'canonicalization_failed',
+    });
+  });
+
+  it('throws canonicalization_failed when rate serializes to scientific notation (1e-10)', async () => {
+    // `String(1e-10)` is `'1e-10'`, which fails the decimal-string regex.
+    const provider = new CoingeckoPolicyRateProvider({
+      fetchStablecoinPrices: vi.fn().mockResolvedValue({
+        prices: { USDC: 1e-10, USDT: 1.0 },
+        source: 'coingecko',
+        fetchedAt: new Date(),
+      }),
+    });
+
+    await expect(provider.getRateAsOf('USDC', 'USD', new Date())).rejects.toMatchObject({
+      reason_code: 'canonicalization_failed',
+    });
+  });
+
+  it('throws canonicalization_failed when rate serializes to scientific notation (1e21)', async () => {
+    // `String(1e21)` is `'1e+21'`, which fails the decimal-string regex. The
+    // `<= 0` check passes (1e21 > 0), so this exercises the rate-precision path.
+    const provider = new CoingeckoPolicyRateProvider({
+      fetchStablecoinPrices: vi.fn().mockResolvedValue({
+        prices: { USDC: 1e21, USDT: 1.0 },
+        source: 'coingecko',
+        fetchedAt: new Date(),
+      }),
+    });
+
+    await expect(provider.getRateAsOf('USDC', 'USD', new Date())).rejects.toMatchObject({
+      reason_code: 'canonicalization_failed',
+    });
+  });
+
+  it.each([
+    ['cache'],
+    ['fallback'],
+    ['stub'],
+    [''],
+    ['CoinGecko'], // case drift
+  ])('rejects unknown source %j with canonicalization_source_unavailable', async (source) => {
+    const provider = new CoingeckoPolicyRateProvider({
+      fetchStablecoinPrices: vi.fn().mockResolvedValue({
+        prices: { USDC: 1.0002, USDT: 1.0001 },
+        source,
+        fetchedAt: new Date(),
+      }),
+    });
+
+    await expect(provider.getRateAsOf('USDC', 'USD', new Date())).rejects.toMatchObject({
+      reason_code: 'canonicalization_source_unavailable',
+    });
+  });
 });
