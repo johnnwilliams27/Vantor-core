@@ -113,8 +113,9 @@ async function cleanUserData(userId: string) {
   // Must delete in FK-safe order.
   // forecast_snapshots has a NOT NULL FK to treasury_state_snapshots so
   // the child goes first. obligations (formerly manual_obligations)
-  // replaces the legacy table name per migration 0036. treasury_forecasts
-  // was dropped in migration 0039 and must no longer appear here.
+  // replaces the legacy table name per migration 0041 (renumbered from
+  // 0036 post-merge). treasury_forecasts was dropped in migration 0044
+  // (renumbered from 0039).
   for (const t of ['simulation_runs', 'forecast_snapshots', 'treasury_state_snapshots',
     'ai_recommendations', 'obligations', 'treasury_rules', 'fiat_transactions', 'gl_postings',
     'kyt_alerts', 'kyt_transfers', 'sanctions_screenings', 'travel_rule_transfers',
@@ -1310,6 +1311,249 @@ async function main() {
   console.log(`✓ ${notificationRows.length} notifications (${pendingRecs.length + 1} unread)`);
 
   // ════════════════════════════════════════════════════════
+  // 13d. POLICY ENGINE (config tables — draft version)
+  // ════════════════════════════════════════════════════════
+  // Seeds a full policy hierarchy so the policy engine has something to
+  // evaluate end-to-end on a fresh install:
+  //   policy_policies → policy_versions (draft) → policy_rules +
+  //   policy_hard_limits + policy_approval_chains
+  //
+  // The version is intentionally left in 'draft' status:
+  //   1. Children (rules, hard_limits, chains) can only be mutated while
+  //      the parent version is 'draft' (trigger
+  //      `policy_child_frozen_when_parent_not_draft`). Once 'active' they
+  //      cannot be re-seeded on a subsequent `npm run seed` because the
+  //      cascade delete from policy_policies hits the row-level trigger.
+  //   2. Demo users can click "Activate" in the UI to exercise the full
+  //      end-to-end evaluation path.
+  //
+  // Runtime/audit tables (policy_evaluations, policy_approval_requests,
+  // policy_activation_events) are deliberately NOT seeded — they are
+  // append-only via `_no_delete` rewrite rules and would poison re-seeds.
+  // Schema: supabase/migrations/0034_policy_engine_schema.sql
+  if (enterpriseId) {
+    console.log('\n🛡️  Seeding policy engine (config tables)...');
+
+    // Cascade delete through policy_policies (CASCADE FK on policy_versions,
+    // which in turn cascades to rules/hard_limits/approval_chains).
+    // Triggers allow these DELETEs because the version is draft.
+    await sb.from('policy_policies').delete().eq('enterprise_id', enterpriseId);
+
+    const { data: policyRow, error: policyErr } = await sb
+      .from('policy_policies')
+      .insert({
+        enterprise_id: enterpriseId,
+        name: 'Standard Treasury Policy',
+        active_version_id: null, // set below after version exists
+      })
+      .select('id')
+      .single();
+    if (policyErr) throw policyErr;
+
+    const { data: versionRow, error: versionErr } = await sb
+      .from('policy_versions')
+      .insert({
+        enterprise_id: enterpriseId,
+        version_number: 1,
+        status: 'draft',
+        name: 'Standard Policy v1 (draft)',
+        created_by: userId,
+      })
+      .select('id')
+      .single();
+    if (versionErr) throw versionErr;
+    const versionId = versionRow.id;
+
+    // ── Approval chains ───────────────────────────────────────────
+    const { data: chains, error: chainErr } = await sb
+      .from('policy_approval_chains')
+      .insert([
+        {
+          version_id: versionId,
+          name: 'Single-approver (under $100K)',
+          slots: [{ slot_index: 0, minimum_role: 'treasury_manager', label: 'Treasury Manager' }],
+          trigger_condition: null,
+          priority: 10,
+          expiration_hours: 24,
+          created_by: userId,
+        },
+        {
+          version_id: versionId,
+          name: 'Dual approval (over $100K)',
+          slots: [
+            { slot_index: 0, minimum_role: 'treasury_manager', label: 'Treasury Manager' },
+            { slot_index: 1, minimum_role: 'cfo', label: 'CFO or delegate' },
+          ],
+          trigger_condition: {
+            kind: 'amount_compare',
+            attr: 'transfer.amount',
+            op: '>=',
+            value: { amount: '100000', currency: 'USD' },
+          },
+          priority: 20,
+          expiration_hours: 48,
+          created_by: userId,
+        },
+      ])
+      .select('id, name');
+    if (chainErr) throw chainErr;
+    const singleChain = chains.find((c) => c.name.startsWith('Single'))!;
+    const dualChain   = chains.find((c) => c.name.startsWith('Dual'))!;
+
+    // ── Hard limits ──────────────────────────────────────────────
+    // Typed structural limits — NOT condition-DSL rules. One per limit_type.
+    const { error: hlErr } = await sb.from('policy_hard_limits').insert([
+      {
+        version_id: versionId,
+        limit_type: 'min_cash_reserve_usd',
+        name: 'Minimum cash reserve (fiat + stablecoin)',
+        limit_value: '500000',
+        limit_currency: 'USD',
+        scope: {},
+        created_by: userId,
+      },
+      {
+        version_id: versionId,
+        limit_type: 'max_single_asset_concentration_pct',
+        name: 'Max single-asset concentration',
+        limit_value: '75',
+        limit_currency: null,
+        scope: {},
+        created_by: userId,
+      },
+      {
+        version_id: versionId,
+        limit_type: 'max_daily_outflow_usd',
+        name: 'Max 24h outflow',
+        limit_value: '500000',
+        limit_currency: 'USD',
+        scope: {},
+        created_by: userId,
+      },
+      {
+        version_id: versionId,
+        limit_type: 'max_30day_outflow_usd',
+        name: 'Max 30-day outflow',
+        limit_value: '5000000',
+        limit_currency: 'USD',
+        scope: {},
+        created_by: userId,
+      },
+      {
+        version_id: versionId,
+        limit_type: 'obligation_coverage_days',
+        name: 'Minimum obligation coverage window',
+        limit_value: '30',
+        limit_currency: null,
+        scope: {},
+        created_by: userId,
+      },
+    ]);
+    if (hlErr) throw hlErr;
+
+    // ── Rules (condition IR — must match schemas/ir.schema.ts) ───
+    const { error: rulesErr } = await sb.from('policy_rules').insert([
+      // 1. Low-value auto-approval — allow transfers under $10K
+      {
+        version_id: versionId,
+        rule_type: 'approval_threshold',
+        name: 'Auto-approve transfers under $10K',
+        rationale: 'Low-value day-to-day vendor payments do not need manual review. Keeps treasurer focused on material movements.',
+        condition: {
+          kind: 'amount_compare',
+          attr: 'transfer.amount',
+          op: '<',
+          value: { amount: '10000', currency: 'USD' },
+        },
+        verdict: 'allow_auto',
+        verdict_chain_id: null,
+        priority: 10,
+        created_by: userId,
+      },
+      // 2. Mid-value single approver — transfers $10K–$100K
+      {
+        version_id: versionId,
+        rule_type: 'approval_threshold',
+        name: 'Single-approver review for $10K–$100K',
+        rationale: 'Everyday operational payments above the auto-approve floor still need a human eye.',
+        condition: {
+          kind: 'amount_compare',
+          attr: 'transfer.amount',
+          op: 'between',
+          value: { amount: '10000', currency: 'USD' },
+          value_upper: { amount: '100000', currency: 'USD' },
+        },
+        verdict: 'require_approval',
+        verdict_chain_id: singleChain.id,
+        priority: 20,
+        created_by: userId,
+      },
+      // 3. High-value dual approver — transfers $100K+
+      {
+        version_id: versionId,
+        rule_type: 'approval_threshold',
+        name: 'Dual approval for transfers $100K+',
+        rationale: 'Material movements require treasurer + CFO sign-off. Mirrors SOX-style segregation of duties for large outflows.',
+        condition: {
+          kind: 'amount_compare',
+          attr: 'transfer.amount',
+          op: '>=',
+          value: { amount: '100000', currency: 'USD' },
+        },
+        verdict: 'require_approval',
+        verdict_chain_id: dualChain.id,
+        priority: 30,
+        created_by: userId,
+      },
+      // 4. Sanctions block — any transfer with sanctioned counterparty
+      {
+        version_id: versionId,
+        rule_type: 'counterparty',
+        name: 'Block sanctioned counterparties',
+        rationale: 'Transfers to or from counterparties flagged as sanctioned or partial-match must be blocked unconditionally.',
+        condition: {
+          kind: 'sanctions_status',
+          op: 'in',
+          values: ['sanctioned', 'partial_match'],
+        },
+        verdict: 'block',
+        verdict_chain_id: null,
+        priority: 5, // evaluates before approval-threshold rules
+        created_by: userId,
+      },
+      // 5. AI-initiated floor — every AI-initiated movement requires approval
+      {
+        version_id: versionId,
+        rule_type: 'approval_threshold',
+        name: 'AI-initiated movements always require approval',
+        rationale: 'Vantor invariant: AI-initiated money movement never auto-executes, regardless of amount. Reinforces the system-level default-deny for non-human initiators.',
+        condition: {
+          kind: 'string_compare',
+          attr: 'transfer.initiator_type',
+          op: 'in',
+          value: 'ai_recommendation',
+        },
+        verdict: 'require_approval',
+        verdict_chain_id: singleChain.id,
+        priority: 40,
+        created_by: userId,
+      },
+    ]);
+    if (rulesErr) throw rulesErr;
+
+    // Point the policy at its draft version
+    const { error: updErr } = await sb
+      .from('policy_policies')
+      .update({ active_version_id: versionId })
+      .eq('id', policyRow.id);
+    if (updErr) throw updErr;
+
+    console.log('✓ policy v1 (draft) with 5 rules, 5 hard limits, 2 approval chains');
+  } else {
+    console.log('\n⏭  Skipping policy engine seed (no enterprise_id)');
+  }
+
+  // ════════════════════════════════════════════════════════
   // 14. TREASURY FORECAST (90-day forward projection)
   // ════════════════════════════════════════════════════════
   console.log('\n📈 Seeding treasury forecast...');
@@ -1702,6 +1946,7 @@ async function main() {
   console.log('  Obligations      :', obligationRows.length, '(next 90 days)');
   console.log('  AI recommendations:', aiRows.length, `(${aiRows.filter(r => r.status === 'pending_approval').length} pending approval)`);
   console.log('  Forecast snapshots: 3 scenarios (base / conservative / stress) off 1 state snapshot');
+  console.log('  Policy engine    : v1 draft (5 rules, 5 hard limits, 2 approval chains)');
   console.log('  Forecast         : 90-day projection');
   console.log('  Sanctions screens:', sanctionsRows.length);
   console.log('  KYT transfers    :', kytTransferRows.length);
