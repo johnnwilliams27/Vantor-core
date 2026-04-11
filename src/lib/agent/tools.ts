@@ -32,15 +32,33 @@ interface AgentTool {
 
 const getTreasuryOverview: AgentTool = {
   name: 'get_treasury_overview',
-  description: 'Get a full treasury overview including total AUM, bank account balances, and crypto wallet positions.',
+  description:
+    'Get a full treasury overview bucketed into cash & cash equivalents (bank + tokenized MMFs), idle stablecoin wallets, DeFi positions, and a total AUM. Matches the dashboard card layout.',
   input_schema: { type: 'object', properties: {}, required: [] },
   minRole: 'auditor',
   async handler(_input, ctx) {
     const snapshot = await buildTreasurySnapshot(ctx.supabase, ctx.userId, undefined, ctx.enterpriseId);
+    const totalAumUsd =
+      snapshot.totalBankBalanceUsd +
+      snapshot.totalCryptoBalanceUsd +
+      snapshot.totalMmfPositionsUsd +
+      snapshot.totalDefiPositionsUsd +
+      snapshot.totalOtherYieldUsd;
+    const totalCashEquivalentsUsd =
+      snapshot.totalBankBalanceUsd + snapshot.totalMmfPositionsUsd;
     return {
-      totalAumUsd: snapshot.totalBankBalanceUsd + snapshot.totalCryptoBalanceUsd,
+      totalAumUsd,
+      totalCashEquivalentsUsd,
       totalBankBalanceUsd: snapshot.totalBankBalanceUsd,
+      totalMmfPositionsUsd: snapshot.totalMmfPositionsUsd,
+      /**
+       * Idle stablecoin wallet balances only (USDC, USDT in self-custody).
+       * NOT a conflation of all crypto-denominated value — yield positions
+       * are broken out separately below.
+       */
       totalCryptoBalanceUsd: snapshot.totalCryptoBalanceUsd,
+      totalDefiPositionsUsd: snapshot.totalDefiPositionsUsd,
+      totalOtherYieldUsd: snapshot.totalOtherYieldUsd,
       bankAccounts: snapshot.bankAccounts,
       cryptoPositions: snapshot.cryptoPositions,
     };

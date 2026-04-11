@@ -9,6 +9,8 @@ import type {
 import { getStablecoinPrices } from './oracle';
 import { TreasuryStateService } from './state/service';
 import { createForecastService } from '@/lib/forecast/service';
+import { getHoldingCardPlacement } from './holdings-category';
+import type { YieldProtocolId } from '@/lib/yield/interface';
 
 export async function getActiveTreasuryRule(
   supabase: SupabaseClient,
@@ -36,13 +38,32 @@ export async function getActiveTreasuryRule(
 /**
  * Build a TreasurySnapshot for the rules engine.
  *
- * Since Phase A this is a thin adapter over `TreasuryStateService`
- * (`src/lib/treasury/state/service.ts`) which owns the canonical state
- * aggregation. The signature keeps `userId` and `prices` for backwards
- * compatibility with the six existing callers; `userId` is ignored (the
- * new model is enterprise-scoped, which is the correct multi-tenant
- * boundary), and `prices` is ignored because TreasuryStateService does
- * its own price fetch with a 5-minute Next.js cache.
+ * Thin adapter over `TreasuryStateService` (`src/lib/treasury/state/
+ * service.ts`) which owns the canonical state aggregation. The signature
+ * keeps `userId` and `prices` for backwards compatibility with the six
+ * existing callers; `userId` is ignored (the new model is enterprise-
+ * scoped, which is the correct multi-tenant boundary), and `prices` is
+ * ignored because TreasuryStateService does its own price fetch with a
+ * 5-minute Next.js cache.
+ *
+ * ## Bucketing invariant
+ *
+ * Yield positions from TreasuryStateSnapshot arrive all mixed together in
+ * `snap.totalDefiBaseUsd`. This function fans them out into three distinct
+ * buckets using the canonical `getHoldingCardPlacement` logic from
+ * `holdings-category.ts`:
+ *
+ *   - tokenized MMFs       → totalMmfPositionsUsd
+ *   - DeFi venues          → totalDefiPositionsUsd
+ *   - unknown/other venues → totalOtherYieldUsd
+ *
+ * `totalCryptoBalanceUsd` is now strictly "idle stablecoin wallet
+ * balances" — NO yield positions. This is a correction from the Phase A
+ * T18 shape which conflated wallet stablecoins with all yield, causing
+ * the Stablecoins dashboard card to double-count by ~$2.3M on dev.
+ * The bug was masked because `getHoldingCardPlacement` is correct in
+ * isolation; the leak happened one layer up in the adapter. See the
+ * wiring-level regression test in tests/treasury-rollup.test.ts.
  */
 export async function buildTreasurySnapshot(
   supabase: SupabaseClient,
@@ -54,6 +75,9 @@ export async function buildTreasurySnapshot(
     return {
       totalBankBalanceUsd: 0,
       totalCryptoBalanceUsd: 0,
+      totalMmfPositionsUsd: 0,
+      totalDefiPositionsUsd: 0,
+      totalOtherYieldUsd: 0,
       bankAccounts: [],
       cryptoPositions: [],
     };
@@ -62,9 +86,30 @@ export async function buildTreasurySnapshot(
   const stateSvc = new TreasuryStateService(supabase);
   const snap = await stateSvc.computeSnapshot(enterpriseId, 'pre_decision');
 
+  // Fan yield positions into MMF / DeFi / other via the canonical
+  // holdings-category logic. Every position must land in exactly one
+  // bucket and the three bucket totals must sum to the legacy
+  // totalDefiBaseUsd. This is the invariant the regression test locks in.
+  let mmfTotal = 0;
+  let defiTotal = 0;
+  let otherTotal = 0;
+  for (const p of snap.positions.defiPositions) {
+    const placement = getHoldingCardPlacement({
+      kind: 'yield_position',
+      protocol: p.protocol as YieldProtocolId,
+    });
+    if (placement === 'cash') mmfTotal += p.currentValueBaseUsd;
+    else if (placement === 'defi_positions') defiTotal += p.currentValueBaseUsd;
+    else otherTotal += p.currentValueBaseUsd;
+  }
+
   return {
     totalBankBalanceUsd: snap.totalFiatBaseUsd,
-    totalCryptoBalanceUsd: snap.totalStablecoinBaseUsd + snap.totalDefiBaseUsd,
+    // Wallet stablecoins ONLY — no yield conflation.
+    totalCryptoBalanceUsd: snap.totalStablecoinBaseUsd,
+    totalMmfPositionsUsd: mmfTotal,
+    totalDefiPositionsUsd: defiTotal,
+    totalOtherYieldUsd: otherTotal,
     bankAccounts: snap.positions.bankAccounts.map((b) => ({
       id: b.accountId,
       institutionName: b.institutionName,
@@ -208,7 +253,13 @@ export async function computeRecommendation(
     // Short on fiat → liquidate crypto (crypto → fiat = offramp)
     action = 'offramp';
     const needed = Math.abs(surplusUsd);
-    // Cap offramp at available crypto value
+    // Cap offramp at the instantly-available crypto value. This is
+    // intentionally restricted to idle stablecoin wallet balances —
+    // yield positions (Aave, Kamino, even tokenized MMFs with T+1
+    // redemption windows) require an unwinding step first, so they
+    // can't cover a same-day shortfall. A future phase can extend
+    // this to multi-tier liquidity using Projection.shortfalls
+    // from the forecast engine.
     const availableCrypto = snapshot.totalCryptoBalanceUsd;
     recommendedAmountUsd = Math.round(Math.min(needed, availableCrypto) * 100) / 100;
   }
