@@ -7,6 +7,7 @@
 
 import { z } from 'zod';
 import type { AssetCode } from '../types/assets';
+import type { HardLimitType } from '../types/hard-limit';
 import type { MovementKind } from '../types/movement';
 import type {
   AmountAttribute,
@@ -32,6 +33,12 @@ import type {
 export const decimalStringNonNegative = z.string().regex(
   /^(\d+)(\.\d+)?$/,
   'Must be a non-negative decimal string (e.g., "100" or "100.50")',
+);
+
+/** Integer decimal string — non-negative, no fractional part. */
+export const integerStringNonNegative = z.string().regex(
+  /^\d+$/,
+  'Must be a non-negative integer string',
 );
 
 // ─── Asset codes ────────────────────────────────────────────────────────
@@ -138,3 +145,17 @@ export const movementKinds = [
   'payment',
 ] as const satisfies readonly MovementKind[];
 void movementKinds;
+
+// ─── Hard limit type tuple (for hard-limit.schema.ts) ───────────────────
+
+export const hardLimitTypes = [
+  'min_cash_reserve_usd',
+  'max_single_asset_concentration_pct',
+  'max_daily_outflow_usd',
+  'max_30day_outflow_usd',
+  'obligation_coverage_days',
+  'max_native_exposure',
+] as const satisfies readonly HardLimitType[];
+void hardLimitTypes;
+
+export const hardLimitTypeSchema = z.enum(hardLimitTypes);
