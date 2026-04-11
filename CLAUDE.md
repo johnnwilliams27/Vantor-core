@@ -65,3 +65,9 @@ Worktree directories live under `.worktrees/` which is gitignored — they never
 - **Supabase:** two projects — dev (`spllxotyxipdvfpkkvgu`) and prod (`lfujbwemavgiifkltrag`). Migrations must be applied to both; see `supabase/migrations/` and the memory note on Supabase instances.
 - **Email:** Resend. `sendEmail()` at `src/lib/email/send.ts`. Templates in `src/lib/email/templates/`.
 - **Auth middleware:** `src/middleware.ts`. Public routes live in the `PUBLIC_PATHS` array — add new unauthenticated pages there or they'll redirect to `/login`.
+
+## Migrations
+
+- **Apply tool:** `npx tsx scripts/migrate.ts supabase/migrations/<file>.sql`. POSTs the SQL to the Supabase Management API. Swap `NEXT_PUBLIC_SUPABASE_URL` between dev and prod project refs to target each instance. Apply to dev first, verify, then prod.
+- **Tracker — cutover at 2026-04-11:** `supabase_migrations.schema_migrations` is **only authoritative for migrations applied on or after 2026-04-11**. Everything before that line was applied through `migrate.ts` without writing tracker rows, so the tracker is missing ~25 historical migrations and contains two stale `version → filename` mappings (`00071`, `00121`) from a prior renumber. **Do not trust the tracker for anything before 2026-04-11**, and do not backfill — the historical state is the on-disk migration files plus the live schema, not the tracker.
+- **Going forward:** `migrate.ts` writes a tracker row (`version`, `name`, `statements`) on every successful apply, idempotent via `WHERE NOT EXISTS`. If the tracker insert ever fails, the script logs a warning but exits 0 — the migration itself already applied. Patch the missing row by hand if it matters.
