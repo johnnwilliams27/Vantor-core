@@ -45,7 +45,7 @@ export const ondoFetcher: RateFetcher = {
 
     return [
       {
-        protocol: 'ondo',
+        protocol: 'ondo_usdy',
         token: 'USDC',
         chain: 'ethereum',
         supplyAPY,

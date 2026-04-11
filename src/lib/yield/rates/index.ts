@@ -14,7 +14,7 @@ export const ALL_RATE_FETCHERS: { name: string; fetcher: RateFetcher }[] = [
   { name: 'compound', fetcher: compoundFetcher },
   { name: 'morpho_reservoir', fetcher: morphoFetcher },
   { name: 'sky', fetcher: skyFetcher },
-  { name: 'ondo', fetcher: ondoFetcher },
+  { name: 'ondo_usdy', fetcher: ondoFetcher },
   { name: 'ethena', fetcher: ethenaFetcher },
   { name: 'kamino', fetcher: kaminoFetcher },
 ];

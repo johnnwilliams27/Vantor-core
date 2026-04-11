@@ -123,8 +123,12 @@ export interface BridgeExecuteResult {
 }
 
 // ---- Fiat Payments (bank-to-bank) ----
-
-import type { PaymentRail } from './rail-fees';
+//
+// The bank-to-bank payment flow is currently disabled. Bridge only supports
+// fiat↔crypto routes (confirmed via sandbox probing on 2026-04-11), and a
+// dedicated provider (Modern Treasury / Column / Increase) will be wired up
+// in a future PR. The types below are kept as a placeholder so existing
+// callers compile; the adapter methods throw at runtime.
 
 export interface FiatPaymentParams {
   fromBankAccountRef: string;
@@ -135,8 +139,6 @@ export interface FiatPaymentParams {
   amount: number;
   currency: string;
   memo?: string;
-  /** Payment rail (ACH, wire, SWIFT, SEPA, etc.) — determines fee schedule */
-  paymentRail: PaymentRail;
 }
 
 export interface FiatPaymentResult {

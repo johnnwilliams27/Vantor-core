@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
     const rates = cached
       .filter((row) => {
         // Hide Ondo if enterprise is US or has no country set
-        if (row.protocol === 'ondo') {
+        if (row.protocol === 'ondo_usdy') {
           return enterpriseCountry && enterpriseCountry !== 'US';
         }
         return true;

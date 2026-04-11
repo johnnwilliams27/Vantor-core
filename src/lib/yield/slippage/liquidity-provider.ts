@@ -29,9 +29,19 @@ const FALLBACK_TVL: Record<YieldProtocolId, number> = {
   morpho_steakhouse: 30_000_000,
   kamino:            80_000_000,
   kamino_multiply:   15_000_000,
-  ondo:              100_000_000,
+  ondo_usdy:         100_000_000,
   sky:               200_000_000,
   ethena:            500_000_000,
+  // Tokenized MMFs — fund-size-as-TVL fallback. These are cash equivalents
+  // with effectively unlimited underlying capacity (Treasury markets), but
+  // the slippage engine still needs a number. Values mirror the fund sizes
+  // in the venue registry.
+  buidl:             2_370_000_000,
+  ousg:              684_000_000,
+  ustb:              646_000_000,
+  benji:             1_020_000_000,
+  usyc:              2_670_000_000,
+  spiko_usd:         155_000_000,
 };
 
 const POOL_TYPE: Record<YieldProtocolId, 'stablecoin' | 'volatile'> = {
@@ -41,9 +51,16 @@ const POOL_TYPE: Record<YieldProtocolId, 'stablecoin' | 'volatile'> = {
   morpho_steakhouse: 'stablecoin',
   kamino:            'stablecoin',
   kamino_multiply:   'volatile',  // leveraged, more sensitive to size
-  ondo:              'stablecoin',
+  ondo_usdy:         'stablecoin',
   sky:               'stablecoin',
   ethena:            'volatile',  // synthetic dollar, delta-neutral basis
+  // Tokenized MMFs — all cash-equivalent for slippage purposes
+  buidl:             'stablecoin',
+  ousg:              'stablecoin',
+  ustb:              'stablecoin',
+  benji:             'stablecoin',
+  usyc:              'stablecoin',
+  spiko_usd:         'stablecoin',
 };
 
 // Utilization is not yet in the cache — see file-level comment.
@@ -62,9 +79,18 @@ const PROTOCOL_ID_TO_CACHE_SLUG: Record<YieldProtocolId, string> = {
   morpho_steakhouse: 'morpho_steakhouse',
   kamino:            'kamino',
   kamino_multiply:   'kamino_multiply',
-  ondo:              'ondo',
+  ondo_usdy:         'ondo_usdy',
   sky:               'sky',
   ethena:            'ethena',
+  // Tokenized MMFs — cache slug matches protocol ID. No rate cache entries
+  // yet (MMFs are coming_soon and the cron pipeline isn't extended in this
+  // PR), so lookups will always fall through to FALLBACK_TVL.
+  buidl:             'buidl',
+  ousg:              'ousg',
+  ustb:              'ustb',
+  benji:             'benji',
+  usyc:              'usyc',
+  spiko_usd:         'spiko_usd',
 };
 
 export class DbLiquidityProvider implements ILiquidityProvider {

@@ -14,13 +14,7 @@ import { useToast } from '@/components/ui/toast';
 import { SlippageWarning } from './SlippageWarning';
 import type { SlippageEstimate } from '@/lib/yield/slippage';
 import type { YieldPosition } from '@/types/database';
-
-const PROTOCOL_LABELS: Record<string, string> = {
-  aave_v3: 'Aave V3',
-  morpho: 'Morpho',
-  kamino: 'Kamino',
-  ondo: 'Ondo (USDY)',
-};
+import { getVenueDisplayName } from '@/lib/yield/venues';
 
 interface Props {
   position: YieldPosition;
@@ -144,7 +138,7 @@ export function YieldWithdrawForm({ position, onBack }: Props) {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <CardTitle className="text-lg">
-            Withdraw from {PROTOCOL_LABELS[position.protocol] ?? position.protocol}
+            Withdraw from {getVenueDisplayName(position.protocol)}
           </CardTitle>
         </div>
       </CardHeader>

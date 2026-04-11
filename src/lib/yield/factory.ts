@@ -5,6 +5,7 @@ import { getAaveOnChainValue } from './adapters/aave-v3';
 import { getCompoundOnChainValue } from './adapters/compound-v3';
 import { getErc4626OnChainValue } from './adapters/erc4626';
 import { getOndoOnChainValue } from './adapters/ondo';
+import { ALL_VENUE_IDS } from './venues';
 
 export function getYieldAdapter(protocol: YieldProtocolId): IYieldProtocol {
   return new MockYieldAdapter(protocol);
@@ -32,7 +33,7 @@ export async function getOnChainValue(
       case 'sky':
       case 'ethena':
         return await getErc4626OnChainValue(protocol, walletAddress, token);
-      case 'ondo':
+      case 'ondo_usdy':
         return await getOndoOnChainValue(walletAddress, token);
       case 'kamino':
       case 'kamino_multiply': {
@@ -55,7 +56,16 @@ export async function getOnChainValue(
   }
 }
 
-export const ALL_YIELD_PROTOCOLS: YieldProtocolId[] = [
-  'aave_v3', 'compound_v3', 'sky', 'ondo', 'morpho_steakhouse', 'morpho_reservoir',
-  'kamino', 'kamino_multiply', 'ethena',
-];
+/**
+ * The complete list of yield protocol IDs the app knows about — derived
+ * from the venue registry so it can't drift. Every venue in
+ * `src/lib/yield/venues/registry.ts` appears here automatically, which
+ * means adding a new venue to the registry is a single-file change.
+ *
+ * Previously this was a hand-maintained literal which silently omitted
+ * the six tokenized MMF IDs added in the venue-categories PR — the API
+ * iterated over this array to build the Yield Explorer response, so
+ * the MMFs never showed up on the Explore Protocols tab. Fixed by
+ * sourcing the list from the registry directly.
+ */
+export const ALL_YIELD_PROTOCOLS: readonly YieldProtocolId[] = ALL_VENUE_IDS;

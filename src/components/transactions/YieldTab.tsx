@@ -9,13 +9,7 @@ import { useTableFilter } from '@/hooks/useTableFilter';
 import { formatCurrency, formatDateTime, capitalize } from '@/lib/utils';
 import type { YieldTransaction } from '@/types/database';
 import { CardSpinner } from '@/components/ui/spinner';
-
-const PROTOCOL_LABELS: Record<string, string> = {
-  aave_v3: 'Aave V3',
-  morpho_reservoir: 'Morpho Reservoir',
-  kamino: 'Kamino',
-  ondo: 'Ondo (USDY)',
-};
+import { getVenueDisplayName } from '@/lib/yield/venues';
 
 const YIELD_FILTER_CONFIG = {
   searchFields: [
@@ -99,7 +93,7 @@ export function YieldTab() {
                       {capitalize(tx.tx_type)}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-sm">{PROTOCOL_LABELS[tx.protocol] ?? tx.protocol}</TableCell>
+                  <TableCell className="text-sm">{getVenueDisplayName(tx.protocol)}</TableCell>
                   <TableCell>
                     <span className="font-semibold">{formatCurrency(tx.amount)}</span>
                   </TableCell>

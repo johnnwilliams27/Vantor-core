@@ -23,6 +23,7 @@ const VANTOR_DEVELOPER_FEE_PCT = (VANTOR_FEE_RATE * 100).toFixed(4); // "0.2500"
 function getApiKey(mode: IntegrationMode): string {
   return getCredential(
     mode,
+    'BRIDGE_API_KEY',
     process.env.BRIDGE_API_KEY_SANDBOX,
     process.env.BRIDGE_API_KEY_LIVE,
   );
@@ -101,142 +102,55 @@ export class BridgeAdapter implements IBankingAdapter {
     };
   }
 
-  async getSwapQuote(params: SwapQuoteParams): Promise<SwapQuote> {
-    const data = await bridgeFetch(this.mode, '/v0/quotes/swap', {
-      method: 'POST',
-      body: JSON.stringify({
-        chain: params.chain,
-        from_currency: params.fromToken,
-        to_currency: params.toToken,
-        amount: params.amount,
-        slippage_bps: params.slippageBps ?? 50,
-        wallet_address: params.walletAddress,
-      }),
-    });
-
-    return {
-      fromToken: params.fromToken,
-      toToken: params.toToken,
-      fromAmount: params.amount,
-      toAmount: String(data.to_amount ?? data.destination_amount ?? '0'),
-      rate: String(data.rate ?? data.exchange_rate ?? '1'),
-      slippageBps: data.slippage_bps ?? params.slippageBps ?? 50,
-      priceImpact: data.price_impact ? String(data.price_impact) : undefined,
-      feeAmount: data.fee ? String(data.fee) : undefined,
-      quoteData: { quoteId: data.id, ...data },
-    };
+  // Stablecoin swaps (USDC ↔ USDT) are not supported by Bridge. Confirmed
+  // against their documented endpoint inventory on 2026-04-11 — Bridge is a
+  // fiat ↔ crypto orchestration platform, not a DEX, and has no swap or
+  // quote primitive. The previous implementation POSTed to /v0/quotes/swap
+  // and /v0/swaps, neither of which exist on Bridge's API, which is why
+  // production swap requests surfaced as opaque 502s (wrapping a gateway
+  // 400 with empty body). A real DEX aggregator (0x / 1inch for EVM,
+  // Jupiter for Solana) will be wired up as a separate adapter in a future
+  // PR. The /swaps page shows a Coming Soon placeholder and
+  // /api/swaps/{quote,execute} POST return 501, so these methods should
+  // never actually be invoked in production.
+  async getSwapQuote(_params: SwapQuoteParams): Promise<SwapQuote> {
+    throw new Error('Stablecoin swaps are temporarily disabled while we integrate a dedicated DEX aggregator.');
   }
 
-  async executeSwap(params: SwapExecuteParams): Promise<SwapResult> {
-    const data = await bridgeFetch(this.mode, '/v0/swaps', {
-      method: 'POST',
-      body: JSON.stringify({
-        chain: params.chain,
-        from_currency: params.fromToken,
-        to_currency: params.toToken,
-        amount: params.fromAmount,
-        wallet_address: params.walletAddress,
-        quote_id: params.quoteData.quoteId,
-        developer_fee_percent: VANTOR_DEVELOPER_FEE_PCT,
-      }),
-    });
-
-    return {
-      txHash: data.tx_hash ?? data.transaction_hash ?? null,
-      providerRef: data.id ?? data.swap_id,
-      status: data.status === 'completed' ? 'completed' : 'pending',
-    };
+  async executeSwap(_params: SwapExecuteParams): Promise<SwapResult> {
+    throw new Error('Stablecoin swaps are temporarily disabled while we integrate a dedicated DEX aggregator.');
   }
 
-  async getBridgeQuote(params: BridgeQuoteParams): Promise<BridgeQuote> {
-    const data = await bridgeFetch(this.mode, '/v0/quotes/bridge', {
-      method: 'POST',
-      body: JSON.stringify({
-        currency: params.token,
-        amount: params.amount,
-        source_chain: params.fromChain,
-        destination_chain: params.toChain,
-        wallet_address: params.walletAddress,
-      }),
-    });
-
-    return {
-      token: params.token,
-      fromChain: params.fromChain,
-      toChain: params.toChain,
-      fromAmount: params.amount,
-      toAmount: String(data.destination_amount ?? data.to_amount ?? params.amount),
-      bridgeFee: String(data.fee ?? data.bridge_fee ?? '0'),
-      estimatedTimeMinutes: data.estimated_time_minutes ?? data.eta_minutes ?? 15,
-      provider: 'bridge',
-      quoteData: { quoteId: data.id, ...data },
-    };
+  // Cross-chain bridging is not supported by Bridge either. Despite the
+  // product name, Bridge.xyz does not offer a bridging primitive — cross
+  // chain movement is LayerZero / Wormhole / Circle CCTP territory. The
+  // previous implementation POSTed to /v0/quotes/bridge and /v0/transfers
+  // with a `type: 'bridge'` field, neither of which are documented Bridge
+  // endpoints. A real bridging provider will be wired up as a separate
+  // adapter in a future PR. The /bridges page shows a Coming Soon
+  // placeholder and /api/bridges/{quote,execute} POST return 501, so
+  // these methods should never actually be invoked in production.
+  async getBridgeQuote(_params: BridgeQuoteParams): Promise<BridgeQuote> {
+    throw new Error('Cross-chain bridging is temporarily disabled while we integrate a dedicated bridging provider.');
   }
 
-  async executeBridge(params: BridgeExecuteParams): Promise<BridgeExecuteResult> {
-    const data = await bridgeFetch(this.mode, '/v0/transfers', {
-      method: 'POST',
-      body: JSON.stringify({
-        type: 'bridge',
-        currency: params.token,
-        amount: params.amount,
-        source_chain: params.fromChain,
-        destination_chain: params.toChain,
-        wallet_address: params.walletAddress,
-        quote_id: params.quoteData.quoteId,
-        developer_fee_percent: VANTOR_DEVELOPER_FEE_PCT,
-      }),
-    });
-
-    return {
-      txHash: data.tx_hash ?? data.transaction_hash ?? null,
-      providerRef: data.id ?? data.transfer_id,
-      status: data.status === 'completed' ? 'completed' : 'pending',
-      estimatedArrivalMinutes: data.estimated_time_minutes ?? 15,
-    };
+  async executeBridge(_params: BridgeExecuteParams): Promise<BridgeExecuteResult> {
+    throw new Error('Cross-chain bridging is temporarily disabled while we integrate a dedicated bridging provider.');
   }
 
-  async createFiatPayment(params: FiatPaymentParams): Promise<FiatPaymentResult> {
-    // Bridge's /v0/transfers endpoint uses source.payment_rail and
-    // destination.payment_rail to pick the network. The user chose the rail
-    // upfront in the UI so we know the fee schedule and settlement time.
-    const data = await bridgeFetch(this.mode, '/v0/transfers', {
-      method: 'POST',
-      body: JSON.stringify({
-        amount: String(params.amount),
-        source: {
-          payment_rail: params.paymentRail,
-          currency: params.currency.toLowerCase(),
-          from_bank_account_id: params.fromBankAccountRef,
-        },
-        destination: {
-          payment_rail: params.paymentRail,
-          currency: params.currency.toLowerCase(),
-          bank_name: params.toBankName,
-          account_number: params.toAccountNumber,
-          routing_number: params.toRoutingNumber,
-          account_holder_name: params.toAccountHolder,
-        },
-        memo: params.memo,
-        developer_fee_percent: VANTOR_DEVELOPER_FEE_PCT,
-      }),
-    });
-
-    return {
-      providerPaymentId: data.id ?? data.transfer_id ?? data.payment_id,
-      status: 'pending',
-      estimatedSettlement: data.estimated_settlement ?? data.eta ?? new Date(Date.now() + 2 * 86400_000).toISOString(),
-    };
+  async createFiatPayment(_params: FiatPaymentParams): Promise<FiatPaymentResult> {
+    // Bank-to-bank fiat payments are not supported by Bridge. Probing the
+    // /v0/transfers endpoint with every fiat-to-fiat rail combination returned
+    // "route from source -> destination not currently supported" — Bridge only
+    // supports fiat<->crypto routes (used by ramps and the yield flow). A
+    // dedicated bank payment provider (Modern Treasury / Column / Increase)
+    // will handle bank-to-bank in a future PR. The /payments page shows a
+    // Coming Soon placeholder and /api/payments POST returns 501, so this
+    // method should never actually be invoked in production.
+    throw new Error('Bank payments are temporarily disabled while we integrate a new payment provider.');
   }
 
-  async getFiatPaymentStatus(providerPaymentId: string): Promise<FiatPaymentStatusResult> {
-    const data = await bridgeFetch(this.mode, `/v0/payments/${providerPaymentId}`, {
-      method: 'GET',
-    });
-
-    return {
-      status: data.status === 'completed' ? 'completed' : data.status === 'failed' ? 'failed' : 'pending',
-      settledAt: data.settled_at ?? null,
-    };
+  async getFiatPaymentStatus(_providerPaymentId: string): Promise<FiatPaymentStatusResult> {
+    throw new Error('Bank payments are temporarily disabled while we integrate a new payment provider.');
   }
 }

@@ -110,10 +110,15 @@ async function resolveUser(): Promise<{ userId: string; enterpriseId: string | n
 async function cleanUserData(userId: string) {
   console.log('\n🧹 Wiping previous seed data...');
 
-  // Must delete in FK-safe order
-  for (const t of ['simulation_runs', 'treasury_forecasts', 'ai_recommendations',
-    'manual_obligations', 'treasury_rules', 'fiat_transactions', 'gl_postings',
-    'kyt_alerts', 'kyt_transfers', 'sanctions_screenings', 'travel_rule_transfers']) {
+  // Must delete in FK-safe order.
+  // forecast_snapshots has a NOT NULL FK to treasury_state_snapshots so
+  // the child goes first. obligations (formerly manual_obligations)
+  // replaces the legacy table name per migration 0036. treasury_forecasts
+  // was dropped in migration 0039 and must no longer appear here.
+  for (const t of ['simulation_runs', 'forecast_snapshots', 'treasury_state_snapshots',
+    'ai_recommendations', 'obligations', 'treasury_rules', 'fiat_transactions', 'gl_postings',
+    'kyt_alerts', 'kyt_transfers', 'sanctions_screenings', 'travel_rule_transfers',
+    'notifications']) {
     await sb.from(t).delete().eq('user_id', userId);
   }
 
@@ -912,6 +917,13 @@ async function main() {
     { label: 'SaaS Subscriptions',       amount: 7_200,   dayOfMonth: 28 },
   ];
 
+  // Schema note: migration 0036_obligations_v2 renamed manual_obligations
+  // to `obligations` and added direction/currency/amount/confidence/source/
+  // status/recurrence as NOT NULL columns. `amount` has no DEFAULT and is
+  // enforced NOT NULL post-backfill, so every row MUST populate it. The
+  // legacy `amount_usd` / `is_recurring` / `recurrence_days` / `is_active`
+  // columns are still present for one release but marked DEPRECATED; we
+  // populate both shapes during the migration window.
   for (const ob of monthlyObligations) {
     // Find the next 3 occurrences within 90 days
     for (let monthOffset = 0; monthOffset < 3; monthOffset++) {
@@ -925,10 +937,18 @@ async function main() {
           label: ob.label,
           description: `Monthly recurring — due on the ${ob.dayOfMonth}${ob.dayOfMonth === 1 ? 'st' : ob.dayOfMonth === 15 ? 'th' : 'th'}`,
           amount_usd: ob.amount,
+          amount: ob.amount,
+          currency: 'USD',
+          direction: 'outflow',
+          confidence: 'confirmed',
+          source: 'recurring_rule',
+          status: 'upcoming',
+          recurrence: 'monthly',
           due_date: dateStr(d),
           is_recurring: true,
           recurrence_days: 30,
           is_active: true,
+          tags: ['operating'],
         });
       }
     }
@@ -944,21 +964,30 @@ async function main() {
         label: 'Payroll Processing',
         description: 'Bi-weekly payroll via USDC',
         amount_usd: 180_000,
+        amount: 180_000,
+        currency: 'USD',
+        asset: 'USDC',
+        direction: 'outflow',
+        confidence: 'confirmed',
+        source: 'recurring_rule',
+        status: 'upcoming',
+        recurrence: 'biweekly',
         due_date: dateStr(d),
         is_recurring: true,
         recurrence_days: 14,
         is_active: true,
+        tags: ['payroll'],
       });
     }
   }
 
   // One-time future obligations
   const oneTimeFuture = [
-    { label: 'Q1 Software License Renewal', amount: 35_000,  days: 22 },
-    { label: 'Marketing Campaign — Q2',      amount: 45_000,  days: 38 },
-    { label: 'Infrastructure Upgrade',       amount: 120_000, days: 55 },
-    { label: 'Consulting Services Contract', amount: 50_000,  days: 67 },
-    { label: 'Annual Audit Fee',             amount: 28_000,  days: 82 },
+    { label: 'Q1 Software License Renewal', amount: 35_000,  days: 22, conf: 'confirmed' as const },
+    { label: 'Marketing Campaign — Q2',      amount: 45_000,  days: 38, conf: 'expected'  as const },
+    { label: 'Infrastructure Upgrade',       amount: 120_000, days: 55, conf: 'expected'  as const },
+    { label: 'Consulting Services Contract', amount: 50_000,  days: 67, conf: 'estimated' as const },
+    { label: 'Annual Audit Fee',             amount: 28_000,  days: 82, conf: 'confirmed' as const },
   ];
 
   for (const ob of oneTimeFuture) {
@@ -968,13 +997,26 @@ async function main() {
       label: ob.label,
       description: `One-time payment due in ${ob.days} days`,
       amount_usd: ob.amount,
+      amount: ob.amount,
+      currency: 'USD',
+      direction: 'outflow',
+      confidence: ob.conf,
+      source: 'manual',
+      status: 'upcoming',
+      recurrence: 'once',
       due_date: dateStr(daysFromNow(ob.days)),
       is_recurring: false,
       is_active: true,
+      tags: ['one_time'],
     });
   }
 
-  await sb.from('manual_obligations').insert(obligationRows);
+  const { data: insertedObligations, error: obErr } = await sb
+    .from('obligations')
+    .insert(obligationRows)
+    .select('id');
+  if (obErr) throw obErr;
+  const obligationIds: string[] = (insertedObligations ?? []).map((o) => o.id);
   console.log(`✓ ${obligationRows.length} obligations (monthly recurring + bi-weekly payroll + one-time)`);
 
   // ════════════════════════════════════════════════════════
@@ -1002,7 +1044,7 @@ async function main() {
       bank_account_id: svbBank.id,
       stablecoin_token: 'USDC',
       stablecoin_chain: 'ethereum',
-      ai_reasoning: 'Projected crypto balance falls below safety buffer within 30 days. Recommend onramp of $500K USDC from SVB Operating Account to cover upcoming payroll and vendor obligations.',
+      ai_reasoning: 'Projected USDC balance falls below safety buffer within 30 days. Recommend onramp of $500K USDC from SVB Operating Account to cover upcoming payroll and vendor obligations.',
       ai_model: 'claude-sonnet-4-6',
       status: 'executed',
       requires_approval: false,
@@ -1026,7 +1068,7 @@ async function main() {
       bank_account_id: chaseBank.id,
       stablecoin_token: 'USDC',
       stablecoin_chain: 'ethereum',
-      ai_reasoning: 'Crypto holdings significantly exceed safety buffer target. Offramp $200K USDC to Chase Business Checking to optimize yield on idle stablecoin reserves.',
+      ai_reasoning: 'USDC holdings significantly exceed safety buffer target. Offramp $200K USDC to Chase Business Checking to optimize yield on idle stablecoin reserves.',
       ai_model: 'claude-sonnet-4-6',
       status: 'executed',
       requires_approval: true,
@@ -1050,7 +1092,7 @@ async function main() {
       bank_account_id: null,
       stablecoin_token: null,
       stablecoin_chain: null,
-      ai_reasoning: 'Treasury position is healthy. Total crypto balance of $2.15M exceeds the safety buffer target of $780K with comfortable margin. No action required at this time.',
+      ai_reasoning: 'Treasury position is healthy. Total stablecoin balance of $2.15M (USDC across Ethereum + Solana) exceeds the safety buffer target of $780K with comfortable margin. No action required at this time.',
       ai_model: 'claude-sonnet-4-6',
       status: 'auto_executed',
       requires_approval: false,
@@ -1059,7 +1101,7 @@ async function main() {
       updated_at: ts(daysAgo(7)),
       expires_at: ts(daysAgo(6)),
     },
-    // Pending onramp recommendation (requires approval)
+    // Pending onramp recommendation (requires approval) — high-value, 1 day old
     {
       user_id: userId,
       ...eid,
@@ -1074,13 +1116,59 @@ async function main() {
       bank_account_id: svbBank.id,
       stablecoin_token: 'USDC',
       stablecoin_chain: 'ethereum',
-      ai_reasoning: 'Upcoming obligations over the next 30 days total $920K, including $180K bi-weekly payroll, $95K Acme Corp invoice, $88.5K Nexus Digital invoice, and infrastructure upgrade of $120K. Current crypto balance provides only 2.3× coverage vs. required 1.5× safety buffer. Recommend onramp of $350K USDC from SVB Operating Account.',
+      ai_reasoning: 'Upcoming obligations over the next 30 days total $920K, including $180K bi-weekly payroll, $95K Acme Corp invoice, $88.5K Nexus Digital invoice, and infrastructure upgrade of $120K. Current USDC balance provides only 2.3× coverage vs. required 1.5× safety buffer. Recommend onramp of $350K USDC from SVB Operating Account.',
       ai_model: 'claude-sonnet-4-6',
       status: 'pending_approval',
       requires_approval: true,
       created_at: ts(daysAgo(1)),
       updated_at: ts(daysAgo(1)),
       expires_at: ts(daysFromNow(23)),
+    },
+    // Pending offramp — idle cash rebalance, 2 days old
+    {
+      user_id: userId,
+      ...eid,
+      treasury_rule_id: ruleId,
+      total_bank_balance_usd: totalBank,
+      total_crypto_balance_usd: totalCrypto,
+      obligations_in_window_usd: 520_000,
+      safety_buffer_target_usd: 780_000,
+      obligation_lookahead_days: 30,
+      action: 'offramp',
+      recommended_amount_usd: 150_000,
+      bank_account_id: mercuryBank.id,
+      stablecoin_token: 'USDC',
+      stablecoin_chain: 'ethereum',
+      ai_reasoning: 'USDC reserves sit at 2.76× the 30-day safety buffer, leaving ~$590K idle beyond the working envelope. Offramping $150K USDC to Mercury would lock in short-term treasury yield (~4.8% APY) without impacting coverage of upcoming obligations. Confidence is moderate — holding USDC may be preferable if an acquisition or capex event is imminent.',
+      ai_model: 'claude-sonnet-4-6',
+      status: 'pending_approval',
+      requires_approval: true,
+      created_at: ts(daysAgo(2)),
+      updated_at: ts(daysAgo(2)),
+      expires_at: ts(daysFromNow(22)),
+    },
+    // Pending onramp — Solana chain, mid-size, 3 days old
+    {
+      user_id: userId,
+      ...eid,
+      treasury_rule_id: ruleId,
+      total_bank_balance_usd: totalBank,
+      total_crypto_balance_usd: totalCrypto,
+      obligations_in_window_usd: 610_000,
+      safety_buffer_target_usd: 915_000,
+      obligation_lookahead_days: 30,
+      action: 'onramp',
+      recommended_amount_usd: 225_000,
+      bank_account_id: chaseBank.id,
+      stablecoin_token: 'USDC',
+      stablecoin_chain: 'solana',
+      ai_reasoning: 'Solana wallets hold $75K USDC against $180K of scheduled Solana-settled vendor payments over the next 21 days (Jito Labs infra, Helius RPC, Neon EVM). Recommend onramp of $225K USDC via Chase → Solana to restore per-chain coverage before the Jito invoice clears on day 14.',
+      ai_model: 'claude-sonnet-4-6',
+      status: 'pending_approval',
+      requires_approval: true,
+      created_at: ts(daysAgo(3)),
+      updated_at: ts(daysAgo(3)),
+      expires_at: ts(daysFromNow(21)),
     },
     // Rejected recommendation (declined by user last month)
     {
@@ -1109,8 +1197,117 @@ async function main() {
     },
   ];
 
-  await sb.from('ai_recommendations').insert(aiRows);
+  const { data: insertedRecs, error: recErr } = await sb
+    .from('ai_recommendations')
+    .insert(aiRows)
+    .select('id, status, action, recommended_amount_usd, created_at');
+  if (recErr) throw recErr;
   console.log(`✓ ${aiRows.length} AI recommendations`);
+
+  // ════════════════════════════════════════════════════════
+  // 13b. NOTIFICATIONS (bell badge + NotificationsPanel feed)
+  // ════════════════════════════════════════════════════════
+  // Populates the Topbar bell so the treasury_ai surface isn't empty.
+  // Unread rows drive the badge count; read rows fill out the panel history.
+  // Event types mirror src/lib/notifications/events.ts.
+  console.log('\n🔔 Seeding notifications...');
+
+  const pendingRecs = (insertedRecs ?? []).filter((r) => r.status === 'pending_approval');
+  const executedRec = (insertedRecs ?? []).find((r) => r.status === 'executed' && r.action === 'offramp');
+  const autoRec     = (insertedRecs ?? []).find((r) => r.status === 'auto_executed');
+  const rejectedRec = (insertedRecs ?? []).find((r) => r.status === 'rejected');
+
+  const fmtAmt = (n: string | number | null | undefined) =>
+    n == null ? '' : '$' + Math.round(Number(n)).toLocaleString();
+  const actionLabel = (a: string) =>
+    a === 'onramp' ? 'On-ramp' : a === 'offramp' ? 'Off-ramp' : 'No action';
+
+  const notificationRows: any[] = [];
+
+  // Unread: one recommendation_pending per pending rec → feeds the bell badge
+  for (const rec of pendingRecs) {
+    notificationRows.push({
+      user_id: userId,
+      ...eid,
+      event_type: 'recommendation_pending',
+      category: 'treasury_ai',
+      title: 'New AI Recommendation — Approval Required',
+      body: `${actionLabel(rec.action)} ${fmtAmt(rec.recommended_amount_usd)}`,
+      link: `/treasury?reviewRec=${rec.id}`,
+      metadata: { recommendationId: rec.id, action: rec.action, amount: rec.recommended_amount_usd },
+      read: false,
+      emailed: true,
+      created_at: rec.created_at,
+    });
+  }
+
+  // Read history: approved, auto-executed, rejected → panel shows activity log
+  if (executedRec) {
+    notificationRows.push({
+      user_id: userId,
+      ...eid,
+      event_type: 'recommendation_approved',
+      category: 'treasury_ai',
+      title: 'AI Recommendation Approved & Executed',
+      body: `${actionLabel(executedRec.action)} ${fmtAmt(executedRec.recommended_amount_usd)} completed`,
+      link: '/treasury',
+      metadata: { recommendationId: executedRec.id },
+      read: true,
+      emailed: true,
+      created_at: ts(daysAgo(19)),
+    });
+  }
+  if (autoRec) {
+    notificationRows.push({
+      user_id: userId,
+      ...eid,
+      event_type: 'recommendation_auto_executed',
+      category: 'treasury_ai',
+      title: 'AI Recommendation Auto-Executed',
+      body: 'Daily analysis: no action required — treasury position healthy',
+      link: '/treasury',
+      metadata: { recommendationId: autoRec.id },
+      read: true,
+      emailed: false,
+      created_at: ts(daysAgo(7)),
+    });
+  }
+  if (rejectedRec) {
+    notificationRows.push({
+      user_id: userId,
+      ...eid,
+      event_type: 'recommendation_rejected',
+      category: 'treasury_ai',
+      title: 'AI Recommendation Rejected',
+      body: `${actionLabel(rejectedRec.action)} ${fmtAmt(rejectedRec.recommended_amount_usd)} declined`,
+      link: '/treasury',
+      metadata: { recommendationId: rejectedRec.id, reason: 'Holding reserves for Q2 expansion' },
+      read: true,
+      emailed: true,
+      created_at: ts(daysAgo(40)),
+    });
+  }
+
+  // Unread: one daily analysis nudge so the bell shows >3 unread
+  notificationRows.push({
+    user_id: userId,
+    ...eid,
+    event_type: 'recommendation_daily',
+    category: 'treasury_ai',
+    title: 'Daily AI Treasury Analysis',
+    body: 'Today\'s analysis surfaced 3 recommendations awaiting your review',
+    link: '/treasury',
+    metadata: { pendingCount: pendingRecs.length },
+    read: false,
+    emailed: false,
+    created_at: ts(daysAgo(1)),
+  });
+
+  if (notificationRows.length > 0) {
+    const { error: notifErr } = await sb.from('notifications').insert(notificationRows);
+    if (notifErr) throw notifErr;
+  }
+  console.log(`✓ ${notificationRows.length} notifications (${pendingRecs.length + 1} unread)`);
 
   // ════════════════════════════════════════════════════════
   // 14. TREASURY FORECAST (90-day forward projection)
@@ -1160,23 +1357,118 @@ async function main() {
     });
   }
 
-  const { error: fcErr } = await sb.from('treasury_forecasts').upsert({
-    user_id: userId,
-    ...eid,
-    lookahead_days: 90,
-    forecast_data: forecastData,
-    ai_summary: [
-      `Treasury forecast over the next 90 days shows a projected balance starting at $${(totalCrypto / 1_000_000).toFixed(2)}M.`,
-      `Key obligations include bi-weekly payroll ($180K), upcoming vendor invoices ($443K), and one-time infrastructure spend ($120K).`,
-      `A pending onramp of $350K is scheduled to maintain the safety buffer. The position remains healthy throughout the forecast window,`,
-      `with balance projected to stay above the $780K safety threshold except for brief dips around major payroll dates.`,
-      `Recommend approving the pending onramp recommendation to ensure comfortable coverage.`,
-    ].join(' '),
-    generated_at: ts(new Date()),
-  }, { onConflict: 'user_id,lookahead_days' });
+  // treasury_forecasts was dropped in migration 0039. It is replaced by
+  // a treasury_state_snapshots row (frozen positions + fx rates) plus a
+  // forecast_snapshots row (projection + scenario) that FK-links back to
+  // the state snapshot. Only seeded when the test enterprise is set —
+  // both tables have NOT NULL enterprise_id.
+  if (enterpriseId) {
+    const currentFiatUsd = totalBank;
+    const currentStableUsd = totalCrypto; // all USDC per seed
+    const currentDefiUsd = 0;             // none yet in seed
+    const totalValueUsd = currentFiatUsd + currentStableUsd + currentDefiUsd;
 
-  if (fcErr) console.error('  Forecast error:', fcErr.message);
-  else console.log(`✓ Treasury forecast (${forecastData.length} data points)`);
+    const positions = [
+      // Stablecoin positions (one per seeded wallet label, approximate)
+      { assetSymbol: 'USDC', chain: 'ethereum', venueKind: 'wallet', venueId: wallets[0].id, amount: 850_000, unitPriceUsd: 1, valueUsd: 850_000 },
+      { assetSymbol: 'USDC', chain: 'ethereum', venueKind: 'wallet', venueId: wallets[1].id, amount: 150_000, unitPriceUsd: 1, valueUsd: 150_000 },
+      { assetSymbol: 'USDC', chain: 'ethereum', venueKind: 'wallet', venueId: wallets[2].id, amount: 50_000,  unitPriceUsd: 1, valueUsd: 50_000  },
+      { assetSymbol: 'USDC', chain: 'solana',   venueKind: 'wallet', venueId: wallets[3].id, amount: 125_000, unitPriceUsd: 1, valueUsd: 125_000 },
+      { assetSymbol: 'USDC', chain: 'solana',   venueKind: 'wallet', venueId: wallets[4].id, amount: 25_000,  unitPriceUsd: 1, valueUsd: 25_000  },
+      // Fiat positions (one per seeded bank)
+      { assetSymbol: 'USD', chain: null, venueKind: 'bank', venueId: chaseBank.id,   amount: 450_000,   unitPriceUsd: 1, valueUsd: 450_000 },
+      { assetSymbol: 'USD', chain: null, venueKind: 'bank', venueId: svbBank.id,     amount: 1_200_000, unitPriceUsd: 1, valueUsd: 1_200_000 },
+      { assetSymbol: 'USD', chain: null, venueKind: 'bank', venueId: mercuryBank.id, amount: 85_000,    unitPriceUsd: 1, valueUsd: 85_000 },
+    ];
+
+    const { data: stateSnap, error: ssErr } = await sb
+      .from('treasury_state_snapshots')
+      .insert({
+        enterprise_id: enterpriseId,
+        taken_at: ts(new Date()),
+        taken_by: userId,
+        trigger: 'scheduled',
+        base_currency: 'USD',
+        total_value_base_usd: totalValueUsd,
+        total_fiat_base_usd: currentFiatUsd,
+        total_stablecoin_base_usd: currentStableUsd,
+        total_defi_base_usd: currentDefiUsd,
+        positions,
+        fx_rates: { 'USD/USD': 1.0 },
+      })
+      .select('id')
+      .single();
+    if (ssErr) throw ssErr;
+
+    // Three scenarios off the same state snapshot so the Forecasting tab
+    // can render scenario comparisons out of the box.
+    const forecastSummary =
+      `Treasury forecast over the next 90 days starts at $${(totalValueUsd / 1_000_000).toFixed(2)}M total value. ` +
+      `Key obligations include bi-weekly payroll ($180K), upcoming vendor invoices ($443K), and one-time infrastructure spend ($120K). ` +
+      `A pending $350K onramp keeps the safety buffer intact; balance stays above $780K except for brief dips around payroll dates.`;
+
+    const forecastSnapshots = [
+      {
+        enterprise_id: enterpriseId,
+        computed_at: ts(new Date()),
+        computed_by: userId,
+        treasury_state_snapshot_id: stateSnap.id,
+        scenario: 'base',
+        scenario_params: { obligation_confidence_floor: 'confirmed' },
+        window_days: 90,
+        obligation_ids: obligationIds,
+        obligation_count: obligationIds.length,
+        projection: { timeline: forecastData, summary: forecastSummary, breaches: [] },
+        correlation_id: null,
+        consumer: 'treasurer_view',
+        is_hypothetical: false,
+      },
+      {
+        enterprise_id: enterpriseId,
+        computed_at: ts(new Date()),
+        computed_by: userId,
+        treasury_state_snapshot_id: stateSnap.id,
+        scenario: 'conservative',
+        scenario_params: { obligation_confidence_floor: 'expected', inflow_haircut_pct: 25 },
+        window_days: 90,
+        obligation_ids: obligationIds,
+        obligation_count: obligationIds.length,
+        projection: {
+          timeline: forecastData.map((d) => ({ ...d, projectedBalanceUsd: fmt2(d.projectedBalanceUsd * 0.92) })),
+          summary: 'Conservative scenario applies a 25% haircut to expected inflows; projected min balance dips to $560K on day 11 before recovering.',
+          breaches: [{ date: forecastData[10]?.date, minBalance: 560_000 }],
+        },
+        correlation_id: null,
+        consumer: 'treasurer_view',
+        is_hypothetical: false,
+      },
+      {
+        enterprise_id: enterpriseId,
+        computed_at: ts(new Date()),
+        computed_by: userId,
+        treasury_state_snapshot_id: stateSnap.id,
+        scenario: 'stress',
+        scenario_params: { obligation_confidence_floor: 'estimated', inflow_haircut_pct: 50, payroll_acceleration_days: 3 },
+        window_days: 90,
+        obligation_ids: obligationIds,
+        obligation_count: obligationIds.length,
+        projection: {
+          timeline: forecastData.map((d) => ({ ...d, projectedBalanceUsd: fmt2(d.projectedBalanceUsd * 0.78) })),
+          summary: 'Stress scenario zeroes discretionary inflows and accelerates payroll by 3 days. Treasury drops below safety buffer from day 8-18 without corrective action.',
+          breaches: [{ date: forecastData[7]?.date, minBalance: 340_000 }],
+        },
+        correlation_id: null,
+        consumer: 'alert_eval',
+        is_hypothetical: false,
+      },
+    ];
+
+    const { error: fsErr } = await sb.from('forecast_snapshots').insert(forecastSnapshots);
+    if (fsErr) throw fsErr;
+    console.log(`✓ Treasury state snapshot + ${forecastSnapshots.length} forecast snapshots (base/conservative/stress)`);
+  } else {
+    console.log('⏭  Skipping treasury_state_snapshots + forecast_snapshots (no enterprise_id)');
+  }
 
   // ════════════════════════════════════════════════════════
   // 10. COMPLIANCE — Sanctions, KYT, Travel Rule
@@ -1408,7 +1700,8 @@ async function main() {
   console.log('  Balance snapshots:', snapshotRows.length, '(daily × all wallets)');
   console.log('  Fiat ramps       :', fiatRows.length, '(onramp/offramp history)');
   console.log('  Obligations      :', obligationRows.length, '(next 90 days)');
-  console.log('  AI recommendations:', aiRows.length);
+  console.log('  AI recommendations:', aiRows.length, `(${aiRows.filter(r => r.status === 'pending_approval').length} pending approval)`);
+  console.log('  Forecast snapshots: 3 scenarios (base / conservative / stress) off 1 state snapshot');
   console.log('  Forecast         : 90-day projection');
   console.log('  Sanctions screens:', sanctionsRows.length);
   console.log('  KYT transfers    :', kytTransferRows.length);
@@ -1416,7 +1709,7 @@ async function main() {
   console.log('  Travel rule      :', travelRuleRows.length);
   console.log('');
   console.log('  Total bank balance  : $1,735,000');
-  console.log('  Total crypto balance: $2,150,000');
+  console.log('  Total stablecoin balance: $2,150,000 (USDC)');
   console.log('  Total AUM           : $3,885,000');
   console.log('═'.repeat(60));
 }

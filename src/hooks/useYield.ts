@@ -4,19 +4,31 @@ import { useSession } from 'next-auth/react';
 import type { YieldPosition, YieldTransaction } from '@/types/database';
 import type { YieldProtocolInfo, YieldRate } from '@/lib/yield/interface';
 import type { SlippageEstimate } from '@/lib/yield/slippage';
+import type { VenueCategory, VenueStatus, VenueMetadata } from '@/lib/yield/venues';
 
 // ---- Protocols with rates ----
 
+/**
+ * Shape returned by /api/yield/protocols. Extends the legacy protocol info
+ * with the venue category fields so the Yield Explorer UI can narrow on
+ * `category` to pick between DeFi and tokenized-MMF card layouts.
+ */
 export interface YieldProtocolWithRates extends YieldProtocolInfo {
   rates: YieldRate[];
+  category: VenueCategory;
+  status: VenueStatus;
+  venue: VenueMetadata;
 }
 
-export function useYieldProtocols() {
+export function useYieldProtocols(category?: VenueCategory) {
   const { data: session } = useSession();
   return useQuery<YieldProtocolWithRates[]>({
-    queryKey: ['yield-protocols'],
+    queryKey: ['yield-protocols', category ?? 'all'],
     queryFn: async () => {
-      const res = await fetch('/api/yield/protocols');
+      const url = category
+        ? `/api/yield/protocols?category=${encodeURIComponent(category)}`
+        : '/api/yield/protocols';
+      const res = await fetch(url);
       if (!res.ok) throw new Error('Failed to fetch yield protocols');
       const { data } = await res.json();
       return data ?? [];

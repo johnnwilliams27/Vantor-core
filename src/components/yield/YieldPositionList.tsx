@@ -4,30 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, TrendingUp, ArrowDownRight } from 'lucide-react';
-
-const PROTOCOL_LOGOS: Record<string, string> = {
-  aave_v3: '/partners/Aave_idWRQ7YLO7_0.svg',
-  morpho_reservoir: '/partners/morpho-white.svg',
-  morpho_steakhouse: '/partners/morpho-white.svg',
-  kamino: '/partners/kamino-logo.svg',
-  kamino_multiply: '/partners/kamino-logo.svg',
-  ondo: '/partners/Ondo_Logo_0.svg',
-  sky: '/partners/sky_logo.png',
-  ethena: '/partners/ethena_logo.png',
-};
 import { useYieldPositions, useRefreshPosition } from '@/hooks/useYield';
 import { useToast } from '@/components/ui/toast';
 import { YieldWithdrawForm } from './YieldWithdrawForm';
 import { useState } from 'react';
 import { CardSpinner } from '@/components/ui/spinner';
 import { UpgradeGate } from '@/components/ui/upgrade-gate';
-
-const PROTOCOL_LABELS: Record<string, string> = {
-  aave_v3: 'Aave V3',
-  morpho_reservoir: 'Morpho Reservoir',
-  kamino: 'Kamino',
-  ondo: 'Ondo (USDY)',
-};
+import { getVenueDisplayName, getVenueLogoPath } from '@/lib/yield/venues';
 
 const CHAIN_LABELS: Record<string, string> = {
   ethereum: 'Ethereum',
@@ -129,10 +112,13 @@ export function YieldPositionList() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base flex items-center gap-2">
-                  {PROTOCOL_LOGOS[pos.protocol] && (
-                    <Image src={PROTOCOL_LOGOS[pos.protocol]} alt={pos.protocol} width={24} height={24} className="h-6 w-6 object-contain" unoptimized />
-                  )}
-                  {PROTOCOL_LABELS[pos.protocol] ?? pos.protocol}
+                  {(() => {
+                    const logo = getVenueLogoPath(pos.protocol);
+                    return logo ? (
+                      <Image src={logo} alt={pos.protocol} width={24} height={24} className="h-6 w-6 object-contain" unoptimized />
+                    ) : null;
+                  })()}
+                  {getVenueDisplayName(pos.protocol)}
                 </CardTitle>
                 <div className="flex items-center gap-2">
                   <Badge variant={pos.chain === 'ethereum' ? 'ethereum' : 'solana'}>{CHAIN_LABELS[pos.chain] ?? pos.chain}</Badge>

@@ -4,13 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { capitalize, formatDateTime } from '@/lib/utils';
 import { useYieldTransactions } from '@/hooks/useYield';
 import { CardSpinner } from '@/components/ui/spinner';
-
-const PROTOCOL_LABELS: Record<string, string> = {
-  aave_v3: 'Aave V3',
-  morpho_reservoir: 'Morpho Reservoir',
-  kamino: 'Kamino',
-  ondo: 'Ondo (USDY)',
-};
+import { getVenueDisplayName } from '@/lib/yield/venues';
 
 const STATUS_VARIANT: Record<string, 'default' | 'success' | 'destructive' | 'warning' | 'secondary'> = {
   completed: 'success',
@@ -73,7 +67,7 @@ export function YieldTransactionTable() {
                       {capitalize(tx.tx_type)}
                     </Badge>
                   </td>
-                  <td className="px-3 py-2">{PROTOCOL_LABELS[tx.protocol] ?? tx.protocol}</td>
+                  <td className="px-3 py-2">{getVenueDisplayName(tx.protocol)}</td>
                   <td className="text-right px-3 py-2 font-medium">{formatUsd(tx.amount)}</td>
                   <td className="px-3 py-2"><Badge variant="outline">{tx.underlying_token}</Badge></td>
                   <td className="px-3 py-2">

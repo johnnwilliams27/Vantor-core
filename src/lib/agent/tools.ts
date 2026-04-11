@@ -1049,6 +1049,13 @@ const scheduleFiatPayment: AgentTool = {
   },
 };
 
+// NOTE: getSwapQuote, executeSwap, scheduleSwap, and scheduleBridge are
+// intentionally omitted from the registry while stablecoin swaps and
+// cross-chain bridging are disabled (see /api/swaps/quote for the full
+// explanation). Their definitions are kept in this file so re-enabling
+// is a one-line revert once the replacement DEX and bridging adapters
+// land. The AI agent will not see these tools in the meantime, so it
+// cannot try to call them and fail at the adapter layer.
 const ALL_TOOLS: AgentTool[] = [
   // Read-only (all roles)
   getTreasuryOverview,
@@ -1068,8 +1075,6 @@ const ALL_TOOLS: AgentTool[] = [
   scheduleTransfer,
   getRampQuote,
   executeRamp,
-  getSwapQuote,
-  executeSwap,
   approveRecommendation,
   rejectRecommendation,
   // Yield tools
@@ -1078,8 +1083,6 @@ const ALL_TOOLS: AgentTool[] = [
   yieldWithdraw,
   withdrawAndOfframp,
   // Scheduled operations
-  scheduleSwap,
-  scheduleBridge,
   scheduleRamp,
   getScheduledOperations,
   cancelScheduledOperation,

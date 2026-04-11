@@ -1,15 +1,26 @@
 import type { ChainType, TokenSymbol } from '@/types/database';
 
 export type YieldProtocolId =
+  // DeFi lending markets
   | 'aave_v3'
   | 'compound_v3'
+  | 'kamino'
+  // DeFi vaults
   | 'morpho_steakhouse'
   | 'morpho_reservoir'
-  | 'kamino'
   | 'kamino_multiply'
-  | 'ondo'
+  // Ondo USDY (retail yieldcoin) — renamed from 'ondo' in migration 0036
+  | 'ondo_usdy'
+  // Non-MMF venues not yet wired for live deposits
   | 'sky'
-  | 'ethena';
+  | 'ethena'
+  // Tokenized money market funds — all coming_soon in this PR
+  | 'buidl'
+  | 'ousg'
+  | 'ustb'
+  | 'benji'
+  | 'usyc'
+  | 'spiko_usd';
 export type YieldRiskLevel = 'low' | 'medium' | 'high';
 
 export interface RiskFactors {
