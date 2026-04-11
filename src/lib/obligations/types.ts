@@ -15,7 +15,8 @@ export const OBLIGATION_RECURRENCES = [
 ] as const;
 export type ObligationRecurrence = (typeof OBLIGATION_RECURRENCES)[number];
 
-export type VenueKind = 'bank' | 'wallet' | 'defi';
+export const OBLIGATION_VENUE_KINDS = ['bank', 'wallet', 'defi'] as const;
+export type VenueKind = (typeof OBLIGATION_VENUE_KINDS)[number];
 
 export interface Obligation {
   id: string;
@@ -67,8 +68,16 @@ export interface ObligationInput {
   metadata?: Record<string, unknown>;
 }
 
+/**
+ * Patch shape for updating an obligation. The `status` field is intentionally
+ * narrowed to exclude 'upcoming' — once an obligation has transitioned out of
+ * upcoming (paid, missed, cancelled), the type system prevents resurrecting it.
+ * This enforces the invariant established in migration 0036's cancelled-backfill
+ * of legacy is_active=false rows. The service layer is still responsible for
+ * validating transitions between terminal states.
+ */
 export interface ObligationPatch extends Partial<ObligationInput> {
-  status?: ObligationStatus;
+  status?: Exclude<ObligationStatus, 'upcoming'>;
   paidAt?: string | null;
   settlementTxRef?: string | null;
 }
