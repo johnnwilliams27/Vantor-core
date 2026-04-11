@@ -284,6 +284,53 @@ export async function markViewed(
 }
 
 /**
+ * Bulk-transition every `new`-state insight for a user to `viewed`
+ * in a single UPDATE. Returns the number of rows transitioned.
+ *
+ * Called by the InsightFeed frontend on mount to mark the entire
+ * visible feed as seen without firing N separate PATCH calls. Writes
+ * an audit log entry per transitioned row (fire-and-forget to avoid
+ * blocking the frontend on sequential audit writes).
+ *
+ * Enterprise scoping is the caller's responsibility — the route
+ * handler resolves the effective enterprise before calling this.
+ */
+export async function markAllViewed(
+  enterpriseId: string,
+  userId: string,
+  supabase: SupabaseClient = createAdminClient(),
+): Promise<number> {
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from('treasury_insights')
+    .update({ state: 'viewed', viewed_at: now })
+    .eq('enterprise_id', enterpriseId)
+    .eq('user_id', userId)
+    .eq('state', 'new')
+    .select('id');
+
+  if (error) {
+    throw new Error(`Failed to mark insights viewed: ${error.message}`);
+  }
+
+  const rows = data ?? [];
+
+  // Non-blocking audit writes, matching the expireStaleInsights pattern.
+  // The UI doesn't need to wait for audit logging to render.
+  for (const row of rows) {
+    writeAuditLog({
+      userId,
+      enterpriseId,
+      action: 'insight_view',
+      entityType: 'treasury_insight',
+      entityId: row.id as string,
+    }).catch(() => {});
+  }
+
+  return rows.length;
+}
+
+/**
  * Dismiss an insight. Sets a cooldown on the dedup_key to suppress
  * immediate re-creation by the next cron cycle. Writes audit log.
  */

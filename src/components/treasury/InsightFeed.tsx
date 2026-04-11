@@ -2,7 +2,7 @@
 import { useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CardSpinner } from '@/components/ui/spinner';
-import { useInsights, useMarkInsightViewed } from '@/hooks/useInsights';
+import { useInsights, useMarkAllInsightsViewed } from '@/hooks/useInsights';
 import { InsightCard } from './InsightCard';
 import { Lightbulb } from 'lucide-react';
 
@@ -10,33 +10,32 @@ import { Lightbulb } from 'lucide-react';
  * InsightFeed — the Treasury Insights Engine UI surface.
  *
  * Lists active insights (`new` + `viewed` state) for the current user,
- * newest first. On mount, sweeps any `new` insights to `viewed` by
- * firing a PATCH per insight. The sweep is guarded by a ref so each
- * insight ID is only marked once per mount, even across refetches.
+ * newest first. On the first render where at least one `new`-state
+ * insight is present, fires a single `POST /api/insights/mark-all-viewed`
+ * to transition the whole feed server-side in one UPDATE. Guarded by a
+ * ref so refetches don't re-trigger the sweep mid-session.
  *
  * Lives on the Treasury AI overview tab (see `TreasuryPageClient`).
  */
 export function InsightFeed() {
   const { data: insights, isLoading, isError, error } = useInsights();
-  const markViewed = useMarkInsightViewed();
+  const markAllViewed = useMarkAllInsightsViewed();
 
-  // Per-mount set of insight IDs we've already marked as viewed, so
-  // refetches don't re-PATCH the same insight. markViewed is idempotent
-  // on the server side (no-ops when state != 'new'), but we still want
-  // to avoid the unnecessary network round-trip.
-  const viewedSweepRef = useRef<Set<string>>(new Set());
+  // Ensures the mark-all-viewed sweep fires at most once per mount,
+  // even if refetches return fresh `new`-state insights later. The
+  // server endpoint is idempotent (no-ops when nothing to transition),
+  // but we still want to skip the round-trip when the ref is set.
+  const sweptRef = useRef(false);
 
   useEffect(() => {
+    if (sweptRef.current) return;
     if (!insights?.length) return;
-    for (const insight of insights) {
-      if (insight.state !== 'new') continue;
-      if (viewedSweepRef.current.has(insight.id)) continue;
-      viewedSweepRef.current.add(insight.id);
-      // Fire-and-forget; errors are swallowed here (the store is
-      // tolerant and the list will refresh on the next cron tick).
-      markViewed.mutate(insight.id);
-    }
-    // markViewed is stable across renders but intentionally omitted
+    if (!insights.some((i) => i.state === 'new')) return;
+    sweptRef.current = true;
+    // Fire-and-forget. Errors are swallowed — the list will refresh
+    // on the next refetch tick regardless.
+    markAllViewed.mutate();
+    // markAllViewed is stable across renders; intentionally omitted
     // from deps to avoid re-running the sweep on mutation state change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [insights]);

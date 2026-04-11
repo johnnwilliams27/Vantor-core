@@ -68,6 +68,35 @@ export function useMarkInsightViewed() {
   });
 }
 
+/**
+ * Single-round-trip alternative to calling `useMarkInsightViewed` for
+ * every insight in the feed. Hits `POST /api/insights/mark-all-viewed`
+ * which runs a single UPDATE on the server side.
+ */
+export function useMarkAllInsightsViewed() {
+  const queryClient = useQueryClient();
+  const { data: session } = useSession();
+
+  return useMutation<{ count: number }>({
+    mutationFn: async () => {
+      const res = await fetch('/api/insights/mark-all-viewed', { method: 'POST' });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error ?? 'Failed to mark insights viewed');
+      }
+      const { data } = await res.json();
+      return data as { count: number };
+    },
+    onSuccess: (result) => {
+      // Only invalidate if we actually transitioned rows — avoids a
+      // pointless refetch when the mutation was a no-op.
+      if (result.count > 0) {
+        queryClient.invalidateQueries({ queryKey: insightsQueryKey(session?.user?.id) });
+      }
+    },
+  });
+}
+
 export function useDismissInsight() {
   const queryClient = useQueryClient();
   const { data: session } = useSession();
