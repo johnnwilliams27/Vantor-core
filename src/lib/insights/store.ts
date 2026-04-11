@@ -26,8 +26,11 @@ import type {
  * Default cooldown windows by insight type (in hours). Dismissing an
  * insight locks its dedup_key for this long to prevent the cron from
  * immediately re-creating it. Tunable per-detector if needed.
+ *
+ * Exported so unit tests can assert coverage (every `InsightType` has a
+ * cooldown) without touching the DB.
  */
-const DEFAULT_COOLDOWN_HOURS: Record<InsightType, number> = {
+export const DEFAULT_COOLDOWN_HOURS: Record<InsightType, number> = {
   liquidity_below_buffer: 6,    // critical — short cooldown, re-surface quickly
   liquidity_idle_cash: 72,      // informational — dismiss for 3 days
   yield_drop: 24,
@@ -230,7 +233,13 @@ export async function getInsight(
 
 // ─── State transitions ───────────────────────────────────────────────
 
-const VALID_TRANSITIONS: Record<InsightState, InsightState[]> = {
+/**
+ * Insight state machine. Exported so unit tests can validate the rules
+ * without needing a Supabase test harness. The corresponding DB rows
+ * enforce the same invariants via the `insight_state` enum + check
+ * constraints in migration 0037.
+ */
+export const VALID_TRANSITIONS: Record<InsightState, InsightState[]> = {
   new: ['viewed', 'dismissed', 'acted_on', 'expired'],
   viewed: ['dismissed', 'acted_on', 'expired'],
   dismissed: [],
@@ -238,7 +247,7 @@ const VALID_TRANSITIONS: Record<InsightState, InsightState[]> = {
   expired: [],
 };
 
-function isValidTransition(from: InsightState, to: InsightState): boolean {
+export function isValidTransition(from: InsightState, to: InsightState): boolean {
   return VALID_TRANSITIONS[from]?.includes(to) ?? false;
 }
 

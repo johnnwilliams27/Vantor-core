@@ -155,8 +155,9 @@ describe('concentrationDetector', () => {
     });
 
     it('fires concentration_warning at 80% of cap', async () => {
-      // Balanced cap = $37.5M. 80% = $30M. Position of $31M warns but does not breach.
-      const positions = [buildYieldPosition('aave_v3', 31_000_000)];
+      // Balanced cap = min($500M × 7.5%, $15M abs) = $15M (abs cap binds).
+      // 80% of $15M = $12M warning threshold. A $13M position warns but does not breach.
+      const positions = [buildYieldPosition('aave_v3', 13_000_000)];
       const universe = buildUniverse(BALANCED_PROFILE, ['aave_v3']);
       const ctx = buildContext(buildSnapshot(positions), universe, BALANCED_PROFILE);
 
