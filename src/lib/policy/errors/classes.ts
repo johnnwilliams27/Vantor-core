@@ -76,6 +76,30 @@ export class CanonicalizationError extends PolicyError {
   }
 }
 
+/** Canonicalization failed because the rate source is unreachable, mock, or unconfigured. */
+export class CanonicalizationSourceUnavailableError extends PolicyError {
+  constructor(init: Omit<PolicyErrorInit, 'reason_code' | 'module'>) {
+    super({
+      ...init,
+      reason_code: REASON_CODES.canonicalization_source_unavailable,
+      module: 'canonicalizer',
+    });
+    this.name = 'CanonicalizationSourceUnavailableError';
+  }
+}
+
+/** Canonicalization failed because the rate reading is older than POLICY_RATE_MAX_AGE_MS. */
+export class CanonicalizationRateStaleError extends PolicyError {
+  constructor(init: Omit<PolicyErrorInit, 'reason_code' | 'module'>) {
+    super({
+      ...init,
+      reason_code: REASON_CODES.canonicalization_rate_stale,
+      module: 'canonicalizer',
+    });
+    this.name = 'CanonicalizationRateStaleError';
+  }
+}
+
 /** A hard limit was breached by the proposed movement. */
 export class HardLimitBreachError extends PolicyError {
   constructor(init: Omit<PolicyErrorInit, 'reason_code' | 'module'>) {

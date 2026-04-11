@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   PolicyError,
   CanonicalizationError,
+  CanonicalizationSourceUnavailableError,
+  CanonicalizationRateStaleError,
   HardLimitBreachError,
   ForecastUnavailableError,
   AggregateQueryFailedError,
@@ -111,6 +113,38 @@ describe('CanonicalizationError', () => {
     expect(err.reason_code).toBe('canonicalization_failed');
     expect(err.module).toBe('canonicalizer');
     expect(err.details).toMatchObject({ from: 'BTC', to: 'USD' });
+  });
+});
+
+describe('CanonicalizationSourceUnavailableError', () => {
+  it('is a PolicyError with reason_code=canonicalization_source_unavailable', () => {
+    const err = new CanonicalizationSourceUnavailableError({
+      human_readable: 'Rate provider unreachable',
+      user_action: 'Retry in a few minutes',
+      details: { from_asset: 'USDC', to_asset: 'USD', oracle_source: 'mock' },
+    });
+
+    expect(err).toBeInstanceOf(PolicyError);
+    expect(err.reason_code).toBe('canonicalization_source_unavailable');
+    expect(err.module).toBe('canonicalizer');
+    expect(err.name).toBe('CanonicalizationSourceUnavailableError');
+    expect(err.details).toMatchObject({ from_asset: 'USDC' });
+  });
+});
+
+describe('CanonicalizationRateStaleError', () => {
+  it('is a PolicyError with reason_code=canonicalization_rate_stale', () => {
+    const err = new CanonicalizationRateStaleError({
+      human_readable: 'Rate too old',
+      user_action: 'Check oracle health',
+      details: { rate_age_ms: 120_000, max_age_ms: 60_000 },
+    });
+
+    expect(err).toBeInstanceOf(PolicyError);
+    expect(err.reason_code).toBe('canonicalization_rate_stale');
+    expect(err.module).toBe('canonicalizer');
+    expect(err.name).toBe('CanonicalizationRateStaleError');
+    expect(err.details.rate_age_ms).toBe(120_000);
   });
 });
 
