@@ -49,6 +49,17 @@
   }
 }
 
+:root {
+  --bg-void: #060d1f;
+  --bg-deep-navy: #040a18;
+  --teal-400: #2dd4bf;
+  --cyan-300: #67e8f9;
+  --text-100: #e5e7eb;
+  --text-200: #d1d5db;
+  --text-300: #9ca3af;
+  --text-400: #6b7280;
+}
+
 @layer base {
   * {
     @apply border-border;
@@ -253,4 +264,22 @@
 @keyframes spinnerDotPulse {
   0%, 100% { transform: scale(1); opacity: 0.6; }
   50%      { transform: scale(1.6); opacity: 1; }
+}
+
+/* v5.6 landing — focus-visible ring (v5.5 a11y pass) */
+.landing-page :focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg-void), 0 0 0 4px var(--teal-400);
+  border-radius: 4px;
+}
+
+/* v5.6 landing — global reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .landing-page *,
+  .landing-page *::before,
+  .landing-page *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }
