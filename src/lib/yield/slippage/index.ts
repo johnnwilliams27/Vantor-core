@@ -1,5 +1,5 @@
 export { calculateSlippage, getSeverity } from './calculator';
-export { getLiquidityProvider, MockLiquidityProvider } from './liquidity-provider';
+export { getLiquidityProvider, DbLiquidityProvider } from './liquidity-provider';
 export type {
   PoolLiquidity,
   SlippageEstimate,
