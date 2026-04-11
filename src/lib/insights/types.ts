@@ -34,21 +34,23 @@ export type InsightState = 'new' | 'viewed' | 'dismissed' | 'acted_on' | 'expire
 
 export type DataFreshness = 'fresh' | 'stale_under_10min' | 'stale_over_10min';
 
-// ─── Policy verdict mirror ────────────────────────────────────────────
+// ─── Policy verdict ──────────────────────────────────────────────────
+
+import type { Verdict } from '@/lib/policy/types/verdict';
 
 /**
- * Mirror of the Verdict enum from `feature/policy-engine`. The real type
- * will live at `@/lib/policy/types/verdict` once the policy engine lands
- * on master. Until then, we carry a local copy with the exact same shape
- * so a swap is one-line in `policy-gate.ts`.
+ * Canonical `Verdict` type from the policy engine library (landed in
+ * master via feature/policy-engine Plan 1), aliased to the historical
+ * `PolicyVerdict` name so existing call sites don't need to rename.
  *
- * **Do not edit this list** — keep in sync with the policy engine.
+ * This used to be a local mirror in this file. If the policy engine
+ * ever extends the Verdict union, that change propagates here
+ * automatically.
+ *
+ * `policy-gate.ts` still returns a stub `require_approval` verdict
+ * until Plan 2 wires the real `EvaluationEngine` into runtime.
  */
-export type PolicyVerdict =
-  | 'allow_auto'
-  | 'require_approval'
-  | 'block'
-  | 'block_hard_limit';
+export type PolicyVerdict = Verdict;
 
 /**
  * A proposed action that a detector wants the treasurer to take.
