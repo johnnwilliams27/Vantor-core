@@ -81,4 +81,55 @@ describe('proposedMovementSchema', () => {
     });
     expect(result.success).toBe(false);
   });
+
+  // ─── C2 regression guard ─────────────────────────────────────────────
+  it('rejects a movement where initiator.type=ai_recommendation has a leaked user_id (C2 regression)', () => {
+    const result = proposedMovementSchema.safeParse({
+      ...validMovement,
+      initiator: {
+        type: 'ai_recommendation',
+        recommendation_id: 'rec-1',
+        user_id: 'hijack',
+      },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects a movement where initiator.type=human has a leaked agent_id (C2 regression)', () => {
+    const result = proposedMovementSchema.safeParse({
+      ...validMovement,
+      initiator: {
+        type: 'human',
+        user_id: 'user-1',
+        agent_id: 'hijack',
+      },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  // ─── Symmetry: missing-identity cases for the two other initiator types ─
+  it('rejects a movement where initiator.type=agent but no agent_id', () => {
+    const result = proposedMovementSchema.safeParse({
+      ...validMovement,
+      initiator: { type: 'agent' },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects a movement where initiator.type=schedule but no scheduled_op_id', () => {
+    const result = proposedMovementSchema.safeParse({
+      ...validMovement,
+      initiator: { type: 'schedule' },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  // ─── Asset code is now closed ────────────────────────────────────────
+  it('rejects a movement with an unknown asset code', () => {
+    const result = proposedMovementSchema.safeParse({
+      ...validMovement,
+      amount: { amount: '100', asset: 'BOGUS' },
+    });
+    expect(result.success).toBe(false);
+  });
 });
