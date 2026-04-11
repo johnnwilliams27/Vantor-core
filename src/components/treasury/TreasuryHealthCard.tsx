@@ -68,7 +68,11 @@ export function TreasuryHealthCard() {
   const defiUsd = defiTotalUsd;
 
   const health = overview.healthAnalysis;
-  const totalAum = overview.totalBankBalanceUsd + overview.totalCryptoBalanceUsd;
+  // Sum every bucket so the header AUM matches the card subtotals.
+  // The pre-fix formula (bank + crypto) was missing MMFs and DeFi
+  // entirely because totalCryptoBalanceUsd is narrowly the wallet
+  // stablecoin total.
+  const totalAum = cashUsd + stablecoinUsd + defiUsd;
 
   const statusConfig = {
     healthy: {

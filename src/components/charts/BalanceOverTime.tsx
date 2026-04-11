@@ -105,8 +105,17 @@ export function BalanceOverTime() {
   });
 
   const { data: overview } = useTreasuryOverview();
+  // Current total AUM sums every bucket — bank + wallet stablecoins +
+  // tokenized MMFs + DeFi positions + other yield. Matches the Total
+  // Treasury card on the dashboard. The pre-fix version summed only
+  // bank + crypto, which missed MMFs and DeFi entirely (or conflated
+  // them into crypto via the T18 regression).
   const currentTotal = overview
-    ? (overview.totalBankBalanceUsd ?? 0) + (overview.totalCryptoBalanceUsd ?? 0)
+    ? (overview.totalBankBalanceUsd ?? 0) +
+      (overview.totalCryptoBalanceUsd ?? 0) +
+      (overview.totalMmfPositionsUsd ?? 0) +
+      (overview.totalDefiPositionsUsd ?? 0) +
+      (overview.totalOtherYieldUsd ?? 0)
     : null;
 
   if (isLoading) {

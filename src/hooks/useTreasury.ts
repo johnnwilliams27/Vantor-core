@@ -32,7 +32,11 @@ export interface TreasuryHealthAnalysis {
 
 export interface TreasuryOverview {
   totalBankBalanceUsd: number;
+  /** Wallet USDC/USDT balances only. See TreasurySnapshot JSDoc. */
   totalCryptoBalanceUsd: number;
+  totalMmfPositionsUsd: number;
+  totalDefiPositionsUsd: number;
+  totalOtherYieldUsd: number;
   bankAccounts: Array<{
     id: string;
     institutionName: string;
