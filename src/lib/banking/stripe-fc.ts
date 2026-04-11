@@ -18,17 +18,30 @@ function getStripeClient(_mode: IntegrationMode): Stripe {
 }
 
 /**
- * Creates a Financial Connections session.
- * Returns the client secret for the frontend widget.
+ * Creates a Financial Connections session tied to a Stripe customer.
+ *
+ * In live mode, Stripe requires a concrete account holder — either
+ * `type=customer` with a customer ID, or `type=account` with a connected
+ * account ID. Using `type=account` without an ID fails with
+ * `Missing required param: account_holder[account]`.
+ *
+ * We pass the enterprise's Stripe customer ID (created during subscription
+ * checkout) so the linked bank account is associated with the right customer.
  */
-export async function createFCSession(mode: IntegrationMode): Promise<{
+export async function createFCSession(
+  mode: IntegrationMode,
+  stripeCustomerId: string,
+): Promise<{
   clientSecret: string;
   sessionId: string;
 }> {
   const stripe = getStripeClient(mode);
 
   const session = await stripe.financialConnections.sessions.create({
-    account_holder: { type: 'account' },
+    account_holder: {
+      type: 'customer',
+      customer: stripeCustomerId,
+    },
     permissions: ['balances', 'ownership', 'transactions'],
   });
 
