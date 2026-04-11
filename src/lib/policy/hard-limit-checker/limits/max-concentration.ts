@@ -76,25 +76,66 @@ export function checkMaxConcentration(
     };
   }
 
+  // Reject any malformed position entry upfront — silent-skip would
+  // produce an incorrect max calculation, potentially missing a real
+  // breach. Fail-closed with a structured error instead.
+  const malformedPositions: string[] = [];
+  for (const [asset, pos] of Object.entries(ctx.treasury_state.positions_usd_by_asset)) {
+    if (!isValidDecimalString(pos)) {
+      malformedPositions.push(asset);
+    }
+  }
+  if (malformedPositions.length > 0) {
+    return {
+      ...base,
+      current_value: '0',
+      post_transfer_value: '',
+      breached: false,
+      failure: {
+        reason_code: 'treasury_state_unavailable',
+        human_readable: `Cannot evaluate '${limit.name}' — treasury positions contain malformed values for assets: ${malformedPositions.join(', ')}`,
+        details: { malformed_assets: malformedPositions },
+        user_action: 'Treasury state loader returned invalid position values. Contact support.',
+      },
+    };
+  }
+
+  if (!isValidDecimalString(ctx.canonicalization.canonical_amount)) {
+    return {
+      ...base,
+      current_value: '0',
+      post_transfer_value: '',
+      breached: false,
+      failure: {
+        reason_code: 'canonicalization_failed',
+        human_readable: `Cannot evaluate '${limit.name}' — canonical_amount is malformed.`,
+        details: { canonical_amount_raw: ctx.canonicalization.canonical_amount },
+        user_action: 'Canonicalizer returned a non-decimal amount. Contact support.',
+      },
+    };
+  }
+
   const total = new Big(ctx.treasury_state.total_treasury_usd);
-  const canonicalAmount = new Big(ctx.canonicalization.canonical_amount || '0');
+  const canonicalAmount = new Big(ctx.canonicalization.canonical_amount);
 
   // Compute current max concentration (pre-transfer) — used for the
   // current_value field even when no breach
   let currentMaxPct = new Big(0);
   if (total.gt(0)) {
     for (const [, pos] of Object.entries(ctx.treasury_state.positions_usd_by_asset)) {
-      if (!isValidDecimalString(pos)) continue; // skip malformed entries silently for current calc
       const pct = new Big(pos).div(total).times(100);
       if (pct.gt(currentMaxPct)) currentMaxPct = pct;
     }
   }
 
-  // Build post-transfer position map (phase-1: assume outflow from source)
+  // Build post-transfer position map (phase-1: assume outflow from source).
+  // If srcAsset isn't in positions_usd_by_asset, the outflow comes from
+  // an off-book position — we leave positions unchanged but still shrink
+  // total (fail-closed: inflated percentages may false-positive breach).
   const postPositions: Record<string, string> = { ...ctx.treasury_state.positions_usd_by_asset };
   const srcAsset = movement.source.asset;
   const srcCurrent = ctx.treasury_state.positions_usd_by_asset[srcAsset];
-  if (srcCurrent !== undefined && isValidDecimalString(srcCurrent)) {
+  if (srcCurrent !== undefined) {
     postPositions[srcAsset] = new Big(srcCurrent).minus(canonicalAmount).toString();
   }
 
@@ -103,7 +144,10 @@ export function checkMaxConcentration(
   let postMaxPct = new Big(0);
   if (newTotal.gt(0)) {
     for (const [, pos] of Object.entries(postPositions)) {
-      if (!isValidDecimalString(pos)) continue;
+      // pos may be a computed value with a leading '-' from the subtract
+      // above — skip negatives for the max calc (a negative position
+      // can't contribute to a max concentration) but don't fail.
+      if (pos.startsWith('-')) continue;
       const pct = new Big(pos).div(newTotal).times(100);
       if (pct.gt(postMaxPct)) postMaxPct = pct;
     }

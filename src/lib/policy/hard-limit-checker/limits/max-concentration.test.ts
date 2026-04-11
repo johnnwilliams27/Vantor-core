@@ -123,4 +123,45 @@ describe('checkMaxConcentration', () => {
     );
     expect(result.failure?.reason_code).toBe('treasury_state_unavailable');
   });
+
+  it('returns structured failure when a position entry is malformed (not silent skip)', () => {
+    const result = checkMaxConcentration(
+      mkLimit('60'),
+      mkMovement('100000'),
+      mkContext({ USDC: '500000', USDT: 'garbage' }, '1000000', '100000'),
+    );
+    expect(result.failure?.reason_code).toBe('treasury_state_unavailable');
+    expect(result.failure?.human_readable).toContain('USDT');
+  });
+
+  it('handles off-book srcAsset (not in positions map) without crashing', () => {
+    // srcAsset USDC is in positions; but let's test when the source isn't tracked
+    // Using 'USDT' as source with only USDC in positions to simulate off-book
+    const result = checkMaxConcentration(
+      mkLimit('70'),
+      mkMovement('100000', 'USDT'),
+      mkContext({ USDC: '800000' }, '1000000', '100000'),
+    );
+    // USDC unchanged at 800k, newTotal = 900k, USDC% = 88.89% > 70% → breached
+    // This is the fail-closed direction for off-book outflows
+    expect(result.breached).toBe(true);
+  });
+
+  it('contract: breached and failure are mutually exclusive', () => {
+    const notBreached = checkMaxConcentration(
+      mkLimit('70'),
+      mkMovement('100000', 'USDC'),
+      mkContext({ USDC: '600000', USDT: '400000' }, '1000000', '100000'),
+    );
+    expect(notBreached.breached).toBe(false);
+    expect(notBreached.failure).toBeUndefined();
+
+    const breached = checkMaxConcentration(
+      mkLimit('50'),
+      mkMovement('200000', 'USDC'),
+      mkContext({ USDC: '500000', USDT: '500000' }, '1000000', '200000'),
+    );
+    expect(breached.breached).toBe(true);
+    expect(breached.failure).toBeUndefined();
+  });
 });

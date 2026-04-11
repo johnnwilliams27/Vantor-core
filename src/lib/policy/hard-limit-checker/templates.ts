@@ -115,12 +115,21 @@ function assertNeverLimitType(x: never): never {
 }
 
 /**
- * Validate that a decimal string can be parsed by big.js. Used by limit
- * evaluators to reject malformed treasury state values upfront so a
- * downstream big.js throw doesn't escape the never-throws contract.
+ * Validate that a decimal string can be parsed by big.js AND represents
+ * a non-negative value. Used by limit evaluators to reject malformed or
+ * semantically-invalid treasury state values upfront so a downstream
+ * big.js throw (or a negative treasury position) doesn't escape the
+ * never-throws contract.
+ *
+ * PHASE-1 semantics: treasury positions, canonical amounts, aggregate
+ * sums, and limit values are all non-negative. Negative values in these
+ * fields indicate upstream data corruption and must be rejected, not
+ * silently coerced. If a future feature needs signed values (e.g.,
+ * delta tracking), introduce a separate `isValidSignedDecimalString`
+ * helper and use it explicitly at those call sites.
  */
 export function isValidDecimalString(s: string | undefined | null): boolean {
   if (s === undefined || s === null || s === '') return false;
-  // Reject NaN, scientific notation, commas, currency symbols, etc.
-  return /^-?\d+(\.\d+)?$/.test(s);
+  // Reject NaN, scientific notation, commas, currency symbols, leading `-`
+  return /^\d+(\.\d+)?$/.test(s);
 }

@@ -142,4 +142,22 @@ describe('checkObligationCoverage', () => {
     );
     expect(result.failure?.reason_code).toBe('condition_node_evaluation_failed');
   });
+
+  it('contract: breached and failure are mutually exclusive', () => {
+    const covered = checkObligationCoverage(
+      mkLimit('14'),
+      mkMovement(),
+      mkContext(14, { value: { covered: true, obligations_checked: 5, obligations_uncovered: 0 } }),
+    );
+    expect(covered.breached).toBe(false);
+    expect(covered.failure).toBeUndefined();
+
+    const notCovered = checkObligationCoverage(
+      mkLimit('14'),
+      mkMovement(),
+      mkContext(14, { value: { covered: false, obligations_checked: 5, obligations_uncovered: 2 } }),
+    );
+    expect(notCovered.breached).toBe(true);
+    expect(notCovered.failure).toBeUndefined();
+  });
 });

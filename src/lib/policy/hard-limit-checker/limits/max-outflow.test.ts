@@ -165,4 +165,48 @@ describe('checkMaxOutflow — 30day', () => {
     const result = checkMaxOutflow(mk30dLimit('10000000'), mkMovement('500000'), mkContext('0', '500000'));
     expect(result.failure?.reason_code).toBe('historical_outflow_unavailable');
   });
+
+  it('propagates failure when the 30d aggregate has a failure field', () => {
+    const failedResult: AggregateWindowResult = {
+      window_spec_hash: '30d',
+      window_start: new Date(Date.now() - 30 * 86_400_000),
+      window_end: new Date(),
+      sum_amount_usd: '',
+      sum_amount_by_asset: {},
+      count: 0,
+      distinct_destinations: 0,
+      distinct_counterparties: 0,
+      included_evaluation_ids: [],
+      includes_proposed: false,
+      failure: {
+        reason_code: 'aggregate_query_failed',
+        human_readable: '30d aggregate query timed out',
+        details: {},
+      },
+    };
+    const result = checkMaxOutflow(
+      mk30dLimit('10000000'),
+      mkMovement('500000'),
+      mkContext('0', '500000', failedResult),
+    );
+    expect(result.failure?.reason_code).toBe('aggregate_query_failed');
+  });
+
+  it('contract: breached and failure are mutually exclusive (daily)', () => {
+    const notBreached = checkMaxOutflow(
+      mkDailyLimit('1000000'),
+      mkMovement('50000'),
+      mkContext('800000', '50000'),
+    );
+    expect(notBreached.breached).toBe(false);
+    expect(notBreached.failure).toBeUndefined();
+
+    const breached = checkMaxOutflow(
+      mkDailyLimit('1000000'),
+      mkMovement('300000'),
+      mkContext('800000', '300000'),
+    );
+    expect(breached.breached).toBe(true);
+    expect(breached.failure).toBeUndefined();
+  });
 });

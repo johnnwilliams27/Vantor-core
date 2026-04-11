@@ -123,4 +123,19 @@ describe('checkMinCashReserve', () => {
     const result = checkMinCashReserve(mkLimit('not-a-number'), mkMovement('10000'), mkContext('600000', '10000'));
     expect(result.failure?.reason_code).toBe('condition_node_evaluation_failed');
   });
+
+  it('rejects negative treasury values as malformed', () => {
+    const result = checkMinCashReserve(mkLimit('500000'), mkMovement('10000'), mkContext('-600000', '10000'));
+    expect(result.failure?.reason_code).toBe('treasury_state_unavailable');
+  });
+
+  it('contract: breached and failure are mutually exclusive', () => {
+    const notBreached = checkMinCashReserve(mkLimit('500000'), mkMovement('10000'), mkContext('600000', '10000'));
+    expect(notBreached.breached).toBe(false);
+    expect(notBreached.failure).toBeUndefined();
+
+    const breached = checkMinCashReserve(mkLimit('500000'), mkMovement('200000'), mkContext('520000', '200000'));
+    expect(breached.breached).toBe(true);
+    expect(breached.failure).toBeUndefined();
+  });
 });

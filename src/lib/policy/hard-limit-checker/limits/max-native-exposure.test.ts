@@ -140,4 +140,31 @@ describe('checkMaxNativeExposure', () => {
     );
     expect(result.failure?.reason_code).toBe('treasury_state_unavailable');
   });
+
+  it('rejects negative position values as malformed', () => {
+    const result = checkMaxNativeExposure(
+      mkLimit('USDC', '1000000'),
+      mkMovement('USDC', 'USDT', '100000'),
+      mkContext({ USDC: '-500000' }),
+    );
+    expect(result.failure?.reason_code).toBe('treasury_state_unavailable');
+  });
+
+  it('contract: breached and failure are mutually exclusive', () => {
+    const notBreached = checkMaxNativeExposure(
+      mkLimit('USDC', '1000000'),
+      mkMovement('USDC', 'USDT', '100000'),
+      mkContext({ USDC: '500000' }),
+    );
+    expect(notBreached.breached).toBe(false);
+    expect(notBreached.failure).toBeUndefined();
+
+    const breached = checkMaxNativeExposure(
+      mkLimit('USDC', '500000'),
+      mkMovement('USDT', 'USDC', '300000'),
+      mkContext({ USDC: '300000' }),
+    );
+    expect(breached.breached).toBe(true);
+    expect(breached.failure).toBeUndefined();
+  });
 });

@@ -52,7 +52,18 @@ export function checkMaxOutflow(
     }
     trailingSumUsd = ctx.aggregates.system_splitting_guard_24h.sum_amount_usd;
   } else {
-    // 30-day lookup — iterate user_specs for an entry with sufficient duration
+    // 30-day lookup — iterate user_specs for an entry with sufficient duration.
+    //
+    // PHASE-1 CONTRACT: the context loader (Plan 2) MUST populate EXACTLY
+    // ONE ungrouped 30d aggregate in user_specs when a max_30day_outflow_usd
+    // hard limit exists. If multiple entries match the ≥30d duration check,
+    // this code silently picks the first one, which may underestimate the
+    // true trailing sum and produce a false-negative breach.
+    //
+    // Plan 2 refinement options: (a) key user_specs by limit_id for hard
+    // limits, (b) thread a WindowSpec through HardLimit so this code can
+    // compute the hash directly, (c) move 30d aggregates to a separate
+    // system-level field analogous to system_splitting_guard_24h.
     const thirtyDayMs = 30 * 86_400_000;
     const tolerance = 60_000; // 1 minute
     const thirtyDay = Object.values(ctx.aggregates.user_specs).find(
