@@ -127,3 +127,33 @@ export class EnvKeyCipherProvider implements CipherProvider {
     }
   }
 }
+
+let cachedProvider: CipherProvider | null = null;
+
+/**
+ * Returns the module-level cached CipherProvider, constructing it on first
+ * call. The returned provider is immutable; changing env vars at runtime
+ * has no effect until the process restarts (which is always what happens
+ * in Vercel production deployments).
+ *
+ * Test code should NOT use this — construct EnvKeyCipherProvider directly
+ * with a config you control, and pass it to encryptJson/decryptJson.
+ */
+export function getCipherProvider(): CipherProvider {
+  if (cachedProvider) return cachedProvider;
+  const providerName = process.env.CRYPTO_PROVIDER ?? 'env';
+  if (providerName !== 'env') {
+    throw new Error(
+      `CRYPTO_PROVIDER="${providerName}" is not implemented. Valid values: "env". ` +
+        'See docs/superpowers/specs/2026-04-11-erp-credentials-encryption-design.md for the KMS migration path.',
+    );
+  }
+  const config = loadEnvKeyConfigFromProcessEnv(process.env);
+  cachedProvider = new EnvKeyCipherProvider(config);
+  return cachedProvider;
+}
+
+/** Test-only: reset the cached provider so the next call re-reads process.env. */
+export function __resetCipherProviderForTests(): void {
+  cachedProvider = null;
+}
