@@ -23,6 +23,7 @@ const VANTOR_DEVELOPER_FEE_PCT = (VANTOR_FEE_RATE * 100).toFixed(4); // "0.2500"
 function getApiKey(mode: IntegrationMode): string {
   return getCredential(
     mode,
+    'BRIDGE_API_KEY',
     process.env.BRIDGE_API_KEY_SANDBOX,
     process.env.BRIDGE_API_KEY_LIVE,
   );

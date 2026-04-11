@@ -8,8 +8,8 @@ function getBaseUrl(mode: IntegrationMode): string {
 }
 
 function getAuth(mode: IntegrationMode): string {
-  const keyId = getCredential(mode, process.env.BELVO_SECRET_KEY_ID_SANDBOX, process.env.BELVO_SECRET_KEY_ID_LIVE);
-  const keyPassword = getCredential(mode, process.env.BELVO_SECRET_KEY_PASSWORD_SANDBOX, process.env.BELVO_SECRET_KEY_PASSWORD_LIVE);
+  const keyId = getCredential(mode, 'BELVO_SECRET_KEY_ID', process.env.BELVO_SECRET_KEY_ID_SANDBOX, process.env.BELVO_SECRET_KEY_ID_LIVE);
+  const keyPassword = getCredential(mode, 'BELVO_SECRET_KEY_PASSWORD', process.env.BELVO_SECRET_KEY_PASSWORD_SANDBOX, process.env.BELVO_SECRET_KEY_PASSWORD_LIVE);
   return Buffer.from(`${keyId}:${keyPassword}`).toString('base64');
 }
 
@@ -22,8 +22,8 @@ export async function createWidgetToken(mode: IntegrationMode): Promise<string> 
       Authorization: `Basic ${getAuth(mode)}`,
     },
     body: JSON.stringify({
-      id: getCredential(mode, process.env.BELVO_SECRET_KEY_ID_SANDBOX, process.env.BELVO_SECRET_KEY_ID_LIVE),
-      password: getCredential(mode, process.env.BELVO_SECRET_KEY_PASSWORD_SANDBOX, process.env.BELVO_SECRET_KEY_PASSWORD_LIVE),
+      id: getCredential(mode, 'BELVO_SECRET_KEY_ID', process.env.BELVO_SECRET_KEY_ID_SANDBOX, process.env.BELVO_SECRET_KEY_ID_LIVE),
+      password: getCredential(mode, 'BELVO_SECRET_KEY_PASSWORD', process.env.BELVO_SECRET_KEY_PASSWORD_SANDBOX, process.env.BELVO_SECRET_KEY_PASSWORD_LIVE),
       scopes: 'read_institutions,read_accounts,read_balances',
     }),
   });
