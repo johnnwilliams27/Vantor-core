@@ -86,7 +86,8 @@ CREATE TABLE policy_hard_limits (
   limit_currency      TEXT,            -- Asset code for monetary limits, NULL for %/duration
   scope               JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_by          UUID NOT NULL REFERENCES user_profiles(id),
-  created_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (version_id, limit_type, scope)
 );
 
 COMMENT ON TABLE policy_hard_limits IS
@@ -138,7 +139,8 @@ CREATE TABLE policy_approval_requests (
   approved_at         TIMESTAMPTZ,
   resolved_at         TIMESTAMPTZ,
   resolution_notes    JSONB,
-  version             INTEGER NOT NULL DEFAULT 0  -- Optimistic lock
+  version             INTEGER NOT NULL DEFAULT 0,  -- Optimistic lock
+  UNIQUE (enterprise_id, movement_id)
 );
 
 COMMENT ON TABLE policy_approval_requests IS
