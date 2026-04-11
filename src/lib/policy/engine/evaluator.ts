@@ -1,0 +1,243 @@
+// src/lib/policy/engine/evaluator.ts
+
+import { ProposedMovement } from '../types/movement';
+import { EvaluationContext } from '../types/context';
+import { EvaluationResult } from '../types/verdict';
+import {
+  EvaluationTrace,
+  RuleEvaluationTrace,
+  CanonicalizationTrace,
+  ReasonCodeEntry,
+} from '../types/trace';
+import { HardLimitChecker } from '../hard-limit-checker/checker';
+import { HardLimitCheckResult } from '../types/hard-limit';
+import { evalCondition } from '../ir-evaluator/evaluator';
+import { composeVerdict } from '../verdict-composer/composer';
+import { REASON_CODES } from '../errors/reason-codes';
+
+const ENGINE_VERSION = '1.0.0';
+
+/**
+ * Main policy engine evaluator. Pure, synchronous, deterministic given
+ * a (movement, context) pair. The async context loader (Task 23) builds
+ * the context; this evaluator only transforms (movement, context) →
+ * EvaluationResult.
+ *
+ * Same function called by live evaluation (via the Plan 2 gate) and
+ * simulation (via Plan 3 replay) — no parallel implementation.
+ *
+ * PHASE-1 GAP: `required_chain` on the returned EvaluationResult is
+ * NOT populated. Chain selection lives in Plan 2 where the gate
+ * consumes this result, matches rules to approval chains via rule
+ * verdict_chain_id, and populates required_chain before persisting
+ * to policy_evaluations. The engine itself doesn't know about chains.
+ */
+export class EvaluationEngine {
+  private readonly hardLimitChecker: HardLimitChecker;
+
+  constructor(hardLimitChecker?: HardLimitChecker) {
+    this.hardLimitChecker = hardLimitChecker ?? new HardLimitChecker();
+  }
+
+  evaluate(movement: ProposedMovement, ctx: EvaluationContext): EvaluationResult {
+    const startTime = Date.now();
+
+    // Step 1: Hard limit check — runs first, terminal on breach at composition time
+    const hardLimitCheckResult = this.hardLimitChecker.check(movement, ctx);
+
+    // Step 2: Evaluate every user rule. We walk all rules (even after
+    // finding a match or a failure) so the trace shows every rule that
+    // was considered — complete audit trail.
+    const rulesEvaluated: RuleEvaluationTrace[] = [];
+    for (const rule of ctx.policy_version.rules) {
+      rulesEvaluated.push(this.evaluateRule(rule, movement, ctx));
+    }
+
+    // Step 3: Compose final verdict with system invariants
+    const composition = composeVerdict(
+      movement,
+      rulesEvaluated,
+      hardLimitCheckResult.any_breached,
+    );
+
+    // Step 4: Build reason codes list — ONLY from hard limit breaches
+    // and actual rule failures (never from rule-matched blocks or from
+    // system invariants — those have their own fields on the trace).
+    const reasonCodes = this.buildReasonCodes(
+      composition.verdict,
+      hardLimitCheckResult,
+      rulesEvaluated,
+    );
+
+    // Step 5: Build canonicalization trace
+    const canonicalizationTrace: CanonicalizationTrace = {
+      native_amount: ctx.canonicalization.native_amount,
+      native_asset: ctx.canonicalization.native_asset,
+      canonical_amount: ctx.canonicalization.canonical_amount,
+      canonical_currency: ctx.canonicalization.canonical_currency,
+      rate: ctx.canonicalization.rate,
+      rate_source: ctx.canonicalization.rate_source,
+      rate_as_of: ctx.canonicalization.rate_as_of.toISOString(),
+      max_age_ms: ctx.canonicalization.max_age_ms,
+      succeeded: !ctx.canonicalization.failure,
+      failure_reason_code: ctx.canonicalization.failure?.reason_code,
+    };
+
+    // Step 6: Assemble the full trace
+    const trace: EvaluationTrace = {
+      engine_version: ENGINE_VERSION,
+      policy_version_id: ctx.policy_version.id,
+      policy_version_number: ctx.policy_version.version_number,
+      proposed_movement_id: movement.id,
+      canonicalization: canonicalizationTrace,
+      hard_limit_check: hardLimitCheckResult,
+      rules_evaluated: rulesEvaluated,
+      system_invariants_applied: composition.invariants_applied,
+      final_verdict: composition.verdict,
+      final_verdict_source: composition.source,
+      final_verdict_reasons: reasonCodes,
+      forecast_mode: ctx.forecast.query_metadata.mode,
+      forecast_warnings: ctx.forecast.query_metadata.warnings,
+      evaluation_duration_ms: Date.now() - startTime,
+    };
+
+    return {
+      verdict: composition.verdict,
+      trace,
+      reason_codes: reasonCodes.map((r) => r.reason_code),
+    };
+  }
+
+  /**
+   * Evaluate a single rule, wrapping evalCondition in a try/catch as
+   * defense in depth. The IR leaf evaluators have a never-throws contract
+   * (they return structured LeafResult.failure on any problem), but if
+   * a programmer-error assertNever fires the engine must not crash the
+   * whole evaluation — the failing rule becomes a rule-level failure and
+   * the verdict composer blocks the transfer.
+   */
+  private evaluateRule(
+    rule: EvaluationContext['policy_version']['rules'][number],
+    movement: ProposedMovement,
+    ctx: EvaluationContext,
+  ): RuleEvaluationTrace {
+    let leafResult;
+    try {
+      leafResult = evalCondition(rule.condition, movement, ctx, [rule.id]);
+    } catch (err) {
+      return {
+        rule_id: rule.id,
+        rule_name: rule.name,
+        rule_type: rule.rule_type,
+        priority: rule.priority,
+        condition_result: {
+          path: [rule.id],
+          node_kind: rule.condition.kind,
+          result: 'failed',
+          details: { uncaught_error: err instanceof Error ? err.message : String(err) },
+        },
+        matched: false,
+        verdict_contribution: null,
+        failure: {
+          reason_code: 'condition_node_evaluation_failed',
+          human_readable: `Rule '${rule.name}' crashed during evaluation: ${err instanceof Error ? err.message : String(err)}`,
+          details: {
+            rule_id: rule.id,
+            error_class: err instanceof Error ? err.name : typeof err,
+          },
+          affected_condition_path: [rule.id],
+          user_action:
+            'This indicates a bug in the policy engine. Contact support with the trace ID.',
+        },
+      };
+    }
+
+    return {
+      rule_id: rule.id,
+      rule_name: rule.name,
+      rule_type: rule.rule_type,
+      priority: rule.priority,
+      condition_result: {
+        path: [rule.id],
+        node_kind: rule.condition.kind,
+        result: leafResult.failure ? 'failed' : leafResult.matched ? 'matched' : 'not_matched',
+        details: leafResult.evaluation_details,
+      },
+      matched: leafResult.matched,
+      matched_via: leafResult.via,
+      // Only contribute a verdict when the rule matched cleanly. Failed
+      // rules have verdict_contribution=null; the composer's step 2 catches
+      // failures before step 3's privilege composition.
+      verdict_contribution: leafResult.matched && !leafResult.failure ? rule.verdict : null,
+      failure: leafResult.failure
+        ? {
+            reason_code: leafResult.failure.reason_code,
+            human_readable: leafResult.failure.human_readable,
+            details: leafResult.failure.details,
+            affected_condition_path: [rule.id],
+            user_action: leafResult.failure.user_action,
+          }
+        : undefined,
+    };
+  }
+
+  /**
+   * Build the structured reason_codes list attached to the final verdict.
+   *
+   * Populated ONLY from:
+   * - Hard limit breaches (when verdict === 'block_hard_limit')
+   * - Actual rule-level failures (when verdict === 'block' due to
+   *   cannot-fully-evaluate)
+   *
+   * NOT populated from:
+   * - Rule-matched blocks — these are explained by `trace.rules_evaluated`;
+   *   the matched rule's name + rationale is the user-facing explanation.
+   * - System invariants (ai_initiator_floor, default_deny) — these are
+   *   explained by `trace.system_invariants_applied`, which carries
+   *   warning codes, not reason codes.
+   */
+  private buildReasonCodes(
+    verdict: EvaluationResult['verdict'],
+    hardLimitResult: HardLimitCheckResult,
+    ruleTraces: RuleEvaluationTrace[],
+  ): ReasonCodeEntry[] {
+    const entries: ReasonCodeEntry[] = [];
+
+    if (verdict === 'block_hard_limit') {
+      for (const breach of hardLimitResult.breaches) {
+        entries.push({
+          reason_code: REASON_CODES.hard_limit_breached,
+          human_readable: breach.human_readable,
+          details: {
+            limit_name: breach.limit_name,
+            limit_type: breach.limit_type,
+            limit_value: breach.limit_value,
+            post_transfer_value: breach.post_transfer_value,
+            overage: breach.overage,
+          },
+          user_action: breach.user_action,
+        });
+      }
+      return entries;
+    }
+
+    if (verdict === 'block') {
+      // Block may be from: (a) a rule failure (cannot-fully-evaluate), or
+      // (b) a rule matching with verdict=block. Only the failure case
+      // produces structured reason codes — rule-matched blocks are
+      // explained by the trace's rules_evaluated array.
+      for (const rule of ruleTraces) {
+        if (rule.failure) {
+          entries.push({
+            reason_code: rule.failure.reason_code,
+            human_readable: rule.failure.human_readable,
+            details: rule.failure.details,
+            user_action: rule.failure.user_action,
+          });
+        }
+      }
+    }
+
+    return entries;
+  }
+}
