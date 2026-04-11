@@ -14,7 +14,6 @@ const PROTOCOL_LOGOS: Record<string, string> = {
   ondo: '/partners/Ondo_Logo_0.svg',
   sky: '/partners/sky_logo.png',
   ethena: '/partners/ethena_logo.png',
-  drift: '/partners/drift_logo.svg',
 };
 import { useYieldPositions, useRefreshPosition } from '@/hooks/useYield';
 import { useToast } from '@/components/ui/toast';

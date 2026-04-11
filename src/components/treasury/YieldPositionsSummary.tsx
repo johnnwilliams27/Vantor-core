@@ -12,7 +12,7 @@ import type { YieldPosition } from '@/types/database';
 const PROTOCOL_LABELS: Record<string, string> = {
   aave_v3: 'Aave V3', morpho_reservoir: 'Morpho Reservoir', morpho_steakhouse: 'Morpho Steakhouse',
   kamino: 'Kamino', kamino_multiply: 'Kamino Multiply', ondo: 'Ondo (USDY)',
-  sky: 'Sky sUSDS', ethena: 'Ethena sUSDe', drift: 'Drift',
+  sky: 'Sky sUSDS', ethena: 'Ethena sUSDe',
 };
 
 const PROTOCOL_LOGOS: Record<string, string> = {
@@ -24,7 +24,6 @@ const PROTOCOL_LOGOS: Record<string, string> = {
   ondo: '/partners/Ondo_Logo_0.svg',
   sky: '/partners/sky_logo.png',
   ethena: '/partners/ethena_logo.png',
-  drift: '/partners/drift_logo.svg',
 };
 
 function formatUsd(value: number | string): string {

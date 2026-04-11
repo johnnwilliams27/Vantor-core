@@ -24,7 +24,6 @@ const PROTOCOL_LABELS: Record<string, string> = {
   ondo: 'Ondo',
   sky: 'Sky sUSDS',
   ethena: 'Ethena',
-  drift: 'Drift',
 };
 
 const PROTOCOL_COLORS: Record<string, string> = {
@@ -36,7 +35,6 @@ const PROTOCOL_COLORS: Record<string, string> = {
   ondo: '#06b6d4',
   sky: '#0ea5e9',
   ethena: '#f43f5e',
-  drift: '#a855f7',
 };
 
 function CustomTooltip({ active, payload }: any) {

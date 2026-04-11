@@ -1,10 +1,10 @@
 /**
  * Shared DefiLlama yield pools fetcher.
  *
- * Why: several of our native protocol APIs are flaky or require auth
- * (Kamino's endpoint has been 404 for weeks, Drift requires an API key,
- * and the Ethena API doesn't return TVL). DefiLlama's /pools endpoint
- * aggregates all of them in one place and is free + unauthenticated.
+ * Why: several of our native protocol APIs are flaky (Kamino's endpoint
+ * has been 404 for weeks, and the Ethena API doesn't return TVL).
+ * DefiLlama's /pools endpoint aggregates them in one place and is free
+ * + unauthenticated.
  *
  * We use it as:
  *   - Primary source when the native API is broken (Kamino).

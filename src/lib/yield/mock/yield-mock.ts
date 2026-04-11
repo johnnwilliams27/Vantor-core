@@ -95,15 +95,6 @@ const PROTOCOL_META: Record<YieldProtocolId, Omit<YieldProtocolInfo, 'id'>> = {
     riskFactors: { smartContract: 2, counterparty: 3, liquidity: 2, regulatory: 3 },
     kycRequired: false,
   },
-  drift: {
-    name: 'Drift Earn',
-    chain: 'solana',
-    supportedTokens: ['USDC'],
-    description: 'Lending vaults on Solana\'s largest perps DEX. Earn yield from margin traders and liquidations.',
-    riskLevel: 'high',
-    riskFactors: { smartContract: 2, counterparty: 2, liquidity: 3, regulatory: 3 },
-    kycRequired: false,
-  },
 };
 
 const MOCK_APYS: Record<YieldProtocolId, { supply: number; reward: number }> = {
@@ -116,7 +107,6 @@ const MOCK_APYS: Record<YieldProtocolId, { supply: number; reward: number }> = {
   ondo:              { supply: 0.0475, reward: 0 },
   sky:               { supply: 0.0625, reward: 0 },
   ethena:            { supply: 0.1720, reward: 0.0380 },
-  drift:             { supply: 0.1250, reward: 0.0150 },
 };
 
 const YIELD_TOKENS: Record<YieldProtocolId, string> = {
@@ -129,7 +119,6 @@ const YIELD_TOKENS: Record<YieldProtocolId, string> = {
   ondo: 'USDY',
   sky: 'sUSDS',
   ethena: 'sUSDe',
-  drift: 'dUSDC',
 };
 
 // In-memory mock positions

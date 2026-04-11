@@ -56,10 +56,6 @@ export function useSolanaDeposit() {
           // Kamino: always mainnet (no public devnet market available)
           const { buildKaminoDepositTx } = await import('@/lib/yield/contracts/solana/kamino');
           tx = await buildKaminoDepositTx(connection, publicKey, token, parseFloat(amount), 'mainnet-beta');
-        } else if (protocol === 'drift') {
-          // Drift: supports devnet via SDK when test mode is on
-          const { buildDriftDepositTx } = await import('@/lib/yield/contracts/solana/drift');
-          tx = await buildDriftDepositTx(connection, publicKey, token, parseFloat(amount), cluster);
         } else {
           throw new Error(`Unsupported Solana protocol: ${protocol}`);
         }

@@ -9,8 +9,7 @@ export type YieldProtocolId =
   | 'kamino_multiply'
   | 'ondo'
   | 'sky'
-  | 'ethena'
-  | 'drift';
+  | 'ethena';
 export type YieldRiskLevel = 'low' | 'medium' | 'high';
 
 export interface RiskFactors {

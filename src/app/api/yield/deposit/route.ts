@@ -12,7 +12,7 @@ import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 import { requirePaidTier, tierGateResponse, TierGateError } from '@/lib/auth/tier-gate';
 
 const depositSchema = z.object({
-  protocol: z.enum(['aave_v3', 'morpho_reservoir', 'morpho_steakhouse', 'kamino', 'kamino_multiply', 'ondo', 'sky', 'ethena', 'drift']),
+  protocol: z.enum(['aave_v3', 'morpho_reservoir', 'morpho_steakhouse', 'kamino', 'kamino_multiply', 'ondo', 'sky', 'ethena']),
   token: z.enum(['USDC', 'USDT']),
   amount: z.string().min(1).refine((v) => parseFloat(v) > 0, 'Amount must be positive'),
   walletAddress: z.string().min(1).max(100),
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
 
   const { protocol, token, amount, walletAddress, chain, vaultAddress, slippage } = parsed.data;
 
-  const COMING_SOON_PROTOCOLS = ['sky', 'ethena', 'ondo', 'drift'];
+  const COMING_SOON_PROTOCOLS = ['sky', 'ethena', 'ondo'];
   if (COMING_SOON_PROTOCOLS.includes(protocol)) {
     return NextResponse.json(
       { error: 'This protocol is coming soon and not yet available for deposits' },

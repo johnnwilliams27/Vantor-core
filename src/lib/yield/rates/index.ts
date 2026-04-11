@@ -5,7 +5,6 @@ import { skyFetcher } from './sky';
 import { ondoFetcher } from './ondo';
 import { ethenaFetcher } from './ethena';
 import { kaminoFetcher } from './kamino';
-import { driftFetcher } from './drift';
 import type { RateFetcher, RateResult } from './types';
 
 export type { RateResult, RateFetcher };
@@ -18,7 +17,6 @@ export const ALL_RATE_FETCHERS: { name: string; fetcher: RateFetcher }[] = [
   { name: 'ondo', fetcher: ondoFetcher },
   { name: 'ethena', fetcher: ethenaFetcher },
   { name: 'kamino', fetcher: kaminoFetcher },
-  { name: 'drift', fetcher: driftFetcher },
 ];
 
 export async function fetchAllRates(): Promise<{

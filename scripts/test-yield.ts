@@ -13,7 +13,7 @@
  *
  * Supported protocols:
  *   EVM:    aave_v3, compound_v3, morpho_steakhouse, morpho_reservoir
- *   Solana: kamino, drift
+ *   Solana: kamino, kamino_multiply
  *
  * SAFETY:
  *   - Uses real mainnet — real money, real gas
@@ -38,11 +38,6 @@ import {
   buildKaminoWithdrawTx,
   getKaminoPosition,
 } from '../src/lib/yield/contracts/solana/kamino';
-import {
-  buildDriftDepositTx,
-  buildDriftWithdrawTx,
-  getDriftPosition,
-} from '../src/lib/yield/contracts/solana/drift';
 import { ERC20_ABI } from '../src/lib/yield/contracts/abis';
 import type { YieldProtocolId } from '../src/lib/yield/interface';
 
@@ -53,7 +48,7 @@ const EVM_PROTOCOLS = new Set<YieldProtocolId>([
   'morpho_reservoir',
 ]);
 
-const SOLANA_PROTOCOLS = new Set<YieldProtocolId>(['kamino', 'kamino_multiply', 'drift']);
+const SOLANA_PROTOCOLS = new Set<YieldProtocolId>(['kamino', 'kamino_multiply']);
 
 const ETH_RPC = process.env.ETHEREUM_RPC_URL ?? 'https://ethereum-rpc.publicnode.com';
 const SOL_RPC = process.env.SOLANA_RPC_URL ?? 'https://api.mainnet-beta.solana.com';
@@ -65,7 +60,7 @@ if (!protocolArg || !action) {
   console.error('   Usage: npx tsx scripts/test-yield.ts <protocol> <action> [amount]');
   console.error('   Actions: deposit, withdraw, status');
   console.error('   EVM protocols: aave_v3, compound_v3, morpho_steakhouse, morpho_reservoir');
-  console.error('   Solana protocols: kamino, drift');
+  console.error('   Solana protocols: kamino, kamino_multiply');
   process.exit(1);
 }
 
@@ -301,8 +296,6 @@ async function solanaStatus() {
   let pos;
   if (protocol === 'kamino' || protocol === 'kamino_multiply') {
     pos = await getKaminoPosition(connection, keypair.publicKey, token, 'mainnet-beta');
-  } else if (protocol === 'drift') {
-    pos = await getDriftPosition(connection, keypair.publicKey, token, 'mainnet-beta');
   } else {
     throw new Error(`Protocol ${protocol} not supported`);
   }
@@ -328,8 +321,6 @@ async function solanaDeposit() {
   let tx: Transaction;
   if (protocol === 'kamino' || protocol === 'kamino_multiply') {
     tx = await buildKaminoDepositTx(connection, keypair.publicKey, token, parseFloat(amount), 'mainnet-beta');
-  } else if (protocol === 'drift') {
-    tx = await buildDriftDepositTx(connection, keypair.publicKey, token, parseFloat(amount), 'mainnet-beta');
   } else {
     throw new Error(`Protocol ${protocol} not supported`);
   }
@@ -373,8 +364,6 @@ async function solanaWithdraw() {
   let tx: Transaction;
   if (protocol === 'kamino' || protocol === 'kamino_multiply') {
     tx = await buildKaminoWithdrawTx(connection, keypair.publicKey, token, parseFloat(amount), isFullWithdrawal, 'mainnet-beta');
-  } else if (protocol === 'drift') {
-    tx = await buildDriftWithdrawTx(connection, keypair.publicKey, token, parseFloat(amount), isFullWithdrawal, 'mainnet-beta');
   } else {
     throw new Error(`Protocol ${protocol} not supported`);
   }

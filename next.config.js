@@ -8,7 +8,7 @@ const nextConfig = {
     unoptimized: true,
   },
   experimental: {
-    serverComponentsExternalPackages: ['@kamino-finance/klend-sdk', '@drift-labs/sdk'],
+    serverComponentsExternalPackages: ['@kamino-finance/klend-sdk'],
   },
   webpack: (config) => {
     config.resolve.fallback = {

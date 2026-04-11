@@ -32,7 +32,6 @@ const FALLBACK_TVL: Record<YieldProtocolId, number> = {
   ondo:              100_000_000,
   sky:               200_000_000,
   ethena:            500_000_000,
-  drift:             20_000_000,
 };
 
 const POOL_TYPE: Record<YieldProtocolId, 'stablecoin' | 'volatile'> = {
@@ -45,7 +44,6 @@ const POOL_TYPE: Record<YieldProtocolId, 'stablecoin' | 'volatile'> = {
   ondo:              'stablecoin',
   sky:               'stablecoin',
   ethena:            'volatile',  // synthetic dollar, delta-neutral basis
-  drift:             'volatile',
 };
 
 // Utilization is not yet in the cache — see file-level comment.
@@ -67,7 +65,6 @@ const PROTOCOL_ID_TO_CACHE_SLUG: Record<YieldProtocolId, string> = {
   ondo:              'ondo',
   sky:               'sky',
   ethena:            'ethena',
-  drift:             'drift',
 };
 
 export class DbLiquidityProvider implements ILiquidityProvider {

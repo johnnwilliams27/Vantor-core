@@ -24,7 +24,7 @@ import type { RiskFactors } from '@/lib/yield/interface';
 import type { YieldProtocolWithRates } from '@/hooks/useYield';
 import { UpgradeGate } from '@/components/ui/upgrade-gate';
 
-const COMING_SOON_PROTOCOLS = new Set(['sky', 'ethena', 'ondo', 'drift']);
+const COMING_SOON_PROTOCOLS = new Set(['sky', 'ethena', 'ondo']);
 
 const CHAIN_LABELS: Record<string, string> = {
   ethereum: 'Ethereum',
@@ -40,7 +40,6 @@ const PROTOCOL_LOGOS: Record<string, string> = {
   ondo: '/partners/Ondo_Logo_0.svg',
   sky: '/partners/sky_logo.png',
   ethena: '/partners/ethena_logo.png',
-  drift: '/partners/drift_logo.svg',
   compound_v3: '/partners/compound-white.png',
 };
 
@@ -58,7 +57,6 @@ const PROTOCOL_RATE_SOURCE: Record<string, string> = {
   ondo: 'Ondo Finance (fixed rate)',
   kamino: 'DefiLlama (yields.llama.fi) — kamino-lend pool',
   kamino_multiply: 'DefiLlama (yields.llama.fi) — kamino-lend × 2.5 leverage',
-  drift: 'Drift API (drift.trade) — currently unauthorized, needs API key',
 };
 
 const RISK_COLORS: Record<string, string> = {

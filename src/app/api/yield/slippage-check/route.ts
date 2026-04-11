@@ -8,7 +8,7 @@ import type { YieldProtocolId } from '@/lib/yield/interface';
 import { z } from 'zod';
 
 const schema = z.object({
-  protocol: z.enum(['aave_v3', 'morpho_reservoir', 'morpho_steakhouse', 'kamino', 'kamino_multiply', 'ondo', 'sky', 'ethena', 'drift']),
+  protocol: z.enum(['aave_v3', 'morpho_reservoir', 'morpho_steakhouse', 'kamino', 'kamino_multiply', 'ondo', 'sky', 'ethena']),
   token: z.enum(['USDC', 'USDT']),
   chain: z.enum(['ethereum', 'solana']),
   amountUsd: z.number().positive('Amount must be positive'),

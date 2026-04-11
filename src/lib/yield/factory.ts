@@ -46,13 +46,6 @@ export async function getOnChainValue(
         const conn = new Connection(process.env.SOLANA_RPC_URL ?? 'https://api.mainnet-beta.solana.com', 'confirmed');
         return await getKaminoPosition(conn, new PublicKey(walletAddress), token);
       }
-      case 'drift': {
-        // TODO: same as above — pass cluster from caller once cookie is read server-side.
-        const { getDriftPosition } = await import('./contracts/solana/drift');
-        const { Connection, PublicKey } = await import('@solana/web3.js');
-        const conn = new Connection(process.env.SOLANA_RPC_URL ?? 'https://api.mainnet-beta.solana.com', 'confirmed');
-        return await getDriftPosition(conn, new PublicKey(walletAddress), token);
-      }
       default:
         return { currentValueUsd: storedValue, yieldTokenBalance: storedTokenBalance };
     }
@@ -64,5 +57,5 @@ export async function getOnChainValue(
 
 export const ALL_YIELD_PROTOCOLS: YieldProtocolId[] = [
   'aave_v3', 'compound_v3', 'sky', 'ondo', 'morpho_steakhouse', 'morpho_reservoir',
-  'kamino', 'kamino_multiply', 'ethena', 'drift',
+  'kamino', 'kamino_multiply', 'ethena',
 ];
