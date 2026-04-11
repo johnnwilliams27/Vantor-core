@@ -45,6 +45,58 @@ describe('PolicyError', () => {
       details: { from: 'USDC', to: 'USD' },
     });
   });
+
+  it('propagates cause through super() and serializes name+message in envelope', () => {
+    const underlying = new TypeError('rate fetch timed out');
+    const err = new PolicyError({
+      reason_code: REASON_CODES.canonicalization_failed,
+      module: 'canonicalizer',
+      human_readable: 'Rate unavailable',
+      user_action: 'Retry in 30 seconds',
+      details: {},
+      cause: underlying,
+    });
+
+    expect(err.cause).toBe(underlying);
+    // ES2022 Error.cause
+    expect((err as Error & { cause?: unknown }).cause).toBe(underlying);
+
+    const env = err.toJSON();
+    expect(env.cause).toEqual({ name: 'TypeError', message: 'rate fetch timed out' });
+  });
+
+  it('omits cause from envelope when not provided', () => {
+    const err = new PolicyError({
+      reason_code: REASON_CODES.gate_internal_error,
+      module: 'gate',
+      human_readable: 'x',
+      user_action: 'y',
+    });
+    expect(err.toJSON().cause).toBeUndefined();
+  });
+
+  it('accepts an injected occurred_at for deterministic testing', () => {
+    const frozen = '2026-01-01T00:00:00.000Z';
+    const err = new PolicyError({
+      reason_code: REASON_CODES.gate_internal_error,
+      module: 'gate',
+      human_readable: 'x',
+      user_action: 'y',
+      occurred_at: frozen,
+    });
+    expect(err.occurred_at).toBe(frozen);
+    expect(err.toJSON().occurred_at).toBe(frozen);
+  });
+
+  it('generates a valid ISO timestamp when occurred_at is not provided', () => {
+    const err = new PolicyError({
+      reason_code: REASON_CODES.gate_internal_error,
+      module: 'gate',
+      human_readable: 'x',
+      user_action: 'y',
+    });
+    expect(err.occurred_at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+  });
 });
 
 describe('CanonicalizationError', () => {

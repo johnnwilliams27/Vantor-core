@@ -13,8 +13,10 @@ export interface PolicyErrorInit {
   reason_code: ReasonCode;
   module: string;
   human_readable: string;
-  user_action?: string;
+  user_action: string;
   details?: Record<string, unknown>;
+  cause?: unknown;
+  occurred_at?: string;
 }
 
 export class PolicyError extends Error {
@@ -24,16 +26,21 @@ export class PolicyError extends Error {
   readonly user_action: string;
   readonly details: Record<string, unknown>;
   readonly occurred_at: string;
+  readonly cause: unknown;
 
   constructor(init: PolicyErrorInit) {
-    super(`[${init.reason_code}] ${init.human_readable}`);
+    super(
+      `[${init.reason_code}] ${init.human_readable}`,
+      init.cause !== undefined ? { cause: init.cause } : undefined,
+    );
     this.name = 'PolicyError';
     this.reason_code = init.reason_code;
     this.module = init.module;
     this.human_readable = init.human_readable;
-    this.user_action = init.user_action ?? '';
+    this.user_action = init.user_action;
     this.details = init.details ?? {};
-    this.occurred_at = new Date().toISOString();
+    this.occurred_at = init.occurred_at ?? new Date().toISOString();
+    this.cause = init.cause;
   }
 
   toJSON(): PolicyErrorEnvelope {
@@ -44,6 +51,9 @@ export class PolicyError extends Error {
       user_action: this.user_action,
       details: this.details,
       occurred_at: this.occurred_at,
+      ...(this.cause instanceof Error
+        ? { cause: { name: this.cause.name, message: this.cause.message } }
+        : {}),
     };
   }
 }
@@ -55,6 +65,7 @@ export interface PolicyErrorEnvelope {
   user_action: string;
   details: Record<string, unknown>;
   occurred_at: string;
+  cause?: { name: string; message: string } | undefined;
 }
 
 /** Canonicalization failed for any reason — rate stale, source down, unsupported asset. */
