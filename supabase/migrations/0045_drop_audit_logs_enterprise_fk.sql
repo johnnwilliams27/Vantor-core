@@ -1,6 +1,8 @@
 -- ============================================================
--- 0040_drop_audit_logs_enterprise_fk.sql — remove FK constraints
+-- 0045_drop_audit_logs_enterprise_fk.sql — remove FK constraints
 -- that clash with audit-style rewrite rules on child tables.
+-- (Was 0040 on the forecast-analytics branch; renumbered on the
+--  master merge when 0036-0040 numbering moved to 0041-0045.)
 -- ============================================================
 --
 -- Context: several tables in this schema use a rewrite rule to enforce
@@ -60,7 +62,7 @@ ALTER TABLE audit_logs
 COMMENT ON COLUMN audit_logs.enterprise_id IS
   'Tenant scope at write time. Not FK-enforced — enterprises may be '
   'deleted while audit records referencing them survive. See migration '
-  '0040 for the rewrite-rule interaction that forced dropping the FK.';
+  '0045 for the rewrite-rule interaction that forced dropping the FK.';
 
 -- 2-5. policy_* tables — cross-branch contamination from the
 --      feature/policy-engine branch. Each drop is guarded so this

@@ -37,7 +37,7 @@ export async function PATCH(
   }
 
   const supabase = createAdminClient();
-  // Table rename from migration 0036. Also derives `amount` from
+  // Table rename from migration 0041. Also derives `amount` from
   // `amount_usd` when the caller updates the legacy mirror, so the
   // non-null native column stays in sync. Same invariant that
   // ObligationsRepo.patch (T4) enforces on the new API side.
@@ -77,7 +77,7 @@ export async function DELETE(
   if (!isValidUUID(params.id)) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
 
   const supabase = createAdminClient();
-  // Table rename from 0036. Sets both is_active=false (legacy) and
+  // Table rename from 0041. Sets both is_active=false (legacy) and
   // status='cancelled' (new canonical signal) so the row stays
   // consistent whether a consumer reads via the new Obligation type
   // or via the legacy is_active path.

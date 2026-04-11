@@ -89,7 +89,7 @@ export async function createTestEnterprise(db: SupabaseClient): Promise<TestEnte
     // actually care about the intermediate state — both deletes together
     // sweep everything.
     await db.auth.admin.deleteUser(userId).catch(() => undefined);
-    // The enterprise delete MUST NOT silently fail. Before migration 0040 it
+    // The enterprise delete MUST NOT silently fail. Before migration 0045 it
     // was blocked by a rewrite-rule / FK-cascade interaction on audit_logs and
     // several policy_* tables, and the silent failure let dev accumulate
     // dozens of stale test enterprises across runs. Surface any future error.

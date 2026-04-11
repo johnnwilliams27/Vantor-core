@@ -168,7 +168,7 @@ Cash-flow forecasting is built on three services under `src/lib/`:
   Aggregates bank accounts, wallet balances, DeFi positions, and
   in-flight transfers into a `TreasuryStateSnapshot` with FX rates
   captured inline for reproducibility. Persisted to
-  `treasury_state_snapshots` (migration 0037).
+  `treasury_state_snapshots` (migration 0042).
 - **`ForecastEngine`** (`src/lib/forecast/engine.ts`) — Pure
   projection math. Takes a state snapshot + obligations +
   `ScenarioParams` and returns a day-by-day `Projection` with
@@ -177,7 +177,7 @@ Cash-flow forecasting is built on three services under `src/lib/`:
 - **`ForecastService`** (`src/lib/forecast/service.ts`) —
   Orchestrates state snapshotting, obligation expansion, scenario
   resolution, and engine invocation. Persists results to
-  `forecast_snapshots` (migration 0038) with a `correlation_id` so
+  `forecast_snapshots` (migration 0043) with a `correlation_id` so
   downstream consumers can link their decisions back to the
   forecast they acted on. Supports hypothetical overlays via
   `svc.hypothetical([...])`.

@@ -16,8 +16,9 @@ export async function GET(_req: NextRequest) {
   const enterpriseId = await getEffectiveEnterpriseId(session.user.enterprise_id);
 
   const supabase = createAdminClient();
-  // Table was renamed manual_obligations → obligations in migration 0036.
-  // Legacy columns (amount_usd, is_recurring, recurrence_days, is_active)
+  // Table was renamed manual_obligations → obligations in migration 0041
+  // (formerly numbered 0036 pre-merge). Legacy columns
+  // (amount_usd, is_recurring, recurrence_days, is_active)
   // are kept on the renamed table as deprecated NOT NULL mirrors, so this
   // legacy route's shape contract keeps working without a UI cutover.
   const { data, error } = await supabase
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
 
   const supabase = createAdminClient();
   // Same rename as the GET above. Also writes `amount` alongside
-  // the legacy `amount_usd` mirror — migration 0036 made `amount`
+  // the legacy `amount_usd` mirror — migration 0041 made `amount`
   // NOT NULL (and has no default), so inserts that only set
   // amount_usd will 400 against the renamed table.
   const { data: obligation, error } = await supabase

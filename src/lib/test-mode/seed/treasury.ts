@@ -76,7 +76,7 @@ export async function seedTreasury(ctx: SeedContext): Promise<void> {
     });
   }
 
-  // Table renamed from manual_obligations → obligations in migration 0036.
+  // Table renamed from manual_obligations → obligations in migration 0041.
   await supabase.from('obligations').insert(obligations);
 
   // AI recommendations

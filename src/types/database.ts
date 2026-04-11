@@ -345,7 +345,7 @@ export interface TreasuryRule {
   updated_at: string;
 }
 
-/** @deprecated Use `Obligation` from `@/lib/obligations/types` — extended in migration 0036 */
+/** @deprecated Use `Obligation` from `@/lib/obligations/types` — extended in migration 0041 */
 export interface ManualObligation {
   id: string;
   user_id: string;

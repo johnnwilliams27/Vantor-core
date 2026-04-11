@@ -1,5 +1,5 @@
 -- ============================================================
--- 0038_forecast_snapshots.sql — scenario-aware forecast
+-- 0043_forecast_snapshots.sql — scenario-aware forecast
 -- snapshots linked to a treasury state snapshot, with
 -- correlation ID for audit linkage to consuming decisions.
 -- ============================================================
@@ -72,5 +72,5 @@ END $$;
 
 COMMENT ON TABLE forecast_snapshots IS
   'Scenario-aware cash-flow forecasts computed by ForecastEngine (T10). '
-  'Links back to the treasury_state_snapshot (0037) it was projected from, '
+  'Links back to the treasury_state_snapshot (0042) it was projected from, '
   'so any forecast can be reproduced from the frozen positions + fx rates.';

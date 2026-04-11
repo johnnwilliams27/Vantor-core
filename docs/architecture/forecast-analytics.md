@@ -49,10 +49,10 @@ downstream consumers can mock it trivially.
 
 ## Database tables
 
-Three new tables, introduced in migrations 0037 and 0038. The legacy
-`treasury_forecasts` table is dropped in 0039.
+Three new tables, introduced in migrations 0042 and 0043. The legacy
+`treasury_forecasts` table is dropped in 0044.
 
-### `treasury_state_snapshots` (0037)
+### `treasury_state_snapshots` (0042)
 
 Point-in-time aggregate of an enterprise's full treasury — fiat, crypto,
 DeFi positions, pending transfers — with fx_rates captured inline. Any
@@ -64,7 +64,7 @@ Trigger column distinguishes `'scheduled' | 'on_demand' | 'pre_decision'
 | 'pre_action'` so the audit trail can correlate snapshots back to the
 event that caused them.
 
-### `forecast_snapshots` (0038)
+### `forecast_snapshots` (0043)
 
 Scenario-aware cash-flow forecast with a FK back to the
 `treasury_state_snapshot` it was projected from. Every forecast
@@ -85,10 +85,10 @@ RLS scoped to `auth_user_enterprise_id()`, cascades off enterprise
 deletion, indexed on `(enterprise_id, computed_at DESC)` and
 `correlation_id` for post-hoc audit.
 
-### `obligations` (formerly `manual_obligations`, renamed + extended in 0036)
+### `obligations` (formerly `manual_obligations`, renamed + extended in 0041)
 
 Not a Phase A table per se, but the canonical source of truth for
-everything the engine projects. Extended in 0036 with direction,
+everything the engine projects. Extended in 0041 with direction,
 confidence, recurrence enum, source, counterparty_id, erp_reference,
 recurring_parent_id, settlement_tx_ref, and tag/metadata JSONB.
 
@@ -160,7 +160,7 @@ the snapshot's captured rates (`current`), a pessimistic bps shift
 ### Adding a new scenario
 
 1. Extend the `forecast_scenario` enum in a new migration (do NOT
-   modify 0038). Example:
+   modify 0043). Example:
 
    ```sql
    ALTER TYPE forecast_scenario ADD VALUE IF NOT EXISTS 'blackswan';

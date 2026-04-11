@@ -72,7 +72,7 @@ export interface ObligationInput {
  * Patch shape for updating an obligation. The `status` field is intentionally
  * narrowed to exclude 'upcoming' — once an obligation has transitioned out of
  * upcoming (paid, missed, cancelled), the type system prevents resurrecting it.
- * This enforces the invariant established in migration 0036's cancelled-backfill
+ * This enforces the invariant established in migration 0041's cancelled-backfill
  * of legacy is_active=false rows. The service layer is still responsible for
  * validating transitions between terminal states.
  */

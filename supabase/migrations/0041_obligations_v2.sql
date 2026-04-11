@@ -1,5 +1,5 @@
 -- ============================================================
--- 0036_obligations_v2.sql  —  Extend manual_obligations into
+-- 0041_obligations_v2.sql  —  Extend manual_obligations into
 -- a full obligations model and rename to `obligations`.
 -- Backfills legacy is_recurring/recurrence_days into the new
 -- recurrence enum and mirrors amount_usd into native `amount`.

@@ -34,9 +34,9 @@ export async function wipeTestEnterprise(
     'yield_transactions',
     'yield_positions',
     'simulation_runs',
-    // treasury_forecasts dropped in migration 0039 (Phase A T20)
+    // treasury_forecasts dropped in migration 0044 (Phase A T20)
     'ai_recommendations',
-    // manual_obligations was renamed to obligations in migration 0036
+    // manual_obligations was renamed to obligations in migration 0041
     'obligations',
     'treasury_rules',
     'bridge_transfers',

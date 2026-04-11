@@ -68,7 +68,7 @@ export async function buildReportData(
       .order('created_at', { ascending: true })
       .limit(500),
     // Manual obligations in period (for weekly coverage).
-    // Table renamed from manual_obligations → obligations in migration 0036.
+    // Table renamed from manual_obligations → obligations in migration 0041.
     supabase
       .from('obligations')
       .select('due_date, amount_usd')

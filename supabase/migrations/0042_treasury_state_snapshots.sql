@@ -1,5 +1,5 @@
 -- ============================================================
--- 0037_treasury_state_snapshots.sql — persisted point-in-time
+-- 0042_treasury_state_snapshots.sql — persisted point-in-time
 -- aggregate of an enterprise's full treasury across fiat, crypto,
 -- and DeFi, with FX rates captured for reproducibility.
 -- ============================================================
@@ -51,4 +51,4 @@ END $$;
 
 COMMENT ON TABLE treasury_state_snapshots IS
   'Point-in-time aggregate of treasury state. Consumed by ForecastEngine (T10) '
-  'and forecast_snapshots (0038) via their source_state_snapshot_id FK.';
+  'and forecast_snapshots (0043) via their source_state_snapshot_id FK.';

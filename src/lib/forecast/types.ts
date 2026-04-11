@@ -3,7 +3,7 @@ import type { TreasuryStateSnapshot } from '@/lib/treasury/state/types';
 
 /**
  * Forecast scenario — mirrors the forecast_scenario enum in
- * supabase/migrations/0038_forecast_snapshots.sql. Keep both in sync.
+ * supabase/migrations/0043_forecast_snapshots.sql. Keep both in sync.
  */
 export type ForecastScenario = 'base' | 'conservative' | 'stress' | 'custom';
 
