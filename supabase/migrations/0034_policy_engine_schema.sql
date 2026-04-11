@@ -41,8 +41,7 @@ CREATE TABLE policy_versions (
 );
 
 COMMENT ON TABLE policy_versions IS
-  'Immutable policy version snapshots. Draft versions may be edited freely; ' ||
-  'active and superseded versions are frozen by triggers.';
+  'Immutable policy version snapshots. Draft versions may be edited freely; active and superseded versions are frozen by triggers.';
 
 -- Complete the FK on policy_policies now that policy_versions exists
 ALTER TABLE policy_policies
@@ -67,8 +66,7 @@ CREATE TABLE policy_rules (
 );
 
 COMMENT ON TABLE policy_rules IS
-  'Individual rules belonging to a policy version. Condition IR stored as JSONB. ' ||
-  'Rule type is a UI category hint, not an evaluation-semantic distinction.';
+  'Individual rules belonging to a policy version. Condition IR stored as JSONB. Rule type is a UI category hint, not an evaluation-semantic distinction.';
 
 CREATE TABLE policy_hard_limits (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -91,9 +89,7 @@ CREATE TABLE policy_hard_limits (
 );
 
 COMMENT ON TABLE policy_hard_limits IS
-  'Typed structural limits, NOT condition-DSL rules. Each row is a named ' ||
-  'parameter with a numeric/duration value. Only is_policy_admin users can ' ||
-  'modify these (enforced at API layer in Plan 2).';
+  'Typed structural limits, NOT condition-DSL rules. Each row is a named parameter with a numeric/duration value. Only is_policy_admin users can modify these (enforced at API layer in Plan 2).';
 
 CREATE TABLE policy_approval_chains (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -108,8 +104,7 @@ CREATE TABLE policy_approval_chains (
 );
 
 COMMENT ON TABLE policy_approval_chains IS
-  'Approval chain definitions. When a rule triggers require_approval, the ' ||
-  'matching chain determines who must sign off.';
+  'Approval chain definitions. When a rule triggers require_approval, the matching chain determines who must sign off.';
 
 -- Complete the FK on policy_rules now that chains exist
 ALTER TABLE policy_rules
@@ -144,8 +139,7 @@ CREATE TABLE policy_approval_requests (
 );
 
 COMMENT ON TABLE policy_approval_requests IS
-  'Approval queue. Version pinned at creation; re-evaluation at execution time ' ||
-  'uses the then-current active version. DELETE forbidden.';
+  'Approval queue. Version pinned at creation; re-evaluation at execution time uses the then-current active version. DELETE forbidden.';
 
 CREATE TABLE policy_evaluations (
   id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -167,8 +161,7 @@ CREATE TABLE policy_evaluations (
 );
 
 COMMENT ON TABLE policy_evaluations IS
-  'Append-only evaluation trace + context snapshot. Simulation replays against ' ||
-  'context_snapshot. Only executed_at and execution_ref may be updated after insert.';
+  'Append-only evaluation trace + context snapshot. Simulation replays against context_snapshot. Only executed_at and execution_ref may be updated after insert.';
 
 CREATE TABLE policy_simulation_runs (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -201,8 +194,7 @@ CREATE TABLE policy_activation_events (
 );
 
 COMMENT ON TABLE policy_activation_events IS
-  'Append-only log of every policy version activation. Reason must be ≥20 chars. ' ||
-  'DELETE and UPDATE forbidden by triggers.';
+  'Append-only log of every policy version activation. Reason must be ≥20 chars. DELETE and UPDATE forbidden by triggers.';
 
 -- ════════════════════════════════════════════════════════════════════════
 -- OBSERVABILITY TABLES
@@ -217,8 +209,7 @@ CREATE TABLE policy_forecast_stub_calls (
 );
 
 COMMENT ON TABLE policy_forecast_stub_calls IS
-  'Engineering observability: counts of forecast stub usage. NOT customer data, ' ||
-  'not RLS-protected. Tracks rollout urgency of the real forecast module.';
+  'Engineering observability: counts of forecast stub usage. NOT customer data, not RLS-protected. Tracks rollout urgency of the real forecast module.';
 
 CREATE TABLE policy_migration_warnings (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -232,8 +223,7 @@ CREATE TABLE policy_migration_warnings (
 );
 
 COMMENT ON TABLE policy_migration_warnings IS
-  'One-shot migration hints surfaced as banners to affected users/enterprises. ' ||
-  'Populated by Plan 2 data migration; empty after this schema-only plan.';
+  'One-shot migration hints surfaced as banners to affected users/enterprises. Populated by Plan 2 data migration; empty after this schema-only plan.';
 
 -- ════════════════════════════════════════════════════════════════════════
 -- APPEND-ONLY TRIGGERS
@@ -481,17 +471,13 @@ ALTER TABLE user_profiles
   ADD COLUMN is_policy_admin BOOLEAN NOT NULL DEFAULT false;
 
 COMMENT ON COLUMN user_profiles.is_policy_admin IS
-  'Per-enterprise flag: grants permission to edit hard limits and activate ' ||
-  'policy versions within the user''s own enterprise. Scoped to that enterprise ' ||
-  'only — does not grant cross-enterprise access. is_app_admin implicitly ' ||
-  'satisfies this check for Vantor staff support scenarios.';
+  'Per-enterprise flag: grants permission to edit hard limits and activate policy versions within the user''s own enterprise. Scoped to that enterprise only — does not grant cross-enterprise access. is_app_admin implicitly satisfies this check for Vantor staff support scenarios.';
 
 -- Link ai_recommendations to their corresponding approval requests
 ALTER TABLE ai_recommendations
   ADD COLUMN approval_request_id UUID REFERENCES policy_approval_requests(id);
 
 COMMENT ON COLUMN ai_recommendations.approval_request_id IS
-  'Set when a recommendation enters the policy engine approval queue. ' ||
-  'Used for linking display of recommendation narrative to approval actions.';
+  'Set when a recommendation enters the policy engine approval queue. Used for linking display of recommendation narrative to approval actions.';
 
 COMMIT;
