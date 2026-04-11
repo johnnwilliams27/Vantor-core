@@ -51,7 +51,8 @@ export type AuditAction =
   | 'counterparty_create' | 'counterparty_screen'
   | 'screening_case_open' | 'screening_case_clear' | 'screening_case_escalate'
   | 'screening_case_block' | 'screening_case_reassign' | 'screening_case_note'
-  | 'screening_adhoc_lookup';
+  | 'screening_adhoc_lookup'
+  | 'insight_create' | 'insight_view' | 'insight_dismiss' | 'insight_acted_on' | 'insight_expire';
 
 export interface UserProfile {
   id: string;
