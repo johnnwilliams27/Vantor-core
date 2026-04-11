@@ -106,7 +106,7 @@ export function ScheduleBridgeForm() {
         <CardTitle className="flex items-center gap-2">
           <Calendar className="h-5 w-5" />
           Schedule Bridge
-          <InfoTooltip content="Move the same stablecoin across different blockchains. Scheduled for a future date." />
+          <InfoTooltip content="Move the same stablecoin across different blockchains. Scheduled for a future date. Auto-executes within 25bps of quoted rate; you'll be asked to approve if it deviates further." />
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -119,7 +119,7 @@ export function ScheduleBridgeForm() {
             </Select>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label>From Wallet</Label>
               <Select {...register('fromWalletId')}>
@@ -186,10 +186,6 @@ export function ScheduleBridgeForm() {
             <Label>Memo (optional)</Label>
             <Input placeholder="Bridge reference…" {...register('memo')} />
           </div>
-
-          <p className="text-xs text-muted-foreground rounded-md bg-muted/50 p-3">
-            Auto-executes within 25bps of quoted rate. If rate deviates further, you&apos;ll be asked to approve.
-          </p>
 
           <Button type="submit" className="w-full" disabled={createOp.isPending || exceeds || !!sameChain || !fromWalletId || !toWalletId || !amount || !watch('scheduledFor')}>
             {isSubmitting ? (
