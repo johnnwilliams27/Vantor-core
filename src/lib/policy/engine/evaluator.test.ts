@@ -347,6 +347,173 @@ describe('EvaluationEngine.evaluate', () => {
     expect(result.trace.engine_version).toBe('1.0.0');
   });
 
+  // CRITICAL fix: hard limit evaluation failure must block the transfer.
+  // Regression test for a silent fail-open where a canonicalization hiccup
+  // would cause every min_cash_reserve_usd check to return
+  // breached=false+failure, leaving user rules to decide and the floor
+  // silently unchecked.
+  it('blocks when a hard limit cannot be evaluated (canonicalization failure)', () => {
+    const engine = new EvaluationEngine();
+    const policy = mkPolicy({
+      hard_limits: [
+        {
+          id: 'hl-1',
+          limit_type: 'min_cash_reserve_usd',
+          name: 'Cash Floor',
+          limit_value: '500000',
+          limit_currency: 'USD',
+          scope: {},
+        },
+      ],
+    });
+    const ctx = mkContext(policy);
+    // Set canonicalization to failed — the min_cash_reserve evaluator
+    // returns breached=false + failure=canonicalization_failed
+    ctx.canonicalization = {
+      ...ctx.canonicalization,
+      canonical_amount: '',
+      failure: {
+        reason_code: 'canonicalization_failed',
+        human_readable: 'Rate unavailable',
+        details: {},
+        user_action: 'Retry',
+      },
+    };
+
+    const result = engine.evaluate(mkMovement(), ctx);
+    // Without the fix, this would return allow_auto (no rules matched)
+    expect(result.verdict).toBe('block');
+    expect(result.trace.final_verdict_source).toBe('hard_limit');
+    expect(result.reason_codes).toContain('canonicalization_failed');
+    expect(result.trace.hard_limit_check.evaluated[0].failure).toBeDefined();
+  });
+
+  it('blocks when a hard limit cannot be evaluated even if user rules would say allow_auto', () => {
+    const engine = new EvaluationEngine();
+    const policy = mkPolicy({
+      rules: [
+        {
+          id: 'r-1',
+          version_id: 'v-1',
+          rule_type: 'approval_threshold',
+          name: 'Small transfers',
+          rationale: '',
+          priority: 1,
+          verdict: 'allow_auto',
+          condition: {
+            kind: 'amount_compare',
+            attr: 'transfer.amount',
+            op: '<',
+            value: { amount: '100000', currency: 'USD' },
+          },
+          created_by: 'u',
+          created_at: new Date(),
+        },
+      ],
+      hard_limits: [
+        {
+          id: 'hl-1',
+          limit_type: 'min_cash_reserve_usd',
+          name: 'Cash Floor',
+          limit_value: '500000',
+          limit_currency: 'USD',
+          scope: {},
+        },
+      ],
+    });
+    const ctx = mkContext(policy);
+    // Corrupt the treasury state → hard limit fails to evaluate
+    ctx.treasury_state = {
+      ...ctx.treasury_state,
+      cash_equivalent_usd: 'garbage',
+    };
+
+    const result = engine.evaluate(mkMovement(), ctx);
+    expect(result.verdict).toBe('block');
+    expect(result.trace.final_verdict_source).toBe('hard_limit');
+  });
+
+  it('breach wins over failed limit when both occur', () => {
+    const engine = new EvaluationEngine();
+    const policy = mkPolicy({
+      hard_limits: [
+        {
+          id: 'hl-1',
+          limit_type: 'min_cash_reserve_usd',
+          name: 'Cash Floor',
+          limit_value: '995000', // will breach
+          limit_currency: 'USD',
+          scope: {},
+        },
+      ],
+    });
+    const result = engine.evaluate(mkMovement(), mkContext(policy));
+    expect(result.verdict).toBe('block_hard_limit');
+    expect(result.trace.final_verdict_source).toBe('hard_limit');
+  });
+
+  it('per-rule try/catch: a rule whose condition throws (assertNever) becomes a rule failure', () => {
+    const engine = new EvaluationEngine();
+    const policy = mkPolicy({
+      rules: [
+        {
+          id: 'r-crash',
+          version_id: 'v-1',
+          rule_type: 'approval_threshold',
+          name: 'Crashing rule',
+          rationale: '',
+          priority: 1,
+          verdict: 'require_approval',
+          // Unknown Condition kind — the recursive evaluator's assertNever
+          // will throw. The per-rule try/catch must convert this to a
+          // rule-level failure, not crash the engine.
+          condition: { kind: 'mystery_kind' } as unknown as import('../types/ir').Condition,
+          created_by: 'u',
+          created_at: new Date(),
+        },
+        {
+          id: 'r-sane',
+          version_id: 'v-1',
+          rule_type: 'approval_threshold',
+          name: 'Sane rule',
+          rationale: '',
+          priority: 2,
+          verdict: 'allow_auto',
+          condition: {
+            kind: 'amount_compare',
+            attr: 'transfer.amount',
+            op: '>',
+            value: { amount: '0', currency: 'USD' },
+          },
+          created_by: 'u',
+          created_at: new Date(),
+        },
+      ],
+    });
+    const result = engine.evaluate(mkMovement(), mkContext(policy));
+
+    // Crashing rule becomes a failure → verdict = block
+    expect(result.verdict).toBe('block');
+    // BOTH rules were evaluated (the crash didn't abort the loop)
+    expect(result.trace.rules_evaluated).toHaveLength(2);
+    expect(result.trace.rules_evaluated[0].failure).toBeDefined();
+    expect(result.trace.rules_evaluated[0].failure?.human_readable).toContain('crashed');
+    // Second rule still evaluated
+    expect(result.trace.rules_evaluated[1].matched).toBe(true);
+  });
+
+  it('Invalid Date on ctx.canonicalization.rate_as_of produces a sentinel ISO string (no crash)', () => {
+    const engine = new EvaluationEngine();
+    const ctx = mkContext(mkPolicy());
+    ctx.canonicalization = {
+      ...ctx.canonicalization,
+      rate_as_of: new Date('not-a-real-date'),
+    };
+    // Must not throw from .toISOString()
+    const result = engine.evaluate(mkMovement(), ctx);
+    expect(result.trace.canonicalization.rate_as_of).toBe('1970-01-01T00:00:00.000Z');
+  });
+
   it('required_chain is NOT populated (phase-1 gap — Plan 2 wires chain resolution)', () => {
     const engine = new EvaluationEngine();
     const policy = mkPolicy({
