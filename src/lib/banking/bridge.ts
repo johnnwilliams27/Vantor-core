@@ -197,25 +197,33 @@ export class BridgeAdapter implements IBankingAdapter {
   }
 
   async createFiatPayment(params: FiatPaymentParams): Promise<FiatPaymentResult> {
-    const data = await bridgeFetch(this.mode, '/v0/payments', {
+    // Bridge's /v0/transfers endpoint uses source.payment_rail and
+    // destination.payment_rail to pick the network. The user chose the rail
+    // upfront in the UI so we know the fee schedule and settlement time.
+    const data = await bridgeFetch(this.mode, '/v0/transfers', {
       method: 'POST',
       body: JSON.stringify({
-        source_account: params.fromBankAccountRef,
+        amount: String(params.amount),
+        source: {
+          payment_rail: params.paymentRail,
+          currency: params.currency.toLowerCase(),
+          from_bank_account_id: params.fromBankAccountRef,
+        },
         destination: {
+          payment_rail: params.paymentRail,
+          currency: params.currency.toLowerCase(),
           bank_name: params.toBankName,
           account_number: params.toAccountNumber,
           routing_number: params.toRoutingNumber,
           account_holder_name: params.toAccountHolder,
         },
-        amount: params.amount,
-        currency: params.currency,
         memo: params.memo,
         developer_fee_percent: VANTOR_DEVELOPER_FEE_PCT,
       }),
     });
 
     return {
-      providerPaymentId: data.id ?? data.payment_id,
+      providerPaymentId: data.id ?? data.transfer_id ?? data.payment_id,
       status: 'pending',
       estimatedSettlement: data.estimated_settlement ?? data.eta ?? new Date(Date.now() + 2 * 86400_000).toISOString(),
     };

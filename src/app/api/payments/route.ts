@@ -22,7 +22,8 @@ const schema = z.object({
   toRoutingNumber: z.string().min(4),
   toAccountHolder: z.string().min(1),
   amount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Must be a valid decimal amount'),
-  currency: z.enum(['USD', 'EUR', 'GBP']),
+  currency: z.enum(['USD', 'EUR', 'GBP', 'BRL', 'MXN']),
+  paymentRail: z.enum(['ach_push', 'ach_same_day', 'wire', 'swift', 'sepa', 'spei', 'pix']),
   scheduledFor: z.string().datetime().optional(),
   invoiceId: z.string().uuid().optional(),
   memo: z.string().max(2000).optional(),
@@ -83,26 +84,22 @@ export async function POST(req: NextRequest) {
 
   if (!bankAccount) return NextResponse.json({ error: 'Bank account not found' }, { status: 404 });
 
-  const isScheduled = !!parsed.data.scheduledFor;
+  // Scheduled fiat payments are not yet supported — they require unattended
+  // rail selection which isn't possible without a cron-time user decision.
+  // The UI shows a Coming Soon placeholder for the schedule tab.
+  if (parsed.data.scheduledFor) {
+    return NextResponse.json(
+      { error: 'Scheduled payments are not yet supported. Send the payment immediately or check back soon.' },
+      { status: 400 },
+    );
+  }
+
+  const isScheduled = false;
   let paymentData: Record<string, unknown>;
 
   if (isScheduled) {
-    // Scheduled: insert with pending status, no adapter call
-    paymentData = {
-      user_id: session.user.id,
-      enterprise_id: enterpriseId,
-      from_bank_account_id: parsed.data.fromBankAccountId,
-      to_bank_name: parsed.data.toBankName,
-      to_account_number: parsed.data.toAccountNumber,
-      to_routing_number: parsed.data.toRoutingNumber,
-      to_account_holder: parsed.data.toAccountHolder,
-      amount: parsed.data.amount,
-      currency: parsed.data.currency,
-      status: 'pending',
-      scheduled_for: parsed.data.scheduledFor,
-      invoice_id: parsed.data.invoiceId ?? null,
-      memo: parsed.data.memo ?? null,
-    };
+    // Unreachable — kept for future restoration when unattended scheduling lands.
+    paymentData = {};
   } else {
     // Immediate: call adapter
     const mode = getIntegrationMode(session.user.subscription_tier);
@@ -116,6 +113,7 @@ export async function POST(req: NextRequest) {
       amount: parseFloat(parsed.data.amount),
       currency: parsed.data.currency,
       memo: parsed.data.memo,
+      paymentRail: parsed.data.paymentRail,
     });
 
     paymentData = {

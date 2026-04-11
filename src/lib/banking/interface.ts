@@ -124,6 +124,8 @@ export interface BridgeExecuteResult {
 
 // ---- Fiat Payments (bank-to-bank) ----
 
+import type { PaymentRail } from './rail-fees';
+
 export interface FiatPaymentParams {
   fromBankAccountRef: string;
   toBankName: string;
@@ -133,6 +135,8 @@ export interface FiatPaymentParams {
   amount: number;
   currency: string;
   memo?: string;
+  /** Payment rail (ACH, wire, SWIFT, SEPA, etc.) — determines fee schedule */
+  paymentRail: PaymentRail;
 }
 
 export interface FiatPaymentResult {

@@ -24,76 +24,15 @@ export async function GET(req: NextRequest) {
     .eq('is_test_enterprise', true);
   const testEntIds = (testEnts ?? []).map((e: { id: string }) => e.id);
 
-  let executeSucceeded = 0;
-  let executeFailed = 0;
   let settleSucceeded = 0;
   let settleFailed = 0;
 
-  // ---- Phase 1: Execute scheduled payments that are now due ----
-  {
-    let query = supabase
-      .from('fiat_payments')
-      .select('*')
-      .eq('status', 'pending')
-      .not('scheduled_for', 'is', null)
-      .lte('scheduled_for', new Date().toISOString())
-      .is('executed_at', null)
-      .limit(BATCH_SIZE);
-
-    if (testEntIds.length > 0) {
-      query = query.not('enterprise_id', 'in', `(${testEntIds.join(',')})`);
-    }
-
-    const { data: payments, error } = await query;
-
-    if (error) {
-      console.error('[cron/fiat-settlements] Phase 1 query error:', error);
-    } else if (payments?.length) {
-      for (const payment of payments) {
-        try {
-          const result = await adapter.createFiatPayment({
-            fromBankAccountRef: payment.from_bank_account_id,
-            toBankName: payment.to_bank_name,
-            toAccountNumber: payment.to_account_number,
-            toRoutingNumber: payment.to_routing_number,
-            toAccountHolder: payment.to_account_holder,
-            amount: parseFloat(payment.amount),
-            currency: payment.currency,
-            memo: payment.memo ?? undefined,
-          });
-
-          await supabase
-            .from('fiat_payments')
-            .update({
-              executed_at: new Date().toISOString(),
-              provider_payment_id: result.providerPaymentId,
-              estimated_settlement: result.estimatedSettlement,
-            })
-            .eq('id', payment.id);
-
-          await writeAuditLog({
-            userId: payment.user_id,
-            action: 'fiat_payment_execute',
-            entityType: 'fiat_payment',
-            entityId: payment.id,
-            details: { providerPaymentId: result.providerPaymentId },
-          });
-
-          executeSucceeded++;
-        } catch (err) {
-          console.error(`[cron/fiat-settlements] Failed to execute payment ${payment.id}:`, err);
-          await supabase
-            .from('fiat_payments')
-            .update({
-              status: 'failed',
-              error_message: (err as Error).message,
-            })
-            .eq('id', payment.id);
-          executeFailed++;
-        }
-      }
-    }
-  }
+  // Phase 1 (execute scheduled payments) is currently disabled — scheduled
+  // bank payments require a payment rail chosen by the user upfront, which
+  // isn't possible in an unattended cron. Scheduled payments are blocked at
+  // the POST /api/payments layer and the scheduling UI shows Coming Soon.
+  // When we add unattended scheduling, restore the Phase 1 block from git
+  // history and pass payment.payment_rail through to createFiatPayment().
 
   // ---- Phase 2: Settle pending payments whose estimated_settlement has passed ----
   {
@@ -165,12 +104,10 @@ export async function GET(req: NextRequest) {
   }
 
   console.log(
-    `[cron/fiat-settlements] execute ok=${executeSucceeded} fail=${executeFailed} | settle ok=${settleSucceeded} fail=${settleFailed}`
+    `[cron/fiat-settlements] settle ok=${settleSucceeded} fail=${settleFailed}`
   );
 
   return NextResponse.json({
-    executeSucceeded,
-    executeFailed,
     settleSucceeded,
     settleFailed,
   });

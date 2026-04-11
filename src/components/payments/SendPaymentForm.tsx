@@ -1,4 +1,5 @@
 'use client';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -14,7 +15,14 @@ import { useInvoices } from '@/hooks/useInvoices';
 import { Loader2, Send } from 'lucide-react';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { VANTOR_FEE_RATE } from '@/lib/billing/tiers';
+import {
+  getAvailableRails,
+  calculateRailFee,
+  type PaymentRail,
+} from '@/lib/banking/rail-fees';
 import type { BankAccount } from '@/types/database';
+
+const RAIL_VALUES = ['ach_push', 'ach_same_day', 'wire', 'swift', 'sepa', 'spei', 'pix'] as const;
 
 const schema = z.object({
   fromBankAccountId: z.string().min(1, 'Select a bank account'),
@@ -24,6 +32,7 @@ const schema = z.object({
   toRoutingNumber: z.string().min(1, 'Enter routing number'),
   amount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Enter a valid amount'),
   currency: z.enum(['USD', 'EUR', 'GBP', 'BRL', 'MXN']),
+  paymentRail: z.enum(RAIL_VALUES),
   invoiceId: z.string().optional(),
   memo: z.string().optional(),
 });
@@ -51,10 +60,11 @@ export function SendPaymentForm() {
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { currency: 'USD' },
+    defaultValues: { currency: 'USD', paymentRail: 'ach_push' },
   });
 
   const fromBankAccountId = watch('fromBankAccountId');
@@ -63,8 +73,27 @@ export function SendPaymentForm() {
   const toAccountNumber = watch('toAccountNumber');
   const toRoutingNumber = watch('toRoutingNumber');
   const amount = watch('amount');
+  const currency = watch('currency');
+  const paymentRail = watch('paymentRail');
 
-  const isReady = !!(fromBankAccountId && toBankName && toAccountHolder && toAccountNumber && toRoutingNumber && amount);
+  const availableRails = getAvailableRails(currency ?? 'USD');
+  const selectedRailSchedule = availableRails.find((r) => r.rail === paymentRail);
+
+  // If the user changes currency and the currently-selected rail doesn't
+  // support the new currency, snap to the first compatible rail.
+  useEffect(() => {
+    if (!availableRails.length) return;
+    if (!availableRails.some((r) => r.rail === paymentRail)) {
+      setValue('paymentRail', availableRails[0].rail);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currency]);
+
+  const railFee = amount && parseFloat(amount) > 0 && paymentRail
+    ? calculateRailFee(paymentRail as PaymentRail, parseFloat(amount))
+    : null;
+
+  const isReady = !!(fromBankAccountId && toBankName && toAccountHolder && toAccountNumber && toRoutingNumber && amount && paymentRail);
 
   const onSubmit = async (data: FormData) => {
     try {
@@ -76,12 +105,15 @@ export function SendPaymentForm() {
         toAccountHolder: data.toAccountHolder,
         amount: data.amount,
         currency: data.currency,
+        paymentRail: data.paymentRail,
         invoiceId: data.invoiceId || undefined,
         memo: data.memo || undefined,
       });
       toast({
         title: 'Payment sent',
-        description: 'Settlement typically takes 2 business days.',
+        description: selectedRailSchedule
+          ? `Settlement: ${selectedRailSchedule.settlementTime.toLowerCase()}.`
+          : 'Settlement typically takes 2 business days.',
         variant: 'success',
       });
       reset();
@@ -174,6 +206,26 @@ export function SendPaymentForm() {
             </div>
           </div>
 
+          {/* Payment rail */}
+          <div className="space-y-2">
+            <Label>
+              Payment Method
+              <InfoTooltip content="The banking rail used to move funds. Different rails have different fees and settlement times." />
+            </Label>
+            <Select {...register('paymentRail')}>
+              {availableRails.length === 0 ? (
+                <option value="">No rails available for {currency}</option>
+              ) : (
+                availableRails.map((r) => (
+                  <option key={r.rail} value={r.rail}>
+                    {r.label} — {r.description}
+                  </option>
+                ))
+              )}
+            </Select>
+            {errors.paymentRail && <p className="text-sm text-red-500">{errors.paymentRail.message}</p>}
+          </div>
+
           {/* Invoice */}
           <div className="space-y-2">
             <Label>Invoice <span className="text-muted-foreground">(optional)</span></Label>
@@ -197,22 +249,44 @@ export function SendPaymentForm() {
             <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-1.5 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Amount</span>
-                <span className="font-mono">{parseFloat(amount).toFixed(2)} {watch('currency')}</span>
+                <span className="font-mono">
+                  {parseFloat(amount).toFixed(2)} {currency}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Vantor fee (0.25%)</span>
                 <span className="font-mono">
-                  {(parseFloat(amount) * VANTOR_FEE_RATE).toFixed(2)} {watch('currency')}
+                  {(parseFloat(amount) * VANTOR_FEE_RATE).toFixed(2)} {currency}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Rail fee</span>
-                <span className="font-mono text-muted-foreground">Varies — applied by bank</span>
+              {railFee && selectedRailSchedule && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">
+                    {selectedRailSchedule.label} fee
+                  </span>
+                  <span className="font-mono">
+                    {railFee.total.toFixed(2)} {railFee.currency}
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between font-medium border-t border-border/50 pt-1.5 mt-0.5">
+                <span>Total fees</span>
+                <span className="font-mono">
+                  {(
+                    parseFloat(amount) * VANTOR_FEE_RATE +
+                    (railFee?.currency === currency ? railFee.total : 0)
+                  ).toFixed(2)}{' '}
+                  {currency}
+                  {railFee && railFee.currency !== currency && (
+                    <span className="text-muted-foreground"> + {railFee.total.toFixed(2)} {railFee.currency}</span>
+                  )}
+                </span>
               </div>
               <div className="text-xs text-muted-foreground pt-1.5 border-t border-border/50 leading-relaxed">
-                The 0.25% Vantor fee is deducted at payment time by our banking rail
-                (not billed monthly). Your bank may also apply rail fees — typically
-                free for ACH, ~$25 for domestic wires, and 0.1–0.5% for SWIFT/international.
+                Both fees are deducted at payment time by our banking rail.
+                {selectedRailSchedule && (
+                  <> Expected settlement: <span className="font-medium">{selectedRailSchedule.settlementTime.toLowerCase()}</span>.</>
+                )}
               </div>
             </div>
           )}

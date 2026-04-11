@@ -26,6 +26,7 @@ export function useCreateFiatPayment() {
       toAccountHolder: string;
       amount: string;
       currency: string;
+      paymentRail: 'ach_push' | 'ach_same_day' | 'wire' | 'swift' | 'sepa' | 'spei' | 'pix';
       scheduledFor?: string;
       invoiceId?: string;
       memo?: string;
