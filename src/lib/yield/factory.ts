@@ -32,7 +32,7 @@ export async function getOnChainValue(
       case 'sky':
       case 'ethena':
         return await getErc4626OnChainValue(protocol, walletAddress, token);
-      case 'ondo':
+      case 'ondo_usdy':
         return await getOndoOnChainValue(walletAddress, token);
       case 'kamino':
       case 'kamino_multiply': {
@@ -56,6 +56,6 @@ export async function getOnChainValue(
 }
 
 export const ALL_YIELD_PROTOCOLS: YieldProtocolId[] = [
-  'aave_v3', 'compound_v3', 'sky', 'ondo', 'morpho_steakhouse', 'morpho_reservoir',
+  'aave_v3', 'compound_v3', 'sky', 'ondo_usdy', 'morpho_steakhouse', 'morpho_reservoir',
   'kamino', 'kamino_multiply', 'ethena',
 ];

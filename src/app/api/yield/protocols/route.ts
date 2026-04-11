@@ -5,15 +5,12 @@ import { requireRole } from '@/lib/auth/rbac';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getYieldAdapter, ALL_YIELD_PROTOCOLS } from '@/lib/yield/factory';
 import type { YieldProtocolId, YieldRate } from '@/lib/yield/interface';
+import { VENUES, type VenueCategory } from '@/lib/yield/venues';
 
 /**
  * The fetchers under src/lib/yield/rates use short protocol slugs for
  * two protocols that the UI/adapter layer knows as longer IDs. Normalize
  * the cache rows to the adapter IDs on read so the join works.
- *
- * TODO: update the fetchers themselves to emit YieldProtocolId values
- * and delete this map — tracked separately because it involves clearing
- * stale cache rows with the old slugs.
  */
 const CACHE_SLUG_TO_PROTOCOL_ID: Record<string, YieldProtocolId> = {
   aave: 'aave_v3',
@@ -50,16 +47,32 @@ function rowToRate(row: CacheRow, protocolId: YieldProtocolId): YieldRate {
   };
 }
 
-export async function GET(_req: NextRequest) {
+const VALID_CATEGORIES: VenueCategory[] = [
+  'tokenized_mmf',
+  'defi_vault',
+  'defi_lending_market',
+];
+
+function parseCategoryFilter(raw: string | null): VenueCategory | null {
+  if (!raw) return null;
+  return VALID_CATEGORIES.includes(raw as VenueCategory)
+    ? (raw as VenueCategory)
+    : null;
+}
+
+export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try { requireRole(session.user.role as any, 'accountant'); }
   catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
 
+  // Optional category filter — ?category=tokenized_mmf|defi_vault|defi_lending_market
+  const categoryFilter = parseCategoryFilter(req.nextUrl.searchParams.get('category'));
+
   const supabase = createAdminClient();
 
-  // Load country for the Ondo geo-gate + the rate cache for real-data merge.
-  // Both queries are independent — fetch in parallel.
+  // Load country for the Ondo USDY geo-gate + the rate cache for real-data
+  // merge. Both queries are independent — fetch in parallel.
   const enterpriseId = session.user.enterprise_id;
   const [enterpriseResult, cacheResult] = await Promise.all([
     enterpriseId
@@ -87,11 +100,10 @@ export async function GET(_req: NextRequest) {
     ALL_YIELD_PROTOCOLS.map(async (pid) => {
       const adapter = getYieldAdapter(pid);
       const info = adapter.getInfo();
+      const venue = VENUES[pid];
 
       // Prefer cache rows (real on-chain / API data). Fall back to the
-      // adapter's getAPY() only when a cache row doesn't exist yet — that
-      // happens on a fresh deploy before the first cron run, or for a
-      // protocol whose fetcher hasn't been implemented.
+      // adapter's getAPY() only when a cache row doesn't exist yet.
       const rates: YieldRate[] = await Promise.all(
         info.supportedTokens.map(async (token) => {
           const cached = cacheIndex.get(`${pid}:${token}`);
@@ -100,17 +112,33 @@ export async function GET(_req: NextRequest) {
         }),
       );
 
-      return { ...info, rates };
+      // Return the legacy info shape plus venue category fields and the
+      // full category-specific metadata. Clients that only cared about
+      // the legacy fields continue working; the new Yield Explorer UI
+      // narrows on `category` to pick between DeFi and MMF card layouts.
+      return {
+        ...info,
+        rates,
+        category: venue.category,
+        status: venue.status,
+        venue,
+      };
     }),
   );
 
-  // Filter out Ondo for US enterprises
-  const filteredProtocols = protocols.filter((p) => {
-    if (p.id === 'ondo') {
+  // Filter out Ondo USDY for US enterprises (unchanged from previous behavior).
+  let filteredProtocols = protocols.filter((p) => {
+    if (p.id === 'ondo_usdy') {
       return enterpriseCountry && enterpriseCountry !== 'US';
     }
     return true;
   });
+
+  // Optional category filter — applied after the geo-gate so the URL
+  // param always returns a consistent subset regardless of enterprise.
+  if (categoryFilter) {
+    filteredProtocols = filteredProtocols.filter((p) => p.category === categoryFilter);
+  }
 
   return NextResponse.json({ data: filteredProtocols });
 }

@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
 
   const { protocol, token, amount, walletAddress, chain, txHash, yieldToken, tokensReceived } = parsed.data;
 
-  const COMING_SOON_PROTOCOLS = ['sky', 'ethena', 'ondo'];
+  const COMING_SOON_PROTOCOLS = ['sky', 'ethena', 'ondo_usdy'];
   if (COMING_SOON_PROTOCOLS.includes(protocol)) {
     return NextResponse.json(
       { error: 'This protocol is coming soon and not yet available for deposits' },
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
   const supabase = createAdminClient();
 
   // Geo-gate: Ondo USDY is only available to non-US enterprises
-  if (protocol === 'ondo') {
+  if (protocol === 'ondo_usdy') {
     const { data: ent } = await supabase
       .from('enterprises')
       .select('country')

@@ -11,7 +11,7 @@ import type { YieldPosition } from '@/types/database';
 
 const PROTOCOL_LABELS: Record<string, string> = {
   aave_v3: 'Aave V3', morpho_reservoir: 'Morpho Reservoir', morpho_steakhouse: 'Morpho Steakhouse',
-  kamino: 'Kamino', kamino_multiply: 'Kamino Multiply', ondo: 'Ondo (USDY)',
+  kamino: 'Kamino', kamino_multiply: 'Kamino Multiply', ondo_usdy: 'Ondo (USDY)',
   sky: 'Sky sUSDS', ethena: 'Ethena sUSDe',
 };
 
@@ -21,7 +21,7 @@ const PROTOCOL_LOGOS: Record<string, string> = {
   morpho_steakhouse: '/partners/morpho-white.svg',
   kamino: '/partners/kamino-logo.svg',
   kamino_multiply: '/partners/kamino-logo.svg',
-  ondo: '/partners/Ondo_Logo_0.svg',
+  ondo_usdy: '/partners/Ondo_Logo_0.svg',
   sky: '/partners/sky_logo.png',
   ethena: '/partners/ethena_logo.png',
 };

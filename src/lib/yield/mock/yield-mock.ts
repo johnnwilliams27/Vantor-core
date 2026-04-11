@@ -12,113 +12,77 @@ import type {
 } from '../interface';
 import type { TokenSymbol, ChainType } from '@/types/database';
 import { randomUUID } from 'crypto';
+import { VENUES } from '@/lib/yield/venues';
 
-const PROTOCOL_META: Record<YieldProtocolId, Omit<YieldProtocolInfo, 'id'>> = {
-  aave_v3: {
-    name: 'Aave V3',
-    chain: 'ethereum',
-    supportedTokens: ['USDC', 'USDT'],
-    description: 'Leading decentralized lending protocol. Supply stablecoins to earn yield from borrowers.',
-    riskLevel: 'low',
-    riskFactors: { smartContract: 1, counterparty: 1, liquidity: 1, regulatory: 2 },
-    kycRequired: false,
-  },
-  compound_v3: {
-    name: 'Compound V3',
-    chain: 'ethereum',
-    supportedTokens: ['USDC', 'USDT'],
-    description: 'Battle-tested lending protocol. Supply stablecoins to the Comet market and earn yield from borrowers.',
-    riskLevel: 'low',
-    riskFactors: { smartContract: 1, counterparty: 1, liquidity: 1, regulatory: 2 },
-    kycRequired: false,
-  },
-  morpho_reservoir: {
-    name: 'Morpho Reservoir USDC',
-    chain: 'ethereum',
-    supportedTokens: ['USDC'],
-    description: 'Steakhouse-curated Morpho vault for high-yield USDC supply across optimized markets.',
-    riskLevel: 'medium',
-    riskFactors: { smartContract: 2, counterparty: 2, liquidity: 2, regulatory: 2 },
-    kycRequired: false,
-  },
-  morpho_steakhouse: {
-    name: 'Morpho Steakhouse USDC',
-    chain: 'ethereum',
-    supportedTokens: ['USDC'],
-    description: 'Steakhouse-curated Morpho vault. Concentrated exposure to high-yield markets with active risk management.',
-    riskLevel: 'high',
-    riskFactors: { smartContract: 2, counterparty: 2, liquidity: 3, regulatory: 2 },
-    kycRequired: false,
-  },
-  kamino: {
-    name: 'Kamino Lend',
-    chain: 'solana',
-    supportedTokens: ['USDC', 'USDT'],
-    description: 'Largest Solana lending protocol. Supply stablecoins to earn yield from Solana borrowers.',
-    riskLevel: 'medium',
-    riskFactors: { smartContract: 2, counterparty: 1, liquidity: 2, regulatory: 3 },
-    kycRequired: false,
-  },
-  kamino_multiply: {
-    name: 'Kamino Multiply',
-    chain: 'solana',
-    supportedTokens: ['USDC'],
-    description: 'Leveraged yield strategy on Solana. Automated looping for amplified stablecoin returns with liquidation risk.',
-    riskLevel: 'high',
-    riskFactors: { smartContract: 2, counterparty: 2, liquidity: 3, regulatory: 3 },
-    kycRequired: false,
-  },
-  ondo: {
-    name: 'Ondo USDY',
-    chain: 'ethereum',
-    supportedTokens: ['USDC'],
-    description: 'Tokenized US Treasury yield. Mint USDY backed by short-term T-bills. KYC required.',
-    riskLevel: 'low',
-    riskFactors: { smartContract: 1, counterparty: 2, liquidity: 2, regulatory: 1 },
-    kycRequired: true,
-  },
-  sky: {
-    name: 'Sky sUSDS',
-    chain: 'ethereum',
-    supportedTokens: ['USDC', 'USDT'],
-    description: 'Savings rate from Sky (formerly MakerDAO). Deposit stablecoins to earn the Sky Savings Rate backed by RWA revenue.',
-    riskLevel: 'low',
-    riskFactors: { smartContract: 1, counterparty: 1, liquidity: 1, regulatory: 2 },
-    kycRequired: false,
-  },
-  ethena: {
-    name: 'Ethena sUSDe',
-    chain: 'ethereum',
-    supportedTokens: ['USDC', 'USDT'],
-    description: 'Synthetic dollar protocol. Stake USDe for yield derived from delta-neutral ETH positions and funding rate arbitrage.',
-    riskLevel: 'high',
-    riskFactors: { smartContract: 2, counterparty: 3, liquidity: 2, regulatory: 3 },
-    kycRequired: false,
-  },
-};
+// Venue metadata is owned by the discriminated-union registry at
+// src/lib/yield/venues. PROTOCOL_META used to live here as a duplicated
+// Record<YieldProtocolId, ...>; it's been deleted — all lookups go
+// through VENUES via `venueToProtocolInfo()` below.
+
+/** Convert a VenueMetadata entry to the legacy YieldProtocolInfo shape. */
+function venueToProtocolInfo(protocol: YieldProtocolId): YieldProtocolInfo {
+  const venue = VENUES[protocol];
+  return {
+    id: venue.id,
+    name: venue.displayName,
+    chain: venue.chain,
+    supportedTokens: venue.supportedTokens,
+    description: venue.description,
+    riskLevel: venue.riskLevel,
+    riskFactors: venue.riskFactors,
+    kycRequired: venue.kycRequired,
+  };
+}
+
+/**
+ * Reference APY per protocol. For DeFi protocols this is a mock value
+ * used only when the rate cache is empty (e.g. local dev without a cron).
+ * For tokenized MMFs, the reference yield comes from the venue registry
+ * and matches the value shown on the card ("as of …").
+ */
+function mmfReferenceYield(id: YieldProtocolId): number {
+  const venue = VENUES[id];
+  return venue.category === 'tokenized_mmf' ? venue.referenceYield : 0;
+}
 
 const MOCK_APYS: Record<YieldProtocolId, { supply: number; reward: number }> = {
+  // DeFi protocols — mock values for the cache-empty fallback path
   aave_v3:           { supply: 0.0485, reward: 0.0020 },
   compound_v3:       { supply: 0.0440, reward: 0.0035 },
   morpho_reservoir:  { supply: 0.0700, reward: 0.0000 },
   morpho_steakhouse: { supply: 0.1150, reward: 0.0200 },
   kamino:            { supply: 0.0710, reward: 0.0050 },
   kamino_multiply:   { supply: 0.1480, reward: 0.0120 },
-  ondo:              { supply: 0.0475, reward: 0 },
+  ondo_usdy:         { supply: 0.0475, reward: 0 },
   sky:               { supply: 0.0625, reward: 0 },
   ethena:            { supply: 0.1720, reward: 0.0380 },
+  // Tokenized MMFs — reference yields sourced from the venue registry
+  buidl:             { supply: mmfReferenceYield('buidl'),     reward: 0 },
+  ousg:              { supply: mmfReferenceYield('ousg'),      reward: 0 },
+  ustb:              { supply: mmfReferenceYield('ustb'),      reward: 0 },
+  benji:             { supply: mmfReferenceYield('benji'),     reward: 0 },
+  usyc:              { supply: mmfReferenceYield('usyc'),      reward: 0 },
+  spiko_usd:         { supply: mmfReferenceYield('spiko_usd'), reward: 0 },
 };
 
+/** Receipt-token symbols by protocol. Used for deposit/withdraw flows. */
 const YIELD_TOKENS: Record<YieldProtocolId, string> = {
-  aave_v3: 'aUSDC',
-  compound_v3: 'cUSDCv3',
-  morpho_reservoir: 'bbqUSDCreservoir',
+  aave_v3:           'aUSDC',
+  compound_v3:       'cUSDCv3',
+  morpho_reservoir:  'bbqUSDCreservoir',
   morpho_steakhouse: 'mshUSDC',
-  kamino: 'kUSDC',
-  kamino_multiply: 'kmUSDC',
-  ondo: 'USDY',
-  sky: 'sUSDS',
-  ethena: 'sUSDe',
+  kamino:            'kUSDC',
+  kamino_multiply:   'kmUSDC',
+  ondo_usdy:         'USDY',
+  sky:               'sUSDS',
+  ethena:            'sUSDe',
+  // Tokenized MMF receipt tokens
+  buidl:             'BUIDL',
+  ousg:              'OUSG',
+  ustb:              'USTB',
+  benji:             'BENJI',
+  usyc:              'USYC',
+  spiko_usd:         'USTBL',
 };
 
 // In-memory mock positions
@@ -132,7 +96,7 @@ export class MockYieldAdapter implements IYieldProtocol {
   constructor(private protocol: YieldProtocolId) {}
 
   getInfo(): YieldProtocolInfo {
-    return { id: this.protocol, ...PROTOCOL_META[this.protocol] };
+    return venueToProtocolInfo(this.protocol);
   }
 
   async getAPY(token: TokenSymbol): Promise<YieldRate> {
@@ -140,7 +104,7 @@ export class MockYieldAdapter implements IYieldProtocol {
     return {
       protocol: this.protocol,
       token,
-      chain: PROTOCOL_META[this.protocol].chain,
+      chain: VENUES[this.protocol].chain,
       supplyAPY: apys.supply,
       rewardAPY: apys.reward,
       totalAPY: apys.supply + apys.reward,
@@ -206,7 +170,7 @@ export class MockYieldAdapter implements IYieldProtocol {
       metadata: { tokenBalance: newTokenBalance },
     });
 
-    const needsProviderRef = ['ondo'].includes(this.protocol);
+    const needsProviderRef = this.protocol === 'ondo_usdy';
     return {
       txHash: needsProviderRef ? null : `0xmock_${randomUUID().replace(/-/g, '').slice(0, 40)}`,
       providerRef: needsProviderRef ? `${this.protocol.toUpperCase()}-${randomUUID().slice(0, 8).toUpperCase()}` : undefined,
@@ -255,7 +219,7 @@ export class MockYieldAdapter implements IYieldProtocol {
       }
     }
 
-    const needsProviderRef = ['ondo'].includes(this.protocol);
+    const needsProviderRef = this.protocol === 'ondo_usdy';
     return {
       txHash: needsProviderRef ? null : `0xmock_${randomUUID().replace(/-/g, '').slice(0, 40)}`,
       providerRef: needsProviderRef ? `${this.protocol.toUpperCase()}-${randomUUID().slice(0, 8).toUpperCase()}` : undefined,

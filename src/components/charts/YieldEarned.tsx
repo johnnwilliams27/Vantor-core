@@ -21,7 +21,7 @@ const PROTOCOL_LABELS: Record<string, string> = {
   morpho_steakhouse: 'Morpho Steakhouse',
   kamino: 'Kamino Lend',
   kamino_multiply: 'Kamino Multiply',
-  ondo: 'Ondo',
+  ondo_usdy: 'Ondo',
   sky: 'Sky sUSDS',
   ethena: 'Ethena',
 };
@@ -32,7 +32,7 @@ const PROTOCOL_COLORS: Record<string, string> = {
   morpho_steakhouse: '#1d4ed8',
   kamino: '#8b5cf6',
   kamino_multiply: '#7c3aed',
-  ondo: '#06b6d4',
+  ondo_usdy: '#06b6d4',
   sky: '#0ea5e9',
   ethena: '#f43f5e',
 };

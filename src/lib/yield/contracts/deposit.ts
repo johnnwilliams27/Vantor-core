@@ -81,7 +81,7 @@ export function buildDepositTx(
       };
     }
 
-    case 'ondo': {
+    case 'ondo_usdy': {
       return {
         address: protocolConfig.router,
         abi: ONDO_ABI,

@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -7,7 +8,7 @@ import { CardSpinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { ArrowUpRight, ArrowLeft, Shield, Lock, Loader2, CheckCircle2, X, Info } from 'lucide-react';
+import { ArrowUpRight, ArrowLeft, Shield, Lock, Loader2, CheckCircle2, X, Info, Landmark, Clock } from 'lucide-react';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { useYieldProtocols, useYieldDeposit, useSlippageCheck } from '@/hooks/useYield';
 import { useOnChainDeposit, type DepositStep } from '@/hooks/useOnChainDeposit';
@@ -23,8 +24,21 @@ import { RISK_FACTOR_LABELS, RISK_SCORE_LABELS } from '@/lib/yield/interface';
 import type { RiskFactors } from '@/lib/yield/interface';
 import type { YieldProtocolWithRates } from '@/hooks/useYield';
 import { UpgradeGate } from '@/components/ui/upgrade-gate';
+import {
+  type VenueCategory,
+  CATEGORY_LABELS,
+  ELIGIBILITY_LABELS,
+  isTokenizedMMF,
+} from '@/lib/yield/venues';
 
-const COMING_SOON_PROTOCOLS = new Set(['sky', 'ethena', 'ondo']);
+const COMING_SOON_PROTOCOLS = new Set(['sky', 'ethena', 'ondo_usdy']);
+
+const CATEGORY_FILTER_ORDER: Array<VenueCategory | 'all'> = [
+  'all',
+  'tokenized_mmf',
+  'defi_vault',
+  'defi_lending_market',
+];
 
 const CHAIN_LABELS: Record<string, string> = {
   ethereum: 'Ethereum',
@@ -37,7 +51,7 @@ const PROTOCOL_LOGOS: Record<string, string> = {
   morpho_steakhouse: '/partners/morpho-white.svg',
   kamino: '/partners/kamino-logo.svg',
   kamino_multiply: '/partners/kamino-logo.svg',
-  ondo: '/partners/Ondo_Logo_0.svg',
+  ondo_usdy: '/partners/Ondo_Logo_0.svg',
   sky: '/partners/sky_logo.png',
   ethena: '/partners/ethena_logo.png',
   compound_v3: '/partners/compound-white.png',
@@ -54,9 +68,16 @@ const PROTOCOL_RATE_SOURCE: Record<string, string> = {
   morpho_reservoir: 'Morpho Blue API (blue-api.morpho.org)',
   sky: 'On-chain: sUSDS.ssr() + sUSDS.totalAssets()',
   ethena: 'APY: ethena.fi · TVL: DefiLlama (yields.llama.fi)',
-  ondo: 'Ondo Finance (fixed rate)',
+  ondo_usdy: 'Ondo Finance (fixed rate)',
   kamino: 'DefiLlama (yields.llama.fi) — kamino-lend pool',
   kamino_multiply: 'DefiLlama (yields.llama.fi) — kamino-lend × 2.5 leverage',
+  // Tokenized MMFs — reference yield from rwa.xyz, not a live fetch
+  buidl:     'rwa.xyz reference (refreshed quarterly)',
+  ousg:      'rwa.xyz reference (refreshed quarterly)',
+  ustb:      'rwa.xyz reference (refreshed quarterly)',
+  benji:     'rwa.xyz reference (refreshed quarterly)',
+  usyc:      'rwa.xyz reference (refreshed quarterly)',
+  spiko_usd: 'rwa.xyz reference (refreshed quarterly)',
 };
 
 const RISK_COLORS: Record<string, string> = {
@@ -575,9 +596,189 @@ function InlineDepositForm({
   );
 }
 
+/* ---- Category filter bar ---- */
+
+function CategoryFilterBar({
+  selected,
+  onSelect,
+  counts,
+}: {
+  selected: VenueCategory | 'all';
+  onSelect: (c: VenueCategory | 'all') => void;
+  counts: Record<VenueCategory | 'all', number>;
+}) {
+  const label = (c: VenueCategory | 'all') =>
+    c === 'all' ? 'All' : CATEGORY_LABELS[c];
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {CATEGORY_FILTER_ORDER.map((c) => {
+        const isActive = selected === c;
+        return (
+          <button
+            key={c}
+            type="button"
+            onClick={() => onSelect(c)}
+            className={`
+              inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-medium
+              transition-colors border
+              ${isActive
+                ? 'bg-teal-600 text-white border-teal-600 dark:bg-teal-500 dark:border-teal-500'
+                : 'bg-background text-muted-foreground border-border hover:bg-muted hover:text-foreground'}
+            `}
+          >
+            {label(c)}
+            <span className={`text-[10px] rounded-full px-1.5 py-0.5 tabular-nums ${
+              isActive ? 'bg-white/20 text-white' : 'bg-muted text-muted-foreground'
+            }`}>
+              {counts[c] ?? 0}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ---- Tokenized MMF card variant ---- */
+
+function TokenizedMmfCard({ protocol }: { protocol: YieldProtocolWithRates }) {
+  // Narrow: we know category === 'tokenized_mmf' by the time we render this.
+  if (!isTokenizedMMF(protocol.venue)) return null;
+  const venue = protocol.venue;
+
+  return (
+    <Card className="relative overflow-hidden">
+      <div className="flex items-center justify-between px-5 pt-5 pb-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-lg font-semibold truncate">{venue.displayName}</span>
+          <span className="ml-1 inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-500/20 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">
+            Coming Soon
+          </span>
+        </div>
+        <div className="flex flex-col items-end gap-1.5 shrink-0">
+          <Badge variant="ethereum">{venue.currency}</Badge>
+          <Badge className="bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400 text-[10px]">
+            <Landmark className="h-3 w-3 mr-1" />
+            Tokenized MMF
+          </Badge>
+        </div>
+      </div>
+
+      <div className="px-5 pb-2 border-b border-border/50">
+        <p className="text-xs text-muted-foreground">{venue.notes}</p>
+      </div>
+
+      <CardContent className="space-y-3 pt-3">
+        {/* Reference yield — the hero metric for an MMF card */}
+        <div className="flex items-center justify-between rounded-lg border border-teal-500/20 bg-gradient-to-r from-teal-500/[0.08] to-cyan-500/[0.04] px-4 py-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold uppercase tracking-wider text-teal-700 dark:text-teal-300">
+              Reference yield
+            </span>
+            <InfoTooltip content={`7-day annualized yield as of ${venue.yieldAsOf}. Not a live quote — refreshed quarterly from rwa.xyz.`} />
+          </div>
+          <div className="text-right">
+            <div className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
+              {formatAPY(venue.referenceYield)}
+            </div>
+            <div className="text-[10px] text-muted-foreground">as of {venue.yieldAsOf}</div>
+          </div>
+        </div>
+
+        {/* Fund Size — deliberately NOT called "TVL" */}
+        <div className="flex items-center justify-between rounded-md border border-border/60 bg-muted/20 px-3 py-2">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Fund Size / AUM
+            </span>
+            <InfoTooltip content="Assets under management (AUM) of the underlying fund. Unlike a DeFi pool's TVL, this is informational — tokenized MMFs are backed by the underlying Treasury market and have effectively unlimited capacity." />
+          </div>
+          <span className="text-base font-bold tracking-tight tabular-nums">
+            {formatUsdCompact(venue.fundSizeUsd)}
+          </span>
+        </div>
+
+        {/* Metadata grid */}
+        <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+          <div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Issuer</div>
+            <div className="font-medium">{venue.issuer}</div>
+          </div>
+          <div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Fund Manager</div>
+            <div className="font-medium truncate">{venue.fundManager}</div>
+          </div>
+          <div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Wrapper</div>
+            <div className="font-medium">{venue.regulatoryWrapper}</div>
+          </div>
+          <div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Eligibility</div>
+            <div className="font-medium">{ELIGIBILITY_LABELS[venue.eligibility]}</div>
+          </div>
+          <div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Redemption</div>
+            <div className="font-medium flex items-center gap-1">
+              <Clock className="h-3 w-3 text-muted-foreground" />
+              {venue.timeToCash}
+            </div>
+          </div>
+          <div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Reporting</div>
+            <div className="font-medium">{venue.reportingCadence}</div>
+          </div>
+          <div className="col-span-2">
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Underlying</div>
+            <div className="font-medium">{venue.underlyingComposition}</div>
+          </div>
+          <div className="col-span-2">
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Supported chains</div>
+            <div className="font-medium text-[11px]">{venue.supportedChains.join(' · ')}</div>
+          </div>
+        </div>
+
+        {/* Rate source attribution */}
+        <div className="text-[10px] text-muted-foreground">
+          <p className="flex items-center gap-1">
+            <Info className="h-2.5 w-2.5 shrink-0" />
+            {PROTOCOL_RATE_SOURCE[venue.id] ?? 'rwa.xyz reference'}
+          </p>
+        </div>
+
+        {/* Coming Soon CTA — matches the existing treatment used for sky/ethena */}
+        <div className="flex items-center justify-end pt-1">
+          <button
+            type="button"
+            disabled
+            className="w-full px-4 py-2 rounded-lg text-sm font-medium bg-muted/50 text-muted-foreground cursor-not-allowed border border-border"
+          >
+            Coming Soon
+          </button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 /* ---- Main grid ---- */
 
 export function YieldRatesTable() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // Category filter — reads from ?category= URL param, defaults to 'all'.
+  const categoryParam = searchParams.get('category');
+  const selectedCategory: VenueCategory | 'all' =
+    categoryParam === 'tokenized_mmf' ||
+    categoryParam === 'defi_vault' ||
+    categoryParam === 'defi_lending_market'
+      ? categoryParam
+      : 'all';
+
+  // Fetch the unfiltered list once — we need it for the count badges and
+  // filter client-side so toggling categories is instant.
   const { data: protocols, isLoading } = useYieldProtocols();
   const [depositId, setDepositId] = useState<string | null>(null);
   const [ondoKycModal, setOndoKycModal] = useState<{ walletAddress: string } | null>(null);
@@ -591,15 +792,50 @@ export function YieldRatesTable() {
 
   const { data: wallets } = useWallets();
 
+  const onSelectCategory = useCallback(
+    (c: VenueCategory | 'all') => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (c === 'all') {
+        params.delete('category');
+      } else {
+        params.set('category', c);
+      }
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [searchParams, router, pathname],
+  );
+
   if (isLoading) {
     return <CardSpinner />;
   }
 
-  // Sort by best total APY (low → high)
-  const sorted = [...(protocols ?? [])].sort((a, b) => {
-    const bestA = Math.max(...a.rates.map((r) => r.totalAPY));
-    const bestB = Math.max(...b.rates.map((r) => r.totalAPY));
-    return bestA - bestB;
+  const allProtocols = protocols ?? [];
+
+  // Category counts for the filter pill badges — computed on the unfiltered set.
+  const counts: Record<VenueCategory | 'all', number> = {
+    all: allProtocols.length,
+    tokenized_mmf: 0,
+    defi_vault: 0,
+    defi_lending_market: 0,
+  };
+  for (const p of allProtocols) {
+    counts[p.category] = (counts[p.category] ?? 0) + 1;
+  }
+
+  // Apply the category filter client-side.
+  const filteredProtocols =
+    selectedCategory === 'all'
+      ? allProtocols
+      : allProtocols.filter((p) => p.category === selectedCategory);
+
+  // Default sort: highest total APY first. Within MMFs, the reference yield
+  // on the venue is what we sort by (the `totalAPY` on the rate row is the
+  // same value because we seed rate rows from the venue registry).
+  const sorted = [...filteredProtocols].sort((a, b) => {
+    const bestA = a.rates.length > 0 ? Math.max(...a.rates.map((r) => r.totalAPY)) : 0;
+    const bestB = b.rates.length > 0 ? Math.max(...b.rates.map((r) => r.totalAPY)) : 0;
+    return bestB - bestA;
   });
 
   // Compute oldest fetchedAt across all rates for the global timestamp
@@ -612,7 +848,7 @@ export function YieldRatesTable() {
     : null;
 
   const handleOndoDeposit = async (protocolId: string) => {
-    if (protocolId !== 'ondo') {
+    if (protocolId !== 'ondo_usdy') {
       setDepositId(protocolId);
       return;
     }
@@ -644,11 +880,27 @@ export function YieldRatesTable() {
 
   return (
     <div className="space-y-3">
-      {/* Rate timestamp */}
-      {oldestFetchedAt && (
-        <p className="text-xs text-muted-foreground text-right">
-          Last updated: {new Date(oldestFetchedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'medium' })} ({formatRelativeTime(oldestFetchedAt)})
-        </p>
+      {/* Category filter bar */}
+      <div className="flex items-center justify-between gap-3">
+        <CategoryFilterBar
+          selected={selectedCategory}
+          onSelect={onSelectCategory}
+          counts={counts}
+        />
+        {/* Rate timestamp */}
+        {oldestFetchedAt && (
+          <p className="text-xs text-muted-foreground text-right shrink-0">
+            Last updated: {new Date(oldestFetchedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'medium' })} ({formatRelativeTime(oldestFetchedAt)})
+          </p>
+        )}
+      </div>
+
+      {sorted.length === 0 && (
+        <div className="rounded-lg border border-dashed border-border p-8 text-center">
+          <p className="text-sm text-muted-foreground">
+            No venues match the <span className="font-medium">{selectedCategory === 'all' ? 'current filter' : CATEGORY_LABELS[selectedCategory]}</span> filter.
+          </p>
+        </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -661,6 +913,13 @@ export function YieldRatesTable() {
                 onBack={() => setDepositId(null)}
               />
             );
+          }
+
+          // Tokenized MMFs get their own card layout — different hero
+          // metric (reference yield + as-of), different secondary metric
+          // (Fund Size, not TVL), and a richer metadata grid.
+          if (p.category === 'tokenized_mmf') {
+            return <TokenizedMmfCard key={p.id} protocol={p} />;
           }
 
           const comingSoon = COMING_SOON_PROTOCOLS.has(p.id);
@@ -679,7 +938,7 @@ export function YieldRatesTable() {
                       </span>
                     )}
                     {p.kycRequired && (
-                      p.id === 'ondo' && ondoKycVerified ? (
+                      p.id === 'ondo_usdy' && ondoKycVerified ? (
                         <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-[10px]">
                           <CheckCircle2 className="h-3 w-3 mr-1" />
                           KYC Verified
@@ -829,7 +1088,7 @@ export function YieldRatesTable() {
           onVerified={() => {
             setOndoKycVerified(true);
             setOndoKycModal(null);
-            setDepositId('ondo');
+            setDepositId('ondo_usdy');
           }}
           onClose={() => setOndoKycModal(null)}
         />

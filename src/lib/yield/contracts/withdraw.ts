@@ -87,7 +87,7 @@ export function buildWithdrawTx(
       };
     }
 
-    case 'ondo': {
+    case 'ondo_usdy': {
       // Ondo uses a request-based redemption flow; amount is always explicit
       const ondoAmount = isFullWithdrawal ? parseUnits(amount, decimals) : amountBigInt;
       return {

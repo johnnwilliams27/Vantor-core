@@ -11,7 +11,7 @@ const PROTOCOL_LABELS: Record<string, string> = {
   aave_v3: 'Aave V3',
   morpho_reservoir: 'Morpho Reservoir',
   kamino: 'Kamino',
-  ondo: 'Ondo (USDY)',
+  ondo_usdy: 'Ondo (USDY)',
 };
 
 const FILTER_CONFIG = {
