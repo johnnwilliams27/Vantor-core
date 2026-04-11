@@ -70,7 +70,7 @@ describe('CryptoError factory', () => {
       next_step: err.next_step,
       trace_id: err.fields.trace_id,
     });
-    expect((user as Record<string, unknown>).key_id).toBeUndefined();
-    expect((user as Record<string, unknown>).row_locator).toBeUndefined();
+    expect('key_id' in user).toBe(false);
+    expect('row_locator' in user).toBe(false);
   });
 });
