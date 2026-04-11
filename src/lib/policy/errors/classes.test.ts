@@ -1,0 +1,105 @@
+import { describe, it, expect } from 'vitest';
+import {
+  PolicyError,
+  CanonicalizationError,
+  HardLimitBreachError,
+  ForecastUnavailableError,
+  AggregateQueryFailedError,
+} from './classes';
+import { REASON_CODES } from './reason-codes';
+
+describe('PolicyError', () => {
+  it('carries reason_code, human_readable, details, and user_action', () => {
+    const err = new PolicyError({
+      reason_code: REASON_CODES.gate_internal_error,
+      module: 'gate',
+      human_readable: 'Something went wrong.',
+      user_action: 'Retry or contact support.',
+      details: { foo: 'bar' },
+    });
+
+    expect(err.reason_code).toBe('gate_internal_error');
+    expect(err.module).toBe('gate');
+    expect(err.human_readable).toBe('Something went wrong.');
+    expect(err.user_action).toBe('Retry or contact support.');
+    expect(err.details).toEqual({ foo: 'bar' });
+    expect(err).toBeInstanceOf(Error);
+    expect(err.message).toContain('gate_internal_error');
+  });
+
+  it('serializes to a structured object via toJSON()', () => {
+    const err = new PolicyError({
+      reason_code: REASON_CODES.canonicalization_failed,
+      module: 'canonicalizer',
+      human_readable: 'Rate unavailable',
+      user_action: 'Retry',
+      details: { from: 'USDC', to: 'USD' },
+    });
+
+    const serialized = err.toJSON();
+    expect(serialized).toMatchObject({
+      reason_code: 'canonicalization_failed',
+      module: 'canonicalizer',
+      human_readable: 'Rate unavailable',
+      user_action: 'Retry',
+      details: { from: 'USDC', to: 'USD' },
+    });
+  });
+});
+
+describe('CanonicalizationError', () => {
+  it('is a PolicyError with reason_code=canonicalization_failed', () => {
+    const err = new CanonicalizationError({
+      human_readable: 'Cannot convert BTC to USD',
+      user_action: 'Add BTC rate source',
+      details: { from: 'BTC', to: 'USD', source_status: 'unsupported' },
+    });
+
+    expect(err).toBeInstanceOf(PolicyError);
+    expect(err.reason_code).toBe('canonicalization_failed');
+    expect(err.module).toBe('canonicalizer');
+    expect(err.details).toMatchObject({ from: 'BTC', to: 'USD' });
+  });
+});
+
+describe('HardLimitBreachError', () => {
+  it('carries limit_type and is not throwable at API boundary (structured only)', () => {
+    const err = new HardLimitBreachError({
+      human_readable: 'Cash reserve floor breached',
+      user_action: 'Reduce transfer amount',
+      details: {
+        limit_type: 'min_cash_reserve_usd',
+        limit_value: '500000',
+        post_transfer_value: '470000',
+        overage: '30000',
+      },
+    });
+
+    expect(err.reason_code).toBe('hard_limit_breached');
+    expect(err.details.limit_type).toBe('min_cash_reserve_usd');
+  });
+});
+
+describe('ForecastUnavailableError', () => {
+  it('has reason_code=forecast_unavailable', () => {
+    const err = new ForecastUnavailableError({
+      human_readable: 'Forecast query failed',
+      user_action: 'Retry later',
+      details: { query: 'obligations_covered', window_days: 14 },
+    });
+
+    expect(err.reason_code).toBe('forecast_unavailable');
+  });
+});
+
+describe('AggregateQueryFailedError', () => {
+  it('has reason_code=aggregate_query_failed', () => {
+    const err = new AggregateQueryFailedError({
+      human_readable: 'Window query failed',
+      user_action: 'Retry',
+      details: { window_spec: { duration_ms: 86400000 } },
+    });
+
+    expect(err.reason_code).toBe('aggregate_query_failed');
+  });
+});
