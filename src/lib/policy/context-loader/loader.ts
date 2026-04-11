@@ -48,7 +48,10 @@ export interface EvaluationContextLoaderDeps {
  *   the loader re-throws — without a policy version, there's nothing to
  *   evaluate, and the engine's top-level catch must surface this as a
  *   gate-internal-error. Callers must be prepared for this single
- *   exception path.
+ *   exception path. Note: when fetchPolicyVersion rejects, `Promise.all`
+ *   waits for the other five sub-loaders to settle (it doesn't cancel
+ *   them) and then surfaces the rejection — no resource leak, just a
+ *   brief wait while in-flight peers complete.
  * - `forecastFactory.createForEnterprise` is wrapped — if the factory
  *   throws, the loader falls back to a sentinel failure forecast where
  *   every forecast query request produces forecast_unavailable.
@@ -83,7 +86,7 @@ export class EvaluationContextLoader {
         fetchLatestScreening: this.deps.fetchLatestScreening,
       }),
       canonicalizeToUsd(movement.amount, this.deps.rateProvider, now),
-      this.createForecastQuerySafely(enterpriseId),
+      this.createForecastQuerySafely(enterpriseId, now),
     ]);
 
     // Aggregates depend on the policy version, so load after
@@ -94,7 +97,7 @@ export class EvaluationContextLoader {
     );
 
     // Pre-load forecast query results referenced by the policy
-    const forecast = await this.preloadForecastResults(forecastQuery, movement, policyVersion);
+    const forecast = await this.preloadForecastResults(forecastQuery, movement, policyVersion, now);
 
     return {
       now,
@@ -114,12 +117,18 @@ export class EvaluationContextLoader {
    * ForecastQuery sentinel whose every method rejects with a tagged
    * error. The per-query try/catch in preloadForecastResults converts
    * these into structured forecast_unavailable failures.
+   *
+   * Passes the shared `now` so the sentinel's metadata.snapshot_taken_at
+   * matches the rest of the context instead of drifting by a few ms.
    */
-  private async createForecastQuerySafely(enterpriseId: string): Promise<ForecastQuery> {
+  private async createForecastQuerySafely(
+    enterpriseId: string,
+    now: Date,
+  ): Promise<ForecastQuery> {
     try {
       return await this.deps.forecastFactory.createForEnterprise(enterpriseId);
     } catch (err) {
-      return new FailedForecastQuery(err);
+      return new FailedForecastQuery(err, now);
     }
   }
 
@@ -127,6 +136,7 @@ export class EvaluationContextLoader {
     query: ForecastQuery,
     movement: ProposedMovement,
     policy: PolicyVersionSnapshot,
+    now: Date,
   ): Promise<ForecastSnapshot> {
     const queryRequests = this.extractForecastQueryRequests(policy);
 
@@ -136,7 +146,7 @@ export class EvaluationContextLoader {
     try {
       hypothetical = query.hypothetical(movement);
     } catch (err) {
-      hypothetical = new FailedForecastQuery(err);
+      hypothetical = new FailedForecastQuery(err, now);
     }
 
     // Execute all forecast queries in parallel. Each request becomes one
@@ -305,13 +315,27 @@ interface ForecastQueryRequest {
  * preloadForecastResults wraps it into a structured failure entry.
  */
 class FailedForecastQuery implements ForecastQuery {
-  readonly metadata = {
-    mode: 'stub' as const,
-    snapshot_taken_at: new Date(),
-    source: 'failed-forecast-factory',
-    warnings: ['Forecast factory threw during context load; all forecast queries will fail.'],
+  readonly metadata: {
+    mode: 'stub';
+    snapshot_taken_at: Date;
+    source: string;
+    warnings: string[];
   };
-  constructor(private readonly error: unknown) {}
+  constructor(
+    private readonly error: unknown,
+    snapshotTakenAt: Date,
+  ) {
+    this.metadata = {
+      // PHASE-1 LIMITATION: ForecastQueryMetadata.mode is 'stub' | 'real'
+      // so we must label a factory-failure sentinel as 'stub'. Plan 2
+      // should extend the union to 'failed' so observers (audit, UI) can
+      // distinguish a real stub from a factory failure.
+      mode: 'stub',
+      snapshot_taken_at: snapshotTakenAt,
+      source: 'failed-forecast-factory',
+      warnings: ['Forecast factory threw during context load; all forecast queries will fail.'],
+    };
+  }
   private reject(): Promise<never> {
     return Promise.reject(
       this.error instanceof Error

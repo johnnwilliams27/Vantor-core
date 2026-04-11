@@ -334,7 +334,102 @@ describe('EvaluationContextLoader.load', () => {
     expect(Object.keys(ctx.forecast.results).length).toBeGreaterThanOrEqual(1);
   });
 
-  it('loads treasury, counterparty, sanctions, policy, and canonicalization in parallel', async () => {
+  it('pre-loads rule-level forecast queries with scope.venue (locks in hash canonicalization)', async () => {
+    const policy: PolicyVersionSnapshot = mkPolicy({
+      rules: [
+        {
+          id: 'r1',
+          version_id: 'v-1',
+          rule_type: 'lookahead',
+          name: 'Venue-scoped',
+          rationale: '',
+          priority: 1,
+          verdict: 'require_approval',
+          created_by: 'u',
+          created_at: new Date(),
+          condition: {
+            kind: 'forecast_query',
+            query: 'projected_min_balance',
+            window_days: 7,
+            scope: { asset: 'USDC', venue: 'ethereum' },
+            comparator: '>',
+            value: { amount: '500000', currency: 'USDC' },
+          },
+        },
+      ],
+    });
+    const deps = mkHappyDeps(policy);
+    const loader = new EvaluationContextLoader(deps);
+
+    const ctx = await loader.load(mkMovement(), 'ent-1');
+    expect(Object.keys(ctx.forecast.results).length).toBe(1);
+  });
+
+  it('skips obligation_coverage_days hard limit with non-integer limit_value', async () => {
+    const policy: PolicyVersionSnapshot = mkPolicy({
+      hard_limits: [
+        {
+          id: 'hl-frac',
+          limit_type: 'obligation_coverage_days',
+          name: 'Fractional',
+          limit_value: '14.5',
+          scope: {},
+        },
+      ],
+    });
+    const deps = mkHappyDeps(policy);
+    const loader = new EvaluationContextLoader(deps);
+
+    const ctx = await loader.load(mkMovement(), 'ent-1');
+    expect(Object.keys(ctx.forecast.results).length).toBe(0);
+  });
+
+  it('deduplicates obligation_coverage_days hard limits with the same window_days', async () => {
+    const policy: PolicyVersionSnapshot = mkPolicy({
+      hard_limits: [
+        {
+          id: 'hl-1',
+          limit_type: 'obligation_coverage_days',
+          name: 'Coverage A',
+          limit_value: '14',
+          scope: {},
+        },
+        {
+          id: 'hl-2',
+          limit_type: 'obligation_coverage_days',
+          name: 'Coverage B',
+          limit_value: '14',
+          scope: {},
+        },
+      ],
+    });
+    const deps = mkHappyDeps(policy);
+    const loader = new EvaluationContextLoader(deps);
+
+    const ctx = await loader.load(mkMovement(), 'ent-1');
+    expect(Object.keys(ctx.forecast.results).length).toBe(1);
+  });
+
+  it('FailedForecastQuery sentinel pins snapshot_taken_at to the shared `now`', async () => {
+    const failedFactory: ForecastQueryFactory = {
+      createForEnterprise: vi.fn().mockRejectedValue(new Error('forecast down')),
+    };
+    const deps = mkHappyDeps();
+    deps.forecastFactory = failedFactory;
+
+    const before = Date.now();
+    const loader = new EvaluationContextLoader(deps);
+    const ctx = await loader.load(mkMovement(), 'ent-1');
+    const after = Date.now();
+
+    // sentinel metadata.snapshot_taken_at should equal ctx.now (not drift)
+    expect(ctx.forecast.query_metadata.snapshot_taken_at.getTime()).toBe(ctx.now.getTime());
+    expect(ctx.forecast.query_metadata.snapshot_taken_at.getTime()).toBeGreaterThanOrEqual(before);
+    expect(ctx.forecast.query_metadata.snapshot_taken_at.getTime()).toBeLessThanOrEqual(after);
+    expect(ctx.forecast.query_metadata.source).toBe('failed-forecast-factory');
+  });
+
+  it('all four DB fetchers are invoked under Promise.all (phase-1 smoke — not a strong concurrency proof)', async () => {
     // Each mock tracks when it was called relative to the others. With
     // Promise.all semantics, all should be invoked before any resolves.
     let callsBeforeAnyResolve = 0;
