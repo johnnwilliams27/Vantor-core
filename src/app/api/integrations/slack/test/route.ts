@@ -29,7 +29,7 @@ export async function POST(_req: NextRequest) {
 
   let creds;
   try {
-    creds = decryptSlackCredentials(integration.credentials);
+    creds = await decryptSlackCredentials(integration.credentials, `slack_integrations/id=${integration.id}`);
   } catch {
     return NextResponse.json({ error: 'Failed to decrypt Slack credentials' }, { status: 500 });
   }
