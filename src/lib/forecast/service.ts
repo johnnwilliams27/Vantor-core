@@ -52,6 +52,16 @@ export interface ForecastService {
     shortfallAsset?: string;
   }>;
   getObligationsDueInWindow(windowDays: number): Promise<Obligation[]>;
+  /**
+   * Returns the full day-by-day projection plus the expanded obligation
+   * set that fed it. Used by the Task 15 legacy adapter in
+   * `src/lib/treasury/predictions.ts` to materialize the old
+   * ForecastDataPoint[] shape for Treasury AI UI consumers that haven't
+   * migrated yet. Phase B UI will consume Projection directly.
+   */
+  getProjection(
+    windowDays: number,
+  ): Promise<{ projection: Projection; obligations: Obligation[] }>;
   hypothetical(proposedTransfers: ProposedTransfer[]): ForecastService;
 }
 
@@ -297,6 +307,10 @@ export function createForecastService(cfg: ServiceConfig): ForecastService {
       from.setUTCHours(0, 0, 0, 0);
       const to = new Date(from.getTime() + windowDays * DAY_MS);
       return loadExpandedObligations(cfg.db, cfg.enterpriseId, from, to);
+    },
+    async getProjection(windowDays) {
+      const { projection, obligations } = await compute(windowDays);
+      return { projection, obligations };
     },
     hypothetical(proposedTransfers) {
       // Returns a NEW ForecastService with the overlay layered on top of

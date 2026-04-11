@@ -1,210 +1,87 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ForecastDataPoint } from '@/types/database';
-
-interface ExpandedObligation {
-  date: string;
-  amountUsd: number;
-  label: string;
-}
+import { createForecastService } from '@/lib/forecast/service';
 
 /**
- * Projects recurring obligations forward by their recurrence_days interval
- * from today through the end of the lookahead window.
- * Also includes one-time obligations falling within the window.
- */
-function expandRecurringObligations(
-  obligations: Array<{
-    id: string;
-    label: string;
-    amount_usd: string;
-    due_date: string;
-    is_recurring: boolean;
-    recurrence_days: number | null;
-  }>,
-  from: Date,
-  to: Date
-): ExpandedObligation[] {
-  const expanded: ExpandedObligation[] = [];
-  const fromTime = from.getTime();
-  const toTime = to.getTime();
-
-  for (const ob of obligations) {
-    const amountUsd = parseFloat(ob.amount_usd);
-    const baseDate = new Date(ob.due_date + 'T00:00:00Z');
-
-    if (!ob.is_recurring || !ob.recurrence_days) {
-      // One-time obligation — include if within window
-      const dateTime = baseDate.getTime();
-      if (dateTime >= fromTime && dateTime <= toTime) {
-        expanded.push({
-          date: ob.due_date,
-          amountUsd,
-          label: ob.label,
-        });
-      }
-      continue;
-    }
-
-    // Recurring: project forward from baseDate
-    const intervalMs = ob.recurrence_days * 24 * 60 * 60 * 1000;
-    let current = new Date(baseDate);
-
-    // Advance past dates before `from` window
-    while (current.getTime() < fromTime) {
-      current = new Date(current.getTime() + intervalMs);
-    }
-
-    // Emit all occurrences within window
-    while (current.getTime() <= toTime) {
-      expanded.push({
-        date: current.toISOString().split('T')[0],
-        amountUsd,
-        label: ob.label,
-      });
-      current = new Date(current.getTime() + intervalMs);
-    }
-  }
-
-  return expanded;
-}
-
-/**
- * Computes the average daily net fiat inflow from the past 90 days.
- * onramp transactions are positive, offramp are negative.
- */
-async function computeAverageDailyRampInflow(
-  supabase: SupabaseClient,
-  userId: string
-): Promise<number> {
-  const ninetyDaysAgo = new Date();
-  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-
-  const { data, error } = await supabase
-    .from('fiat_transactions')
-    .select('direction, fiat_amount, created_at')
-    .eq('user_id', userId)
-    .eq('status', 'completed')
-    .gte('created_at', ninetyDaysAgo.toISOString());
-
-  if (error || !data || data.length === 0) return 0;
-
-  // Sum net over the 90-day window
-  let netTotal = 0;
-  for (const tx of data) {
-    const amount = parseFloat(tx.fiat_amount as string);
-    netTotal += tx.direction === 'onramp' ? amount : -amount;
-  }
-
-  // Divide by 90 days to get daily average
-  return netTotal / 90;
-}
-
-/**
- * Generates a day-by-day cash flow forecast from today through today+lookaheadDays.
- * Projects bank balance considering obligations and average daily ramp inflow.
+ * @deprecated Transitional adapter — kept alive only so the legacy Treasury AI
+ * forecast route (`/api/treasury/forecast/generate`) and the tab that reads
+ * `treasury_forecasts.forecast_data` can keep working until Task 17 rewrites
+ * the UI to consume the raw Projection shape from forecast_snapshots directly.
+ *
+ * The real forecast math now lives in `src/lib/forecast/engine.ts` (T10) and
+ * is orchestrated by `createForecastService` (T12). This file just translates
+ * the new Projection into the legacy 7-field ForecastDataPoint shape the UI
+ * still reads today.
+ *
+ * Notes on the legacy shape:
+ *   - `projectedBalanceUsd` — the engine's `day.totalBaseUsd` (rounded to
+ *      cents, which the engine already does internally)
+ *   - `obligationsDueUsd`   — sum of obligations whose dueDate matches the day
+ *   - `safetyBufferUsd`     — legacy semantics: the total obligations still
+ *      ahead of you from THIS day through the end of the window, so a
+ *      `runningBalance < safetyBufferUsd` day is one where you don't have
+ *      enough cash on hand to meet what's coming. The new Projection.shortfalls
+ *      captures a cleaner version of the same idea, but the UI still reads
+ *      safetyBufferUsd so we compute it here.
+ *   - `isBelow`             — derived from the above
+ *   - `scheduledRampsUsd`   — the legacy concept was "avg daily ramp inflow
+ *      over the past 90 days". The new engine doesn't model scheduled ramps
+ *      at all (they're an input to the state snapshot now, not a daily
+ *      projection delta). We zero it out. The UI treats zero as "no scheduled
+ *      ramps this day" which is acceptable during the transition.
+ *   - `obligationLabels`    — labels of obligations due on that day, unchanged.
  */
 export async function generateCashFlowForecast(
   supabase: SupabaseClient,
-  userId: string,
-  lookaheadDays: number
+  _userId: string,
+  lookaheadDays: number,
+  enterpriseId: string,
 ): Promise<ForecastDataPoint[]> {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const windowEnd = new Date(today.getTime() + lookaheadDays * 24 * 60 * 60 * 1000);
+  if (!enterpriseId) return [];
 
-  // Fetch ALL active manual obligations (no date filter — expand recurring ones ourselves)
-  const [obligationRes, invoiceRes, bankRes, avgDailyRamp] = await Promise.all([
-    supabase
-      .from('manual_obligations')
-      .select('id, label, amount_usd, due_date, is_recurring, recurrence_days')
-      .eq('user_id', userId)
-      .eq('is_active', true),
-    supabase
-      .from('invoices')
-      .select('id, invoice_number, description, amount, due_date')
-      .eq('user_id', userId)
-      .in('status', ['unpaid', 'overdue'])
-      .not('due_date', 'is', null),
-    supabase
-      .from('bank_accounts')
-      .select('current_balance')
-      .eq('user_id', userId)
-      .eq('is_active', true),
-    computeAverageDailyRampInflow(supabase, userId),
-  ]);
+  const svc = createForecastService({
+    enterpriseId,
+    db: supabase,
+    consumer: 'treasurer_view',
+  });
+  const { projection, obligations } = await svc.getProjection(lookaheadDays);
 
-  // Starting bank balance
-  const startingBalance = (bankRes.data ?? []).reduce((sum, acct) => {
-    return sum + (acct.current_balance ? parseFloat(acct.current_balance as string) : 0);
-  }, 0);
-
-  // Normalize manual obligations for expansion
-  const manualObligations = (obligationRes.data ?? []).map((ob) => ({
-    id: ob.id as string,
-    label: ob.label as string,
-    amount_usd: ob.amount_usd as string,
-    due_date: ob.due_date as string,
-    is_recurring: ob.is_recurring as boolean,
-    recurrence_days: ob.recurrence_days as number | null,
-  }));
-
-  // Normalize invoices as non-recurring obligations
-  const invoiceObligations = (invoiceRes.data ?? [])
-    .filter((inv) => inv.due_date)
-    .map((inv) => ({
-      id: inv.id as string,
-      label: (inv.description as string) || `Invoice ${inv.invoice_number}`,
-      amount_usd: inv.amount as string,
-      due_date: inv.due_date as string,
-      is_recurring: false,
-      recurrence_days: null,
-    }));
-
-  const allObligations = [...manualObligations, ...invoiceObligations];
-  const expanded = expandRecurringObligations(allObligations, today, windowEnd);
-
-  // Group obligations by date for fast lookup
-  const obligationsByDate = new Map<string, Array<{ amountUsd: number; label: string }>>();
-  for (const ob of expanded) {
-    const existing = obligationsByDate.get(ob.date) ?? [];
-    existing.push({ amountUsd: ob.amountUsd, label: ob.label });
-    obligationsByDate.set(ob.date, existing);
+  // Group obligations by due date for O(1) per-day lookup.
+  interface ObligationBucket {
+    totalUsd: number;
+    labels: string[];
+  }
+  const byDate = new Map<string, ObligationBucket>();
+  for (const o of obligations) {
+    const bucket = byDate.get(o.dueDate) ?? { totalUsd: 0, labels: [] };
+    // Obligations are already in USD for the legacy UI — non-USD is rare and
+    // the legacy UI has no FX handling. For consistency with the engine's
+    // internal math we use the same USD-coerced amount here.
+    bucket.totalUsd += o.amount;
+    bucket.labels.push(o.label);
+    byDate.set(o.dueDate, bucket);
   }
 
-  // Walk day by day
-  const points: ForecastDataPoint[] = [];
-  let runningBalance = startingBalance;
+  // Pre-compute "obligations still ahead from day i" so each day's safety
+  // buffer is O(1) instead of O(n²).
+  const forwardTotals: number[] = new Array(projection.daily.length).fill(0);
+  for (let i = projection.daily.length - 1; i >= 0; i--) {
+    const bucket = byDate.get(projection.daily[i].date);
+    forwardTotals[i] = (forwardTotals[i + 1] ?? 0) + (bucket?.totalUsd ?? 0);
+  }
 
-  for (let i = 0; i <= lookaheadDays; i++) {
-    const day = new Date(today.getTime() + i * 24 * 60 * 60 * 1000);
-    const dateStr = day.toISOString().split('T')[0];
-
-    const dayObligations = obligationsByDate.get(dateStr) ?? [];
-    const obligationsDueUsd = dayObligations.reduce((sum, o) => sum + o.amountUsd, 0);
-    const obligationLabels = dayObligations.map((o) => o.label);
-
-    // Deduct obligations, add avg daily ramp inflow
-    runningBalance -= obligationsDueUsd;
-    runningBalance += avgDailyRamp;
-
-    // Safety buffer = sum of all obligations in remaining lookahead window from this day
-    const remainingWindowEnd = new Date(day.getTime() + lookaheadDays * 24 * 60 * 60 * 1000);
-    const futureObligations = expanded.filter((ob) => {
-      const obDate = new Date(ob.date + 'T00:00:00Z');
-      return obDate >= day && obDate <= remainingWindowEnd;
-    });
-    const safetyBufferUsd = futureObligations.reduce((sum, o) => sum + o.amountUsd, 0);
-
-    points.push({
-      date: dateStr,
-      projectedBalanceUsd: Math.round(runningBalance * 100) / 100,
+  return projection.daily.map((day, i) => {
+    const bucket = byDate.get(day.date);
+    const obligationsDueUsd = bucket?.totalUsd ?? 0;
+    const safetyBufferUsd = forwardTotals[i];
+    return {
+      date: day.date,
+      projectedBalanceUsd: day.totalBaseUsd,
       obligationsDueUsd: Math.round(obligationsDueUsd * 100) / 100,
       safetyBufferUsd: Math.round(safetyBufferUsd * 100) / 100,
-      isBelow: runningBalance < safetyBufferUsd,
-      scheduledRampsUsd: Math.round(Math.max(0, avgDailyRamp) * 100) / 100,
-      obligationLabels,
-    });
-  }
-
-  return points;
+      isBelow: day.totalBaseUsd < safetyBufferUsd,
+      scheduledRampsUsd: 0,
+      obligationLabels: bucket?.labels ?? [],
+    };
+  });
 }

@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
 
     const [snapshot, forecastPoints] = await Promise.all([
       buildTreasurySnapshot(supabase, userId, undefined, enterpriseId),
-      generateCashFlowForecast(supabase, userId, lookahead_days),
+      generateCashFlowForecast(supabase, userId, lookahead_days, enterpriseId ?? ''),
     ]);
 
     const dangerDays = forecastPoints.filter((p) => p.isBelow).length;

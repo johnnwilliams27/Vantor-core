@@ -62,6 +62,20 @@ describe('ForecastService', () => {
     expect(typeof out.amount).toBe('number');
   });
 
+  it('getProjection returns daily array and the obligations that fed it', async () => {
+    const svc = await createForecastService({ enterpriseId, db, consumer: 'treasurer_view' });
+    const out = await svc.getProjection(90);
+    expect(Array.isArray(out.projection.daily)).toBe(true);
+    expect(out.projection.daily.length).toBe(91); // inclusive 0..90
+    expect(Array.isArray(out.obligations)).toBe(true);
+    expect(out.obligations.map(o => o.label)).toContain('Q2 Payroll');
+    // Sanity: every obligation returned falls inside the engine's date window
+    const dates = out.projection.daily.map(d => d.date);
+    for (const o of out.obligations) {
+      expect(dates).toContain(o.dueDate);
+    }
+  });
+
   it('persist=true writes a forecast_snapshots row with correlation_id', async () => {
     const svc = await createForecastService({
       enterpriseId,
