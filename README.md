@@ -159,3 +159,33 @@ src/
 |---|---|---|
 | USDC | 0xA0b86991... | EPjFWdd5... |
 | USDT | 0xdAC17F95... | Es9vMFrz... |
+
+## Forecast Analytics
+
+Cash-flow forecasting is built on three services under `src/lib/`:
+
+- **`TreasuryStateService`** (`src/lib/treasury/state/service.ts`) —
+  Aggregates bank accounts, wallet balances, DeFi positions, and
+  in-flight transfers into a `TreasuryStateSnapshot` with FX rates
+  captured inline for reproducibility. Persisted to
+  `treasury_state_snapshots` (migration 0042).
+- **`ForecastEngine`** (`src/lib/forecast/engine.ts`) — Pure
+  projection math. Takes a state snapshot + obligations +
+  `ScenarioParams` and returns a day-by-day `Projection` with
+  `minBalance`, `shortfalls`, and a `covered` verdict. No I/O, no
+  clock. Deterministic tests in `tests/forecast/engine.test.ts`.
+- **`ForecastService`** (`src/lib/forecast/service.ts`) —
+  Orchestrates state snapshotting, obligation expansion, scenario
+  resolution, and engine invocation. Persists results to
+  `forecast_snapshots` (migration 0043) with a `correlation_id` so
+  downstream consumers can link their decisions back to the
+  forecast they acted on. Supports hypothetical overlays via
+  `svc.hypothetical([...])`.
+
+Scenarios: `base`, `conservative`, `stress`, `custom`. Hypothetical
+queries never auto-persist. Recurring obligations are materialized
+nightly at 03:00 by `/api/cron/materialize-obligations`.
+
+See [`docs/architecture/forecast-analytics.md`](docs/architecture/forecast-analytics.md)
+for the full architecture note, scenario parameters, service contract,
+and Phase B/C roadmap.

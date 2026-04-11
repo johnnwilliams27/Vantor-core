@@ -61,6 +61,11 @@ cron.schedule('0 8 * * *', () => {
   callCron('/api/cron/error-digest');
 });
 
+// Daily at 3am: materialize recurring obligation instances 90 days out
+cron.schedule('0 3 * * *', () => {
+  callCron('/api/cron/materialize-obligations');
+});
+
 console.log('[cron-runner] Started. Schedules:');
 console.log('  * * * * *      → /api/cron/process-scheduled-payments');
 console.log('  */5 * * * *    → /api/cron/poll-balances');
@@ -68,4 +73,5 @@ console.log('  0 */6 * * *    → /api/cron/poll-bank-balances');
 console.log('  0 */6 * * *    → /api/cron/treasury-analysis');
 console.log('  0 */12 * * *   → /api/cron/sync-erp');
 console.log('  0 8 * * *      → /api/cron/error-digest');
+console.log('  0 3 * * *      → /api/cron/materialize-obligations');
 console.log('[cron-runner] Press Ctrl+C to stop.');

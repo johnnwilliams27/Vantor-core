@@ -5,16 +5,31 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { z } from 'zod';
-import { getActiveTreasuryRule, buildTreasurySnapshot } from '@/lib/treasury/rules-engine';
+import { getActiveTreasuryRule } from '@/lib/treasury/rules-engine';
 import { generateCashFlowForecast } from '@/lib/treasury/predictions';
-import { generateForecastSummary } from '@/lib/treasury/claude';
 import { checkRateLimit } from '@/lib/api/rate-limit';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
+import type { TreasuryForecast } from '@/types/database';
 
 const schema = z.object({
   lookahead_days: z.number().int().min(7).max(365).default(30),
 });
 
+/**
+ * POST /api/treasury/forecast/generate
+ *
+ * After T20's cutover the route no longer persists to treasury_forecasts
+ * (the table was dropped). It computes a live forecast via the T15 adapter
+ * and returns it in the same TreasuryForecast shape the mutation hook
+ * expects. The audit log is still written so we have a trail of who
+ * triggered generation and what they saw.
+ *
+ * The legacy ai_summary path (Claude-generated text stored on the forecast
+ * row) is intentionally removed. The Treasury AI UI no longer renders it
+ * since T16's GET returns null for it, and keeping the Claude call alive
+ * would be compute spent on an output no consumer reads. A future phase
+ * can reintroduce AI narratives against forecast_snapshots directly.
+ */
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -49,7 +64,10 @@ export async function POST(req: NextRequest) {
   const userId = session.user.id;
 
   try {
-    // Require an active rule to exist
+    // Require an active treasury rule. The rule itself isn't consumed
+    // by the forecast anymore (that logic moved into ForecastService)
+    // but its existence is still the feature gate: no rule = no forecast
+    // access, matching the legacy UX.
     const rule = await getActiveTreasuryRule(supabase, userId, enterpriseId);
     if (!rule) {
       return NextResponse.json(
@@ -58,10 +76,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const [snapshot, forecastPoints] = await Promise.all([
-      buildTreasurySnapshot(supabase, userId, undefined, enterpriseId),
-      generateCashFlowForecast(supabase, userId, lookahead_days),
-    ]);
+    const forecastPoints = await generateCashFlowForecast(
+      supabase,
+      userId,
+      lookahead_days,
+      enterpriseId ?? '',
+    );
 
     const dangerDays = forecastPoints.filter((p) => p.isBelow).length;
     const worstProjectedBalance = forecastPoints.reduce(
@@ -73,43 +93,36 @@ export async function POST(req: NextRequest) {
       0
     );
 
-    const summaryResult = await generateForecastSummary({
-      lookaheadDays: lookahead_days,
-      currentBankBalanceUsd: snapshot.totalBankBalanceUsd,
-      forecastPoints,
-      dangerDays,
-      worstProjectedBalance: worstProjectedBalance === Infinity ? 0 : worstProjectedBalance,
-      totalObligationsInWindow,
-    });
-
-    // Upsert forecast (one row per user_id + lookahead_days)
-    const { data: forecast, error } = await supabase
-      .from('treasury_forecasts')
-      .upsert(
-        {
-          user_id: userId,
-          enterprise_id: enterpriseId,
-          lookahead_days,
-          forecast_data: forecastPoints,
-          ai_summary: summaryResult.reasoning,
-          generated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,lookahead_days' }
-      )
-      .select()
-      .single();
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
     await writeAuditLog({
       userId,
       action: 'treasury_forecast_generate',
       entityType: 'treasury_forecast',
-      entityId: forecast.id,
-      details: { lookahead_days, dangerDays, totalObligationsInWindow },
+      // entityId intentionally omitted — no treasury_forecasts row to
+      // link to post-T20. Future: link to the forecast_snapshots row
+      // once the POST persists one.
+      details: {
+        lookahead_days,
+        dangerDays,
+        totalObligationsInWindow,
+        worstProjectedBalance: worstProjectedBalance === Infinity ? 0 : worstProjectedBalance,
+      },
     });
 
-    return NextResponse.json({ data: forecast }, { status: 201 });
+    // Synthesize a TreasuryForecast-shaped response so callers that read
+    // data.forecast_data / data.ai_summary keep compiling. Mirrors the
+    // pattern from the T16 GET route.
+    const now = new Date().toISOString();
+    const data: TreasuryForecast = {
+      id: `live-${enterpriseId ?? 'none'}-${lookahead_days}`,
+      user_id: userId,
+      lookahead_days,
+      forecast_data: forecastPoints,
+      ai_summary: null,
+      generated_at: now,
+      created_at: now,
+    };
+
+    return NextResponse.json({ data }, { status: 201 });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 500 });
   }

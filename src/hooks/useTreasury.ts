@@ -302,12 +302,19 @@ export function useStablecoinPrices() {
 
 // ---- Cash Flow Forecast ----
 
-export function useTreasuryForecast(days = 30) {
+export type ForecastScenarioOption = 'base' | 'conservative' | 'stress';
+
+export function useTreasuryForecast(
+  days = 30,
+  scenario: ForecastScenarioOption = 'base',
+) {
   const { data: session } = useSession();
   return useQuery<TreasuryForecast | null>({
-    queryKey: ['treasury-forecast', session?.user?.id, days],
+    queryKey: ['treasury-forecast', session?.user?.id, days, scenario],
     queryFn: async () => {
-      const res = await fetch(`/api/treasury/forecast?days=${days}`);
+      const res = await fetch(
+        `/api/treasury/forecast?days=${days}&scenario=${scenario}`,
+      );
       if (!res.ok) throw new Error('Failed to fetch forecast');
       const { data } = await res.json();
       return data ?? null;
