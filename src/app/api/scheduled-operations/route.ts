@@ -150,27 +150,41 @@ export async function POST(req: NextRequest) {
 
   const { type, scheduledFor, memo, params } = parsed.data;
 
-  // Validate type-specific params
-  let validatedParams: Record<string, unknown>;
+  // Swaps and bridges are temporarily disabled at the product level —
+  // Bridge.xyz does not offer a swap or cross-chain primitive, and the
+  // replacement DEX / bridging adapters are still being designed. See
+  // /api/swaps/quote and /api/bridges/quote for the full explanation.
+  // Reject at the scheduling layer too so users don't queue operations
+  // that will silently fail at execution time.
   if (type === 'swap') {
-    const result = swapParamsSchema.safeParse(params);
-    if (!result.success) {
-      return NextResponse.json({ error: 'Invalid swap params', details: result.error.issues }, { status: 400 });
-    }
-    validatedParams = result.data;
-  } else if (type === 'bridge') {
-    const result = bridgeParamsSchema.safeParse(params);
-    if (!result.success) {
-      return NextResponse.json({ error: 'Invalid bridge params', details: result.error.issues }, { status: 400 });
-    }
-    validatedParams = result.data;
-  } else {
-    const result = rampParamsSchema.safeParse(params);
-    if (!result.success) {
-      return NextResponse.json({ error: 'Invalid ramp params', details: result.error.issues }, { status: 400 });
-    }
-    validatedParams = result.data;
+    return NextResponse.json(
+      {
+        error: 'swaps_disabled',
+        message: 'Stablecoin swaps are temporarily disabled while we integrate a dedicated DEX aggregator.',
+      },
+      { status: 501 },
+    );
   }
+  if (type === 'bridge') {
+    return NextResponse.json(
+      {
+        error: 'bridges_disabled',
+        message: 'Cross-chain bridging is temporarily disabled while we integrate a dedicated bridging provider.',
+      },
+      { status: 501 },
+    );
+  }
+
+  // After the swap/bridge gates above, `type` is narrowed to 'ramp' — the
+  // other param branches are intentionally removed as dead code. The
+  // swap/bridge zod schemas (swapParamsSchema / bridgeParamsSchema) are kept
+  // in this file so re-enabling is a one-line revert once the replacement
+  // adapters land.
+  const rampResult = rampParamsSchema.safeParse(params);
+  if (!rampResult.success) {
+    return NextResponse.json({ error: 'Invalid ramp params', details: rampResult.error.issues }, { status: 400 });
+  }
+  const validatedParams: Record<string, unknown> = rampResult.data;
 
   // Fetch initial quote
   const mode = getIntegrationMode(session.user.subscription_tier);
