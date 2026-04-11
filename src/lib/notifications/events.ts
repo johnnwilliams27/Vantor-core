@@ -44,6 +44,8 @@ export const EVENT_CATALOG: EventConfig[] = [
   { eventType: 'recommendation_rejected', category: 'treasury_ai', label: 'Recommendation Rejected', description: 'AI recommendation was rejected', defaultRoles: ['treasury_manager', 'accountant'] },
   { eventType: 'recommendation_expired', category: 'treasury_ai', label: 'Recommendation Expired', description: 'AI recommendation expired without action', defaultRoles: ['treasury_manager', 'accountant'] },
   { eventType: 'recommendation_daily', category: 'treasury_ai', label: 'Daily AI Analysis', description: 'Daily automated treasury analysis with new recommendations', defaultRoles: ['treasury_manager', 'accountant'] },
+  { eventType: 'insight_critical', category: 'treasury_ai', label: 'Critical Treasury Insight', description: 'High-severity insight requiring immediate attention (liquidity shortfall, concentration breach)', defaultRoles: ['treasury_manager', 'accountant'] },
+  { eventType: 'insight_warning', category: 'treasury_ai', label: 'Treasury Insight Warning', description: 'Medium-severity insight — yield rebalance opportunity, concentration approaching cap, idle cash', defaultRoles: ['treasury_manager', 'accountant'] },
 
   // Transactions
   { eventType: 'transfer_completed', category: 'transactions', label: 'Transfer Completed', description: 'Crypto transfer was executed', defaultRoles: ['treasury_manager', 'accountant'] },

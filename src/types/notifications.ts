@@ -24,6 +24,8 @@ export type NotificationEventType =
   | 'recommendation_rejected'
   | 'recommendation_expired'
   | 'recommendation_daily'
+  | 'insight_critical'
+  | 'insight_warning'
   | 'transfer_completed'
   | 'transfer_scheduled'
   | 'swap_completed'
