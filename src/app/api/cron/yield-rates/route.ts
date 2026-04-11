@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
           supply_apy: rate.supplyAPY,
           reward_apy: rate.rewardAPY,
           total_apy: rate.supplyAPY + rate.rewardAPY,
+          tvl_usd: rate.tvlUsd ?? null,
           fetched_at: new Date().toISOString(),
           is_stale: false,
         },

@@ -87,6 +87,19 @@ function formatAPY(value: number): string {
   return `${(value * 100).toFixed(2)}%`;
 }
 
+/**
+ * Human-readable USD amount: $12.3B, $182M, $4.5K, $0.
+ * Falls through to a "—" string when the value is nullish so callers
+ * don't have to branch before passing in.
+ */
+function formatUsdCompact(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) return '—';
+  if (value >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(2)}B`;
+  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `$${(value / 1_000).toFixed(0)}K`;
+  return `$${Math.round(value)}`;
+}
+
 function formatRelativeTime(isoString: string): string {
   const diffMs = Date.now() - new Date(isoString).getTime();
   const diffSec = Math.floor(diffMs / 1000);
@@ -697,6 +710,30 @@ export function YieldRatesTable() {
                 <p className="text-xs text-muted-foreground mt-0.5">{p.description}</p>
               </div>
               <CardContent className="space-y-3 pt-2">
+
+                {/* Pool TVL — summed across tokens for the protocol. If no
+                    rate has a TVL (e.g. fetcher hasn't populated it yet),
+                    skip the whole strip instead of showing "$0". */}
+                {(() => {
+                  const tvls = p.rates
+                    .map((r) => (r as unknown as { tvlUsd?: number | null }).tvlUsd)
+                    .filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
+                  if (tvls.length === 0) return null;
+                  const totalTvl = tvls.reduce((a, b) => a + b, 0);
+                  return (
+                    <div className="flex items-center justify-between rounded-md border border-border/60 bg-muted/20 px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                          Pool TVL
+                        </span>
+                        <InfoTooltip content="Total Value Locked across all tokens supported by this protocol. Refreshed every minute from on-chain reads or the protocol's own API." />
+                      </div>
+                      <span className="text-lg font-bold tracking-tight">
+                        {formatUsdCompact(totalTvl)}
+                      </span>
+                    </div>
+                  );
+                })()}
 
                 {p.riskFactors && (
                   <div className="border rounded-md p-3 bg-muted/30">

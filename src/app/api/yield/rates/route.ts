@@ -53,6 +53,7 @@ export async function GET(req: NextRequest) {
         supplyAPY: Number(row.supply_apy),
         rewardAPY: Number(row.reward_apy),
         totalAPY: Number(row.total_apy),
+        tvlUsd: row.tvl_usd != null ? Number(row.tvl_usd) : null,
         fetchedAt: row.fetched_at,
         isStale: row.is_stale,
       }));

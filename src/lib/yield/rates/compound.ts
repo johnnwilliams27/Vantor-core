@@ -6,7 +6,11 @@ const USDT_COMET = '0x3Afdc9BCA9213A35503b077a6072F3D0d5AB0840' as const;
 
 const SECONDS_PER_YEAR = 31_536_000;
 
-// Minimal ABI — getUtilization + getSupplyRate
+// USDC and USDT Comets both use 6-decimal base tokens. totalSupply()
+// returns in those base-token units, which equals USD for stablecoins.
+const STABLECOIN_DECIMALS = 6;
+
+// Minimal ABI — getUtilization + getSupplyRate + totalSupply
 const COMET_ABI = [
   {
     name: 'getUtilization',
@@ -22,14 +26,29 @@ const COMET_ABI = [
     inputs: [{ name: 'utilization', type: 'uint256' }],
     outputs: [{ name: '', type: 'uint64' }],
   },
+  {
+    name: 'totalSupply',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
 ] as const;
 
 async function fetchCometRate(comet: `0x${string}`, token: string): Promise<RateResult> {
-  const utilization = await ethereumClient.readContract({
-    address: comet,
-    abi: COMET_ABI,
-    functionName: 'getUtilization',
-  });
+  // Three view calls in parallel — same contract, no dependency between them.
+  const [utilization, totalSupplyRaw] = await Promise.all([
+    ethereumClient.readContract({
+      address: comet,
+      abi: COMET_ABI,
+      functionName: 'getUtilization',
+    }),
+    ethereumClient.readContract({
+      address: comet,
+      abi: COMET_ABI,
+      functionName: 'totalSupply',
+    }).catch(() => null),
+  ]);
 
   const supplyRatePerSecond = await ethereumClient.readContract({
     address: comet,
@@ -42,12 +61,16 @@ async function fetchCometRate(comet: `0x${string}`, token: string): Promise<Rate
   const ratePerSecond = Number(supplyRatePerSecond) / 1e18;
   const supplyAPY = Math.pow(1 + ratePerSecond, SECONDS_PER_YEAR) - 1;
 
+  const tvlUsd =
+    totalSupplyRaw !== null ? Number(totalSupplyRaw) / 10 ** STABLECOIN_DECIMALS : null;
+
   return {
     protocol: 'compound',
     token,
     chain: 'ethereum',
     supplyAPY,
     rewardAPY: 0,
+    tvlUsd,
   };
 }
 

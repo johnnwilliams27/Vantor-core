@@ -52,6 +52,14 @@ export interface YieldRate {
   rewardAPY: number;   // additional reward token APY
   totalAPY: number;    // supplyAPY + rewardAPY
   fetchedAt: string;
+  /**
+   * Pool TVL in USD for this (protocol, token) row, when known.
+   * Populated from the yield_rate_cache table after the per-minute
+   * cron refreshes it. null = unknown / couldn't fetch this cycle.
+   */
+  tvlUsd?: number | null;
+  /** true if the cron failed to refresh this row during its last run. */
+  isStale?: boolean;
 }
 
 export interface DepositParams {
