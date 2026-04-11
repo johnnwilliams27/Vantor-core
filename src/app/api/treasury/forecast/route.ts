@@ -6,6 +6,14 @@ import { requireRole } from '@/lib/auth/rbac';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 import { generateCashFlowForecast } from '@/lib/treasury/predictions';
 import type { TreasuryForecast } from '@/types/database';
+import type { ForecastScenario } from '@/lib/forecast/types';
+
+const VALID_SCENARIOS: readonly ForecastScenario[] = ['base', 'conservative', 'stress'] as const;
+function parseScenario(raw: string | null): ForecastScenario {
+  return (VALID_SCENARIOS as readonly string[]).includes(raw ?? '')
+    ? (raw as ForecastScenario)
+    : 'base';
+}
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -19,6 +27,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const daysRaw = parseInt(searchParams.get('days') ?? '30', 10);
   const days = Number.isInteger(daysRaw) && daysRaw >= 7 && daysRaw <= 365 ? daysRaw : 30;
+  const scenario = parseScenario(searchParams.get('scenario'));
 
   const supabase = createAdminClient();
 
@@ -42,6 +51,7 @@ export async function GET(req: NextRequest) {
       session.user.id,
       days,
       enterpriseId,
+      scenario,
     );
 
     const now = new Date().toISOString();

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ForecastDataPoint } from '@/types/database';
 import { createForecastService } from '@/lib/forecast/service';
+import type { ForecastScenario } from '@/lib/forecast/types';
 
 /**
  * @deprecated Transitional adapter — kept alive only so the legacy Treasury AI
@@ -36,6 +37,7 @@ export async function generateCashFlowForecast(
   _userId: string,
   lookaheadDays: number,
   enterpriseId: string,
+  scenario: ForecastScenario = 'base',
 ): Promise<ForecastDataPoint[]> {
   if (!enterpriseId) return [];
 
@@ -43,6 +45,7 @@ export async function generateCashFlowForecast(
     enterpriseId,
     db: supabase,
     consumer: 'treasurer_view',
+    scenario,
   });
   const { projection, obligations } = await svc.getProjection(lookaheadDays);
 
