@@ -66,21 +66,19 @@ export function buildAggregateQuerySql(
 
   if (window.group_by.initiator) {
     groupFilters.push(`proposed_movement->'initiator'->>'user_id' = $${bindings.length + 1}`);
-    // Discriminated union narrows by type — pull the appropriate identity field
-    const initiatorId =
-      movement.initiator.type === 'human'
-        ? movement.initiator.user_id
-        : movement.initiator.type === 'agent'
-          ? movement.initiator.agent_id
-          : movement.initiator.type === 'ai_recommendation'
-            ? movement.initiator.recommendation_id
-            : movement.initiator.scheduled_op_id;
-    bindings.push(initiatorId);
+    // Discriminated union — use exhaustive switch so adding a 5th Initiator
+    // type is a compile error here rather than a silent fallthrough
+    bindings.push(extractInitiatorIdentity(movement));
   }
   if (window.group_by.counterparty && movement.counterparty) {
     groupFilters.push(`proposed_movement->'counterparty'->>'id' = $${bindings.length + 1}`);
     bindings.push(movement.counterparty.id);
   }
+  // Note: if window.group_by.counterparty is true but movement.counterparty
+  // is undefined, the filter is NOT emitted here. The detector checks this
+  // invariant upstream in runOne() and short-circuits to a structured
+  // failure before reaching this builder, so any call that reaches this
+  // point with that condition is a caller bug.
   if (window.group_by.destination) {
     const destIdentity = `${movement.destination.venue}:${movement.destination.address ?? movement.destination.account_id ?? ''}`;
     groupFilters.push(
@@ -116,4 +114,29 @@ export function buildAggregateQuerySql(
   `;
 
   return { sql, bindings };
+}
+
+/**
+ * Exhaustive discriminated-union unpacker for the Initiator type.
+ * Returns the identity field appropriate for each initiator kind.
+ * Adding a 5th Initiator kind triggers a compile error on the assertNever.
+ */
+function extractInitiatorIdentity(movement: ProposedMovement): string {
+  const init = movement.initiator;
+  switch (init.type) {
+    case 'human':
+      return init.user_id;
+    case 'agent':
+      return init.agent_id;
+    case 'ai_recommendation':
+      return init.recommendation_id;
+    case 'schedule':
+      return init.scheduled_op_id;
+    default:
+      return assertNeverInitiator(init);
+  }
+}
+
+function assertNeverInitiator(x: never): never {
+  throw new Error(`Unhandled Initiator type: ${JSON.stringify(x)}`);
 }

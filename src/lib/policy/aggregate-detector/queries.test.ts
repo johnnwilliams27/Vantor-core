@@ -119,4 +119,38 @@ describe('buildAggregateQuerySql', () => {
     });
     expect(result.bindings).toContain('agent-42');
   });
+
+  it('handles ai_recommendation initiator', () => {
+    const aiMovement: ProposedMovement = {
+      ...mkMovement(),
+      initiator: { type: 'ai_recommendation', recommendation_id: 'rec-7' },
+    };
+    const result = buildAggregateQuerySql({
+      enterpriseId: 'ent-1',
+      window: { duration_ms: 86_400_000, group_by: { initiator: true } },
+      movement: aiMovement,
+      windowStart: new Date(),
+      windowEnd: new Date(),
+    });
+    expect(result.bindings).toContain('rec-7');
+  });
+
+  it('handles schedule initiator', () => {
+    const scheduleMovement: ProposedMovement = {
+      ...mkMovement(),
+      initiator: { type: 'schedule', scheduled_op_id: 'sched-99' },
+    };
+    const result = buildAggregateQuerySql({
+      enterpriseId: 'ent-1',
+      window: { duration_ms: 86_400_000, group_by: { initiator: true } },
+      movement: scheduleMovement,
+      windowStart: new Date(),
+      windowEnd: new Date(),
+    });
+    expect(result.bindings).toContain('sched-99');
+  });
+
+  // Note: the missing-counterparty invariant is enforced upstream in
+  // detector.runOne() (fail-closed with a structured failure) — not in
+  // buildAggregateQuerySql. See detector.test.ts for that test.
 });

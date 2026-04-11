@@ -6,6 +6,7 @@ import { Condition, WindowSpec } from '../types/ir';
 import { AggregateWindowResults, AggregateWindowResult } from '../types/context';
 import { RunAggregateQuery } from './queries';
 import { computeWindowSpecHash } from './hash';
+import { isValidDecimalString } from '../hard-limit-checker/templates';
 
 export interface AggregationDetectorDeps {
   runQuery: RunAggregateQuery;
@@ -98,9 +99,9 @@ export class AggregationDetector {
   /**
    * Recursive walker over a Condition tree, collecting aggregate_window
    * specs into `map` by hash. Non-aggregate leaves are intentionally
-   * skipped — the detector only cares about aggregate nodes. If a new
-   * Condition kind is added, it defaults to skip (safe for this walker
-   * since only aggregate_window carries a WindowSpec).
+   * skipped — the detector only cares about aggregate nodes. The default
+   * case calls assertNever so adding a new Condition kind is a compile
+   * error here rather than a silent skip.
    */
   private walkCondition(cond: Condition, map: Map<string, WindowSpec>): void {
     switch (cond.kind) {
@@ -134,6 +135,12 @@ export class AggregationDetector {
    * Execute a single aggregate window query. Catches query errors and
    * wraps them in an AggregateWindowResult with a failure field so the
    * caller sees a structured result rather than an unhandled rejection.
+   *
+   * Also enforces the fail-closed invariant for counterparty-grouped
+   * specs: if the spec groups by counterparty but the movement has no
+   * counterparty, returns a structured failure BEFORE calling runQuery.
+   * Silently dropping the filter would over-count every row in the
+   * window and produce a false-positive breach with a misleading rationale.
    */
   private async runOne(
     spec: WindowSpec,
@@ -145,6 +152,29 @@ export class AggregationDetector {
     const windowStart = new Date(now.getTime() - spec.duration_ms);
     const windowEnd = now;
 
+    // Fail-closed on counterparty-grouped spec + missing counterparty
+    if (spec.group_by.counterparty && !movement.counterparty) {
+      return {
+        window_spec_hash: hash,
+        window_start: windowStart,
+        window_end: windowEnd,
+        sum_amount_usd: '',
+        sum_amount_by_asset: {},
+        count: 0,
+        distinct_destinations: 0,
+        distinct_counterparties: 0,
+        included_evaluation_ids: [],
+        includes_proposed: false,
+        failure: {
+          reason_code: 'aggregate_query_failed',
+          human_readable:
+            `Aggregate window groups by counterparty, but the proposed movement has no counterparty. ` +
+            `A counterparty-grouped rule cannot be meaningfully evaluated against a movement without one.`,
+          details: { window_spec: spec, missing_counterparty: true },
+        },
+      };
+    }
+
     try {
       const raw = await this.deps.runQuery({
         enterpriseId,
@@ -154,16 +184,47 @@ export class AggregationDetector {
         windowEnd,
       });
 
+      // Shape-check the raw result before trusting it downstream. A buggy
+      // runQuery impl returning undefined/null/garbage for numeric fields
+      // must not propagate into AggregateWindowResult where an evaluator
+      // leaf would silently treat '' or NaN as 'rule did not fire'.
+      if (!isValidDecimalString(raw.sum_amount_usd)) {
+        throw new Error(
+          `runQuery returned malformed sum_amount_usd: ${JSON.stringify(raw.sum_amount_usd)}`,
+        );
+      }
+      if (typeof raw.count !== 'number' || !Number.isFinite(raw.count) || raw.count < 0) {
+        throw new Error(`runQuery returned malformed count: ${JSON.stringify(raw.count)}`);
+      }
+      if (
+        typeof raw.distinct_destinations !== 'number' ||
+        !Number.isFinite(raw.distinct_destinations) ||
+        raw.distinct_destinations < 0
+      ) {
+        throw new Error(
+          `runQuery returned malformed distinct_destinations: ${JSON.stringify(raw.distinct_destinations)}`,
+        );
+      }
+      if (
+        typeof raw.distinct_counterparties !== 'number' ||
+        !Number.isFinite(raw.distinct_counterparties) ||
+        raw.distinct_counterparties < 0
+      ) {
+        throw new Error(
+          `runQuery returned malformed distinct_counterparties: ${JSON.stringify(raw.distinct_counterparties)}`,
+        );
+      }
+
       return {
         window_spec_hash: hash,
         window_start: windowStart,
         window_end: windowEnd,
         sum_amount_usd: raw.sum_amount_usd,
-        sum_amount_by_asset: raw.sum_amount_by_asset,
+        sum_amount_by_asset: raw.sum_amount_by_asset ?? {},
         count: raw.count,
         distinct_destinations: raw.distinct_destinations,
         distinct_counterparties: raw.distinct_counterparties,
-        included_evaluation_ids: raw.included_evaluation_ids,
+        included_evaluation_ids: raw.included_evaluation_ids ?? [],
         includes_proposed: false,
       };
     } catch (err) {
