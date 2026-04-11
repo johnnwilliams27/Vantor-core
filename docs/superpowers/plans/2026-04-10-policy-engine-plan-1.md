@@ -127,7 +127,7 @@ tests/smoke.test.ts                           ← minimal smoke test to verify V
 ### New files — database
 
 ```
-supabase/migrations/0034_policy_engine_schema.sql   ← all policy_* tables + triggers + RLS + indexes + column adds
+supabase/migrations/0038_policy_engine_schema.sql   ← all policy_* tables + triggers + RLS + indexes + column adds
 ```
 
 ### Modified files
@@ -278,11 +278,11 @@ EOF
 ## Task 1: Create policy engine schema migration file
 
 **Files:**
-- Create: `supabase/migrations/0034_policy_engine_schema.sql`
+- Create: `supabase/migrations/0038_policy_engine_schema.sql`
 
 - [ ] **Step 1: Create the migration file with header and BEGIN block**
 
-Create `supabase/migrations/0034_policy_engine_schema.sql`:
+Create `supabase/migrations/0038_policy_engine_schema.sql`:
 
 ```sql
 -- Migration 0034: Policy Engine Schema
@@ -852,7 +852,7 @@ The migration uses standard Postgres SQL. Visually scan the file for:
 - [ ] **Step 11: Commit the migration file**
 
 ```bash
-git add supabase/migrations/0034_policy_engine_schema.sql
+git add supabase/migrations/0038_policy_engine_schema.sql
 git commit -m "$(cat <<'EOF'
 feat(policy): add migration 0034 — policy engine schema
 
@@ -874,7 +874,7 @@ EOF
 
 ## Task 2: Apply schema migration to dev and prod Supabase
 
-**Files:** (runs existing `supabase/migrations/0034_policy_engine_schema.sql`, no new files)
+**Files:** (runs existing `supabase/migrations/0038_policy_engine_schema.sql`, no new files)
 
 This task runs the migration against both Supabase instances. Per CLAUDE.md, both dev (`spllxotyxipdvfpkkvgu`) and prod (`lfujbwemavgiifkltrag`) must be kept in sync.
 
@@ -894,12 +894,12 @@ If it shows the prod URL (`lfujbwemavgiifkltrag`), stop and swap to dev first. *
 - [ ] **Step 2: Run the migration against dev**
 
 ```bash
-npm run migrate supabase/migrations/0034_policy_engine_schema.sql
+npm run migrate supabase/migrations/0038_policy_engine_schema.sql
 ```
 
 Expected output:
 ```
-Running migration: supabase/migrations/0034_policy_engine_schema.sql
+Running migration: supabase/migrations/0038_policy_engine_schema.sql
 Project: spllxotyxipdvfpkkvgu
 Migration applied successfully.
 ```
@@ -1021,12 +1021,12 @@ NEXT_PUBLIC_SUPABASE_URL=https://lfujbwemavgiifkltrag.supabase.co
 - [ ] **Step 8: Run the migration against prod**
 
 ```bash
-npm run migrate supabase/migrations/0034_policy_engine_schema.sql
+npm run migrate supabase/migrations/0038_policy_engine_schema.sql
 ```
 
 Expected output:
 ```
-Running migration: supabase/migrations/0034_policy_engine_schema.sql
+Running migration: supabase/migrations/0038_policy_engine_schema.sql
 Project: lfujbwemavgiifkltrag
 Migration applied successfully.
 ```
@@ -10069,7 +10069,7 @@ git push origin feature/policy-engine
 When all tasks are checked:
 
 - [ ] Vitest installed, configured, and running against the repo
-- [ ] `0034_policy_engine_schema.sql` migration applied to both dev and prod Supabase
+- [ ] `0038_policy_engine_schema.sql` migration applied to both dev and prod Supabase
 - [ ] All 9 `policy_*` tables exist with triggers, RLS policies, indexes
 - [ ] `is_policy_admin` and `approval_request_id` columns added to existing tables
 - [ ] `src/lib/policy/errors/` — ReasonCode enum + PolicyError classes

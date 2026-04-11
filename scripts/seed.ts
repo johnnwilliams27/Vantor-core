@@ -1657,7 +1657,7 @@ async function main() {
   // Runtime/audit tables (policy_evaluations, policy_approval_requests,
   // policy_activation_events) are deliberately NOT seeded — they are
   // append-only via `_no_delete` rewrite rules and would poison re-seeds.
-  // Schema: supabase/migrations/0034_policy_engine_schema.sql
+  // Schema: supabase/migrations/0038_policy_engine_schema.sql
   if (enterpriseId) {
     console.log('\n🛡️  Seeding policy engine (config tables)...');
 
