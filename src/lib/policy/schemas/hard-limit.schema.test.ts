@@ -145,4 +145,114 @@ describe('hardLimitSchema', () => {
     const row = { ...baseValid, name: '' };
     expect(hardLimitSchema.safeParse(row).success).toBe(false);
   });
+
+  // ─── C1: parseFloat bypass regressions ───────────────────────────────
+  it('rejects max_single_asset_concentration_pct with "50foo" (parseFloat bypass)', () => {
+    const row = {
+      ...baseValid,
+      limit_type: 'max_single_asset_concentration_pct',
+      limit_value: '50foo',
+      limit_currency: undefined,
+    };
+    expect(hardLimitSchema.safeParse(row).success).toBe(false);
+  });
+
+  it('rejects max_single_asset_concentration_pct with "0xFF" (parseFloat bypass)', () => {
+    const row = {
+      ...baseValid,
+      limit_type: 'max_single_asset_concentration_pct',
+      limit_value: '0xFF',
+      limit_currency: undefined,
+    };
+    expect(hardLimitSchema.safeParse(row).success).toBe(false);
+  });
+
+  it('rejects max_single_asset_concentration_pct with "50 %" (trailing garbage)', () => {
+    const row = {
+      ...baseValid,
+      limit_type: 'max_single_asset_concentration_pct',
+      limit_value: '50 %',
+      limit_currency: undefined,
+    };
+    expect(hardLimitSchema.safeParse(row).success).toBe(false);
+  });
+
+  // ─── I1: cross-field currency semantics ──────────────────────────────
+  it('rejects min_cash_reserve_usd with limit_currency=undefined (must be USD)', () => {
+    const row = { ...baseValid, limit_currency: undefined };
+    expect(hardLimitSchema.safeParse(row).success).toBe(false);
+  });
+
+  it('rejects min_cash_reserve_usd with limit_currency=USDC (not USD)', () => {
+    const row = { ...baseValid, limit_currency: 'USDC' };
+    expect(hardLimitSchema.safeParse(row).success).toBe(false);
+  });
+
+  it('rejects max_single_asset_concentration_pct when limit_currency is set', () => {
+    const row = {
+      ...baseValid,
+      limit_type: 'max_single_asset_concentration_pct',
+      limit_value: '70',
+      limit_currency: 'USD',
+    };
+    expect(hardLimitSchema.safeParse(row).success).toBe(false);
+  });
+
+  it('rejects obligation_coverage_days when limit_currency is set', () => {
+    const row = {
+      ...baseValid,
+      limit_type: 'obligation_coverage_days',
+      limit_value: '14',
+      limit_currency: 'USD',
+    };
+    expect(hardLimitSchema.safeParse(row).success).toBe(false);
+  });
+
+  it('rejects max_native_exposure with no limit_currency', () => {
+    const row = {
+      ...baseValid,
+      limit_type: 'max_native_exposure',
+      limit_value: '10000000',
+      limit_currency: undefined,
+      scope: { asset: 'USDT' },
+    };
+    expect(hardLimitSchema.safeParse(row).success).toBe(false);
+  });
+
+  // ─── I2/I3/I4: bounded values ────────────────────────────────────────
+  it('rejects obligation_coverage_days with value 0 (tautology)', () => {
+    const row = {
+      ...baseValid,
+      limit_type: 'obligation_coverage_days',
+      limit_value: '0',
+      limit_currency: undefined,
+    };
+    expect(hardLimitSchema.safeParse(row).success).toBe(false);
+  });
+
+  it('rejects obligation_coverage_days beyond the 365-day ceiling', () => {
+    const row = {
+      ...baseValid,
+      limit_type: 'obligation_coverage_days',
+      limit_value: '400',
+      limit_currency: undefined,
+    };
+    expect(hardLimitSchema.safeParse(row).success).toBe(false);
+  });
+
+  it('rejects min_cash_reserve_usd with value 0 (use a rule for total freeze)', () => {
+    const row = { ...baseValid, limit_value: '0' };
+    expect(hardLimitSchema.safeParse(row).success).toBe(false);
+  });
+
+  it('rejects min_cash_reserve_usd exceeding MAX_MONETARY_USD ceiling', () => {
+    // 1e15 + 1
+    const row = { ...baseValid, limit_value: '1000000000000001' };
+    expect(hardLimitSchema.safeParse(row).success).toBe(false);
+  });
+
+  it('rejects min_cash_reserve_usd with absurdly long decimal digits', () => {
+    const row = { ...baseValid, limit_value: '1'.repeat(50) };
+    expect(hardLimitSchema.safeParse(row).success).toBe(false);
+  });
 });
