@@ -48,6 +48,24 @@ export class CryptoError extends Error {
       trace_id: this.fields.trace_id,
     };
   }
+
+  /**
+   * Returns a new CryptoError with `row_locator` merged into fields. If the
+   * error already carries a `row_locator`, returns `this` unchanged so an
+   * inner caller's identifier wins over an outer one.
+   *
+   * This is the sanctioned way to attach caller context to an error that
+   * was raised by a lower layer — never mutate `fields` directly.
+   */
+  withRowLocator(row_locator: string): CryptoError {
+    if (this.fields.row_locator) return this;
+    return new CryptoError(
+      this.code,
+      this.explanation,
+      this.next_step,
+      { ...this.fields, row_locator },
+    );
+  }
 }
 
 function withTrace(fields: Omit<CryptoErrorFields, 'trace_id'> = {}): CryptoErrorFields {

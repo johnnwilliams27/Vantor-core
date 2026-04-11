@@ -5,6 +5,7 @@ import {
   cryptoUnknownKeyId,
   cryptoAuthTagMismatch,
   cryptoBadEnvelope,
+  cryptoProviderUnavailable,
 } from './errors';
 
 const HEX64_RE = /^[0-9a-fA-F]{64}$/;
@@ -140,13 +141,15 @@ let cachedProvider: CipherProvider | null = null;
  * with a config you control, and pass it to encryptJson/decryptJson.
  */
 export function getCipherProvider(): CipherProvider {
+  // NOTE: errors thrown here are NOT cached — a misconfigured deploy will
+  // throw on every call until the env vars are fixed and the process
+  // restarts. Only a successful construction is memoized.
   if (cachedProvider) return cachedProvider;
   const providerName = process.env.CRYPTO_PROVIDER ?? 'env';
   if (providerName !== 'env') {
-    throw new Error(
-      `CRYPTO_PROVIDER="${providerName}" is not implemented. Valid values: "env". ` +
-        'See docs/superpowers/specs/2026-04-11-erp-credentials-encryption-design.md for the KMS migration path.',
-    );
+    throw cryptoProviderUnavailable({
+      cause: `unknown CRYPTO_PROVIDER value "${providerName}". Valid values: "env". See docs/superpowers/specs/2026-04-11-erp-credentials-encryption-design.md for the KMS migration path.`,
+    });
   }
   const config = loadEnvKeyConfigFromProcessEnv(process.env);
   cachedProvider = new EnvKeyCipherProvider(config);

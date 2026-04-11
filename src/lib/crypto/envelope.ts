@@ -55,12 +55,12 @@ export async function decryptJson<T>(envelope: string, opts: DecryptOptions = {}
   try {
     plaintext = await p.decrypt(keyId, inner);
   } catch (err) {
-    // Re-throw CryptoErrors after attaching row_locator; wrap anything else as upstream.
+    // If provider.decrypt threw a CryptoError and the caller gave us a
+    // row_locator, return a fresh CryptoError with the locator attached.
+    // Never mutate the error's fields — withRowLocator() returns a new
+    // instance so outer layers can't accidentally observe half-written state.
     if (err instanceof CryptoError) {
-      if (row_locator && !err.fields.row_locator) {
-        err.fields.row_locator = row_locator;
-      }
-      throw err;
+      throw row_locator ? err.withRowLocator(row_locator) : err;
     }
     throw err;
   }
