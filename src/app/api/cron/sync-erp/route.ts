@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
 
   for (const erpConfig of configs) {
     try {
-      const credentials = decryptCredentials(erpConfig.credentials);
+      const credentials = await decryptCredentials(erpConfig.credentials, `erp_configurations/id=${erpConfig.id}`);
       const adapter = getERPAdapter(erpConfig.provider as ErpProvider, credentials);
 
       // Sync vendors

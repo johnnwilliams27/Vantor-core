@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
 
   if (!erpConfig) return NextResponse.json({ error: 'ERP config not found' }, { status: 404 });
 
-  const credentials = decryptCredentials(erpConfig.credentials);
+  const credentials = await decryptCredentials(erpConfig.credentials, `erp_configurations/id=${erpConfig.id}`);
   const adapter = getERPAdapter(erpConfig.provider as ErpProvider, credentials);
 
   const result = await adapter.postGLEntry({
