@@ -49,16 +49,16 @@ const PROTOCOL_LOGOS: Record<string, string> = {
  * Shown below the rates table on each protocol card.
  */
 const PROTOCOL_RATE_SOURCE: Record<string, string> = {
-  aave_v3: 'On-chain: Aave V3 Pool.getReserveData()',
-  compound_v3: 'On-chain: Compound V3 Comet.getSupplyRate()',
+  aave_v3: 'On-chain: Aave V3 Pool.getReserveData() + aToken.totalSupply()',
+  compound_v3: 'On-chain: Compound V3 Comet.getSupplyRate() + Comet.totalSupply()',
   morpho_steakhouse: 'Morpho Blue API (blue-api.morpho.org)',
   morpho_reservoir: 'Morpho Blue API (blue-api.morpho.org)',
-  sky: 'On-chain: sUSDS.ssr() (Sky Savings Rate)',
-  ethena: 'Ethena API (ethena.fi)',
+  sky: 'On-chain: sUSDS.ssr() + sUSDS.totalAssets()',
+  ethena: 'APY: ethena.fi · TVL: DefiLlama (yields.llama.fi)',
   ondo: 'Ondo Finance (fixed rate)',
-  kamino: 'Kamino API (api.kamino.finance)',
-  kamino_multiply: 'Kamino API (api.kamino.finance)',
-  drift: 'Drift API (drift.trade)',
+  kamino: 'DefiLlama (yields.llama.fi) — kamino-lend pool',
+  kamino_multiply: 'DefiLlama (yields.llama.fi) — kamino-lend × 2.5 leverage',
+  drift: 'Drift API (drift.trade) — currently unauthorized, needs API key',
 };
 
 const RISK_COLORS: Record<string, string> = {
@@ -721,14 +721,14 @@ export function YieldRatesTable() {
                   if (tvls.length === 0) return null;
                   const totalTvl = tvls.reduce((a, b) => a + b, 0);
                   return (
-                    <div className="flex items-center justify-between rounded-md border border-border/60 bg-muted/20 px-3 py-2">
+                    <div className="flex items-center justify-between rounded-lg border border-teal-500/20 bg-gradient-to-r from-teal-500/[0.08] to-cyan-500/[0.04] px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                        <span className="text-sm font-semibold uppercase tracking-wider text-teal-700 dark:text-teal-300">
                           Pool TVL
                         </span>
                         <InfoTooltip content="Total Value Locked across all tokens supported by this protocol. Refreshed every minute from on-chain reads or the protocol's own API." />
                       </div>
-                      <span className="text-lg font-bold tracking-tight">
+                      <span className="text-2xl font-bold tracking-tight text-foreground">
                         {formatUsdCompact(totalTvl)}
                       </span>
                     </div>
