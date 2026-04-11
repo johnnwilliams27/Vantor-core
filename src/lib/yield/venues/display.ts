@@ -66,7 +66,20 @@ export function getVenueDisplayName(protocolId: string | null | undefined): stri
   const venue = getVenue(protocolId as YieldProtocolId);
   if (venue) return venue.displayName;
   if (LEGACY_DISPLAY_NAMES[protocolId]) return LEGACY_DISPLAY_NAMES[protocolId];
-  return protocolId;
+  // Final fallback: title-case the raw slug so we never render
+  // something like `spiko_usd` or `morpho_steakhouse` in the UI.
+  // Tokens that look like all-caps tickers (USDC, OUSG, USYC, BUIDL)
+  // are kept uppercase; everything else is capitalized.
+  return protocolId
+    .split(/[_\s]+/)
+    .filter(Boolean)
+    .map((part) => {
+      if (/^[a-z]{3,5}$/.test(part) && /^(usdc|usdt|usdy|ousg|usyc|ustb|buidl|benji|busd|dai|sky|aave)$/.test(part)) {
+        return part.toUpperCase();
+      }
+      return part.charAt(0).toUpperCase() + part.slice(1);
+    })
+    .join(' ');
 }
 
 /**

@@ -1,6 +1,7 @@
 'use client';
 import { Card, CardContent } from '@/components/ui/card';
 import { useTreasuryOverview } from '@/hooks/useTreasury';
+import { useYieldPositions } from '@/hooks/useYield';
 import { CardSpinner } from '@/components/ui/spinner';
 import {
   ShieldCheck,
@@ -13,8 +14,11 @@ import {
   Wallet,
   Target,
   Receipt,
+  TrendingUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getHoldingCardPlacement } from '@/lib/treasury/holdings-category';
+import type { YieldProtocolId } from '@/lib/yield/interface';
 
 function formatUsd(value: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -37,9 +41,31 @@ function timeAgo(dateStr: string): string {
 
 export function TreasuryHealthCard() {
   const { data: overview, isLoading } = useTreasuryOverview();
+  const { data: yieldPositions } = useYieldPositions();
 
   if (isLoading) return <CardSpinner />;
   if (!overview) return null;
+
+  // Roll yield positions into Cash (tokenized MMFs) and DeFi using the
+  // same categorization the dashboard uses, so the Treasury AI overview
+  // mirrors what the user sees on the main balance card.
+  let mmfTotalUsd = 0;
+  let defiTotalUsd = 0;
+  for (const p of yieldPositions ?? []) {
+    if (!p.is_active) continue;
+    const placement = getHoldingCardPlacement({
+      kind: 'yield_position',
+      protocol: p.protocol as YieldProtocolId,
+    });
+    const usdValue = parseFloat(p.current_value_usd);
+    if (Number.isNaN(usdValue)) continue;
+    if (placement === 'cash') mmfTotalUsd += usdValue;
+    else if (placement === 'defi_positions') defiTotalUsd += usdValue;
+  }
+
+  const cashUsd = overview.totalBankBalanceUsd + mmfTotalUsd;
+  const stablecoinUsd = overview.totalCryptoBalanceUsd;
+  const defiUsd = defiTotalUsd;
 
   const health = overview.healthAnalysis;
   const totalAum = overview.totalBankBalanceUsd + overview.totalCryptoBalanceUsd;
@@ -105,16 +131,21 @@ export function TreasuryHealthCard() {
         </div>
 
         {/* Metrics grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           <MetricCell
             icon={Landmark}
-            label="Fiat"
-            value={formatUsd(overview.totalBankBalanceUsd)}
+            label="Cash"
+            value={formatUsd(cashUsd)}
           />
           <MetricCell
             icon={Wallet}
-            label="Crypto"
-            value={formatUsd(overview.totalCryptoBalanceUsd)}
+            label="Stablecoin"
+            value={formatUsd(stablecoinUsd)}
+          />
+          <MetricCell
+            icon={TrendingUp}
+            label="DeFi"
+            value={formatUsd(defiUsd)}
           />
           {health ? (
             <>

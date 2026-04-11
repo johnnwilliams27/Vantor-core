@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useYieldPositions, useYieldTransactions } from '@/hooks/useYield';
 import { TrendingUp } from 'lucide-react';
 import { CardSpinner } from '@/components/ui/spinner';
-import { getVenueDisplayName } from '@/lib/yield/venues';
+import { getVenueDisplayName, getVenue } from '@/lib/yield/venues';
+import type { YieldProtocolId } from '@/lib/yield/interface';
 
 function formatUsd(value: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -19,7 +20,12 @@ function formatUsd(value: number): string {
 /**
  * Chart colors per protocol. Intentionally kept local to this chart
  * (not in the venue registry) — they're rendering concerns, not venue
- * metadata. Unknown protocols fall through to the default gray.
+ * metadata.
+ *
+ * For unknown protocols, `getProtocolColor` falls back to a category-
+ * based palette via the venue registry, so newly added MMFs show up
+ * with a warm Treasury-style color instead of grey even before they
+ * earn an explicit entry here.
  */
 const PROTOCOL_COLORS: Record<string, string> = {
   aave_v3:           '#6366f1',
@@ -39,6 +45,22 @@ const PROTOCOL_COLORS: Record<string, string> = {
   usyc:              '#d97706',
   spiko_usd:         '#ca8a04',
 };
+
+// Category-based fallback palette — used when a protocol ID has no
+// explicit color above. Keeps MMFs warm and DeFi cool.
+const CATEGORY_FALLBACK_COLORS: Record<string, string> = {
+  tokenized_mmf:        '#f59e0b', // amber
+  defi_vault:           '#3b82f6', // blue
+  defi_lending_market:  '#6366f1', // indigo
+};
+
+function getProtocolColor(protocolId: string): string {
+  const explicit = PROTOCOL_COLORS[protocolId];
+  if (explicit) return explicit;
+  const venue = getVenue(protocolId as YieldProtocolId);
+  if (venue) return CATEGORY_FALLBACK_COLORS[venue.category] ?? '#94a3b8';
+  return '#94a3b8';
+}
 
 function CustomTooltip({ active, payload }: any) {
   if (!active || !payload?.length) return null;
@@ -89,7 +111,7 @@ export function YieldEarned() {
   const chartData = Object.entries(yieldByProtocol).map(([protocol, earned]) => ({
     protocol: getVenueDisplayName(protocol),
     earned,
-    fill: PROTOCOL_COLORS[protocol] ?? '#94a3b8',
+    fill: getProtocolColor(protocol),
   }));
 
   // Total deployed

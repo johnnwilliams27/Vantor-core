@@ -346,7 +346,24 @@ type DefiPositionRow = {
   current_value_usd: string;
   apy_snapshot: string | null;
   underlying_token: string;
+  apyAsOf: string | null;
 };
+
+// Compact "Apr 11" / "2h ago"-style label for APY snapshot timestamps.
+function formatApyAsOf(iso: string | null): string | null {
+  if (!iso) return null;
+  const ts = new Date(iso);
+  if (Number.isNaN(ts.getTime())) return null;
+  const diffMs = Date.now() - ts.getTime();
+  const diffMin = Math.floor(diffMs / 60_000);
+  if (diffMin < 1) return 'just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay < 7) return `${diffDay}d ago`;
+  return ts.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
 
 function DeFiPositionsCard({
   positions,
@@ -390,6 +407,7 @@ function DeFiPositionsCard({
                 {positions.map((pos) => {
                   const label = getVenueDisplayName(pos.protocol);
                   const apy = pos.apy_snapshot ? parseFloat(pos.apy_snapshot).toFixed(2) : null;
+                  const apyAsOfLabel = formatApyAsOf(pos.apyAsOf);
                   return (
                     <div key={pos.id} className="flex items-center justify-between py-1.5 px-1 rounded hover:bg-muted/30 transition-colors">
                       <div className="flex items-center gap-2 min-w-0">
@@ -398,7 +416,9 @@ function DeFiPositionsCard({
                           {pos.underlying_token}
                         </Badge>
                         {apy && (
-                          <span className="text-[10px] text-muted-foreground shrink-0">{apy}%</span>
+                          <span className="text-[10px] text-muted-foreground shrink-0">
+                            {apy}%{apyAsOfLabel ? ` · as of ${apyAsOfLabel}` : ''}
+                          </span>
                         )}
                       </div>
                       <span className="text-sm font-semibold tabular-nums shrink-0">{fmtD(parseFloat(pos.current_value_usd))}</span>
@@ -473,6 +493,7 @@ export function UnifiedBalanceCard() {
         current_value_usd: p.current_value_usd,
         apy_snapshot: p.apy_snapshot,
         underlying_token: p.underlying_token,
+        apyAsOf: p.last_refreshed_at ?? null,
       });
       defiTotalUsd += usdValue;
     } else {

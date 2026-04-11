@@ -668,7 +668,7 @@ function TokenizedMmfCard({ protocol }: { protocol: YieldProtocolWithRates }) {
             <InfoTooltip content={`7-day annualized yield as of ${venue.yieldAsOf}. Not a live quote — refreshed quarterly from rwa.xyz.`} />
           </div>
           <div className="text-right">
-            <div className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
+            <div className="text-lg font-bold tracking-tight text-foreground tabular-nums">
               {formatAPY(venue.referenceYield)}
             </div>
             <div className="text-[10px] text-muted-foreground">as of {venue.yieldAsOf}</div>
