@@ -106,13 +106,25 @@ export function SendPaymentForm() {
             <Label>From Bank Account</Label>
             <Select {...register('fromBankAccountId')}>
               <option value="">Select account…</option>
-              {bankAccounts?.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.nickname
-                    ? `${a.nickname} – ${a.institution_name}${a.last4 ? ` ****${a.last4}` : ''}`
-                    : `${a.institution_name}${a.last4 ? ` ****${a.last4}` : ''}`}
-                </option>
-              ))}
+              {bankAccounts?.map((a) => {
+                const base = a.nickname
+                  ? `${a.nickname} – ${a.institution_name}${a.last4 ? ` ****${a.last4}` : ''}`
+                  : `${a.institution_name}${a.last4 ? ` ****${a.last4}` : ''}`;
+                const balance =
+                  a.current_balance != null
+                    ? new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: a.balance_currency || a.currency || 'USD',
+                        maximumFractionDigits: 2,
+                      }).format(parseFloat(a.current_balance))
+                    : null;
+                return (
+                  <option key={a.id} value={a.id}>
+                    {base}
+                    {balance ? ` · ${balance}` : ''}
+                  </option>
+                );
+              })}
             </Select>
             {errors.fromBankAccountId && <p className="text-sm text-red-500">{errors.fromBankAccountId.message}</p>}
           </div>
@@ -189,10 +201,18 @@ export function SendPaymentForm() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Vantor fee (0.25%)</span>
-                <span className="font-mono">{(parseFloat(amount) * VANTOR_FEE_RATE).toFixed(2)} {watch('currency')}</span>
+                <span className="font-mono">
+                  {(parseFloat(amount) * VANTOR_FEE_RATE).toFixed(2)} {watch('currency')}
+                </span>
               </div>
-              <div className="text-xs text-muted-foreground pt-1 border-t border-border/50">
-                Vantor fees are aggregated and billed monthly to your card on file.
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Rail fee</span>
+                <span className="font-mono text-muted-foreground">Varies — applied by bank</span>
+              </div>
+              <div className="text-xs text-muted-foreground pt-1.5 border-t border-border/50 leading-relaxed">
+                The 0.25% Vantor fee is deducted at payment time by our banking rail
+                (not billed monthly). Your bank may also apply rail fees — typically
+                free for ACH, ~$25 for domestic wires, and 0.1–0.5% for SWIFT/international.
               </div>
             </div>
           )}
