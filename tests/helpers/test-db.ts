@@ -89,7 +89,17 @@ export async function createTestEnterprise(db: SupabaseClient): Promise<TestEnte
     // actually care about the intermediate state — both deletes together
     // sweep everything.
     await db.auth.admin.deleteUser(userId).catch(() => undefined);
-    await db.from('enterprises').delete().eq('id', enterpriseId);
+    // The enterprise delete MUST NOT silently fail. Before migration 0040 it
+    // was blocked by a rewrite-rule / FK-cascade interaction on audit_logs and
+    // several policy_* tables, and the silent failure let dev accumulate
+    // dozens of stale test enterprises across runs. Surface any future error.
+    const { error } = await db.from('enterprises').delete().eq('id', enterpriseId);
+    if (error) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[test-db] enterprise cleanup failed for ${enterpriseId}: ${error.message}`,
+      );
+    }
   };
 
   return { enterpriseId, userId, cleanup };
