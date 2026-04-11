@@ -113,7 +113,8 @@ async function cleanUserData(userId: string) {
   // Must delete in FK-safe order
   for (const t of ['simulation_runs', 'treasury_forecasts', 'ai_recommendations',
     'manual_obligations', 'treasury_rules', 'fiat_transactions', 'gl_postings',
-    'kyt_alerts', 'kyt_transfers', 'sanctions_screenings', 'travel_rule_transfers']) {
+    'kyt_alerts', 'kyt_transfers', 'sanctions_screenings', 'travel_rule_transfers',
+    'notifications', 'treasury_insights']) {
     await sb.from(t).delete().eq('user_id', userId);
   }
 
@@ -1002,7 +1003,7 @@ async function main() {
       bank_account_id: svbBank.id,
       stablecoin_token: 'USDC',
       stablecoin_chain: 'ethereum',
-      ai_reasoning: 'Projected crypto balance falls below safety buffer within 30 days. Recommend onramp of $500K USDC from SVB Operating Account to cover upcoming payroll and vendor obligations.',
+      ai_reasoning: 'Projected USDC balance falls below safety buffer within 30 days. Recommend onramp of $500K USDC from SVB Operating Account to cover upcoming payroll and vendor obligations.',
       ai_model: 'claude-sonnet-4-6',
       status: 'executed',
       requires_approval: false,
@@ -1026,7 +1027,7 @@ async function main() {
       bank_account_id: chaseBank.id,
       stablecoin_token: 'USDC',
       stablecoin_chain: 'ethereum',
-      ai_reasoning: 'Crypto holdings significantly exceed safety buffer target. Offramp $200K USDC to Chase Business Checking to optimize yield on idle stablecoin reserves.',
+      ai_reasoning: 'USDC holdings significantly exceed safety buffer target. Offramp $200K USDC to Chase Business Checking to optimize yield on idle stablecoin reserves.',
       ai_model: 'claude-sonnet-4-6',
       status: 'executed',
       requires_approval: true,
@@ -1050,7 +1051,7 @@ async function main() {
       bank_account_id: null,
       stablecoin_token: null,
       stablecoin_chain: null,
-      ai_reasoning: 'Treasury position is healthy. Total crypto balance of $2.15M exceeds the safety buffer target of $780K with comfortable margin. No action required at this time.',
+      ai_reasoning: 'Treasury position is healthy. Total stablecoin balance of $2.15M (USDC across Ethereum + Solana) exceeds the safety buffer target of $780K with comfortable margin. No action required at this time.',
       ai_model: 'claude-sonnet-4-6',
       status: 'auto_executed',
       requires_approval: false,
@@ -1059,7 +1060,7 @@ async function main() {
       updated_at: ts(daysAgo(7)),
       expires_at: ts(daysAgo(6)),
     },
-    // Pending onramp recommendation (requires approval)
+    // Pending onramp recommendation (requires approval) — high-value, 1 day old
     {
       user_id: userId,
       ...eid,
@@ -1074,13 +1075,59 @@ async function main() {
       bank_account_id: svbBank.id,
       stablecoin_token: 'USDC',
       stablecoin_chain: 'ethereum',
-      ai_reasoning: 'Upcoming obligations over the next 30 days total $920K, including $180K bi-weekly payroll, $95K Acme Corp invoice, $88.5K Nexus Digital invoice, and infrastructure upgrade of $120K. Current crypto balance provides only 2.3× coverage vs. required 1.5× safety buffer. Recommend onramp of $350K USDC from SVB Operating Account.',
+      ai_reasoning: 'Upcoming obligations over the next 30 days total $920K, including $180K bi-weekly payroll, $95K Acme Corp invoice, $88.5K Nexus Digital invoice, and infrastructure upgrade of $120K. Current USDC balance provides only 2.3× coverage vs. required 1.5× safety buffer. Recommend onramp of $350K USDC from SVB Operating Account.',
       ai_model: 'claude-sonnet-4-6',
       status: 'pending_approval',
       requires_approval: true,
       created_at: ts(daysAgo(1)),
       updated_at: ts(daysAgo(1)),
       expires_at: ts(daysFromNow(23)),
+    },
+    // Pending offramp — idle cash rebalance, 2 days old
+    {
+      user_id: userId,
+      ...eid,
+      treasury_rule_id: ruleId,
+      total_bank_balance_usd: totalBank,
+      total_crypto_balance_usd: totalCrypto,
+      obligations_in_window_usd: 520_000,
+      safety_buffer_target_usd: 780_000,
+      obligation_lookahead_days: 30,
+      action: 'offramp',
+      recommended_amount_usd: 150_000,
+      bank_account_id: mercuryBank.id,
+      stablecoin_token: 'USDC',
+      stablecoin_chain: 'ethereum',
+      ai_reasoning: 'USDC reserves sit at 2.76× the 30-day safety buffer, leaving ~$590K idle beyond the working envelope. Offramping $150K USDC to Mercury would lock in short-term treasury yield (~4.8% APY) without impacting coverage of upcoming obligations. Confidence is moderate — holding USDC may be preferable if an acquisition or capex event is imminent.',
+      ai_model: 'claude-sonnet-4-6',
+      status: 'pending_approval',
+      requires_approval: true,
+      created_at: ts(daysAgo(2)),
+      updated_at: ts(daysAgo(2)),
+      expires_at: ts(daysFromNow(22)),
+    },
+    // Pending onramp — Solana chain, mid-size, 3 days old
+    {
+      user_id: userId,
+      ...eid,
+      treasury_rule_id: ruleId,
+      total_bank_balance_usd: totalBank,
+      total_crypto_balance_usd: totalCrypto,
+      obligations_in_window_usd: 610_000,
+      safety_buffer_target_usd: 915_000,
+      obligation_lookahead_days: 30,
+      action: 'onramp',
+      recommended_amount_usd: 225_000,
+      bank_account_id: chaseBank.id,
+      stablecoin_token: 'USDC',
+      stablecoin_chain: 'solana',
+      ai_reasoning: 'Solana wallets hold $75K USDC against $180K of scheduled Solana-settled vendor payments over the next 21 days (Jito Labs infra, Helius RPC, Neon EVM). Recommend onramp of $225K USDC via Chase → Solana to restore per-chain coverage before the Jito invoice clears on day 14.',
+      ai_model: 'claude-sonnet-4-6',
+      status: 'pending_approval',
+      requires_approval: true,
+      created_at: ts(daysAgo(3)),
+      updated_at: ts(daysAgo(3)),
+      expires_at: ts(daysFromNow(21)),
     },
     // Rejected recommendation (declined by user last month)
     {
@@ -1109,8 +1156,443 @@ async function main() {
     },
   ];
 
-  await sb.from('ai_recommendations').insert(aiRows);
+  const { data: insertedRecs, error: recErr } = await sb
+    .from('ai_recommendations')
+    .insert(aiRows)
+    .select('id, status, action, recommended_amount_usd, created_at');
+  if (recErr) throw recErr;
   console.log(`✓ ${aiRows.length} AI recommendations`);
+
+  // ════════════════════════════════════════════════════════
+  // 13b. NOTIFICATIONS (bell badge + NotificationsPanel feed)
+  // ════════════════════════════════════════════════════════
+  // Populates the Topbar bell so the treasury_ai surface isn't empty.
+  // Unread rows drive the badge count; read rows fill out the panel history.
+  // Event types mirror src/lib/notifications/events.ts.
+  console.log('\n🔔 Seeding notifications...');
+
+  const pendingRecs = (insertedRecs ?? []).filter((r) => r.status === 'pending_approval');
+  const executedRec = (insertedRecs ?? []).find((r) => r.status === 'executed' && r.action === 'offramp');
+  const autoRec     = (insertedRecs ?? []).find((r) => r.status === 'auto_executed');
+  const rejectedRec = (insertedRecs ?? []).find((r) => r.status === 'rejected');
+
+  const fmtAmt = (n: string | number | null | undefined) =>
+    n == null ? '' : '$' + Math.round(Number(n)).toLocaleString();
+  const actionLabel = (a: string) =>
+    a === 'onramp' ? 'On-ramp' : a === 'offramp' ? 'Off-ramp' : 'No action';
+
+  const notificationRows: any[] = [];
+
+  // Unread: one recommendation_pending per pending rec → feeds the bell badge
+  for (const rec of pendingRecs) {
+    notificationRows.push({
+      user_id: userId,
+      ...eid,
+      event_type: 'recommendation_pending',
+      category: 'treasury_ai',
+      title: 'New AI Recommendation — Approval Required',
+      body: `${actionLabel(rec.action)} ${fmtAmt(rec.recommended_amount_usd)}`,
+      link: `/treasury?reviewRec=${rec.id}`,
+      metadata: { recommendationId: rec.id, action: rec.action, amount: rec.recommended_amount_usd },
+      read: false,
+      emailed: true,
+      created_at: rec.created_at,
+    });
+  }
+
+  // Read history: approved, auto-executed, rejected → panel shows activity log
+  if (executedRec) {
+    notificationRows.push({
+      user_id: userId,
+      ...eid,
+      event_type: 'recommendation_approved',
+      category: 'treasury_ai',
+      title: 'AI Recommendation Approved & Executed',
+      body: `${actionLabel(executedRec.action)} ${fmtAmt(executedRec.recommended_amount_usd)} completed`,
+      link: '/treasury',
+      metadata: { recommendationId: executedRec.id },
+      read: true,
+      emailed: true,
+      created_at: ts(daysAgo(19)),
+    });
+  }
+  if (autoRec) {
+    notificationRows.push({
+      user_id: userId,
+      ...eid,
+      event_type: 'recommendation_auto_executed',
+      category: 'treasury_ai',
+      title: 'AI Recommendation Auto-Executed',
+      body: 'Daily analysis: no action required — treasury position healthy',
+      link: '/treasury',
+      metadata: { recommendationId: autoRec.id },
+      read: true,
+      emailed: false,
+      created_at: ts(daysAgo(7)),
+    });
+  }
+  if (rejectedRec) {
+    notificationRows.push({
+      user_id: userId,
+      ...eid,
+      event_type: 'recommendation_rejected',
+      category: 'treasury_ai',
+      title: 'AI Recommendation Rejected',
+      body: `${actionLabel(rejectedRec.action)} ${fmtAmt(rejectedRec.recommended_amount_usd)} declined`,
+      link: '/treasury',
+      metadata: { recommendationId: rejectedRec.id, reason: 'Holding reserves for Q2 expansion' },
+      read: true,
+      emailed: true,
+      created_at: ts(daysAgo(40)),
+    });
+  }
+
+  // Unread: one daily analysis nudge so the bell shows >3 unread
+  notificationRows.push({
+    user_id: userId,
+    ...eid,
+    event_type: 'recommendation_daily',
+    category: 'treasury_ai',
+    title: 'Daily AI Treasury Analysis',
+    body: 'Today\'s analysis surfaced 3 recommendations awaiting your review',
+    link: '/treasury',
+    metadata: { pendingCount: pendingRecs.length },
+    read: false,
+    emailed: false,
+    created_at: ts(daysAgo(1)),
+  });
+
+  if (notificationRows.length > 0) {
+    const { error: notifErr } = await sb.from('notifications').insert(notificationRows);
+    if (notifErr) throw notifErr;
+  }
+  console.log(`✓ ${notificationRows.length} notifications (${pendingRecs.length + 1} unread)`);
+
+  // ════════════════════════════════════════════════════════
+  // 13c. TREASURY INSIGHTS (proactive detector feed)
+  // ════════════════════════════════════════════════════════
+  // Populates the InsightFeed card on Treasury AI → Overview tab. One row
+  // per detector type so the feed demonstrates the full taxonomy, with
+  // varied state (new / viewed / dismissed / acted_on) so the state
+  // machine is observable without running the cron.
+  // Schema: supabase/migrations/0037_treasury_insights.sql
+  console.log('\n💡 Seeding treasury insights...');
+
+  const insightRows: any[] = [
+    // CRITICAL — unread, hits the bell as insight_critical
+    {
+      user_id: userId,
+      ...eid,
+      detector_name: 'liquidity-buffer',
+      insight_type: 'liquidity_below_buffer',
+      severity: 'critical',
+      state: 'new',
+      title: 'Projected USDC balance falls below safety buffer',
+      summary: 'Over the next 14 days, projected minimum balance is $620K vs. required safety buffer of $780K. Shortfall driven by $180K bi-weekly payroll on day 7 + $95K Acme Corp invoice on day 11.',
+      ai_reasoning: 'Forecast engine projects a 3-day dip below the 1.5× buffer between day 7 and day 11 of the forecast window. Recommended action is a $350K USDC onramp from SVB Operating Account, which restores coverage for the full 30-day window. This insight is linked to the pending AI recommendation in the approvals queue — approving the recommendation resolves the insight.',
+      ai_model: 'claude-sonnet-4-6',
+      rationale: {
+        projected_min_usd: 620_000,
+        required_buffer_usd: 780_000,
+        shortfall_window_days: 3,
+        driving_obligations: ['payroll_day7', 'acme_invoice_day11'],
+      },
+      recommended_action: {
+        type: 'transfer',
+        fromVenueId: svbBank.id,
+        toVenueId: wallets[0].id,
+        asset: 'USDC',
+        amount: 350_000,
+        amountUsd: 350_000,
+        metadata: { direction: 'onramp', chain: 'ethereum' },
+      },
+      policy_verdict: 'require_approval',
+      policy_reason: 'AI-initiated movement — always requires human approval per policy invariant',
+      impact_dollar_value: 350_000,
+      impact_buffer_days: 18,
+      confidence: 0.92,
+      data_freshness: 'fresh',
+      supporting_data: { forecast_window_days: 30, obligations_count: 12 },
+      dedup_key: 'liquidity_below_buffer:default:14d',
+      created_at: ts(daysAgo(1)),
+      updated_at: ts(daysAgo(1)),
+      expires_at: ts(daysFromNow(2)),
+    },
+
+    // CRITICAL — concentration breach on a single vault
+    {
+      user_id: userId,
+      ...eid,
+      detector_name: 'concentration',
+      insight_type: 'concentration_breach',
+      severity: 'critical',
+      state: 'new',
+      title: 'Fasanara mm-EUREKA exceeds single-vault cap',
+      summary: 'Position of $500K in Fasanara mm-EUREKA represents 23.3% of total stablecoin treasury, exceeding the 15% Balanced profile per-vault cap.',
+      ai_reasoning: null,
+      ai_model: null,
+      rationale: {
+        venue_id: 'fasanara_mm_eureka',
+        position_usd: 500_000,
+        total_treasury_usd: 2_150_000,
+        concentration_pct: 23.3,
+        cap_pct: 15.0,
+        overage_usd: 177_500,
+      },
+      recommended_action: {
+        type: 'yield_withdraw',
+        fromVenueId: 'fasanara_mm_eureka',
+        toVenueId: 'spiko_usdc',
+        asset: 'USDC',
+        amount: 178_000,
+        amountUsd: 178_000,
+      },
+      policy_verdict: 'require_approval',
+      policy_reason: 'AI-initiated movement — always requires human approval',
+      impact_dollar_value: 178_000,
+      impact_apy_delta_bps: -20,
+      confidence: 1.0,
+      venue_category: 'tokenized_mmf',
+      data_freshness: 'fresh',
+      supporting_data: { profile: 'balanced', aum_tier: 'scale' },
+      dedup_key: 'concentration_breach:fasanara_mm_eureka:balanced',
+      created_at: ts(daysAgo(2)),
+      updated_at: ts(daysAgo(2)),
+      expires_at: ts(daysFromNow(2)),
+    },
+
+    // WARNING — yield drop on Aave
+    {
+      user_id: userId,
+      ...eid,
+      detector_name: 'yield-drop',
+      insight_type: 'yield_drop',
+      severity: 'warning',
+      state: 'new',
+      title: 'Aave v3 USDC supply APY dropped 120 bps',
+      summary: 'Aave v3 Ethereum USDC supply APY fell from 5.4% → 4.2% over the last 7 days. Your $275K position now yields ~$3.3K less annualized vs. the 7-day high.',
+      ai_reasoning: null,
+      ai_model: null,
+      rationale: {
+        venue_id: 'aave_v3_usdc_ethereum',
+        prior_apy_bps: 540,
+        current_apy_bps: 420,
+        delta_bps: -120,
+        position_usd: 275_000,
+        annualized_yield_delta_usd: -3_300,
+      },
+      recommended_action: null,
+      policy_verdict: null,
+      policy_reason: null,
+      impact_dollar_value: -3_300,
+      impact_apy_delta_bps: -120,
+      confidence: 1.0,
+      venue_category: 'defi_lending',
+      data_freshness: 'fresh',
+      supporting_data: { observation_window_days: 7 },
+      dedup_key: 'yield_drop:aave_v3_usdc_ethereum',
+      created_at: ts(daysAgo(1)),
+      updated_at: ts(daysAgo(1)),
+      expires_at: ts(daysFromNow(2)),
+    },
+
+    // WARNING — yield opportunity surfacing a better venue
+    {
+      user_id: userId,
+      ...eid,
+      detector_name: 'yield-opportunity',
+      insight_type: 'yield_opportunity',
+      severity: 'warning',
+      state: 'new',
+      title: 'Spiko USDC offering 4.8% — 60 bps over current blended',
+      summary: 'Spiko USDC tokenized money market fund is yielding 4.8% APY with $47M TVL. Rebalancing $500K from your idle Ethereum wallet would add ~$3K annualized yield without breaching concentration caps.',
+      ai_reasoning: null,
+      ai_model: null,
+      rationale: {
+        venue_id: 'spiko_usdc',
+        venue_apy_bps: 480,
+        current_blended_apy_bps: 420,
+        delta_bps: 60,
+        tvl_usd: 47_000_000,
+        proposed_deposit_usd: 500_000,
+      },
+      recommended_action: {
+        type: 'yield_deposit',
+        fromVenueId: wallets[0].id,
+        toVenueId: 'spiko_usdc',
+        asset: 'USDC',
+        amount: 500_000,
+        amountUsd: 500_000,
+      },
+      policy_verdict: 'require_approval',
+      policy_reason: 'AI-initiated movement — always requires human approval',
+      impact_dollar_value: 3_000,
+      impact_apy_delta_bps: 60,
+      confidence: 0.85,
+      venue_category: 'tokenized_mmf',
+      data_freshness: 'fresh',
+      supporting_data: {},
+      dedup_key: 'yield_opportunity:spiko_usdc:USDC',
+      created_at: ts(daysAgo(1)),
+      updated_at: ts(daysAgo(1)),
+      expires_at: ts(daysFromNow(2)),
+    },
+
+    // INFO — idle cash yield opportunity (viewed but not acted)
+    {
+      user_id: userId,
+      ...eid,
+      detector_name: 'yield-idle-opportunity',
+      insight_type: 'yield_idle_opportunity',
+      severity: 'info',
+      state: 'viewed',
+      title: '$590K USDC sitting idle on-chain',
+      summary: 'Ethereum Treasury Main wallet holds $590K USDC above the 30-day working envelope. Deploying to any A-tier venue would add ~$28K annualized yield.',
+      ai_reasoning: null,
+      ai_model: null,
+      rationale: {
+        wallet_id: wallets[0].id,
+        idle_usd: 590_000,
+        working_envelope_usd: 260_000,
+        best_venue_apy_bps: 480,
+        annualized_yield_potential_usd: 28_320,
+      },
+      recommended_action: null,
+      policy_verdict: null,
+      policy_reason: null,
+      impact_dollar_value: 28_320,
+      impact_apy_delta_bps: 480,
+      confidence: 0.9,
+      venue_category: null,
+      data_freshness: 'fresh',
+      supporting_data: { wallet_label: 'Treasury Main' },
+      dedup_key: 'yield_idle_opportunity:treasury_main:USDC',
+      created_at: ts(daysAgo(3)),
+      updated_at: ts(daysAgo(2)),
+      expires_at: ts(daysFromNow(1)),
+      viewed_at: ts(daysAgo(2)),
+    },
+
+    // INFO — concentration warning (not yet a breach)
+    {
+      user_id: userId,
+      ...eid,
+      detector_name: 'concentration',
+      insight_type: 'concentration_warning',
+      severity: 'info',
+      state: 'viewed',
+      title: 'USDC concentration at 82% of treasury',
+      summary: 'USDC accounts for 82% of stablecoin treasury across all venues. Balanced profile recommends diversifying toward USDT or tokenized treasury funds above 75%.',
+      ai_reasoning: null,
+      ai_model: null,
+      rationale: {
+        asset: 'USDC',
+        asset_share_pct: 82.0,
+        soft_cap_pct: 75.0,
+        hard_cap_pct: 90.0,
+      },
+      recommended_action: null,
+      policy_verdict: null,
+      policy_reason: null,
+      impact_dollar_value: null,
+      confidence: 1.0,
+      venue_category: null,
+      data_freshness: 'fresh',
+      supporting_data: { profile: 'balanced' },
+      dedup_key: 'concentration_warning:USDC:balanced',
+      created_at: ts(daysAgo(2)),
+      updated_at: ts(daysAgo(1)),
+      expires_at: ts(daysFromNow(1)),
+      viewed_at: ts(daysAgo(1)),
+    },
+
+    // DISMISSED — shows state machine works
+    {
+      user_id: userId,
+      ...eid,
+      detector_name: 'yield-opportunity',
+      insight_type: 'yield_opportunity',
+      severity: 'info',
+      state: 'dismissed',
+      title: 'Ethena sUSDe yield jumped 40 bps',
+      summary: 'Ethena sUSDe APY rose from 8.2% to 8.6%. Synthetic exposure, not recommended for Balanced profile.',
+      ai_reasoning: null,
+      ai_model: null,
+      rationale: { venue_id: 'ethena_susde', delta_bps: 40 },
+      recommended_action: null,
+      policy_verdict: null,
+      policy_reason: null,
+      impact_apy_delta_bps: 40,
+      confidence: 0.6,
+      venue_category: 'defi_yield',
+      data_freshness: 'fresh',
+      supporting_data: {},
+      dedup_key: 'yield_opportunity:ethena_susde:USDC',
+      cooldown_until: ts(daysFromNow(1)),
+      created_at: ts(daysAgo(4)),
+      updated_at: ts(daysAgo(3)),
+      expires_at: ts(daysFromNow(0)),
+      viewed_at: ts(daysAgo(3)),
+      dismissed_at: ts(daysAgo(3)),
+    },
+
+    // ACTED_ON — completes the state machine coverage
+    {
+      user_id: userId,
+      ...eid,
+      detector_name: 'liquidity-idle',
+      insight_type: 'liquidity_idle_cash',
+      severity: 'info',
+      state: 'acted_on',
+      title: 'Idle USDC in Chase operating account',
+      summary: '$250K USDC equivalent sitting unallocated in Chase beyond the 14-day working envelope.',
+      ai_reasoning: null,
+      ai_model: null,
+      rationale: { bank_id: chaseBank.id, idle_usd: 250_000 },
+      recommended_action: null,
+      policy_verdict: null,
+      policy_reason: null,
+      impact_dollar_value: 250_000,
+      confidence: 0.9,
+      venue_category: null,
+      data_freshness: 'fresh',
+      supporting_data: {},
+      dedup_key: 'liquidity_idle_cash:chase:USD',
+      created_at: ts(daysAgo(10)),
+      updated_at: ts(daysAgo(9)),
+      expires_at: ts(daysAgo(8)),
+      viewed_at: ts(daysAgo(9)),
+      acted_on_at: ts(daysAgo(9)),
+    },
+  ];
+
+  const { error: insightErr } = await sb.from('treasury_insights').insert(insightRows);
+  if (insightErr) throw insightErr;
+  const newCritical = insightRows.filter((i) => i.state === 'new' && i.severity === 'critical').length;
+  const newWarning  = insightRows.filter((i) => i.state === 'new' && i.severity === 'warning').length;
+  console.log(`✓ ${insightRows.length} treasury insights (${newCritical} critical, ${newWarning} warning, ${insightRows.length - newCritical - newWarning} info/historical)`);
+
+  // Add a couple of bell notifications for the critical insights so the
+  // InsightFeed and bell badge tell a consistent story on fresh seed.
+  const criticalInsightRows = insightRows.filter((i) => i.state === 'new' && i.severity === 'critical');
+  if (criticalInsightRows.length > 0) {
+    const insightNotifs = criticalInsightRows.map((i) => ({
+      user_id: userId,
+      ...eid,
+      event_type: 'insight_critical',
+      category: 'treasury_ai',
+      title: `Critical insight: ${i.title}`,
+      body: i.summary.slice(0, 180),
+      link: '/treasury',
+      metadata: { insightType: i.insight_type, detectorName: i.detector_name },
+      read: false,
+      emailed: true,
+      created_at: i.created_at,
+    }));
+    const { error: insErr } = await sb.from('notifications').insert(insightNotifs);
+    if (insErr) throw insErr;
+    console.log(`✓ ${insightNotifs.length} insight_critical notifications`);
+  }
 
   // ════════════════════════════════════════════════════════
   // 14. TREASURY FORECAST (90-day forward projection)
@@ -1408,7 +1890,8 @@ async function main() {
   console.log('  Balance snapshots:', snapshotRows.length, '(daily × all wallets)');
   console.log('  Fiat ramps       :', fiatRows.length, '(onramp/offramp history)');
   console.log('  Obligations      :', obligationRows.length, '(next 90 days)');
-  console.log('  AI recommendations:', aiRows.length);
+  console.log('  AI recommendations:', aiRows.length, `(${aiRows.filter(r => r.status === 'pending_approval').length} pending approval)`);
+  console.log('  Treasury insights :', insightRows.length, `(${insightRows.filter(i => i.state === 'new' && i.severity === 'critical').length} critical new)`);
   console.log('  Forecast         : 90-day projection');
   console.log('  Sanctions screens:', sanctionsRows.length);
   console.log('  KYT transfers    :', kytTransferRows.length);
@@ -1416,7 +1899,7 @@ async function main() {
   console.log('  Travel rule      :', travelRuleRows.length);
   console.log('');
   console.log('  Total bank balance  : $1,735,000');
-  console.log('  Total crypto balance: $2,150,000');
+  console.log('  Total stablecoin balance: $2,150,000 (USDC)');
   console.log('  Total AUM           : $3,885,000');
   console.log('═'.repeat(60));
 }
