@@ -17,11 +17,11 @@ import { getVenue } from './registry';
  * rows even though they're no longer in the VENUES registry. Display
  * something sensible instead of the raw slug.
  *
- * `morpho` — old catch-all used before the split into steakhouse and
- * reservoir variants. A handful of test-mode seed rows still reference it.
+ * The original `'morpho'` enum value used to live here. Migration
+ * 0037_delete_legacy_morpho_rows.sql removes the rows, so the fallback
+ * is no longer needed and was dropped in the same release.
  */
 const LEGACY_DISPLAY_NAMES: Record<string, string> = {
-  morpho: 'Morpho (legacy)',
   maple: 'Maple (deprecated)',
   _maple_deprecated: 'Maple (deprecated)',
   drift: 'Drift (removed)',
