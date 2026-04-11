@@ -1,6 +1,7 @@
 'use client';
 import { useState, useCallback } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
 import { Building2, Loader2, Globe } from 'lucide-react';
@@ -48,6 +49,7 @@ interface BankLinkButtonProps {
 
 export function BankLinkButton({ onSuccess, bankingProvider }: BankLinkButtonProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [showManual, setShowManual] = useState(false);
 
@@ -75,7 +77,16 @@ export function BankLinkButton({ onSuccess, bankingProvider }: BankLinkButtonPro
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ accountIds }),
       });
-      if (!linkRes.ok) throw new Error('Failed to save accounts');
+      if (!linkRes.ok) {
+        const json = await linkRes.json().catch(() => ({}));
+        throw new Error(json.error ?? 'Failed to save accounts');
+      }
+
+      // Invalidate bank accounts + treasury overview so the newly-linked
+      // account appears with its fresh balance (the link route fetches
+      // initial balance inline via Stripe FC).
+      queryClient.invalidateQueries({ queryKey: ['bank-accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['treasury-overview'] });
 
       toast({ title: 'Bank account connected', variant: 'success' });
       onSuccess();
@@ -84,7 +95,7 @@ export function BankLinkButton({ onSuccess, bankingProvider }: BankLinkButtonPro
     } finally {
       setLoading(false);
     }
-  }, [toast, onSuccess]);
+  }, [toast, onSuccess, queryClient]);
 
   const startBelvo = useCallback(async () => {
     setLoading(true);
@@ -112,6 +123,8 @@ export function BankLinkButton({ onSuccess, bankingProvider }: BankLinkButtonPro
               });
               const linkJson = await linkRes.json();
               if (!linkRes.ok) throw new Error(linkJson.error || 'Failed to save accounts');
+              queryClient.invalidateQueries({ queryKey: ['bank-accounts'] });
+              queryClient.invalidateQueries({ queryKey: ['treasury-overview'] });
               toast({ title: 'Bank account connected', variant: 'success' });
               onSuccess();
             } catch (err) {
@@ -131,7 +144,7 @@ export function BankLinkButton({ onSuccess, bankingProvider }: BankLinkButtonPro
       toast({ title: 'Connection failed', description: (err as Error).message, variant: 'destructive' });
       setLoading(false);
     }
-  }, [toast, onSuccess]);
+  }, [toast, onSuccess, queryClient]);
 
   if (!bankingProvider) {
     return (

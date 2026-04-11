@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth/nextauth.config';
 import { requireRole } from '@/lib/auth/rbac';
 import { requirePaidTier, TierGateError, tierGateResponse } from '@/lib/auth/tier-gate';
 import { getIntegrationMode } from '@/lib/env/integration-mode';
-import { getFCAccount } from '@/lib/banking/stripe-fc';
+import { getFCAccount, getFCBalance } from '@/lib/banking/stripe-fc';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { z } from 'zod';
 
@@ -31,6 +31,19 @@ export async function POST(req: NextRequest) {
     for (const accountId of parsed.data.accountIds) {
       const acc = await getFCAccount(mode, accountId);
 
+      // Fetch the initial balance so the account isn't stuck showing "—" in
+      // the UI immediately after linking. If balance retrieval fails (e.g.
+      // Stripe hasn't finished hydrating the account yet), fall back to null
+      // and let a manual refresh or the nightly cron populate it — the row
+      // still lands.
+      let initialBalance: { current: number; currency: string } | null = null;
+      try {
+        const bal = await getFCBalance(mode, accountId);
+        initialBalance = { current: bal.current, currency: bal.currency };
+      } catch (balErr) {
+        console.warn('[stripe-fc/link] initial balance fetch failed for', accountId, balErr);
+      }
+
       await supabase.from('bank_accounts').insert({
         user_id: session.user.id,
         enterprise_id: session.user.enterprise_id,
@@ -39,8 +52,11 @@ export async function POST(req: NextRequest) {
         institution_name: acc.institutionName,
         account_name: acc.displayName || 'Account',
         account_type: acc.accountType,
-        currency: acc.currency || 'USD',
+        currency: initialBalance?.currency ?? acc.currency ?? 'USD',
         last4: acc.last4,
+        current_balance: initialBalance?.current ?? null,
+        balance_currency: initialBalance?.currency ?? null,
+        balance_as_of: initialBalance ? new Date().toISOString() : null,
         verified_at: new Date().toISOString(),
         is_active: true,
       });
@@ -56,6 +72,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ data: { linked: parsed.data.accountIds.length } });
   } catch (err) {
     console.error('[stripe-fc/link]', err);
-    return NextResponse.json({ error: 'Failed to link accounts' }, { status: 500 });
+    return NextResponse.json(
+      { error: (err as Error).message ?? 'Failed to link accounts' },
+      { status: 500 },
+    );
   }
 }
