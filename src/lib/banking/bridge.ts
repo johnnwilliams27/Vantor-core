@@ -196,47 +196,19 @@ export class BridgeAdapter implements IBankingAdapter {
     };
   }
 
-  async createFiatPayment(params: FiatPaymentParams): Promise<FiatPaymentResult> {
-    // Bridge's /v0/transfers endpoint uses source.payment_rail and
-    // destination.payment_rail to pick the network. The user chose the rail
-    // upfront in the UI so we know the fee schedule and settlement time.
-    const data = await bridgeFetch(this.mode, '/v0/transfers', {
-      method: 'POST',
-      body: JSON.stringify({
-        amount: String(params.amount),
-        source: {
-          payment_rail: params.paymentRail,
-          currency: params.currency.toLowerCase(),
-          from_bank_account_id: params.fromBankAccountRef,
-        },
-        destination: {
-          payment_rail: params.paymentRail,
-          currency: params.currency.toLowerCase(),
-          bank_name: params.toBankName,
-          account_number: params.toAccountNumber,
-          routing_number: params.toRoutingNumber,
-          account_holder_name: params.toAccountHolder,
-        },
-        memo: params.memo,
-        developer_fee_percent: VANTOR_DEVELOPER_FEE_PCT,
-      }),
-    });
-
-    return {
-      providerPaymentId: data.id ?? data.transfer_id ?? data.payment_id,
-      status: 'pending',
-      estimatedSettlement: data.estimated_settlement ?? data.eta ?? new Date(Date.now() + 2 * 86400_000).toISOString(),
-    };
+  async createFiatPayment(_params: FiatPaymentParams): Promise<FiatPaymentResult> {
+    // Bank-to-bank fiat payments are not supported by Bridge. Probing the
+    // /v0/transfers endpoint with every fiat-to-fiat rail combination returned
+    // "route from source -> destination not currently supported" — Bridge only
+    // supports fiat<->crypto routes (used by ramps and the yield flow). A
+    // dedicated bank payment provider (Modern Treasury / Column / Increase)
+    // will handle bank-to-bank in a future PR. The /payments page shows a
+    // Coming Soon placeholder and /api/payments POST returns 501, so this
+    // method should never actually be invoked in production.
+    throw new Error('Bank payments are temporarily disabled while we integrate a new payment provider.');
   }
 
-  async getFiatPaymentStatus(providerPaymentId: string): Promise<FiatPaymentStatusResult> {
-    const data = await bridgeFetch(this.mode, `/v0/payments/${providerPaymentId}`, {
-      method: 'GET',
-    });
-
-    return {
-      status: data.status === 'completed' ? 'completed' : data.status === 'failed' ? 'failed' : 'pending',
-      settledAt: data.settled_at ?? null,
-    };
+  async getFiatPaymentStatus(_providerPaymentId: string): Promise<FiatPaymentStatusResult> {
+    throw new Error('Bank payments are temporarily disabled while we integrate a new payment provider.');
   }
 }
