@@ -41,19 +41,19 @@ export function useTestMode() {
       throw new Error('Failed to toggle test mode');
     }
 
+    // Full page reload. The test-mode boundary changes enterprise_id in
+    // the session JWT, Zustand state, every React Query cache entry, and
+    // the Solana ConnectionProvider's RPC endpoint (devnet ↔ mainnet-beta,
+    // set at mount time). A reload is the only way to get all four in
+    // sync atomically — partial cache invalidation leaves stale data
+    // visible for the frame before the new mode's queries resolve, and
+    // the Solana wallet stays on the wrong cluster entirely.
+    //
+    // Zustand + queryClient.clear() are kept as belt-and-suspenders for
+    // any code path that reads state before the browser fires reload.
     setTestMode(enabled);
-
-    // Clear ALL cached queries and refetch active ones to prevent stale cross-mode data
     queryClient.clear();
-    await queryClient.invalidateQueries();
-    await queryClient.refetchQueries();
-    // NOTE: The Solana ConnectionProvider's RPC endpoint is set at mount time
-    // based on the test-mode-status query. A full page reload is required for
-    // the wallet adapter to pick up the new RPC URL (devnet vs mainnet-beta)
-    // when test mode is toggled. If seamless switching is needed in future,
-    // refactor ConnectionProvider to be rendered below QueryClientProvider and
-    // re-key it when cluster changes.
-    // window.location.reload(); // Uncomment to force RPC reconnect on toggle.
+    window.location.reload();
   };
 
   return { testMode, toggleTestMode };
