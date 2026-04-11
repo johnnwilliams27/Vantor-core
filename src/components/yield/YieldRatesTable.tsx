@@ -29,6 +29,7 @@ import {
   CATEGORY_LABELS,
   ELIGIBILITY_LABELS,
   isTokenizedMMF,
+  getVenueLogoPath,
 } from '@/lib/yield/venues';
 
 const COMING_SOON_PROTOCOLS = new Set(['sky', 'ethena', 'ondo_usdy']);
@@ -43,18 +44,6 @@ const CATEGORY_FILTER_ORDER: Array<VenueCategory | 'all'> = [
 const CHAIN_LABELS: Record<string, string> = {
   ethereum: 'Ethereum',
   solana: 'Solana',
-};
-
-const PROTOCOL_LOGOS: Record<string, string> = {
-  aave_v3: '/partners/Aave_idWRQ7YLO7_0.svg',
-  morpho_reservoir: '/partners/morpho-white.svg',
-  morpho_steakhouse: '/partners/morpho-white.svg',
-  kamino: '/partners/kamino-logo.svg',
-  kamino_multiply: '/partners/kamino-logo.svg',
-  ondo_usdy: '/partners/Ondo_Logo_0.svg',
-  sky: '/partners/sky_logo.png',
-  ethena: '/partners/ethena_logo.png',
-  compound_v3: '/partners/compound-white.png',
 };
 
 /**
@@ -924,13 +913,14 @@ export function YieldRatesTable() {
 
           const comingSoon = COMING_SOON_PROTOCOLS.has(p.id);
 
+          const logoPath = getVenueLogoPath(p.id);
           return (
             <Card key={p.id} className="relative overflow-hidden">
               <div className="flex items-center justify-between px-5 pt-5 pb-3">
-                {PROTOCOL_LOGOS[p.id] ? (
+                {logoPath ? (
                   <div className="flex items-center gap-2">
                     <div className="h-[38px] flex items-center">
-                      <Image src={PROTOCOL_LOGOS[p.id]} alt={p.name} width={64} height={38} className="h-[38px] w-auto object-contain" unoptimized />
+                      <Image src={logoPath} alt={p.name} width={64} height={38} className="h-[38px] w-auto object-contain" unoptimized />
                     </div>
                     {comingSoon && (
                       <span className="ml-2 inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-500/20 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">

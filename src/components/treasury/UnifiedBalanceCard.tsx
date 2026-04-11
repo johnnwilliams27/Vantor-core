@@ -9,38 +9,13 @@ import { useFxRates } from '@/hooks/useFxRates';
 import { useDisplayCurrency } from '@/hooks/useDisplayCurrency';
 import { getCurrencySymbol } from '@/lib/fx/rates';
 import { CardSpinner } from '@/components/ui/spinner';
-import { getVenue, MMF_YIELDS_AS_OF } from '@/lib/yield/venues';
+import { getVenue, getVenueDisplayName, MMF_YIELDS_AS_OF } from '@/lib/yield/venues';
 import { getHoldingCardPlacement } from '@/lib/treasury/holdings-category';
 import type { YieldProtocolId } from '@/lib/yield/interface';
 
 const TOKEN_COLORS: Record<string, string> = {
   USDC: 'bg-blue-100 text-blue-800',
   USDT: 'bg-green-100 text-green-800',
-};
-
-const PROTOCOL_LABELS: Record<string, string> = {
-  aave_v3: 'Aave V3', morpho_reservoir: 'Morpho Reservoir', morpho_steakhouse: 'Morpho Steakhouse',
-  kamino: 'Kamino', kamino_multiply: 'Kamino Multiply', ondo_usdy: 'Ondo (USDY)',
-  sky: 'Sky sUSDS', ethena: 'Ethena sUSDe',
-  compound_v3: 'Compound V3',
-  // Tokenized MMFs
-  buidl: 'BlackRock BUIDL',
-  ousg: 'Ondo OUSG',
-  ustb: 'Superstate USTB',
-  benji: 'Franklin BENJI',
-  usyc: 'Circle USYC',
-  spiko_usd: 'Spiko USD',
-};
-
-const PROTOCOL_LOGOS: Record<string, string> = {
-  aave_v3: '/partners/Aave_idWRQ7YLO7_0.svg',
-  morpho_reservoir: '/partners/morpho-white.svg',
-  morpho_steakhouse: '/partners/morpho-white.svg',
-  kamino: '/partners/kamino-logo.svg',
-  kamino_multiply: '/partners/kamino-logo.svg',
-  ondo_usdy: '/partners/Ondo_Logo_0.svg',
-  sky: '/partners/sky_logo.png',
-  ethena: '/partners/ethena_logo.png',
 };
 
 function fmt(value: number, currency: string = 'USD'): string {
@@ -271,7 +246,7 @@ function CashHoldingsCard({
                   </div>
                   <div className="space-y-0.5">
                     {mmfPositions.map((pos) => {
-                      const label = PROTOCOL_LABELS[pos.protocol] ?? pos.protocol;
+                      const label = getVenueDisplayName(pos.protocol);
                       const apy = pos.apy_snapshot ? parseFloat(pos.apy_snapshot).toFixed(2) : null;
                       return (
                         <div key={pos.id} className="flex items-center justify-between py-1.5 px-1 rounded hover:bg-muted/30 transition-colors">
@@ -413,7 +388,7 @@ function DeFiPositionsCard({
               </div>
               <div className="space-y-0.5">
                 {positions.map((pos) => {
-                  const label = PROTOCOL_LABELS[pos.protocol] ?? pos.protocol;
+                  const label = getVenueDisplayName(pos.protocol);
                   const apy = pos.apy_snapshot ? parseFloat(pos.apy_snapshot).toFixed(2) : null;
                   return (
                     <div key={pos.id} className="flex items-center justify-between py-1.5 px-1 rounded hover:bg-muted/30 transition-colors">

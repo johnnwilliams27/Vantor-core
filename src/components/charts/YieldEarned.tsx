@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useYieldPositions, useYieldTransactions } from '@/hooks/useYield';
 import { TrendingUp } from 'lucide-react';
 import { CardSpinner } from '@/components/ui/spinner';
+import { getVenueDisplayName } from '@/lib/yield/venues';
 
 function formatUsd(value: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -15,26 +16,28 @@ function formatUsd(value: number): string {
   }).format(value);
 }
 
-const PROTOCOL_LABELS: Record<string, string> = {
-  aave_v3: 'Aave V3',
-  morpho_reservoir: 'Morpho Reservoir USDC',
-  morpho_steakhouse: 'Morpho Steakhouse',
-  kamino: 'Kamino Lend',
-  kamino_multiply: 'Kamino Multiply',
-  ondo_usdy: 'Ondo',
-  sky: 'Sky sUSDS',
-  ethena: 'Ethena',
-};
-
+/**
+ * Chart colors per protocol. Intentionally kept local to this chart
+ * (not in the venue registry) — they're rendering concerns, not venue
+ * metadata. Unknown protocols fall through to the default gray.
+ */
 const PROTOCOL_COLORS: Record<string, string> = {
-  aave_v3: '#6366f1',
-  morpho_reservoir: '#3b82f6',
+  aave_v3:           '#6366f1',
+  compound_v3:       '#10b981',
+  morpho_reservoir:  '#3b82f6',
   morpho_steakhouse: '#1d4ed8',
-  kamino: '#8b5cf6',
-  kamino_multiply: '#7c3aed',
-  ondo_usdy: '#06b6d4',
-  sky: '#0ea5e9',
-  ethena: '#f43f5e',
+  kamino:            '#8b5cf6',
+  kamino_multiply:   '#7c3aed',
+  ondo_usdy:         '#06b6d4',
+  sky:               '#0ea5e9',
+  ethena:            '#f43f5e',
+  // Tokenized MMFs — warmer palette to visually distinguish from DeFi
+  buidl:             '#eab308',
+  ousg:              '#f97316',
+  ustb:              '#ea580c',
+  benji:             '#dc2626',
+  usyc:              '#d97706',
+  spiko_usd:         '#ca8a04',
 };
 
 function CustomTooltip({ active, payload }: any) {
@@ -84,7 +87,7 @@ export function YieldEarned() {
   }
 
   const chartData = Object.entries(yieldByProtocol).map(([protocol, earned]) => ({
-    protocol: PROTOCOL_LABELS[protocol] ?? protocol,
+    protocol: getVenueDisplayName(protocol),
     earned,
     fill: PROTOCOL_COLORS[protocol] ?? '#94a3b8',
   }));
