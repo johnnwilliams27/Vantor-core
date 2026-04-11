@@ -242,15 +242,18 @@ describe('evalAmountCompare — splitting guard', () => {
     expect(result.failure?.reason_code).toBe('aggregate_query_failed');
   });
 
-  it('splitting check is skipped when rule is in USD but canonical_amount is empty', () => {
+  it('non-USD transfer with empty canonical_amount and no failure flag now fails closed', () => {
+    // CRITICAL 2 regression guard: the previous behavior was to silently
+    // return matched:false with splitting_check:'skipped_no_canonical'
+    // (a fail-open). New behavior: non-USD transfer + empty canonical +
+    // no canonicalization.failure is treated as a canonicalizer bug and
+    // surfaces a structured condition_node_evaluation_failed.
     const node: AmountCompareNode = {
       kind: 'amount_compare',
       attr: 'transfer.amount',
       op: '>',
       value: { amount: '100000', currency: 'USD' },
     };
-    // Movement is in USDT, but rule is USD. Direct compare doesn't fire
-    // because asset != rule currency AND canonical is empty string.
     const ctx = makeContext({
       canonicalization: {
         native_amount: '50000',
@@ -266,8 +269,8 @@ describe('evalAmountCompare — splitting guard', () => {
     });
     const result = evalAmountCompare(node, makeMovement(), ctx);
     expect(result.matched).toBe(false);
-    expect(result.failure).toBeUndefined();
-    expect(result.evaluation_details.splitting_check).toBe('skipped_no_canonical');
+    expect(result.failure?.reason_code).toBe('condition_node_evaluation_failed');
+    expect(result.evaluation_details.splitting_check).toBe('failed_no_canonical');
   });
 
   it('splitting guard does not apply to non-USD rules (phase-1 limitation)', () => {
@@ -442,20 +445,27 @@ describe('evalAmountCompare — between operator', () => {
 });
 
 describe('evalAmountCompare — malformed numeric input', () => {
-  it('does not throw when treasury position is a non-numeric string', () => {
-    // If upstream context loader produces a malformed position string,
-    // the leaf must not throw. The never-throws contract is load-bearing
-    // for the rule caller.
+  // Shared helper: build a treasury.position context with a hostile
+  // positions_by_asset[USDC] value and assert the leaf returns a
+  // structured cannot-evaluate failure (NOT a silent matched:false,
+  // which would fail-open a min-reserve rule).
+  const assertMalformedPositionFailsClosed = (
+    raw: string,
+    label: string
+  ) => {
     const node: AmountCompareNode = {
       kind: 'amount_compare',
       attr: 'treasury.position',
       scope: { asset: 'USDC' },
-      op: '>',
-      value: { amount: '100', currency: 'USDC' },
+      op: '<',
+      // Min-reserve floor: "block if position < 100k USDC".
+      // If position value is garbage, this rule MUST NOT silently
+      // return matched:false — that would let the transfer through.
+      value: { amount: '100000', currency: 'USDC' },
     };
     const ctx = makeContext({
       treasury_state: {
-        positions_by_asset: { USDC: 'garbage' as string, USDT: '500000' },
+        positions_by_asset: { USDC: raw as string, USDT: '500000' },
         positions_by_asset_venue: {},
         positions_usd_by_asset: { USDC: '0', USDT: '500000' },
         total_treasury_usd: '500000',
@@ -471,7 +481,291 @@ describe('evalAmountCompare — malformed numeric input', () => {
     } catch {
       threw = true;
     }
-    expect(threw).toBe(false);
-    expect(result?.matched).toBe(false);
+    expect(threw, `threw for ${label}`).toBe(false);
+    expect(result?.matched, `matched for ${label}`).toBe(false);
+    expect(
+      result?.failure?.reason_code,
+      `failure reason_code for ${label}`
+    ).toBe('condition_node_evaluation_failed');
+    expect(
+      (result?.failure?.details as { position_value_raw?: string } | undefined)
+        ?.position_value_raw,
+      `position_value_raw for ${label}`
+    ).toBe(raw);
+  };
+
+  it('returns structured failure (not silent false) for "garbage"', () => {
+    assertMalformedPositionFailsClosed('garbage', 'garbage');
+  });
+
+  it('returns structured failure for "NaN"', () => {
+    assertMalformedPositionFailsClosed('NaN', 'NaN');
+  });
+
+  it('returns structured failure for empty string ""', () => {
+    assertMalformedPositionFailsClosed('', 'empty string');
+  });
+
+  it('returns structured failure for comma-formatted "1,000"', () => {
+    assertMalformedPositionFailsClosed('1,000', 'comma-formatted');
+  });
+
+  it('returns structured failure for semver-like "1.2.3"', () => {
+    assertMalformedPositionFailsClosed('1.2.3', 'semver-like');
+  });
+
+  it('returns structured failure for negative "-100"', () => {
+    // Treasury positions are non-negative by construction.
+    assertMalformedPositionFailsClosed('-100', 'negative');
+  });
+
+  it('treats a missing asset key as a valid zero position (not a failure)', () => {
+    // The upstream `?? '0'` fallback converts a missing key to '0',
+    // which IS a valid non-negative decimal. A missing position
+    // legitimately means zero — only genuinely malformed values
+    // should fail-closed.
+    const node: AmountCompareNode = {
+      kind: 'amount_compare',
+      attr: 'treasury.position',
+      scope: { asset: 'USDC' },
+      op: '<',
+      value: { amount: '100000', currency: 'USDC' },
+    };
+    const ctx = makeContext({
+      treasury_state: {
+        // USDC key intentionally missing
+        positions_by_asset: { USDT: '500000' },
+        positions_by_asset_venue: {},
+        positions_usd_by_asset: { USDT: '500000' },
+        total_treasury_usd: '500000',
+        cash_equivalent_usd: '500000',
+        loaded_at: new Date(),
+      },
+    });
+    const result = evalAmountCompare(node, makeMovement(), ctx);
+    expect(result.failure).toBeUndefined();
+    // 0 < 100000 — matches the min-reserve floor
+    expect(result.matched).toBe(true);
+  });
+});
+
+describe('evalAmountCompare — USD-native splitting guard', () => {
+  // A USD-native transfer (source.asset=USD, dest.asset=USD, amount.asset=USD)
+  // with an empty canonical_amount must still be caught by the splitting
+  // guard. Previously the splitting branch required a populated
+  // ctx.canonicalization.canonical_amount and silently returned
+  // skipped_no_canonical for USD-native transfers — a fail-open for
+  // genuine USD→USD structuring attacks.
+
+  const makeUsdNativeMovement = (amount: string): ProposedMovement => ({
+    id: 'mv-usd-1',
+    kind: 'crypto_transfer',
+    source: { venue: 'svb', asset: 'USD' },
+    destination: { venue: 'mercury', asset: 'USD' },
+    amount: { amount, asset: 'USD' },
+    initiator: { type: 'human', user_id: 'user-1' },
+    requested_at: '2026-04-10T14:22:33.000Z',
+  });
+
+  const emptyCanonicalCtx = (overrides: Partial<EvaluationContext> = {}) =>
+    makeContext({
+      canonicalization: {
+        native_amount: '',
+        native_asset: 'USD',
+        canonical_amount: '', // USD is identity; upstream may leave this empty
+        canonical_currency: 'USD',
+        rate: '',
+        rate_source: '',
+        rate_as_of: new Date(0),
+        max_age_ms: 0,
+        // no `failure` field set
+      },
+      ...overrides,
+    });
+
+  it('(a) USD-native splitting fires even when canonical_amount is empty', () => {
+    // Rule: block when transfer.amount > 50000 USD
+    // Direct: 5000 < 50000 (fails)
+    // Splitting: 47000 rolling + 5000 proposed = 52000 > 50000 (fires)
+    const node: AmountCompareNode = {
+      kind: 'amount_compare',
+      attr: 'transfer.amount',
+      op: '>',
+      value: { amount: '50000', currency: 'USD' },
+    };
+    const movement = makeUsdNativeMovement('5000');
+    const ctx = emptyCanonicalCtx({
+      aggregates: {
+        system_splitting_guard_24h: {
+          window_spec_hash: 'sys-24h',
+          window_start: new Date('2026-04-09T14:22:33.000Z'),
+          window_end: new Date('2026-04-10T14:22:33.000Z'),
+          sum_amount_usd: '47000',
+          sum_amount_by_asset: {},
+          count: 9,
+          distinct_destinations: 1,
+          distinct_counterparties: 1,
+          included_evaluation_ids: [],
+          includes_proposed: false,
+        },
+        user_specs: {},
+      },
+    });
+    const result = evalAmountCompare(node, movement, ctx);
+    expect(result.failure).toBeUndefined();
+    expect(result.matched).toBe(true);
+    expect(result.via).toBe('splitting');
+  });
+
+  it('(b) USD-native splitting catches structuring with realistic values', () => {
+    // Rolling 48500 + proposed 2000 = 50500, threshold > 50000 — fires.
+    const node: AmountCompareNode = {
+      kind: 'amount_compare',
+      attr: 'transfer.amount',
+      op: '>',
+      value: { amount: '50000', currency: 'USD' },
+    };
+    const movement = makeUsdNativeMovement('2000');
+    const ctx = emptyCanonicalCtx({
+      aggregates: {
+        system_splitting_guard_24h: {
+          window_spec_hash: 'sys-24h',
+          window_start: new Date('2026-04-09T14:22:33.000Z'),
+          window_end: new Date('2026-04-10T14:22:33.000Z'),
+          sum_amount_usd: '48500',
+          sum_amount_by_asset: {},
+          count: 10,
+          distinct_destinations: 1,
+          distinct_counterparties: 1,
+          included_evaluation_ids: [],
+          includes_proposed: false,
+        },
+        user_specs: {},
+      },
+    });
+    const result = evalAmountCompare(node, movement, ctx);
+    expect(result.matched).toBe(true);
+    expect(result.via).toBe('splitting');
+    expect(result.evaluation_details.rolling_with_proposed).toBe('50500');
+  });
+
+  it('(c) non-USD transfer with missing canonical and no failure flag returns structured failure', () => {
+    // Defense in depth: non-USD transfer, empty canonical_amount, no
+    // canonicalization.failure set. Previous behavior: silent
+    // skipped_no_canonical (fail-open). New behavior: structured
+    // condition_node_evaluation_failed.
+    const node: AmountCompareNode = {
+      kind: 'amount_compare',
+      attr: 'transfer.amount',
+      op: '>',
+      value: { amount: '100000', currency: 'USD' },
+    };
+    const movement = makeMovement({ amount: { amount: '5000', asset: 'USDC' } });
+    const ctx = makeContext({
+      canonicalization: {
+        native_amount: '5000',
+        native_asset: 'USDC',
+        canonical_amount: '', // empty — canonicalizer bug
+        canonical_currency: 'USD',
+        rate: '',
+        rate_source: '',
+        rate_as_of: new Date(0),
+        max_age_ms: 0,
+        // no `failure` field set
+      },
+    });
+    const result = evalAmountCompare(node, movement, ctx);
+    expect(result.matched).toBe(false);
+    expect(result.failure?.reason_code).toBe('condition_node_evaluation_failed');
+    expect(result.evaluation_details.splitting_check).toBe('failed_no_canonical');
+  });
+});
+
+describe('evalAmountCompare — between + splitting guard', () => {
+  it('skips the splitting check for between op (semantic mismatch)', () => {
+    // `between 10000 and 50000 USD` with a 60000 rolling sum. Direct
+    // comparison on 50010 (canonical of 50000 USDC) falls OUTSIDE the
+    // range (50010 > 50000). The splitting guard has no meaningful
+    // mapping for range comparisons, so it must be skipped.
+    const node: AmountCompareNode = {
+      kind: 'amount_compare',
+      attr: 'transfer.amount',
+      op: 'between',
+      value: { amount: '10000', currency: 'USD' },
+      value_upper: { amount: '50000', currency: 'USD' },
+    };
+    const movement = makeMovement({ amount: { amount: '50000', asset: 'USDC' } });
+    const ctx = makeContext({
+      aggregates: {
+        system_splitting_guard_24h: {
+          window_spec_hash: 'sys-24h',
+          window_start: new Date('2026-04-09T14:22:33.000Z'),
+          window_end: new Date('2026-04-10T14:22:33.000Z'),
+          sum_amount_usd: '60000', // high rolling sum
+          sum_amount_by_asset: {},
+          count: 12,
+          distinct_destinations: 1,
+          distinct_counterparties: 1,
+          included_evaluation_ids: [],
+          includes_proposed: false,
+        },
+        user_specs: {},
+      },
+    });
+    const result = evalAmountCompare(node, movement, ctx);
+    expect(result.matched).toBe(false);
+    expect(result.failure).toBeUndefined();
+    expect(result.evaluation_details.splitting_check).toBe('skipped_op_between');
+  });
+});
+
+describe('evalAmountCompare — treasury.position scope.venue rejection', () => {
+  it('returns structured failure when scope.venue is set (phase-1 limitation)', () => {
+    // Authoring "USDC position on ethereum < 100k" must NOT silently
+    // return the aggregate USDC position — it must reject the rule
+    // until phase-2 venue-scoped position support lands.
+    const node: AmountCompareNode = {
+      kind: 'amount_compare',
+      attr: 'treasury.position',
+      scope: { asset: 'USDC', venue: 'ethereum' },
+      op: '<',
+      value: { amount: '100000', currency: 'USDC' },
+    };
+    const result = evalAmountCompare(node, makeMovement(), makeContext());
+    expect(result.matched).toBe(false);
+    expect(result.failure?.reason_code).toBe('condition_node_evaluation_failed');
+    expect(
+      (result.failure?.details as { venue?: string } | undefined)?.venue
+    ).toBe('ethereum');
+  });
+
+  it('returns structured failure for treasury.post_position + scope.venue', () => {
+    const node: AmountCompareNode = {
+      kind: 'amount_compare',
+      attr: 'treasury.post_position',
+      scope: { asset: 'USDC', venue: 'solana' },
+      op: '>',
+      value: { amount: '100000', currency: 'USDC' },
+    };
+    const result = evalAmountCompare(node, makeMovement(), makeContext());
+    expect(result.matched).toBe(false);
+    expect(result.failure?.reason_code).toBe('condition_node_evaluation_failed');
+  });
+});
+
+describe('evalAmountCompare — contract: matched:true implies failure:undefined', () => {
+  it('happy path returns failure:undefined', () => {
+    // Lock in the contract invariant. Any matched:true result MUST NOT
+    // carry a failure. This prevents a whole class of bugs where
+    // downstream readers see matched:true and skip the failure check.
+    const node: AmountCompareNode = {
+      kind: 'amount_compare',
+      attr: 'transfer.amount',
+      op: '>',
+      value: { amount: '10000', currency: 'USDC' },
+    };
+    const result = evalAmountCompare(node, makeMovement(), makeContext());
+    expect(result.matched).toBe(true);
+    expect(result.failure).toBeUndefined();
   });
 });

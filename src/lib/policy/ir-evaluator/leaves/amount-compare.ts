@@ -152,6 +152,29 @@ function evalTransferAmount(
   // is 'USD'. The 24h aggregate is stored in USD, so a non-USD rule threshold
   // can't be compared without canonicalizing the threshold itself, which phase 1
   // doesn't do. Author splitting-sensitive rules in USD until phase 2.
+  //
+  // PHASE-1 LIMITATION: the `between` operator is NOT evaluated against the
+  // splitting guard. Splitting semantics are "rolling sum + proposed exceeds
+  // threshold", which has no natural mapping to a range comparison. A
+  // `between 10k and 50k USD` rule with a 60k rolling sum falls outside the
+  // range and the splitting guard would incorrectly NOT fire — so we skip
+  // the splitting check for between entirely. The direct comparison still
+  // applies above.
+
+  if (node.op === 'between') {
+    return {
+      matched: false,
+      via: 'direct',
+      evaluation_details: {
+        attr: 'transfer.amount',
+        actual_value: actualValue,
+        threshold: node.value.amount,
+        threshold_upper: node.value_upper?.amount,
+        op: 'between',
+        splitting_check: 'skipped_op_between',
+      },
+    };
+  }
 
   const splittingGuard = ctx.aggregates.system_splitting_guard_24h;
   if (splittingGuard.failure) {
@@ -169,15 +192,41 @@ function evalTransferAmount(
     };
   }
 
-  // Compute rolling sum including the proposed movement (in USD)
-  const proposedCanonical = ctx.canonicalization.canonical_amount;
+  // Compute the proposed transfer amount in USD for the splitting check.
+  // For USD-native transfers (transferAsset === 'USD'), the canonical amount
+  // IS the native amount — canonicalization is identity for USD, and upstream
+  // canonicalizers may not populate canonical_amount. Without this fallback,
+  // a USD-native transfer + empty canonical_amount would hit the previous
+  // `skipped_no_canonical` path and silently bypass the splitting guard —
+  // a fail-open for genuine USD→USD structuring attacks.
+  //
+  // For non-USD transfers, we require a populated canonical_amount (or a
+  // populated canonicalization.failure caught upstream). A missing canonical
+  // amount WITHOUT a failure flag at this point is a canonicalizer bug —
+  // return a structured failure as defense in depth instead of silently
+  // skipping.
+  const proposedCanonical =
+    transferAsset === 'USD'
+      ? movement.amount.amount
+      : ctx.canonicalization.canonical_amount;
+
   if (!proposedCanonical && ruleCurrency === 'USD') {
-    // Rule is in USD but we have no canonicalization — cannot splitting-check
     return {
       matched: false,
+      failure: {
+        reason_code: 'condition_node_evaluation_failed',
+        human_readable:
+          'Splitting guard cannot compute: transfer amount is non-USD and ' +
+          'canonicalization is empty without a failure flag.',
+        details: {
+          transfer_asset: transferAsset,
+          rule_currency: ruleCurrency,
+        },
+        user_action: 'This indicates a canonicalizer bug — contact support.',
+      },
       evaluation_details: {
         attr: 'transfer.amount',
-        splitting_check: 'skipped_no_canonical',
+        splitting_check: 'failed_no_canonical',
       },
     };
   }
@@ -253,11 +302,36 @@ function evalTransferAmount(
 }
 
 /**
+ * Validate a treasury position string is a non-negative decimal.
+ *
+ * Treasury positions are non-negative by construction. An empty string,
+ * undefined, or any value that big.js can't parse (e.g. 'garbage', 'NaN',
+ * '1,000', '1.2.3') is treated as invalid. A legitimately missing position
+ * key is handled upstream with the `?? '0'` fallback, and '0' IS valid —
+ * only genuinely malformed values are rejected here.
+ */
+function isValidDecimalString(s: string | undefined): boolean {
+  if (s === undefined || s === '') return false;
+  try {
+    const b = new Big(s);
+    return b.gte(0);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * PHASE-1 LIMITATION: post-state computation assumes movement.amount is denominated
  * in the asset being checked. For swaps where source.asset !== destination.asset,
  * the inflow side is computed in source-asset units (incorrect) — phase 2 will
  * either reject post_position checks on swap movements or use a separate
  * destination_amount field on ProposedMovement.
+ *
+ * PHASE-1 LIMITATION: scope.venue is NOT supported. Authoring
+ * "USDC position on ethereum < 100k" would silently return the aggregate
+ * position if we accepted scope.venue here. Instead, we reject scope.venue
+ * with a structured failure so the user knows to remove it (or wait for
+ * phase-2 venue-scoped position support).
  */
 function evalTreasuryPosition(
   node: AmountCompareNode,
@@ -279,8 +353,56 @@ function evalTreasuryPosition(
     };
   }
 
+  if (node.scope.venue) {
+    return {
+      matched: false,
+      failure: {
+        reason_code: 'condition_node_evaluation_failed',
+        human_readable:
+          `Venue-scoped position checks are not supported in phase 1. ` +
+          `Rule specified scope.venue=${node.scope.venue} for ${node.attr}.`,
+        details: {
+          attr: node.attr,
+          asset: node.scope.asset,
+          venue: node.scope.venue,
+        },
+        user_action:
+          'Remove scope.venue from the rule, or wait for phase 2 venue-scoped position support.',
+      },
+      evaluation_details: { attr: node.attr },
+    };
+  }
+
   const asset = node.scope.asset;
   const currentPosition = ctx.treasury_state.positions_by_asset[asset] ?? '0';
+
+  // CRITICAL: validate currentPosition BEFORE any branching. If the upstream
+  // loader produced a malformed value (e.g. 'garbage', 'NaN', '1,000',
+  // '1.2.3', '-100'), applyNumericOp would silently return false, which the
+  // contract reads as "rule did not fire" — a min-reserve rule like
+  // `treasury.position < 100000 USDC` would then FAIL OPEN and approve a
+  // transfer whose position floor is actually unknown. Return a structured
+  // failure instead so the caller treats it as cannot-evaluate (block).
+  if (!isValidDecimalString(currentPosition)) {
+    return {
+      matched: false,
+      failure: {
+        reason_code: 'condition_node_evaluation_failed',
+        human_readable:
+          `treasury_state.positions_by_asset[${asset}] is malformed or missing: ` +
+          `"${currentPosition}". Cannot evaluate ${node.attr} rule.`,
+        details: {
+          attr: node.attr,
+          asset,
+          position_value_raw: currentPosition,
+        },
+        user_action:
+          'Treasury state loader returned an invalid position value. ' +
+          'Contact support — this indicates upstream data corruption.',
+      },
+      evaluation_details: { attr: node.attr, asset },
+    };
+  }
 
   let positionValue: string;
   if (postState && movement) {
@@ -299,14 +421,13 @@ function evalTreasuryPosition(
         positionValue = currentPosition;
       }
     } catch {
-      // Malformed currentPosition or movement amount — fail-closed with a
-      // structured failure so the caller can distinguish "did not fire" from
-      // "could not evaluate".
+      // Malformed movement.amount.amount — currentPosition was already
+      // validated above, so this branch only fires on a bad movement amount.
       return {
         matched: false,
         failure: {
           reason_code: 'condition_node_evaluation_failed',
-          human_readable: `Treasury position for ${asset} is not a valid decimal; cannot compute post-position.`,
+          human_readable: `Movement amount for ${asset} is not a valid decimal; cannot compute post-position.`,
           details: {
             asset,
             current_position: currentPosition,
