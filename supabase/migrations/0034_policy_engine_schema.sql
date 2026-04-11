@@ -368,9 +368,9 @@ ALTER TABLE policy_migration_warnings   ENABLE ROW LEVEL SECURITY;
 -- Helper function (idempotent — may already exist from prior migrations)
 -- Returns enterprise_ids visible to the current authenticated user
 CREATE OR REPLACE FUNCTION user_enterprise_ids()
-RETURNS SETOF UUID AS $$
-  SELECT enterprise_id FROM user_profiles WHERE id = auth.uid()
-$$ LANGUAGE sql STABLE;
+RETURNS SETOF UUID LANGUAGE sql STABLE SECURITY DEFINER AS $$
+  SELECT enterprise_id FROM user_profiles WHERE id = auth.uid();
+$$;
 
 -- Enterprise-scoped SELECT and WRITE for all customer-facing policy tables
 CREATE POLICY policy_policies_enterprise_scoped ON policy_policies
