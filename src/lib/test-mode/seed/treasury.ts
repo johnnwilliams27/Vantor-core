@@ -33,6 +33,7 @@ export async function seedTreasury(ctx: SeedContext): Promise<void> {
         user_id: userId,
         enterprise_id: enterpriseId,
         label: item.label,
+        amount: item.amount,
         amount_usd: item.amount,
         due_date: dateDaysFromNow(m * 30 + randInt(1, 5)),
         recurrence: 'monthly',
@@ -47,6 +48,7 @@ export async function seedTreasury(ctx: SeedContext): Promise<void> {
       user_id: userId,
       enterprise_id: enterpriseId,
       label: 'Biweekly Payroll',
+      amount: '180000',
       amount_usd: '180000',
       due_date: dateDaysFromNow(i * 14 + randInt(0, 2)),
       recurrence: 'biweekly',
@@ -67,13 +69,15 @@ export async function seedTreasury(ctx: SeedContext): Promise<void> {
       user_id: userId,
       enterprise_id: enterpriseId,
       label: oneTimeItems[i].label,
+      amount: oneTimeItems[i].amount,
       amount_usd: oneTimeItems[i].amount,
       due_date: dateDaysFromNow(randInt(15, 82)),
       is_active: true,
     });
   }
 
-  await supabase.from('manual_obligations').insert(obligations);
+  // Table renamed from manual_obligations → obligations in migration 0036.
+  await supabase.from('obligations').insert(obligations);
 
   // AI recommendations
   const recommendations = [

@@ -37,9 +37,20 @@ export async function PATCH(
   }
 
   const supabase = createAdminClient();
+  // Table rename from migration 0036. Also derives `amount` from
+  // `amount_usd` when the caller updates the legacy mirror, so the
+  // non-null native column stays in sync. Same invariant that
+  // ObligationsRepo.patch (T4) enforces on the new API side.
+  const updatePayload: Record<string, unknown> = {
+    ...parsed.data,
+    updated_at: new Date().toISOString(),
+  };
+  if (parsed.data.amount_usd !== undefined) {
+    updatePayload.amount = parsed.data.amount_usd;
+  }
   const { data: obligation, error } = await supabase
-    .from('manual_obligations')
-    .update({ ...parsed.data, updated_at: new Date().toISOString() })
+    .from('obligations')
+    .update(updatePayload)
     .eq('id', params.id)
     .eq('user_id', session.user.id)
     .eq('enterprise_id', enterpriseId)
@@ -66,9 +77,17 @@ export async function DELETE(
   if (!isValidUUID(params.id)) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
 
   const supabase = createAdminClient();
+  // Table rename from 0036. Sets both is_active=false (legacy) and
+  // status='cancelled' (new canonical signal) so the row stays
+  // consistent whether a consumer reads via the new Obligation type
+  // or via the legacy is_active path.
   const { error } = await supabase
-    .from('manual_obligations')
-    .update({ is_active: false, updated_at: new Date().toISOString() })
+    .from('obligations')
+    .update({
+      is_active: false,
+      status: 'cancelled',
+      updated_at: new Date().toISOString(),
+    })
     .eq('id', params.id)
     .eq('user_id', session.user.id)
     .eq('enterprise_id', enterpriseId);
