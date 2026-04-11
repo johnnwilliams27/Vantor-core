@@ -199,7 +199,7 @@ export class BridgeAdapter implements IBankingAdapter {
   async createFiatPayment(_params: FiatPaymentParams): Promise<FiatPaymentResult> {
     // Bank-to-bank fiat payments are not supported by Bridge. Probing the
     // /v0/transfers endpoint with every fiat-to-fiat rail combination returned
-    // "route from source -> destination not currently supported" — Bridge only
+    // "route from source -> destination not currently supported" â€” Bridge only
     // supports fiat<->crypto routes (used by ramps and the yield flow). A
     // dedicated bank payment provider (Modern Treasury / Column / Increase)
     // will handle bank-to-bank in a future PR. The /payments page shows a
