@@ -1,30 +1,9 @@
 import { z } from 'zod';
-import type { AssetCode } from '../types/assets';
-import type { MovementKind } from '../types/movement';
-
-/**
- * Decimal string matching "N" or "N.M" where N, M are digit strings. Non-negative.
- * Accepts leading zeros (e.g., "007"); canonicalization into a normal form is the
- * responsibility of downstream code (rate provider / idempotency hashing), not
- * this boundary schema.
- */
-const decimalStringNonNegative = z.string().regex(
-  /^(\d+)(\.\d+)?$/,
-  'Must be a non-negative decimal string (e.g., "100" or "100.50")'
-);
-
-/**
- * Closed asset enum — mirrors AssetCode from types/assets.ts. The
- * `satisfies readonly AssetCode[]` check makes adding a new AssetCode
- * without updating this tuple a compile error.
- */
-const assetCodes = ['USD', 'USDC', 'USDT'] as const satisfies readonly AssetCode[];
-const assetCodeSchema = z.enum(assetCodes);
-
-const amountNativeSchema = z.object({
-  amount: decimalStringNonNegative,
-  asset: assetCodeSchema,
-});
+import {
+  assetCodeSchema,
+  amountNativeSchema,
+  movementKinds,
+} from './primitives';
 
 const movementEndpointSchema = z.object({
   venue: z.string().min(1),
@@ -78,20 +57,6 @@ const initiatorSchema = z.discriminatedUnion('type', [
     .strict(),
 ]);
 
-/**
- * Closed movement kind enum. The `satisfies readonly MovementKind[]` check
- * forces this tuple to stay in sync with MovementKind in types/movement.ts.
- */
-const movementKinds = [
-  'crypto_transfer',
-  'fiat_ramp',
-  'yield_deposit',
-  'yield_withdraw',
-  'swap',
-  'bridge',
-  'payment',
-] as const satisfies readonly MovementKind[];
-
 export const proposedMovementSchema = z.object({
   id: z.string().min(1),
   kind: z.enum(movementKinds),
@@ -108,8 +73,3 @@ export const proposedMovementSchema = z.object({
 
 export type ProposedMovementInput = z.input<typeof proposedMovementSchema>;
 export type ProposedMovementParsed = z.output<typeof proposedMovementSchema>;
-
-// Unused-variable guard: the satisfies checks above are compile-time only.
-// Export the suppressed tuples so TS doesn't strip them as dead code.
-void assetCodes;
-void movementKinds;

@@ -209,3 +209,133 @@ describe('conditionSchema — unknown kinds', () => {
     expect(conditionSchema.safeParse(bad).success).toBe(false);
   });
 });
+
+// ─── C2/C3 regression guards ──────────────────────────────────────────────
+
+describe('conditionSchema — amount_compare (C2/C3 regression guards)', () => {
+  it('rejects a negative amount value (rule-bypass guard)', () => {
+    const bad = {
+      kind: 'amount_compare',
+      attr: 'transfer.amount',
+      op: '>',
+      value: { amount: '-50000', currency: 'USD' },
+    };
+    expect(conditionSchema.safeParse(bad).success).toBe(false);
+  });
+
+  it('rejects an unknown currency (asset code closed set)', () => {
+    const bad = {
+      kind: 'amount_compare',
+      attr: 'transfer.amount',
+      op: '>',
+      value: { amount: '50000', currency: 'ZWL' },
+    };
+    expect(conditionSchema.safeParse(bad).success).toBe(false);
+  });
+
+  it('rejects extra unknown fields on amount_compare (strict)', () => {
+    const bad = {
+      kind: 'amount_compare',
+      attr: 'transfer.amount',
+      op: '>',
+      value: { amount: '50000', currency: 'USD' },
+      malicious_extra: 'rides along',
+    };
+    expect(conditionSchema.safeParse(bad).success).toBe(false);
+  });
+});
+
+// ─── C1 regression guards (depth + cycles) ────────────────────────────────
+
+describe('conditionSchema — depth and cycles', () => {
+  it('accepts a reasonably deep nested tree (depth 10)', () => {
+    let node: any = {
+      kind: 'amount_compare',
+      attr: 'transfer.amount',
+      op: '>',
+      value: { amount: '1', currency: 'USD' },
+    };
+    for (let i = 0; i < 10; i++) {
+      node = { kind: 'not', child: node };
+    }
+    expect(conditionSchema.safeParse(node).success).toBe(true);
+  });
+
+  it('rejects a tree nested beyond MAX_CONDITION_DEPTH without crashing', () => {
+    let node: any = {
+      kind: 'amount_compare',
+      attr: 'transfer.amount',
+      op: '>',
+      value: { amount: '1', currency: 'USD' },
+    };
+    for (let i = 0; i < 100; i++) {
+      node = { kind: 'not', child: node };
+    }
+    // The validator must NOT throw — it must safeParse cleanly with success=false.
+    let result: any;
+    expect(() => { result = conditionSchema.safeParse(node); }).not.toThrow();
+    expect(result!.success).toBe(false);
+  });
+
+  it('handles a self-referential object without crashing', () => {
+    const cyc: any = { kind: 'not' };
+    cyc.child = cyc;
+    // Must not throw a stack-overflow error; must return safeParse with success=false.
+    let result: any;
+    expect(() => { result = conditionSchema.safeParse(cyc); }).not.toThrow();
+    expect(result!.success).toBe(false);
+  });
+});
+
+// ─── Composition edge cases ────────────────────────────────────────────────
+
+describe('conditionSchema — composition edge cases', () => {
+  it('accepts a NOT-of-NOT wrapping a leaf', () => {
+    const condition = {
+      kind: 'not',
+      child: {
+        kind: 'not',
+        child: {
+          kind: 'amount_compare',
+          attr: 'transfer.amount',
+          op: '>',
+          value: { amount: '1', currency: 'USD' },
+        },
+      },
+    };
+    expect(conditionSchema.safeParse(condition).success).toBe(true);
+  });
+
+  it('accepts an OR with a single child (min(1) enforced)', () => {
+    const condition = {
+      kind: 'or',
+      children: [
+        {
+          kind: 'amount_compare',
+          attr: 'transfer.amount',
+          op: '>',
+          value: { amount: '1', currency: 'USD' },
+        },
+      ],
+    };
+    expect(conditionSchema.safeParse(condition).success).toBe(true);
+  });
+});
+
+// ─── I3 window ceiling guard ──────────────────────────────────────────────
+
+describe('conditionSchema — aggregate_window ceiling (I3)', () => {
+  it('rejects a window_duration beyond the 90-day ceiling', () => {
+    const bad = {
+      kind: 'aggregate_window',
+      window: {
+        duration_ms: 100 * 24 * 60 * 60 * 1000, // 100 days
+        group_by: { initiator: true },
+      },
+      attr: 'sum_amount',
+      op: '>',
+      value: { amount: '1', currency: 'USD' },
+    };
+    expect(conditionSchema.safeParse(bad).success).toBe(false);
+  });
+});
