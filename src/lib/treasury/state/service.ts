@@ -49,7 +49,9 @@ export class TreasuryStateService {
     ] = await Promise.all([
       this.db
         .from('bank_accounts')
-        .select('id, currency, current_balance, balance_as_of')
+        .select(
+          'id, institution_name, account_name, last4, currency, current_balance, balance_as_of',
+        )
         .eq('enterprise_id', enterpriseId)
         .eq('is_active', true),
       this.db
@@ -103,6 +105,9 @@ export class TreasuryStateService {
       }
       bankAccounts.push({
         accountId: String(r.id),
+        institutionName: String(r.institution_name ?? ''),
+        accountName: String(r.account_name ?? ''),
+        last4: (r.last4 as string | null) ?? null,
         currency,
         balanceNative,
         balanceBaseUsd: balanceNative * rate,

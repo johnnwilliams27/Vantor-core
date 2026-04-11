@@ -2,6 +2,21 @@ export type SnapshotTrigger = 'scheduled' | 'on_demand' | 'pre_decision' | 'pre_
 
 export interface BankAccountPosition {
   accountId: string;
+  /**
+   * Display label for the issuing institution (e.g. "Chase", "Mercury").
+   * Denormalized into the snapshot so UI consumers don't need a second
+   * lookup against bank_accounts after reading a cached snapshot.
+   */
+  institutionName: string;
+  /**
+   * User-facing account nickname from bank_accounts.account_name.
+   */
+  accountName: string;
+  /**
+   * Last four digits of the account number. Null when unknown (legacy
+   * rows or accounts that never exposed full digits).
+   */
+  last4: string | null;
   currency: string;
   balanceNative: number;
   balanceBaseUsd: number;

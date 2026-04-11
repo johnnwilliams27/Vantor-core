@@ -6,7 +6,9 @@ import type {
   UpcomingObligation,
   RulesEngineResult,
 } from './interface';
-import { getStablecoinPrices, priceToken } from './oracle';
+import { getStablecoinPrices } from './oracle';
+import { TreasuryStateService } from './state/service';
+import { createForecastService } from '@/lib/forecast/service';
 
 export async function getActiveTreasuryRule(
   supabase: SupabaseClient,
@@ -31,101 +33,92 @@ export async function getActiveTreasuryRule(
   return data;
 }
 
+/**
+ * Build a TreasurySnapshot for the rules engine.
+ *
+ * Since Phase A this is a thin adapter over `TreasuryStateService`
+ * (`src/lib/treasury/state/service.ts`) which owns the canonical state
+ * aggregation. The signature keeps `userId` and `prices` for backwards
+ * compatibility with the six existing callers; `userId` is ignored (the
+ * new model is enterprise-scoped, which is the correct multi-tenant
+ * boundary), and `prices` is ignored because TreasuryStateService does
+ * its own price fetch with a 5-minute Next.js cache.
+ */
 export async function buildTreasurySnapshot(
   supabase: SupabaseClient,
-  userId: string,
-  prices?: StablecoinPrices,
-  enterpriseId?: string | null
+  _userId: string,
+  _prices?: StablecoinPrices,
+  enterpriseId?: string | null,
 ): Promise<TreasurySnapshot> {
-  let bankQuery = supabase
-    .from('bank_accounts')
-    .select('id, institution_name, account_name, last4, currency, current_balance, balance_as_of')
-    .eq('user_id', userId)
-    .eq('is_active', true);
-
-  let walletQuery = supabase
-    .from('wallets')
-    .select('id, chain, wallet_balances(token, balance, usd_value)')
-    .eq('user_id', userId);
-
-  if (enterpriseId) {
-    bankQuery = bankQuery.eq('enterprise_id', enterpriseId);
-    walletQuery = walletQuery.eq('enterprise_id', enterpriseId);
-  }
-
-  const [bankRes, walletRes] = await Promise.all([bankQuery, walletQuery]);
-
-  if (bankRes.error) throw new Error(bankRes.error.message);
-  if (walletRes.error) throw new Error(walletRes.error.message);
-
-  // Resolve prices: use provided prices or fetch from oracle
-  const resolvedPrices: StablecoinPrices = prices ?? (await getStablecoinPrices()).prices;
-
-  // Fetch cached FX rates for converting non-USD balances
-  const { data: fxRows } = await supabase
-    .from('fx_rate_cache')
-    .select('target_currency, rate')
-    .eq('base_currency', 'USD');
-  const fxRates: Record<string, number> = { USD: 1 };
-  for (const row of fxRows ?? []) {
-    fxRates[row.target_currency] = parseFloat(row.rate as string);
-  }
-
-  const bankAccounts = (bankRes.data ?? []).map((acct) => {
-    const currency = (acct.currency as string) ?? 'USD';
-    const localBalance = acct.current_balance ? parseFloat(acct.current_balance as string) : 0;
-    const fxRate = fxRates[currency] ?? 1;
+  if (!enterpriseId) {
     return {
-      id: acct.id as string,
-      institutionName: acct.institution_name as string,
-      accountName: acct.account_name as string,
-      last4: acct.last4 as string | null,
-      currency,
-      currentBalanceUsd: localBalance / fxRate,
-      balanceAsOf: acct.balance_as_of as string | null,
+      totalBankBalanceUsd: 0,
+      totalCryptoBalanceUsd: 0,
+      bankAccounts: [],
+      cryptoPositions: [],
     };
-  });
-
-  const totalBankBalanceUsd = bankAccounts.reduce((sum, a) => sum + a.currentBalanceUsd, 0);
-
-  const cryptoPositions: TreasurySnapshot['cryptoPositions'] = [];
-  for (const wallet of walletRes.data ?? []) {
-    const balances = (wallet as any).wallet_balances ?? [];
-    for (const wb of balances) {
-      const rawBalance = parseFloat(wb.balance ?? '0');
-      // Apply oracle price; fall back to stored usd_value if price not available
-      const usdValue = priceToken(wb.token as string, rawBalance, resolvedPrices) ||
-        (wb.usd_value ? parseFloat(wb.usd_value) : rawBalance);
-      cryptoPositions.push({
-        walletId: wallet.id as string,
-        chain: wallet.chain as string,
-        token: wb.token as string,
-        balance: rawBalance,
-        usdValue,
-      });
-    }
   }
 
-  const totalCryptoBalanceUsd = cryptoPositions.reduce((sum, p) => sum + p.usdValue, 0);
+  const stateSvc = new TreasuryStateService(supabase);
+  const snap = await stateSvc.computeSnapshot(enterpriseId, 'pre_decision');
 
   return {
-    totalBankBalanceUsd,
-    totalCryptoBalanceUsd,
-    bankAccounts,
-    cryptoPositions,
+    totalBankBalanceUsd: snap.totalFiatBaseUsd,
+    totalCryptoBalanceUsd: snap.totalStablecoinBaseUsd + snap.totalDefiBaseUsd,
+    bankAccounts: snap.positions.bankAccounts.map((b) => ({
+      id: b.accountId,
+      institutionName: b.institutionName,
+      accountName: b.accountName,
+      last4: b.last4,
+      currency: b.currency,
+      currentBalanceUsd: b.balanceBaseUsd,
+      balanceAsOf: b.balanceAsOf,
+    })),
+    cryptoPositions: snap.positions.wallets.map((w) => ({
+      walletId: w.walletId,
+      chain: w.chain,
+      token: w.token,
+      balance: w.balanceNative,
+      usdValue: w.balanceBaseUsd,
+    })),
   };
 }
 
+/**
+ * Collect every obligation due within the lookahead window.
+ *
+ * Invoices still come straight from the `invoices` table — they have
+ * not been synced into the `obligations` table on this branch, so the
+ * rules engine would go blind to overdue invoices if it only asked
+ * ForecastService. Sync lands in a later phase; for now, invoice
+ * loading stays in this function as a direct query.
+ *
+ * Manual / recurring obligations are delegated to
+ * `ForecastService.getObligationsDueInWindow`, which reads from the
+ * `obligations` table (renamed from `manual_obligations` in 0036),
+ * expands recurring rules via `expandRecurrence`, and applies the
+ * rules-engine scenario filter. Prior to this rewire the rules engine
+ * was silently broken on dev after 0036 renamed the table out from
+ * under the direct query — nothing was reaching the rules engine
+ * because every call failed. This is why no callers noticed.
+ *
+ * `userId` stays in the signature for caller compatibility but is only
+ * used for the invoice query (which is still user-scoped). The manual
+ * obligation path is now strictly enterprise-scoped, matching the
+ * multi-tenant model introduced in 0010.
+ */
 export async function collectObligations(
   supabase: SupabaseClient,
   userId: string,
   lookaheadDays: number,
-  enterpriseId?: string | null
+  enterpriseId?: string | null,
 ): Promise<UpcomingObligation[]> {
   const windowEnd = new Date();
   windowEnd.setDate(windowEnd.getDate() + lookaheadDays);
   const windowEndStr = windowEnd.toISOString().split('T')[0];
 
+  // --- Invoices: still queried directly until a later phase syncs them
+  //     into the obligations table via source='erp_sync'.
   let invoiceQuery = supabase
     .from('invoices')
     .select('id, invoice_number, description, amount, due_date')
@@ -134,22 +127,12 @@ export async function collectObligations(
     .not('due_date', 'is', null)
     .lte('due_date', windowEndStr);
 
-  let manualQuery = supabase
-    .from('manual_obligations')
-    .select('id, label, amount_usd, due_date')
-    .eq('user_id', userId)
-    .eq('is_active', true)
-    .lte('due_date', windowEndStr);
-
   if (enterpriseId) {
     invoiceQuery = invoiceQuery.eq('enterprise_id', enterpriseId);
-    manualQuery = manualQuery.eq('enterprise_id', enterpriseId);
   }
 
-  const [invoiceRes, manualRes] = await Promise.all([invoiceQuery, manualQuery]);
-
+  const invoiceRes = await invoiceQuery;
   if (invoiceRes.error) throw new Error(invoiceRes.error.message);
-  if (manualRes.error) throw new Error(manualRes.error.message);
 
   const obligations: UpcomingObligation[] = [];
 
@@ -163,14 +146,30 @@ export async function collectObligations(
     });
   }
 
-  for (const ob of manualRes.data ?? []) {
-    obligations.push({
-      id: ob.id as string,
-      source: 'manual',
-      label: ob.label as string,
-      amountUsd: parseFloat(ob.amount_usd as string),
-      dueDate: ob.due_date as string,
+  // --- Manual + recurring obligations: delegated to ForecastService so
+  //     the rules engine sees the same expanded window as every other
+  //     consumer (T15 adapter, forecast API, agent tools).
+  if (enterpriseId) {
+    const svc = createForecastService({
+      enterpriseId,
+      db: supabase,
+      consumer: 'rules_engine',
     });
+    const manual = await svc.getObligationsDueInWindow(lookaheadDays);
+    for (const o of manual) {
+      obligations.push({
+        id: o.id,
+        source: 'manual',
+        label: o.label,
+        // Currency conversion at projection time lives in the engine;
+        // the rules engine's legacy shape is USD-native and does not
+        // FX-convert, so we take the raw amount. Non-USD obligations
+        // would need a caller-side FX pass if the rules engine ever
+        // starts scoring them — out of scope for this rewire.
+        amountUsd: o.amount,
+        dueDate: o.dueDate,
+      });
+    }
   }
 
   return obligations;

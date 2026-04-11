@@ -10,7 +10,7 @@ function emptyState(overrides: Partial<TreasuryStateSnapshot> = {}): TreasurySta
     totalValueBaseUsd: 100000, totalFiatBaseUsd: 100000,
     totalStablecoinBaseUsd: 0, totalDefiBaseUsd: 0,
     positions: {
-      bankAccounts: [{ accountId: 'ba_1', currency: 'USD', balanceNative: 100000, balanceBaseUsd: 100000, balanceAsOf: null }],
+      bankAccounts: [{ accountId: 'ba_1', institutionName: 'Test Bank', accountName: 'Operating', last4: '0001', currency: 'USD', balanceNative: 100000, balanceBaseUsd: 100000, balanceAsOf: null }],
       wallets: [], defiPositions: [], pendingTransfers: [],
     },
     fxRates: {},
