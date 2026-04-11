@@ -9,7 +9,7 @@ import { Select } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
 import { useWallets } from '@/hooks/useWallets';
-import { useWalletTokenBalance } from '@/hooks/useBalances';
+import { useWalletTokenBalance, useWalletBalanceMap, formatWalletBalanceLabel } from '@/hooks/useBalances';
 import { BalanceHint } from '@/components/ui/balance-hint';
 import { Loader2, Calendar } from 'lucide-react';
 import { DateTimePicker } from '@/components/ui/datetime-picker';
@@ -32,6 +32,7 @@ type FormData = z.infer<typeof schema>;
 
 export function ScheduleSwapForm() {
   const { data: wallets } = useWallets();
+  const walletBalanceMap = useWalletBalanceMap();
   const { toast } = useToast();
   const createOp = useCreateScheduledOperation();
 
@@ -100,9 +101,14 @@ export function ScheduleSwapForm() {
               <option value="">Select wallet…</option>
               {wallets?.map((w) => {
                 const chain = w.chain.charAt(0).toUpperCase() + w.chain.slice(1);
+                const base = w.label
+                  ? `${w.label} · ${chain} (${w.address.slice(0, 6)}…${w.address.slice(-4)})`
+                  : `${chain} · ${w.address.slice(0, 6)}…${w.address.slice(-4)}`;
+                const bal = walletBalanceMap.get(w.id);
+                const suffix = bal != null ? ` · ${formatWalletBalanceLabel(bal)}` : '';
                 return (
                   <option key={w.id} value={w.id}>
-                    {w.label ? `${w.label} · ${chain} (${w.address.slice(0, 6)}…${w.address.slice(-4)})` : `${chain} · ${w.address.slice(0, 6)}…${w.address.slice(-4)}`}
+                    {base}{suffix}
                   </option>
                 );
               })}

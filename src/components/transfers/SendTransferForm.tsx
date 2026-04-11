@@ -9,7 +9,7 @@ import { Select } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
 import { useWallets } from '@/hooks/useWallets';
-import { useWalletTokenBalance } from '@/hooks/useBalances';
+import { useWalletTokenBalance, useWalletBalanceMap, formatWalletBalanceLabel } from '@/hooks/useBalances';
 import { BalanceHint } from '@/components/ui/balance-hint';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2, Send } from 'lucide-react';
@@ -57,6 +57,7 @@ const SOL_STEP_LABELS: Record<SolanaTransferStep, string> = {
 
 export function SendTransferForm() {
   const { data: wallets } = useWallets();
+  const walletBalanceMap = useWalletBalanceMap();
   const { data: unpaidInvoices } = useInvoices('unpaid');
   const { data: erpConfigs } = useQuery<ErpConfiguration[]>({
     queryKey: ['erp-configs'],
@@ -178,9 +179,14 @@ export function SendTransferForm() {
               <option value="">Select wallet…</option>
               {wallets?.map((w) => {
                 const chain = w.chain.charAt(0).toUpperCase() + w.chain.slice(1);
+                const base = w.label
+                  ? `${w.label} · ${chain} (${w.address.slice(0, 6)}…${w.address.slice(-4)})`
+                  : `${chain} · ${w.address.slice(0, 6)}…${w.address.slice(-4)}`;
+                const bal = walletBalanceMap.get(w.id);
+                const suffix = bal != null ? ` · ${formatWalletBalanceLabel(bal)}` : '';
                 return (
                   <option key={w.id} value={w.id}>
-                    {w.label ? `${w.label} · ${chain} (${w.address.slice(0, 6)}…${w.address.slice(-4)})` : `${chain} · ${w.address.slice(0, 6)}…${w.address.slice(-4)}`}
+                    {base}{suffix}
                   </option>
                 );
               })}

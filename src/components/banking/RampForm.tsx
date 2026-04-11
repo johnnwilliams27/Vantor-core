@@ -11,7 +11,7 @@ import { Select } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
 import { useWallets } from '@/hooks/useWallets';
-import { useBalances } from '@/hooks/useBalances';
+import { useBalances, useWalletBalanceMap, formatWalletBalanceLabel } from '@/hooks/useBalances';
 import { BalanceHint, FiatBalanceHint } from '@/components/ui/balance-hint';
 import { Loader2, ArrowDownLeft, ArrowUpRight, ArrowDown } from 'lucide-react';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
@@ -61,6 +61,22 @@ export function RampForm() {
 
   const { data: wallets } = useWallets();
   const { data: balances } = useBalances();
+  const walletBalanceMap = useWalletBalanceMap();
+
+  // Format a bank account's current balance for dropdown labels
+  const formatBankBalance = (a: BankAccount): string => {
+    if (a.current_balance == null) return '';
+    const currency = a.balance_currency || 'USD';
+    try {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency,
+        maximumFractionDigits: 2,
+      }).format(parseFloat(a.current_balance));
+    } catch {
+      return `${currency} ${parseFloat(a.current_balance).toFixed(2)}`;
+    }
+  };
 
   const { register, handleSubmit, watch, getValues, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -227,11 +243,19 @@ export function RampForm() {
               <>
                 <Select {...register('walletId')}>
                   <option value="">Select wallet…</option>
-                  {wallets?.map((w) => (
-                    <option key={w.id} value={w.id}>
-                      {w.label ? `${w.label} · ${w.chain.charAt(0).toUpperCase() + w.chain.slice(1)} (${w.address.slice(0, 6)}…${w.address.slice(-4)})` : `${w.chain.charAt(0).toUpperCase() + w.chain.slice(1)} · ${w.address.slice(0, 6)}…${w.address.slice(-4)}`}
-                    </option>
-                  ))}
+                  {wallets?.map((w) => {
+                    const chain = w.chain.charAt(0).toUpperCase() + w.chain.slice(1);
+                    const base = w.label
+                      ? `${w.label} · ${chain} (${w.address.slice(0, 6)}…${w.address.slice(-4)})`
+                      : `${chain} · ${w.address.slice(0, 6)}…${w.address.slice(-4)}`;
+                    const bal = walletBalanceMap.get(w.id);
+                    const suffix = bal != null ? ` · ${formatWalletBalanceLabel(bal)}` : '';
+                    return (
+                      <option key={w.id} value={w.id}>
+                        {base}{suffix}
+                      </option>
+                    );
+                  })}
                 </Select>
                 {errors.walletId && <p className="text-xs text-red-500">{errors.walletId.message}</p>}
               </>
@@ -239,11 +263,15 @@ export function RampForm() {
               <>
                 <Select {...register('bankAccountId')}>
                   <option value="">Select account…</option>
-                  {bankAccounts?.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {`${a.nickname ? `${a.nickname} – ` : ''}${a.institution_name}${a.last4 ? ` ****${a.last4}` : ''}`}
-                    </option>
-                  ))}
+                  {bankAccounts?.map((a) => {
+                    const base = `${a.nickname ? `${a.nickname} – ` : ''}${a.institution_name}${a.last4 ? ` ****${a.last4}` : ''}`;
+                    const bal = formatBankBalance(a);
+                    return (
+                      <option key={a.id} value={a.id}>
+                        {base}{bal ? ` · ${bal}` : ''}
+                      </option>
+                    );
+                  })}
                 </Select>
                 {!isOfframp && selectedBank && bankBalance !== null && (
                   <FiatBalanceHint
@@ -272,11 +300,15 @@ export function RampForm() {
               <>
                 <Select {...register('bankAccountId')}>
                   <option value="">Select account…</option>
-                  {bankAccounts?.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {`${a.nickname ? `${a.nickname} – ` : ''}${a.institution_name}${a.last4 ? ` ****${a.last4}` : ''}`}
-                    </option>
-                  ))}
+                  {bankAccounts?.map((a) => {
+                    const base = `${a.nickname ? `${a.nickname} – ` : ''}${a.institution_name}${a.last4 ? ` ****${a.last4}` : ''}`;
+                    const bal = formatBankBalance(a);
+                    return (
+                      <option key={a.id} value={a.id}>
+                        {base}{bal ? ` · ${bal}` : ''}
+                      </option>
+                    );
+                  })}
                 </Select>
                 {errors.bankAccountId && <p className="text-xs text-red-500">{errors.bankAccountId.message}</p>}
               </>
@@ -284,11 +316,19 @@ export function RampForm() {
               <>
                 <Select {...register('walletId')}>
                   <option value="">Select wallet…</option>
-                  {wallets?.map((w) => (
-                    <option key={w.id} value={w.id}>
-                      {w.label ? `${w.label} · ${w.chain.charAt(0).toUpperCase() + w.chain.slice(1)} (${w.address.slice(0, 6)}…${w.address.slice(-4)})` : `${w.chain.charAt(0).toUpperCase() + w.chain.slice(1)} · ${w.address.slice(0, 6)}…${w.address.slice(-4)}`}
-                    </option>
-                  ))}
+                  {wallets?.map((w) => {
+                    const chain = w.chain.charAt(0).toUpperCase() + w.chain.slice(1);
+                    const base = w.label
+                      ? `${w.label} · ${chain} (${w.address.slice(0, 6)}…${w.address.slice(-4)})`
+                      : `${chain} · ${w.address.slice(0, 6)}…${w.address.slice(-4)}`;
+                    const bal = walletBalanceMap.get(w.id);
+                    const suffix = bal != null ? ` · ${formatWalletBalanceLabel(bal)}` : '';
+                    return (
+                      <option key={w.id} value={w.id}>
+                        {base}{suffix}
+                      </option>
+                    );
+                  })}
                 </Select>
                 {errors.walletId && <p className="text-xs text-red-500">{errors.walletId.message}</p>}
               </>

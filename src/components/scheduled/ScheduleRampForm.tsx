@@ -15,7 +15,22 @@ import { DateTimePicker } from '@/components/ui/datetime-picker';
 import { useCreateScheduledOperation } from '@/hooks/useScheduledOperations';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { useWallets } from '@/hooks/useWallets';
+import { useWalletBalanceMap, formatWalletBalanceLabel } from '@/hooks/useBalances';
 import type { BankAccount } from '@/types/database';
+
+function formatBankBalance(a: BankAccount): string {
+  if (a.current_balance == null) return '';
+  const currency = a.balance_currency || 'USD';
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: 2,
+    }).format(parseFloat(a.current_balance));
+  } catch {
+    return `${currency} ${parseFloat(a.current_balance).toFixed(2)}`;
+  }
+}
 
 async function fetchBankAccounts(): Promise<BankAccount[]> {
   const res = await fetch('/api/bank-accounts');
@@ -47,6 +62,7 @@ export function ScheduleRampForm() {
   });
 
   const { data: wallets } = useWallets();
+  const walletBalanceMap = useWalletBalanceMap();
 
   const {
     register,
@@ -105,24 +121,34 @@ export function ScheduleRampForm() {
   const walletSelect = (
     <Select {...register('walletId')}>
       <option value="">Select wallet…</option>
-      {wallets?.map((w) => (
-        <option key={w.id} value={w.id}>
-          {w.label
-            ? `${w.label} · ${w.chain.charAt(0).toUpperCase() + w.chain.slice(1)} (${w.address.slice(0, 6)}…${w.address.slice(-4)})`
-            : `${w.chain.charAt(0).toUpperCase() + w.chain.slice(1)} · ${w.address.slice(0, 6)}…${w.address.slice(-4)}`}
-        </option>
-      ))}
+      {wallets?.map((w) => {
+        const chain = w.chain.charAt(0).toUpperCase() + w.chain.slice(1);
+        const base = w.label
+          ? `${w.label} · ${chain} (${w.address.slice(0, 6)}…${w.address.slice(-4)})`
+          : `${chain} · ${w.address.slice(0, 6)}…${w.address.slice(-4)}`;
+        const bal = walletBalanceMap.get(w.id);
+        const suffix = bal != null ? ` · ${formatWalletBalanceLabel(bal)}` : '';
+        return (
+          <option key={w.id} value={w.id}>
+            {base}{suffix}
+          </option>
+        );
+      })}
     </Select>
   );
 
   const bankSelect = (
     <Select {...register('bankAccountId')}>
       <option value="">Select account…</option>
-      {bankAccounts?.map((a) => (
-        <option key={a.id} value={a.id}>
-          {`${a.nickname ? `${a.nickname} – ` : ''}${a.institution_name}${a.last4 ? ` ****${a.last4}` : ''}`}
-        </option>
-      ))}
+      {bankAccounts?.map((a) => {
+        const base = `${a.nickname ? `${a.nickname} – ` : ''}${a.institution_name}${a.last4 ? ` ****${a.last4}` : ''}`;
+        const bal = formatBankBalance(a);
+        return (
+          <option key={a.id} value={a.id}>
+            {base}{bal ? ` · ${bal}` : ''}
+          </option>
+        );
+      })}
     </Select>
   );
 

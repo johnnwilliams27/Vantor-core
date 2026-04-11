@@ -10,7 +10,7 @@ import { Select } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
 import { useWallets } from '@/hooks/useWallets';
-import { useWalletTokenBalance } from '@/hooks/useBalances';
+import { useWalletTokenBalance, useWalletBalanceMap, formatWalletBalanceLabel } from '@/hooks/useBalances';
 import { BalanceHint } from '@/components/ui/balance-hint';
 import { Loader2, Calendar } from 'lucide-react';
 import { DateTimePicker } from '@/components/ui/datetime-picker';
@@ -32,6 +32,7 @@ type FormData = z.infer<typeof schema>;
 
 export function ScheduleBridgeForm() {
   const { data: wallets } = useWallets();
+  const walletBalanceMap = useWalletBalanceMap();
   const { toast } = useToast();
   const createOp = useCreateScheduledOperation();
 
@@ -123,11 +124,16 @@ export function ScheduleBridgeForm() {
               <Label>From Wallet</Label>
               <Select {...register('fromWalletId')}>
                 <option value="">Select source…</option>
-                {wallets?.map((w) => (
-                  <option key={w.id} value={w.id}>
-                    {`${w.label ? `${w.label} · ` : ''}${CHAIN_LABELS[w.chain] ?? w.chain} (${w.address.slice(0, 6)}…${w.address.slice(-4)})`}
-                  </option>
-                ))}
+                {wallets?.map((w) => {
+                  const base = `${w.label ? `${w.label} · ` : ''}${CHAIN_LABELS[w.chain] ?? w.chain} (${w.address.slice(0, 6)}…${w.address.slice(-4)})`;
+                  const bal = walletBalanceMap.get(w.id);
+                  const suffix = bal != null ? ` · ${formatWalletBalanceLabel(bal)}` : '';
+                  return (
+                    <option key={w.id} value={w.id}>
+                      {base}{suffix}
+                    </option>
+                  );
+                })}
               </Select>
               {errors.fromWalletId && <p className="text-sm text-red-500">{errors.fromWalletId.message}</p>}
             </div>
@@ -136,11 +142,16 @@ export function ScheduleBridgeForm() {
               <Label>To Wallet</Label>
               <Select {...register('toWalletId')}>
                 <option value="">Select destination…</option>
-                {destWallets.map((w) => (
-                  <option key={w.id} value={w.id}>
-                    {`${w.label ? `${w.label} · ` : ''}${CHAIN_LABELS[w.chain] ?? w.chain} (${w.address.slice(0, 6)}…${w.address.slice(-4)})`}
-                  </option>
-                ))}
+                {destWallets.map((w) => {
+                  const base = `${w.label ? `${w.label} · ` : ''}${CHAIN_LABELS[w.chain] ?? w.chain} (${w.address.slice(0, 6)}…${w.address.slice(-4)})`;
+                  const bal = walletBalanceMap.get(w.id);
+                  const suffix = bal != null ? ` · ${formatWalletBalanceLabel(bal)}` : '';
+                  return (
+                    <option key={w.id} value={w.id}>
+                      {base}{suffix}
+                    </option>
+                  );
+                })}
               </Select>
               {errors.toWalletId && <p className="text-sm text-red-500">{errors.toWalletId.message}</p>}
               {sameChain && <p className="text-sm text-red-500">Destination must be on a different chain.</p>}

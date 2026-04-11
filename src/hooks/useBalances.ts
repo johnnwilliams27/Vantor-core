@@ -51,3 +51,29 @@ export function useWalletTotalBalance(walletId: string | undefined) {
       .reduce((sum, b) => sum + (b.usdValue ? parseFloat(b.usdValue) : 0), 0);
   }, [balances, walletId]);
 }
+
+/** Per-wallet total USD value across all tokens, keyed by walletId. */
+export function useWalletBalanceMap() {
+  const { data: balances } = useBalances();
+
+  return useMemo(() => {
+    const map = new Map<string, number>();
+    if (!balances) return map;
+    for (const b of balances) {
+      if (!b.usdValue) continue;
+      const prev = map.get(b.walletId) ?? 0;
+      map.set(b.walletId, prev + parseFloat(b.usdValue));
+    }
+    return map;
+  }, [balances]);
+}
+
+/** Format a USD amount compactly for dropdown labels (e.g. "$1,234.56"). */
+export function formatWalletBalanceLabel(usd: number | undefined | null): string {
+  if (usd == null) return '';
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 2,
+  }).format(usd);
+}
