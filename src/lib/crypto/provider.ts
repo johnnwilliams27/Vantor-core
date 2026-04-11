@@ -1,4 +1,11 @@
-import { cryptoMissingKey, cryptoBadKeyFormat } from './errors';
+import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
+import {
+  cryptoMissingKey,
+  cryptoBadKeyFormat,
+  cryptoUnknownKeyId,
+  cryptoAuthTagMismatch,
+  cryptoBadEnvelope,
+} from './errors';
 
 const HEX64_RE = /^[0-9a-fA-F]{64}$/;
 const KEY_ID_RE = /^[a-zA-Z0-9_-]+$/;
@@ -66,4 +73,57 @@ export function loadEnvKeyConfigFromProcessEnv(env: NodeJS.ProcessEnv | Record<s
   }
 
   return { primary: { id: primaryId, key: primaryKey }, legacy };
+}
+
+const IV_BYTES = 12;
+const TAG_BYTES = 16;
+const ALGO = 'aes-256-gcm';
+
+export interface CipherProvider {
+  encrypt(plaintext: Buffer): Promise<{ keyId: string; inner: Buffer }>;
+  decrypt(keyId: string, inner: Buffer): Promise<Buffer>;
+}
+
+export class EnvKeyCipherProvider implements CipherProvider {
+  private readonly primary: { id: string; key: Buffer };
+  private readonly legacy: Map<string, Buffer>;
+
+  constructor(config: EnvKeyConfig) {
+    this.primary = config.primary;
+    this.legacy = config.legacy;
+  }
+
+  private getKeyById(id: string): Buffer {
+    if (id === this.primary.id) return this.primary.key;
+    const legacyKey = this.legacy.get(id);
+    if (!legacyKey) throw cryptoUnknownKeyId({ key_id: id });
+    return legacyKey;
+  }
+
+  async encrypt(plaintext: Buffer): Promise<{ keyId: string; inner: Buffer }> {
+    const iv = randomBytes(IV_BYTES);
+    const cipher = createCipheriv(ALGO, this.primary.key, iv);
+    const ct = Buffer.concat([cipher.update(plaintext), cipher.final()]);
+    const tag = cipher.getAuthTag();
+    const inner = Buffer.concat([iv, ct, tag]);
+    return { keyId: this.primary.id, inner };
+  }
+
+  async decrypt(keyId: string, inner: Buffer): Promise<Buffer> {
+    if (inner.length < IV_BYTES + TAG_BYTES) {
+      throw cryptoBadEnvelope({ cause: `inner blob too short: ${inner.length} bytes` });
+    }
+    const key = this.getKeyById(keyId);
+    const iv = inner.subarray(0, IV_BYTES);
+    const tag = inner.subarray(inner.length - TAG_BYTES);
+    const ciphertext = inner.subarray(IV_BYTES, inner.length - TAG_BYTES);
+
+    const decipher = createDecipheriv(ALGO, key, iv);
+    decipher.setAuthTag(tag);
+    try {
+      return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+    } catch {
+      throw cryptoAuthTagMismatch({ key_id: keyId });
+    }
+  }
 }
