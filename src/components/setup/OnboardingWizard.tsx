@@ -232,7 +232,7 @@ export function OnboardingWizard() {
                   style={{ animation: 'fadeSlideIn 0.4s ease-out both' }}
                 >
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    Navigate to <strong className="text-foreground">ERP Systems</strong> in Settings to configure SAP, Oracle, Xero, or NetSuite.
+                    Navigate to <strong className="text-foreground">ERP Systems</strong> in Settings to configure Xero. Oracle, NetSuite, SAP, and Quickbooks coming soon.
                   </p>
                 </div>
                 <div

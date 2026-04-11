@@ -18,15 +18,17 @@ import type { ErpConfiguration } from '@/types/database';
 import { Loader2, CheckCircle, XCircle, Settings2, Trash2, Pencil, Check, X } from 'lucide-react';
 import { CardSpinner } from '@/components/ui/spinner';
 
+// Xero is the only ERP we support for new connections today. SAP, Oracle,
+// and NetSuite are coming soon — their providers still exist in the DB
+// enum and the Linked list still renders legacy rows of those types, but
+// the new-connection form only lets users create Xero configurations.
 const schema = z.object({
-  provider: z.enum(['sap', 'oracle', 'xero', 'netsuite']),
+  provider: z.literal('xero'),
   label: z.string().min(1, 'Nickname required'),
   apiUrl: z.string().url('Enter a valid URL'),
   clientId: z.string().min(1, 'Client ID required'),
   clientSecret: z.string().min(1, 'Client secret required'),
-  companyCode: z.string().optional(),
   tenantId: z.string().optional(),
-  accountId: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -66,7 +68,7 @@ export default function ERPSettingsPage() {
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { provider: 'sap' },
+    defaultValues: { provider: 'xero' },
   });
 
   const handleSetActive = async (id: string, is_active: boolean) => {
@@ -146,9 +148,7 @@ export default function ERPSettingsPage() {
             apiUrl: data.apiUrl,
             clientId: data.clientId,
             clientSecret: data.clientSecret,
-            companyCode: data.companyCode,
             tenantId: data.tenantId,
-            accountId: data.accountId,
           },
           testOnly: true,
         }),
@@ -174,9 +174,7 @@ export default function ERPSettingsPage() {
             apiUrl: data.apiUrl,
             clientId: data.clientId,
             clientSecret: data.clientSecret,
-            companyCode: data.companyCode,
             tenantId: data.tenantId,
-            accountId: data.accountId,
           },
         }),
       });
@@ -207,7 +205,7 @@ export default function ERPSettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Link ERP System</CardTitle>
-            <CardDescription>Connect SAP, Oracle, Xero, or NetSuite to sync invoices and vendors</CardDescription>
+            <CardDescription>Connect Xero to sync invoices, vendors, and obligations</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -215,22 +213,22 @@ export default function ERPSettingsPage() {
                 <div className="space-y-2">
                   <Label>ERP Provider</Label>
                   <Select {...register('provider')}>
-                    <option value="sap">SAP Digital Currency Hub</option>
-                    <option value="oracle">Oracle ERP Cloud</option>
                     <option value="xero">Xero</option>
-                    <option value="netsuite">NetSuite</option>
                   </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Oracle, NetSuite, SAP, and Quickbooks coming soon.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label>Nickname</Label>
-                  <Input placeholder="e.g. Production SAP" {...register('label')} />
+                  <Input placeholder="e.g. Production Xero" {...register('label')} />
                   {errors.label && <p className="text-sm text-red-500">{errors.label.message}</p>}
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label>API URL</Label>
-                <Input placeholder="https://api.example.com" {...register('apiUrl')} />
+                <Input placeholder="https://api.xero.com" {...register('apiUrl')} />
                 {errors.apiUrl && <p className="text-sm text-red-500">{errors.apiUrl.message}</p>}
               </div>
 
@@ -247,19 +245,9 @@ export default function ERPSettingsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Company Code <span className="text-gray-400">(SAP)</span></Label>
-                  <Input placeholder="1000" {...register('companyCode')} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Tenant ID <span className="text-gray-400">(Oracle/Xero)</span></Label>
-                  <Input placeholder="tenant-id" {...register('tenantId')} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Account ID <span className="text-gray-400">(NetSuite)</span></Label>
-                  <Input placeholder="TSTDRV123456" {...register('accountId')} />
-                </div>
+              <div className="space-y-2">
+                <Label>Tenant ID <span className="text-gray-400">(Xero)</span></Label>
+                <Input placeholder="tenant-id" {...register('tenantId')} />
               </div>
 
               {testResult && (
