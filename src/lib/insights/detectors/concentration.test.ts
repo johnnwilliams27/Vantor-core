@@ -24,6 +24,9 @@ function buildSnapshot(yieldPositions: YieldPositionSnapshot[] = []): TreasurySn
   return {
     totalBankBalanceUsd: 0,
     totalCryptoBalanceUsd: 0,
+    totalMmfPositionsUsd: 0,
+    totalDefiPositionsUsd: 0,
+    totalOtherYieldUsd: 0,
     totalYieldBalanceUsd: yieldPositions.reduce((s, p) => s + p.currentValueUsd, 0),
     bankAccounts: [],
     cryptoPositions: [],
