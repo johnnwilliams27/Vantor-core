@@ -14,7 +14,8 @@ export default defineConfig({
     // (node_modules, dist, coverage, .idea, .git, .cache) instead of overriding them.
     // Adding our own repo-specific exclusions on top.
     exclude: [...configDefaults.exclude, '.next', '.worktrees', 'scripts'],
-    testTimeout: 10_000,
+    setupFiles: ['./tests/setup.ts'],
+    testTimeout: 15_000,
   },
   resolve: {
     alias: {
