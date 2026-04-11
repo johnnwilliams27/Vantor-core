@@ -8,6 +8,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
     "cron": "tsx --env-file=.env.local scripts/cron-runner.ts",
     "migrate": "tsx --env-file=.env.local scripts/migrate.ts",
     "seed": "tsx --env-file=.env.local scripts/seed.ts"
@@ -70,16 +74,19 @@
     "@types/node-cron": "^3.0.11",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
+    "@vitest/ui": "^2.1.9",
     "autoprefixer": "^10.4.19",
     "dotenv": "^17.3.1",
     "env-cmd": "^11.0.0",
     "eslint": "^8.57.0",
     "eslint-config-next": "14.2.5",
+    "happy-dom": "^15.11.7",
     "node-cron": "^4.2.1",
     "postcss": "^8.4.39",
     "sharp": "^0.34.5",
     "tailwindcss": "^3.4.4",
     "tsx": "^4.21.0",
-    "typescript": "^5.5.3"
+    "typescript": "^5.5.3",
+    "vitest": "^2.1.9"
   }
 }
