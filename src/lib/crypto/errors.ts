@@ -51,7 +51,7 @@ export class CryptoError extends Error {
 }
 
 function withTrace(fields: Omit<CryptoErrorFields, 'trace_id'> = {}): CryptoErrorFields {
-  return { trace_id: randomUUID(), ...fields };
+  return { ...fields, trace_id: randomUUID() };
 }
 
 export function cryptoMissingKey(extra: Partial<CryptoErrorFields> = {}): CryptoError {
