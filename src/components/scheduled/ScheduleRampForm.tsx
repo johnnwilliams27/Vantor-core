@@ -15,12 +15,12 @@ import { DateTimePicker } from '@/components/ui/datetime-picker';
 import { useCreateScheduledOperation } from '@/hooks/useScheduledOperations';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { useWallets } from '@/hooks/useWallets';
-import { useWalletBalanceMap, formatWalletBalanceLabel } from '@/hooks/useBalances';
+import { useWalletTokenHoldings, formatWalletTokensLabel } from '@/hooks/useBalances';
 import type { BankAccount } from '@/types/database';
 
 function formatBankBalance(a: BankAccount): string {
   if (a.current_balance == null) return '';
-  const currency = a.balance_currency || 'USD';
+  const currency = a.currency || a.balance_currency || 'USD';
   try {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -62,7 +62,7 @@ export function ScheduleRampForm() {
   });
 
   const { data: wallets } = useWallets();
-  const walletBalanceMap = useWalletBalanceMap();
+  const walletHoldings = useWalletTokenHoldings();
 
   const {
     register,
@@ -126,8 +126,9 @@ export function ScheduleRampForm() {
         const base = w.label
           ? `${w.label} · ${chain} (${w.address.slice(0, 6)}…${w.address.slice(-4)})`
           : `${chain} · ${w.address.slice(0, 6)}…${w.address.slice(-4)}`;
-        const bal = walletBalanceMap.get(w.id);
-        const suffix = bal != null ? ` · ${formatWalletBalanceLabel(bal)}` : '';
+        const holdings = walletHoldings.get(w.id);
+        const label = formatWalletTokensLabel(holdings);
+        const suffix = label ? ` · ${label}` : '';
         return (
           <option key={w.id} value={w.id}>
             {base}{suffix}

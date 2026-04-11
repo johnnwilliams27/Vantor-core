@@ -52,28 +52,76 @@ export function useWalletTotalBalance(walletId: string | undefined) {
   }, [balances, walletId]);
 }
 
-/** Per-wallet total USD value across all tokens, keyed by walletId. */
-export function useWalletBalanceMap() {
+export interface WalletTokenHolding {
+  token: string;
+  balance: number;
+  usdValue: number;
+}
+
+/**
+ * Per-wallet token holdings (native amounts, not USD-collapsed),
+ * sorted by USD value descending. Keyed by walletId.
+ */
+export function useWalletTokenHoldings() {
   const { data: balances } = useBalances();
 
   return useMemo(() => {
-    const map = new Map<string, number>();
+    const map = new Map<string, WalletTokenHolding[]>();
     if (!balances) return map;
     for (const b of balances) {
-      if (!b.usdValue) continue;
-      const prev = map.get(b.walletId) ?? 0;
-      map.set(b.walletId, prev + parseFloat(b.usdValue));
+      const native = parseFloat(b.balance);
+      if (!isFinite(native) || native <= 0) continue;
+      const list = map.get(b.walletId) ?? [];
+      list.push({
+        token: b.token,
+        balance: native,
+        usdValue: b.usdValue ? parseFloat(b.usdValue) : 0,
+      });
+      map.set(b.walletId, list);
     }
+    map.forEach((list) => {
+      list.sort((a: WalletTokenHolding, b: WalletTokenHolding) => b.usdValue - a.usdValue);
+    });
     return map;
   }, [balances]);
 }
 
-/** Format a USD amount compactly for dropdown labels (e.g. "$1,234.56"). */
-export function formatWalletBalanceLabel(usd: number | undefined | null): string {
-  if (usd == null) return '';
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 2,
-  }).format(usd);
+/** Format a single token amount, e.g. "50,000.00 USDC" or "0.0512 ETH". */
+function formatTokenAmount(amount: number, token: string): string {
+  if (!isFinite(amount)) return `0 ${token}`;
+  let formatted: string;
+  if (amount >= 1_000_000) {
+    formatted = new Intl.NumberFormat('en-US', {
+      notation: 'compact',
+      maximumFractionDigits: 2,
+    }).format(amount);
+  } else if (amount > 0 && amount < 1) {
+    formatted = new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 4,
+      maximumFractionDigits: 4,
+    }).format(amount);
+  } else {
+    formatted = new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  }
+  return `${formatted} ${token}`;
+}
+
+/**
+ * Format a wallet's token holdings for dropdown labels.
+ * Shows the top holdings in their native currency, e.g.:
+ *   "50,000.00 USDC"            (single-token wallet)
+ *   "50,000.00 USDC + 0.0512 ETH" (multi-token wallet, top 2)
+ *   "50,000.00 USDC + 2 more"   (more than 2 tokens)
+ */
+export function formatWalletTokensLabel(holdings: WalletTokenHolding[] | undefined): string {
+  if (!holdings || holdings.length === 0) return '';
+  const first = formatTokenAmount(holdings[0].balance, holdings[0].token);
+  if (holdings.length === 1) return first;
+  if (holdings.length === 2) {
+    return `${first} + ${formatTokenAmount(holdings[1].balance, holdings[1].token)}`;
+  }
+  return `${first} + ${holdings.length - 1} more`;
 }

@@ -11,7 +11,7 @@ import { Select } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
 import { useWallets } from '@/hooks/useWallets';
-import { useBalances, useWalletBalanceMap, formatWalletBalanceLabel } from '@/hooks/useBalances';
+import { useBalances, useWalletTokenHoldings, formatWalletTokensLabel } from '@/hooks/useBalances';
 import { BalanceHint, FiatBalanceHint } from '@/components/ui/balance-hint';
 import { Loader2, ArrowDownLeft, ArrowUpRight, ArrowDown } from 'lucide-react';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
@@ -61,12 +61,12 @@ export function RampForm() {
 
   const { data: wallets } = useWallets();
   const { data: balances } = useBalances();
-  const walletBalanceMap = useWalletBalanceMap();
+  const walletHoldings = useWalletTokenHoldings();
 
   // Format a bank account's current balance for dropdown labels
   const formatBankBalance = (a: BankAccount): string => {
     if (a.current_balance == null) return '';
-    const currency = a.balance_currency || 'USD';
+    const currency = a.currency || a.balance_currency || 'USD';
     try {
       return new Intl.NumberFormat('en-US', {
         style: 'currency',
@@ -248,8 +248,9 @@ export function RampForm() {
                     const base = w.label
                       ? `${w.label} · ${chain} (${w.address.slice(0, 6)}…${w.address.slice(-4)})`
                       : `${chain} · ${w.address.slice(0, 6)}…${w.address.slice(-4)}`;
-                    const bal = walletBalanceMap.get(w.id);
-                    const suffix = bal != null ? ` · ${formatWalletBalanceLabel(bal)}` : '';
+                    const holdings = walletHoldings.get(w.id);
+                    const label = formatWalletTokensLabel(holdings);
+                    const suffix = label ? ` · ${label}` : '';
                     return (
                       <option key={w.id} value={w.id}>
                         {base}{suffix}
@@ -321,8 +322,9 @@ export function RampForm() {
                     const base = w.label
                       ? `${w.label} · ${chain} (${w.address.slice(0, 6)}…${w.address.slice(-4)})`
                       : `${chain} · ${w.address.slice(0, 6)}…${w.address.slice(-4)}`;
-                    const bal = walletBalanceMap.get(w.id);
-                    const suffix = bal != null ? ` · ${formatWalletBalanceLabel(bal)}` : '';
+                    const holdings = walletHoldings.get(w.id);
+                    const label = formatWalletTokensLabel(holdings);
+                    const suffix = label ? ` · ${label}` : '';
                     return (
                       <option key={w.id} value={w.id}>
                         {base}{suffix}

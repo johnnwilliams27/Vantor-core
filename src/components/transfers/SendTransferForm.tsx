@@ -9,7 +9,7 @@ import { Select } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
 import { useWallets } from '@/hooks/useWallets';
-import { useWalletTokenBalance, useWalletBalanceMap, formatWalletBalanceLabel } from '@/hooks/useBalances';
+import { useWalletTokenBalance, useWalletTokenHoldings, formatWalletTokensLabel } from '@/hooks/useBalances';
 import { BalanceHint } from '@/components/ui/balance-hint';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2, Send } from 'lucide-react';
@@ -57,7 +57,7 @@ const SOL_STEP_LABELS: Record<SolanaTransferStep, string> = {
 
 export function SendTransferForm() {
   const { data: wallets } = useWallets();
-  const walletBalanceMap = useWalletBalanceMap();
+  const walletHoldings = useWalletTokenHoldings();
   const { data: unpaidInvoices } = useInvoices('unpaid');
   const { data: erpConfigs } = useQuery<ErpConfiguration[]>({
     queryKey: ['erp-configs'],
@@ -182,8 +182,9 @@ export function SendTransferForm() {
                 const base = w.label
                   ? `${w.label} · ${chain} (${w.address.slice(0, 6)}…${w.address.slice(-4)})`
                   : `${chain} · ${w.address.slice(0, 6)}…${w.address.slice(-4)}`;
-                const bal = walletBalanceMap.get(w.id);
-                const suffix = bal != null ? ` · ${formatWalletBalanceLabel(bal)}` : '';
+                const holdings = walletHoldings.get(w.id);
+                const label = formatWalletTokensLabel(holdings);
+                const suffix = label ? ` · ${label}` : '';
                 return (
                   <option key={w.id} value={w.id}>
                     {base}{suffix}

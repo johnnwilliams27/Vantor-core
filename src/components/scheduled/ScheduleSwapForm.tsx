@@ -9,7 +9,7 @@ import { Select } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
 import { useWallets } from '@/hooks/useWallets';
-import { useWalletTokenBalance, useWalletBalanceMap, formatWalletBalanceLabel } from '@/hooks/useBalances';
+import { useWalletTokenBalance, useWalletTokenHoldings, formatWalletTokensLabel } from '@/hooks/useBalances';
 import { BalanceHint } from '@/components/ui/balance-hint';
 import { Loader2, Calendar } from 'lucide-react';
 import { DateTimePicker } from '@/components/ui/datetime-picker';
@@ -32,7 +32,7 @@ type FormData = z.infer<typeof schema>;
 
 export function ScheduleSwapForm() {
   const { data: wallets } = useWallets();
-  const walletBalanceMap = useWalletBalanceMap();
+  const walletHoldings = useWalletTokenHoldings();
   const { toast } = useToast();
   const createOp = useCreateScheduledOperation();
 
@@ -104,8 +104,9 @@ export function ScheduleSwapForm() {
                 const base = w.label
                   ? `${w.label} · ${chain} (${w.address.slice(0, 6)}…${w.address.slice(-4)})`
                   : `${chain} · ${w.address.slice(0, 6)}…${w.address.slice(-4)}`;
-                const bal = walletBalanceMap.get(w.id);
-                const suffix = bal != null ? ` · ${formatWalletBalanceLabel(bal)}` : '';
+                const holdings = walletHoldings.get(w.id);
+                const label = formatWalletTokensLabel(holdings);
+                const suffix = label ? ` · ${label}` : '';
                 return (
                   <option key={w.id} value={w.id}>
                     {base}{suffix}
