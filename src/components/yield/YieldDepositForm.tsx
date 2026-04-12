@@ -114,7 +114,7 @@ export function YieldDepositForm({ protocolId, onBack }: Props) {
             <div className="rounded-lg bg-muted/50 p-3 text-sm space-y-1">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Estimated APY</span>
-                <span className="font-semibold text-green-600">
+                <span className="font-semibold text-green-400">
                   {(selectedRate.totalAPY * 100).toFixed(2)}%
                 </span>
               </div>

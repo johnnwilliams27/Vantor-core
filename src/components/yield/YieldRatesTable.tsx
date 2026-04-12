@@ -4,7 +4,7 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CardSpinner } from '@/components/ui/spinner';
+import { CardSkeleton, CardError } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -70,21 +70,21 @@ const PROTOCOL_RATE_SOURCE: Record<string, string> = {
 };
 
 const RISK_COLORS: Record<string, string> = {
-  low: 'bg-green-100 text-green-800',
-  medium: 'bg-yellow-100 text-yellow-800',
-  high: 'bg-red-100 text-red-800',
+  low: 'bg-green-500/8 text-green-400',
+  medium: 'bg-amber-500/8 text-amber-400',
+  high: 'bg-red-500/8 text-red-400',
 };
 
 const SCORE_BAR_COLORS: Record<number, string> = {
   1: 'bg-green-500',
-  2: 'bg-yellow-500',
+  2: 'bg-amber-500',
   3: 'bg-red-500',
 };
 
 const SCORE_TEXT_COLORS: Record<number, string> = {
-  1: 'text-green-700',
-  2: 'text-yellow-700',
-  3: 'text-red-700',
+  1: 'text-green-400',
+  2: 'text-amber-400',
+  3: 'text-red-400',
 };
 
 function capitalize(s: string): string {
@@ -110,12 +110,18 @@ function formatUsdCompact(value: number | null | undefined): string {
 
 function formatRelativeTime(isoString: string): string {
   const diffMs = Date.now() - new Date(isoString).getTime();
-  const diffSec = Math.floor(diffMs / 1000);
-  if (diffSec < 60) return `${diffSec}s ago`;
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  return `${diffHr}h ago`;
+  if (diffMs < 60_000) return 'just now';
+  const minutes = Math.floor(diffMs / 60_000);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 4) return `${weeks}w ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo ago`;
+  return `${Math.floor(months / 12)}y ago`;
 }
 
 /* ---- Ondo KYC Modal ---- */
@@ -154,18 +160,18 @@ function OndoKycModal({ walletAddress, onVerified, onClose }: OndoKycModalProps)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-[#0a1628] border border-white/10 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+      <div className="bg-card border border-border rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <Image src="/partners/Ondo_Logo_0.svg" alt="Ondo" width={56} height={28} className="h-7 w-auto object-contain" unoptimized />
             <h3 className="text-white font-semibold">Identity Verification Required</h3>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <p className="text-sm text-gray-400 mb-4">
+        <p className="text-sm text-muted-foreground mb-4">
           Ondo requires separate identity verification before you can deposit. Complete KYC on
           Ondo&apos;s website, then return here to confirm.
         </p>
@@ -243,7 +249,7 @@ function RiskMeter({ factors }: { factors: RiskFactors }) {
           />
         </div>
         <span className={`text-xs font-medium ${
-          avg <= 1.5 ? 'text-green-700' : avg <= 2.25 ? 'text-yellow-700' : 'text-red-700'
+          avg <= 1.5 ? 'text-green-400' : avg <= 2.25 ? 'text-amber-400' : 'text-red-400'
         }`}>
           {avg.toFixed(1)}/3
         </span>
@@ -420,8 +426,8 @@ function InlineDepositForm({
     return (
       <Card className="relative overflow-hidden">
         <CardContent className="p-6 flex flex-col items-center text-center space-y-3">
-          <div className="rounded-full bg-green-100 p-3">
-            <CheckCircle2 className="h-8 w-8 text-green-600" />
+          <div className="rounded-full bg-green-500/10 p-3">
+            <CheckCircle2 className="h-8 w-8 text-green-400" />
           </div>
           <div>
             <p className="font-semibold text-lg">Deposit Successful</p>
@@ -430,7 +436,7 @@ function InlineDepositForm({
             </p>
           </div>
           <div className="rounded-lg bg-muted/50 px-4 py-2 text-sm">
-            Earning <span className="font-semibold text-green-600">{success.apy}</span> APY
+            Earning <span className="font-semibold text-green-400">{success.apy}</span> APY
           </div>
           <Button size="sm" variant="outline" onClick={onBack} className="mt-2">
             Back to Protocols
@@ -508,7 +514,7 @@ function InlineDepositForm({
             <div className="rounded-lg bg-muted/50 p-2.5 text-sm space-y-1">
               <div className="flex justify-between">
                 <span className="text-muted-foreground text-xs">Est. APY</span>
-                <span className="font-semibold text-green-600 text-xs">
+                <span className="font-semibold text-green-400 text-xs">
                   {formatAPY(selectedRate.totalAPY)}
                 </span>
               </div>
@@ -524,7 +530,7 @@ function InlineDepositForm({
           )}
 
           {protocol.kycRequired && (
-            <div className="rounded-lg border border-yellow-200 bg-yellow-50 dark:bg-yellow-900/10 dark:border-yellow-800 p-2.5 text-xs text-yellow-800 dark:text-yellow-200">
+            <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 text-amber-400">
               KYC required. Verify your account with {protocol.name} before depositing.
             </div>
           )}
@@ -612,7 +618,7 @@ function CategoryFilterBar({
               inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-medium
               transition-colors border
               ${isActive
-                ? 'bg-teal-600 text-white border-teal-600 dark:bg-teal-500 dark:border-teal-500'
+                ? 'bg-muted text-foreground border-border'
                 : 'bg-background text-muted-foreground border-border hover:bg-muted hover:text-foreground'}
             `}
           >
@@ -641,16 +647,23 @@ function TokenizedMmfCard({ protocol }: { protocol: YieldProtocolWithRates }) {
       <div className="flex items-center justify-between px-5 pt-5 pb-3">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-lg font-semibold truncate">{venue.displayName}</span>
-          <span className="ml-1 inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-500/20 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">
+          <span className="ml-1 inline-flex items-center rounded-full bg-amber-500/10 text-amber-400 px-2 py-0.5 text-[10px] font-medium">
             Coming Soon
           </span>
         </div>
         <div className="flex flex-col items-end gap-1.5 shrink-0">
-          <Badge variant="ethereum">{venue.currency}</Badge>
-          <Badge className="bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400 text-[10px]">
-            <Landmark className="h-3 w-3 mr-1" />
-            Tokenized MMF
-          </Badge>
+          <div className="flex items-center gap-1">
+            {venue.supportedChains
+              .filter((c) => c.toLowerCase() === 'ethereum' || c.toLowerCase() === 'solana')
+              .map((chain) => (
+                <Badge key={chain} variant={chain.toLowerCase() === 'ethereum' ? 'ethereum' : 'solana'} className="text-[10px]">
+                  {chain}
+                </Badge>
+              ))}
+          </div>
+          <span className="text-[11px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+            USDC
+          </span>
         </div>
       </div>
 
@@ -660,19 +673,16 @@ function TokenizedMmfCard({ protocol }: { protocol: YieldProtocolWithRates }) {
 
       <CardContent className="space-y-3 pt-3">
         {/* Reference yield — the hero metric for an MMF card */}
-        <div className="flex items-center justify-between rounded-lg border border-teal-500/20 bg-gradient-to-r from-teal-500/[0.08] to-cyan-500/[0.04] px-4 py-3">
+        <div className="flex items-center justify-between rounded-lg border border-border/50 px-4 py-3">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold uppercase tracking-wider text-teal-700 dark:text-teal-300">
-              Reference yield
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Reference Yield
             </span>
             <InfoTooltip content={`7-day annualized yield as of ${venue.yieldAsOf}. Not a live quote — refreshed quarterly from rwa.xyz.`} />
           </div>
-          <div className="text-right">
-            <div className="text-lg font-bold tracking-tight text-foreground tabular-nums">
-              {formatAPY(venue.referenceYield)}
-            </div>
-            <div className="text-[10px] text-muted-foreground">as of {venue.yieldAsOf}</div>
-          </div>
+          <span className="text-sm font-bold tracking-tight text-foreground tabular-nums">
+            {formatAPY(venue.referenceYield)}
+          </span>
         </div>
 
         {/* Fund Size — deliberately NOT called "TVL" */}
@@ -683,68 +693,52 @@ function TokenizedMmfCard({ protocol }: { protocol: YieldProtocolWithRates }) {
             </span>
             <InfoTooltip content="Assets under management (AUM) of the underlying fund. Unlike a DeFi pool's TVL, this is informational — tokenized MMFs are backed by the underlying Treasury market and have effectively unlimited capacity." />
           </div>
-          <span className="text-base font-bold tracking-tight tabular-nums">
+          <span className="text-sm font-bold tracking-tight tabular-nums">
             {formatUsdCompact(venue.fundSizeUsd)}
           </span>
         </div>
 
-        {/* Metadata grid */}
+        {/* Metadata grid — 3 rows × 2 columns */}
         <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
           <div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Issuer</div>
-            <div className="font-medium">{venue.issuer}</div>
-          </div>
-          <div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Fund Manager</div>
+            <div className="text-[11px] text-muted-foreground uppercase tracking-wider">Fund Manager</div>
             <div className="font-medium truncate">{venue.fundManager}</div>
           </div>
           <div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Wrapper</div>
-            <div className="font-medium">{venue.regulatoryWrapper}</div>
-          </div>
-          <div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Eligibility</div>
+            <div className="text-[11px] text-muted-foreground uppercase tracking-wider">Eligibility</div>
             <div className="font-medium">{ELIGIBILITY_LABELS[venue.eligibility]}</div>
           </div>
           <div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Redemption</div>
+            <div className="text-[11px] text-muted-foreground uppercase tracking-wider">Underlying</div>
+            <div className="font-medium">{venue.underlyingComposition}</div>
+          </div>
+          <div>
+            <div className="text-[11px] text-muted-foreground uppercase tracking-wider">Reporting</div>
+            <div className="font-medium">{venue.reportingCadence}</div>
+          </div>
+          <div>
+            <div className="text-[11px] text-muted-foreground uppercase tracking-wider">Redemption</div>
             <div className="font-medium flex items-center gap-1">
               <Clock className="h-3 w-3 text-muted-foreground" />
               {venue.timeToCash}
             </div>
           </div>
           <div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Reporting</div>
-            <div className="font-medium">{venue.reportingCadence}</div>
-          </div>
-          <div className="col-span-2">
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Underlying</div>
-            <div className="font-medium">{venue.underlyingComposition}</div>
-          </div>
-          <div className="col-span-2">
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Supported chains</div>
-            <div className="font-medium text-[11px]">{venue.supportedChains.join(' · ')}</div>
+            <div className="text-[11px] text-muted-foreground uppercase tracking-wider">Wrapper</div>
+            <div className="font-medium">{venue.regulatoryWrapper}</div>
           </div>
         </div>
 
-        {/* Rate source attribution */}
-        <div className="text-[10px] text-muted-foreground">
+        {/* Rate source + as-of date */}
+        <div className="text-[11px] text-muted-foreground space-y-0.5">
           <p className="flex items-center gap-1">
             <Info className="h-2.5 w-2.5 shrink-0" />
             {PROTOCOL_RATE_SOURCE[venue.id] ?? 'rwa.xyz reference'}
           </p>
+          <p className="pl-3.5">As of {venue.yieldAsOf}</p>
         </div>
 
-        {/* Coming Soon CTA — matches the existing treatment used for sky/ethena */}
-        <div className="flex items-center justify-end pt-1">
-          <button
-            type="button"
-            disabled
-            className="w-full px-4 py-2 rounded-lg text-sm font-medium bg-muted/50 text-muted-foreground cursor-not-allowed border border-border"
-          >
-            Coming Soon
-          </button>
-        </div>
+        <p className="text-xs text-muted-foreground text-center pt-1">Coming soon</p>
       </CardContent>
     </Card>
   );
@@ -796,7 +790,7 @@ export function YieldRatesTable() {
   );
 
   if (isLoading) {
-    return <CardSpinner />;
+    return <Card><CardContent className="py-5"><CardSkeleton rows={6} /></CardContent></Card>;
   }
 
   const allProtocols = protocols ?? [];
@@ -818,10 +812,12 @@ export function YieldRatesTable() {
       ? allProtocols
       : allProtocols.filter((p) => p.category === selectedCategory);
 
-  // Default sort: highest total APY first. Within MMFs, the reference yield
-  // on the venue is what we sort by (the `totalAPY` on the rate row is the
-  // same value because we seed rate rows from the venue registry).
+  // Sort: pinned protocols first (Spiko, Aave), then highest APY.
+  const PINNED_ORDER: Record<string, number> = { spiko_usd: 0, aave_v3: 1, usyc: 2, compound_v3: 3, ethena: 998, kamino_multiply: 999 };
   const sorted = [...filteredProtocols].sort((a, b) => {
+    const pinA = PINNED_ORDER[a.id] ?? 999;
+    const pinB = PINNED_ORDER[b.id] ?? 999;
+    if (pinA !== pinB) return pinA - pinB;
     const bestA = a.rates.length > 0 ? Math.max(...a.rates.map((r) => r.totalAPY)) : 0;
     const bestB = b.rates.length > 0 ? Math.max(...b.rates.map((r) => r.totalAPY)) : 0;
     return bestB - bestA;
@@ -870,19 +866,11 @@ export function YieldRatesTable() {
   return (
     <div className="space-y-3">
       {/* Category filter bar */}
-      <div className="flex items-center justify-between gap-3">
-        <CategoryFilterBar
-          selected={selectedCategory}
-          onSelect={onSelectCategory}
-          counts={counts}
-        />
-        {/* Rate timestamp */}
-        {oldestFetchedAt && (
-          <p className="text-xs text-muted-foreground text-right shrink-0">
-            Last updated: {new Date(oldestFetchedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'medium' })} ({formatRelativeTime(oldestFetchedAt)})
-          </p>
-        )}
-      </div>
+      <CategoryFilterBar
+        selected={selectedCategory}
+        onSelect={onSelectCategory}
+        counts={counts}
+      />
 
       {sorted.length === 0 && (
         <div className="rounded-lg border border-dashed border-border p-8 text-center">
@@ -913,48 +901,49 @@ export function YieldRatesTable() {
 
           const comingSoon = COMING_SOON_PROTOCOLS.has(p.id);
 
-          const logoPath = getVenueLogoPath(p.id);
           return (
             <Card key={p.id} className="relative overflow-hidden">
               <div className="flex items-center justify-between px-5 pt-5 pb-3">
-                {logoPath ? (
-                  <div className="flex items-center gap-2">
-                    <div className="h-[38px] flex items-center">
-                      <Image src={logoPath} alt={p.name} width={64} height={38} className="h-[38px] w-auto object-contain" unoptimized />
-                    </div>
-                    {comingSoon && (
-                      <span className="ml-2 inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-500/20 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">
-                        Coming Soon
-                      </span>
-                    )}
-                    {p.kycRequired && (
-                      p.id === 'ondo_usdy' && ondoKycVerified ? (
-                        <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-[10px]">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                          KYC Verified
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-[10px] text-yellow-500 border-yellow-500/30">
-                          <Lock className="h-3 w-3 mr-1" />
-                          KYC Required
-                        </Badge>
-                      )
-                    )}
-                  </div>
-                ) : (
-                  <span className="text-2xl font-bold text-muted-foreground">{p.name}</span>
-                )}
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-lg font-semibold truncate">{p.name}</span>
+                  {comingSoon && (
+                    <span className="inline-flex items-center rounded-full bg-amber-500/10 text-amber-400 px-2 py-0.5 text-[10px] font-medium">
+                      Coming Soon
+                    </span>
+                  )}
+                  {p.kycRequired && (
+                    p.id === 'ondo_usdy' && ondoKycVerified ? (
+                      <Badge className="bg-green-500/10 text-green-400 text-[10px]">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        KYC Verified
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px] text-yellow-500 border-yellow-500/30">
+                        <Lock className="h-3 w-3 mr-1" />
+                        KYC Required
+                      </Badge>
+                    )
+                  )}
+                </div>
                 <div className="flex flex-col items-end gap-1.5 shrink-0">
-                  <Badge variant={p.chain === 'ethereum' ? 'ethereum' : 'solana'}>{CHAIN_LABELS[p.chain] ?? p.chain}</Badge>
-                  <Badge className={RISK_COLORS[p.riskLevel]}>
-                    <Shield className="h-3 w-3 mr-1" />
-                    {capitalize(p.riskLevel)} Risk
-                  </Badge>
+                  <div className="flex items-center gap-1">
+                    <Badge variant={p.chain === 'ethereum' ? 'ethereum' : 'solana'} className="text-[10px]">
+                      {CHAIN_LABELS[p.chain] ?? p.chain}
+                    </Badge>
+                  </div>
+                  {p.supportedTokens?.length > 0 && (
+                    <div className="flex items-center gap-1">
+                      {p.supportedTokens.map((t) => (
+                        <span key={t} className="text-[11px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="px-5 pb-2 border-b border-border/50">
-                <CardTitle className="text-base">{p.name}</CardTitle>
-                <p className="text-xs text-muted-foreground mt-0.5">{p.description}</p>
+                <p className="text-xs text-muted-foreground">{p.description}</p>
               </div>
               <CardContent className="space-y-3 pt-2">
 
@@ -968,14 +957,14 @@ export function YieldRatesTable() {
                   if (tvls.length === 0) return null;
                   const totalTvl = tvls.reduce((a, b) => a + b, 0);
                   return (
-                    <div className="flex items-center justify-between rounded-lg border border-teal-500/20 bg-gradient-to-r from-teal-500/[0.08] to-cyan-500/[0.04] px-4 py-3">
+                    <div className="flex items-center justify-between rounded-lg border border-border/50 px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold uppercase tracking-wider text-teal-700 dark:text-teal-300">
+                        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                           Pool TVL
                         </span>
                         <InfoTooltip content="Total Value Locked across all tokens supported by this protocol. Refreshed every minute from on-chain reads or the protocol's own API." />
                       </div>
-                      <span className="text-2xl font-bold tracking-tight text-foreground">
+                      <span className="text-sm font-bold tracking-tight text-foreground tabular-nums">
                         {formatUsdCompact(totalTvl)}
                       </span>
                     </div>
@@ -1009,9 +998,9 @@ export function YieldRatesTable() {
                               {r.rewardAPY > 0 ? `+${formatAPY(r.rewardAPY)}` : '—'}
                             </td>
                             <td className="text-right px-3 py-2">
-                              <span className="font-semibold text-green-600">{formatAPY(r.totalAPY)}</span>
+                              <span className="font-semibold text-green-400">{formatAPY(r.totalAPY)}</span>
                               {rateWithMeta.isStale && (
-                                <span className="ml-1.5 inline-flex items-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-1.5 py-0.5 text-[10px] font-medium">
+                                <span className="ml-1.5 inline-flex items-center rounded-full bg-amber-500/10 text-amber-400 px-1.5 py-0.5 text-[10px] font-medium">
                                   Stale
                                 </span>
                               )}
@@ -1031,37 +1020,31 @@ export function YieldRatesTable() {
                     .pop();
                   const source = PROTOCOL_RATE_SOURCE[p.id];
                   return (
-                    <div className="text-[10px] text-muted-foreground space-y-0.5">
+                    <div className="text-[11px] text-muted-foreground space-y-0.5">
                       {source && (
                         <p className="flex items-center gap-1">
                           <Info className="h-2.5 w-2.5 shrink-0" />
-                          Rate source: {source}
+                          {source}
                         </p>
                       )}
                       {latestFetch && (
-                        <p>
-                          Last updated: {new Date(latestFetch).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'medium' })} ({formatRelativeTime(latestFetch)})
-                        </p>
+                        <p className="pl-3.5">Updated {formatRelativeTime(latestFetch)}</p>
                       )}
                     </div>
                   );
                 })()}
 
-                <div className="flex items-center justify-end pt-1">
+                <div className="pt-2">
                   {comingSoon ? (
-                    <button
-                      type="button"
-                      disabled
-                      className="w-full px-4 py-2 rounded-lg text-sm font-medium bg-muted/50 text-muted-foreground cursor-not-allowed border border-border"
-                    >
-                      Coming Soon
-                    </button>
+                    <p className="text-xs text-muted-foreground text-center">Coming soon</p>
                   ) : (
                     <UpgradeGate feature="Deposit into Yield">
-                      <Button size="sm" className="gap-1" onClick={() => handleOndoDeposit(p.id)}>
-                        <ArrowUpRight className="h-3.5 w-3.5" />
-                        Deposit
-                      </Button>
+                      <button
+                        onClick={() => handleOndoDeposit(p.id)}
+                        className="text-xs font-medium text-teal-500 hover:text-teal-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50 rounded-sm"
+                      >
+                        Deposit →
+                      </button>
                     </UpgradeGate>
                   )}
                 </div>

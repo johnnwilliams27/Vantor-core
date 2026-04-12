@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CardSpinner } from '@/components/ui/spinner';
+import { CardSkeleton } from '@/components/ui/spinner';
 import { useInsights, useMarkAllInsightsViewed } from '@/hooks/useInsights';
 import { InsightCard } from './InsightCard';
 import { Lightbulb } from 'lucide-react';
@@ -50,7 +50,7 @@ export function InsightFeed() {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <CardSpinner />
+          <CardSkeleton rows={4} />
         ) : isError ? (
           <div className="text-sm text-destructive text-center py-8">
             {(error as Error).message || 'Failed to load insights'}
@@ -60,7 +60,7 @@ export function InsightFeed() {
             No active insights. The treasury engine analyses your position every 15 minutes and surfaces recommendations here.
           </div>
         ) : (
-          <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/30">
+          <div className="space-y-3 max-h-[735px] overflow-y-auto pr-1">
             {insights.map((insight) => (
               <InsightCard key={insight.id} insight={insight} />
             ))}

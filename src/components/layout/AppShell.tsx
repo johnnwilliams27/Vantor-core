@@ -31,24 +31,27 @@ function KycRequiredModal() {
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-400 ${
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="kyc-modal-title"
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-[background,backdrop-filter] duration-400 ${
         mounted ? 'bg-black/40 backdrop-blur-[3px]' : 'bg-black/0 backdrop-blur-0'
       }`}
     >
       <div
-        className={`bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transition-all duration-500 ${
+        className={`bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transition-[opacity,transform] duration-500 ${
           mounted ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-6'
         }`}
       >
         {/* Header */}
-        <div className="bg-[#19595b] px-6 py-5 relative overflow-hidden">
+        <div className="bg-primary px-6 py-5 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.04] to-transparent animate-[shimmer_8s_ease-in-out_infinite]" />
           <div className="relative flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center">
               <Shield className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-white">Personal Identity Verification</h2>
+              <h2 id="kyc-modal-title" className="text-base font-semibold text-white">Personal Identity Verification</h2>
               <p className="text-xs text-white/60">Required for paid plan access</p>
             </div>
           </div>
@@ -116,13 +119,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-teal-500 focus:text-white focus:font-semibold focus:text-sm"
+      >
+        Skip to content
+      </a>
       <NavigationProgress />
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden min-w-0">
         <TestModeBanner />
         <Topbar />
-        <main className="flex-1 overflow-auto p-3 sm:p-6">
-          <div key={pathname} className="fade-in">{children}</div>
+        <main id="main-content" className="flex-1 overflow-auto p-4 sm:p-8">
+          <div key={pathname} className="fade-in motion-reduce:animate-none">{children}</div>
         </main>
       </div>
       <AgentPanel />

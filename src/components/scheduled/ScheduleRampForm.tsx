@@ -185,7 +185,7 @@ export function ScheduleRampForm() {
           {/* From */}
           <div className="space-y-2">
             <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
-              From {isOfframp ? '(Crypto Wallet)' : '(Bank Account)'}
+              From {isOfframp ? '(Stablecoin Wallet)' : '(Bank Account)'}
             </Label>
             {isOfframp ? walletSelect : bankSelect}
             {isOfframp && errors.walletId && <p className="text-xs text-red-500">{errors.walletId.message}</p>}
@@ -202,7 +202,7 @@ export function ScheduleRampForm() {
           {/* To */}
           <div className="space-y-2">
             <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
-              To {isOfframp ? '(Bank Account)' : '(Crypto Wallet)'}
+              To {isOfframp ? '(Bank Account)' : '(Stablecoin Wallet)'}
             </Label>
             {isOfframp ? bankSelect : walletSelect}
             {isOfframp && errors.bankAccountId && <p className="text-xs text-red-500">{errors.bankAccountId.message}</p>}

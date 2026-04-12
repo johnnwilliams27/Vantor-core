@@ -7,18 +7,16 @@ export const metadata = { title: 'Dashboard – Vantor' };
 
 export default function DashboardPage() {
   return (
-    <>
-      <div className="space-y-6">
-        <UnifiedBalanceCard />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <YieldEarned />
-          <RecommendationsCard />
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <BalanceOverTime />
-          <TokenDistribution />
-        </div>
+    <div className="space-y-4 md:space-y-5 lg:space-y-6">
+      <UnifiedBalanceCard />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+        <RecommendationsCard />
+        <YieldEarned />
       </div>
-    </>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+        <BalanceOverTime />
+        <TokenDistribution />
+      </div>
+    </div>
   );
 }

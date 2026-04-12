@@ -5,16 +5,22 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useYieldPositions, useYieldTransactions } from '@/hooks/useYield';
 import { TrendingUp } from 'lucide-react';
-import { CardSpinner } from '@/components/ui/spinner';
+import { CardError, ChartSkeleton } from '@/components/ui/spinner';
 import { getVenueDisplayName, getVenue } from '@/lib/yield/venues';
 import type { YieldProtocolId } from '@/lib/yield/interface';
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency';
+import { useFxRates } from '@/hooks/useFxRates';
 
-function formatUsd(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(value);
+function makeFmt(currency: string) {
+  const full = (v: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(v);
+  const compact = (v: number) => {
+    const sym = currency === 'USD' ? '$' : currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : `${currency} `;
+    if (v >= 1_000_000) return `${sym}${(v / 1_000_000).toFixed(1)}M`;
+    if (v >= 1_000) return `${sym}${(v / 1_000).toFixed(0)}K`;
+    return `${sym}${v.toFixed(0)}`;
+  };
+  return { full, compact };
 }
 
 /**
@@ -62,10 +68,12 @@ function getProtocolColor(protocolId: string): string {
   return '#94a3b8';
 }
 
-function CustomTooltip({ active, payload }: any) {
+function CustomTooltip({ active, payload, fmtFull, fxRate }: any) {
   if (!active || !payload?.length) return null;
   const d = payload[0]?.payload;
   if (!d) return null;
+  const fmt = fmtFull ?? ((v: number) => `$${v.toFixed(0)}`);
+  const rate = fxRate ?? 1;
 
   return (
     <div className="rounded-lg border bg-background/95 backdrop-blur-sm px-3 py-2.5 shadow-lg">
@@ -73,21 +81,36 @@ function CustomTooltip({ active, payload }: any) {
         <span className="h-2 w-2 rounded-full" style={{ backgroundColor: d.fill }} />
         <span className="text-xs font-medium">{d.protocol}</span>
       </div>
-      <p className="text-xs font-semibold tabular-nums mt-1 ml-4">{formatUsd(d.earned)}</p>
+      <p className="text-xs font-semibold tabular-nums mt-1 ml-4">{fmt(d.earned * rate)}</p>
     </div>
   );
 }
 
 export function YieldEarned() {
-  const { data: positions, isLoading } = useYieldPositions();
+  const { data: positions, isLoading, isError, refetch } = useYieldPositions();
   const { data: transactions } = useYieldTransactions();
+  const { currency: dc } = useDisplayCurrency();
+  const { data: fxData } = useFxRates();
+  const fxRate = fxData?.rates?.[dc] ?? 1;
+  const { full: fmtFull, compact: fmtCompact } = makeFmt(dc);
 
   if (isLoading) {
     return (
       <Card>
         <CardHeader><CardTitle>Yield Earned</CardTitle></CardHeader>
         <CardContent>
-          <CardSpinner />
+          <ChartSkeleton />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Card>
+        <CardHeader><CardTitle>Yield Earned</CardTitle></CardHeader>
+        <CardContent>
+          <CardError message="Failed to load yield data." onRetry={() => refetch()} />
         </CardContent>
       </Card>
     );
@@ -125,8 +148,8 @@ export function YieldEarned() {
       <Card>
         <CardHeader><CardTitle>Yield Earned</CardTitle></CardHeader>
         <CardContent>
-          <div className="h-48 flex items-center justify-center text-gray-400 text-sm">
-            No yield positions yet. Deposit stablecoins to start earning.
+          <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">
+            No yield positions yet. <a href="/yield" className="text-primary hover:underline">Explore yield opportunities →</a>
           </div>
         </CardContent>
       </Card>
@@ -140,23 +163,23 @@ export function YieldEarned() {
           <span>Yield Earned</span>
           <div className="flex items-center gap-1.5 text-green-600">
             <TrendingUp className="h-4 w-4" />
-            <span className="text-lg font-bold tabular-nums">{formatUsd(totalYield)}</span>
+            <span className="text-lg font-bold tabular-nums">{fmtFull(totalYield * fxRate)}</span>
           </div>
         </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           <div className="flex justify-between text-sm text-foreground">
-            <span>Total Deployed: {formatUsd(totalDeployed)}</span>
+            <span>Total Deployed: {fmtFull(totalDeployed * fxRate)}</span>
             <span>{positions.length} active position{positions.length !== 1 ? 's' : ''}</span>
           </div>
           {chartData.length > 0 && (
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={chartData} barCategoryGap="20%">
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="protocol" tick={{ fontSize: 11, fill: 'hsl(var(--foreground))' }} />
-                <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--foreground))' }} tickFormatter={(v) => `$${v}`} />
-                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(var(--foreground) / 0.05)' }} offset={20} />
+                <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--foreground))' }} tickFormatter={(v) => fmtCompact(v * fxRate)} />
+                <Tooltip content={<CustomTooltip fmtFull={fmtFull} fxRate={fxRate} />} cursor={{ fill: 'hsl(var(--foreground) / 0.05)' }} offset={20} />
                 <Bar dataKey="earned" radius={[4, 4, 0, 0]} maxBarSize={80}>
                   {chartData.map((entry, i) => (
                     <Cell key={i} fill={entry.fill} />

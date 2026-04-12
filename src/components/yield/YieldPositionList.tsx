@@ -1,5 +1,4 @@
 'use client';
-import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -8,9 +7,9 @@ import { useYieldPositions, useRefreshPosition } from '@/hooks/useYield';
 import { useToast } from '@/components/ui/toast';
 import { YieldWithdrawForm } from './YieldWithdrawForm';
 import { useState } from 'react';
-import { CardSpinner } from '@/components/ui/spinner';
+import { CardSkeleton, CardError } from '@/components/ui/spinner';
 import { UpgradeGate } from '@/components/ui/upgrade-gate';
-import { getVenueDisplayName, getVenueLogoPath } from '@/lib/yield/venues';
+import { getVenueDisplayName } from '@/lib/yield/venues';
 
 const CHAIN_LABELS: Record<string, string> = {
   ethereum: 'Ethereum',
@@ -26,6 +25,22 @@ function formatUsd(value: number | string): string {
   }).format(num);
 }
 
+function formatRelativeTime(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  if (diffMs < 60_000) return 'just now';
+  const minutes = Math.floor(diffMs / 60_000);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 4) return `${weeks}w ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo ago`;
+  return `${Math.floor(months / 12)}y ago`;
+}
+
 function formatAPY(value: string | number | null): string {
   if (value === null || value === undefined) return '—';
   const num = typeof value === 'string' ? parseFloat(value) : value;
@@ -34,7 +49,7 @@ function formatAPY(value: string | number | null): string {
 }
 
 export function YieldPositionList() {
-  const { data: positions, isLoading } = useYieldPositions();
+  const { data: positions, isLoading, isError, refetch } = useYieldPositions();
   const refreshPosition = useRefreshPosition();
   const { toast } = useToast();
   const [withdrawId, setWithdrawId] = useState<string | null>(null);
@@ -49,7 +64,11 @@ export function YieldPositionList() {
   };
 
   if (isLoading) {
-    return <CardSpinner />;
+    return <Card><CardContent className="py-5"><CardSkeleton rows={4} /></CardContent></Card>;
+  }
+
+  if (isError) {
+    return <Card><CardContent className="py-5"><CardError message="Failed to load positions." onRetry={() => refetch()} /></CardContent></Card>;
   }
 
   if (!positions?.length) {
@@ -88,19 +107,19 @@ export function YieldPositionList() {
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Total Deposited</p>
-            <p className="text-xl font-bold mt-1">{formatUsd(totalValue)}</p>
+            <p className="text-xl font-bold mt-1 tabular-nums">{formatUsd(totalValue)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Total Yield Earned</p>
-            <p className="text-xl font-bold mt-1 text-green-600">{formatUsd(totalYield)}</p>
+            <p className="text-xl font-bold mt-1 tabular-nums text-green-400">{formatUsd(totalYield)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Active Positions</p>
-            <p className="text-xl font-bold mt-1">{positions.length}</p>
+            <p className="text-xl font-bold mt-1 tabular-nums">{positions.length}</p>
           </CardContent>
         </Card>
       </div>
@@ -111,13 +130,7 @@ export function YieldPositionList() {
           <Card key={pos.id}>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2">
-                  {(() => {
-                    const logo = getVenueLogoPath(pos.protocol);
-                    return logo ? (
-                      <Image src={logo} alt={pos.protocol} width={24} height={24} className="h-6 w-6 object-contain" unoptimized />
-                    ) : null;
-                  })()}
+                <CardTitle className="flex items-center gap-2">
                   {getVenueDisplayName(pos.protocol)}
                 </CardTitle>
                 <div className="flex items-center gap-2">
@@ -130,49 +143,44 @@ export function YieldPositionList() {
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <p className="text-muted-foreground text-xs">Deposited</p>
-                  <p className="font-medium">{formatUsd(pos.deposited_amount)}</p>
+                  <p className="font-medium tabular-nums">{formatUsd(pos.deposited_amount)}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs">Current Value</p>
-                  <p className="font-medium">{formatUsd(pos.current_value_usd)}</p>
+                  <p className="font-medium tabular-nums">{formatUsd(pos.current_value_usd)}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs">Yield Earned</p>
-                  <p className="font-medium text-green-600">{formatUsd(pos.accrued_yield_usd)}</p>
+                  <p className="font-medium tabular-nums text-green-400">{formatUsd(pos.accrued_yield_usd)}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs">APY</p>
-                  <p className="font-medium">{formatAPY(pos.apy_snapshot)}</p>
+                  <p className="font-medium tabular-nums">{formatAPY(pos.apy_snapshot)}</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 pt-1">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-1"
+              <div className="flex items-center gap-4 pt-2 text-xs font-medium">
+                <button
                   onClick={() => handleRefresh(pos.id)}
                   disabled={refreshPosition.isPending}
+                  className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50 rounded-sm"
                 >
-                  <RefreshCw className="h-3.5 w-3.5" />
+                  <RefreshCw className="h-3 w-3" />
                   Refresh
-                </Button>
+                </button>
                 <UpgradeGate feature="Withdraw from Yield">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="gap-1"
+                  <button
                     onClick={() => setWithdrawId(pos.id)}
+                    className="text-teal-500 hover:text-teal-400 transition-colors flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50 rounded-sm"
                   >
-                    <ArrowDownRight className="h-3.5 w-3.5" />
-                    Withdraw
-                  </Button>
+                    Withdraw →
+                  </button>
                 </UpgradeGate>
               </div>
 
               {pos.last_refreshed_at && (
                 <p className="text-[11px] text-muted-foreground/60">
-                  Last refreshed: {new Date(pos.last_refreshed_at).toLocaleString()}
+                  Refreshed {formatRelativeTime(pos.last_refreshed_at)}
                 </p>
               )}
             </CardContent>

@@ -33,7 +33,7 @@ interface AgentTool {
 const getTreasuryOverview: AgentTool = {
   name: 'get_treasury_overview',
   description:
-    'Get a full treasury overview bucketed into cash & cash equivalents (bank + tokenized MMFs), idle stablecoin wallets, DeFi positions, and a total AUM. Matches the dashboard card layout.',
+    'Get a full treasury overview bucketed into cash & stablecoins (bank balances + stablecoin wallets) and yield positions (tokenized MMFs + DeFi protocols), plus a total AUM. Matches the dashboard card layout.',
   input_schema: { type: 'object', properties: {}, required: [] },
   minRole: 'auditor',
   async handler(_input, ctx) {
@@ -51,12 +51,8 @@ const getTreasuryOverview: AgentTool = {
       totalCashEquivalentsUsd,
       totalBankBalanceUsd: snapshot.totalBankBalanceUsd,
       totalMmfPositionsUsd: snapshot.totalMmfPositionsUsd,
-      /**
-       * Idle stablecoin wallet balances only (USDC, USDT in self-custody).
-       * NOT a conflation of all crypto-denominated value — yield positions
-       * are broken out separately below.
-       */
-      totalCryptoBalanceUsd: snapshot.totalCryptoBalanceUsd,
+      /** Stablecoin wallet balances (USDC, USDT in self-custody). */
+      totalStablecoinWalletBalanceUsd: snapshot.totalCryptoBalanceUsd,
       totalDefiPositionsUsd: snapshot.totalDefiPositionsUsd,
       totalOtherYieldUsd: snapshot.totalOtherYieldUsd,
       bankAccounts: snapshot.bankAccounts,
@@ -67,7 +63,7 @@ const getTreasuryOverview: AgentTool = {
 
 const getWallets: AgentTool = {
   name: 'get_wallets',
-  description: 'List all connected crypto wallets with their token balances.',
+  description: 'List all connected stablecoin wallets with their token balances.',
   input_schema: { type: 'object', properties: {}, required: [] },
   minRole: 'auditor',
   async handler(_input, ctx) {

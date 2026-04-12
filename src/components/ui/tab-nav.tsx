@@ -60,7 +60,7 @@ export function TabNav<T extends string>({ tabs, value, onChange, className }: T
           }}
           onClick={() => onChange(tab.value)}
           className={cn(
-            'relative z-10 rounded-md px-3.5 py-1.5 text-sm font-medium transition-colors duration-200',
+            'relative z-10 rounded-md px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50',
             value === tab.value
               ? 'text-foreground'
               : 'text-muted-foreground hover:text-foreground/80'

@@ -237,7 +237,7 @@ export function RampForm() {
           {/* From */}
           <div className="space-y-2">
             <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
-              From {isOfframp ? '(Crypto Wallet)' : '(Bank Account)'}
+              From {isOfframp ? '(Stablecoin Wallet)' : '(Bank Account)'}
             </Label>
             {isOfframp ? (
               <>
@@ -295,7 +295,7 @@ export function RampForm() {
           {/* To */}
           <div className="space-y-2">
             <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
-              To {isOfframp ? '(Bank Account)' : '(Crypto Wallet)'}
+              To {isOfframp ? '(Bank Account)' : '(Stablecoin Wallet)'}
             </Label>
             {isOfframp ? (
               <>

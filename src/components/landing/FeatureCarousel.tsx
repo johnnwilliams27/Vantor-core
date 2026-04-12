@@ -16,8 +16,8 @@ type Slide = {
 
 const SLIDES: Slide[] = [
   {
-    label: 'Command Center',
-    title: 'Command Center',
+    label: 'Dashboard',
+    title: 'Dashboard',
     body: 'Real-time visibility across every bank, wallet, and protocol — with AI insights surfaced the moment they matter.',
     bullets: ['Cash Visibility', 'AI Insights', 'Asset Management', 'AI Agent Chat'],
     mockup: {
@@ -59,7 +59,7 @@ const SLIDES: Slide[] = [
   },
 ];
 
-const SLIDE_SLUGS = ['command-center', 'treasury', 'yield'] as const;
+const SLIDE_SLUGS = ['dashboard', 'treasury', 'yield'] as const;
 
 function getInitialSlide(): number {
   if (typeof window === 'undefined') return 0;
@@ -268,7 +268,7 @@ function SlideCopy({ slide }: { slide: Slide }) {
 
 /**
  * Dashboard-style mockup inside a card frame. Mirrors the HTML preview's
- * fake Command Center screenshot — dots bar, KPI row, AI strip, charts —
+ * fake Dashboard screenshot — dots bar, KPI row, AI strip, charts —
  * so the carousel feels like a product preview, not an empty placeholder.
  */
 function DashboardMockup({ slide }: { slide: Slide }) {

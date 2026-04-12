@@ -15,7 +15,7 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'Vantor – Agentic Stablecoin Treasury Management',
+  title: 'Vantor – Agentic Treasury Management',
   description:
     'Connect ERP systems with digital asset wallets and bank accounts for agentic treasury management. AI-powered yield optimization, compliance, and cash flow forecasting.',
   metadataBase: new URL('https://vantor.xyz'),
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     canonical: '/',
   },
   openGraph: {
-    title: 'Vantor – Agentic Stablecoin Treasury Management',
+    title: 'Vantor – Agentic Treasury Management',
     description:
       'Connect ERP systems with digital asset wallets and bank accounts for agentic treasury management. AI-powered yield optimization, compliance, and cash flow forecasting.',
     siteName: 'Vantor',
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Vantor – Agentic Stablecoin Treasury Management',
+    title: 'Vantor – Agentic Treasury Management',
     description:
       'Connect ERP systems with digital asset wallets and bank accounts for agentic treasury management.',
   },

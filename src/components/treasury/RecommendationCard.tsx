@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -15,9 +14,11 @@ import { useApproveRecommendation, useRejectRecommendation } from '@/hooks/useTr
 import { useSession } from 'next-auth/react';
 import { hasRole } from '@/lib/auth/rbac';
 import type { AiRecommendation } from '@/types/database';
-import { ArrowDownToLine, ArrowUpFromLine, Minus, CheckCircle2, XCircle, Clock, ArrowRight } from 'lucide-react';
+import { ArrowDownToLine, ArrowUpFromLine, Minus, Clock, ArrowRight } from 'lucide-react';
 import { SimpleMarkdown } from '@/components/ui/simple-markdown';
 import { useWallets } from '@/hooks/useWallets';
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency';
+import { useFxRates } from '@/hooks/useFxRates';
 
 function formatUsd(v: string | number | null): string {
   if (v === null || v === undefined) return '—';
@@ -28,9 +29,24 @@ function formatUsd(v: string | number | null): string {
   }).format(Number(v));
 }
 
+function formatRelativeTime(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  if (diffMs < 60_000) return 'just now';
+  const minutes = Math.floor(diffMs / 60_000);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 4) return `${weeks}w ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo ago`;
+  return `${Math.floor(months / 12)}y ago`;
+}
+
 function useCountdown(expiresAt: string): string {
   const [label, setLabel] = useState('');
-
   useEffect(() => {
     function update() {
       const ms = new Date(expiresAt).getTime() - Date.now();
@@ -43,65 +59,66 @@ function useCountdown(expiresAt: string): string {
     const id = setInterval(update, 60_000);
     return () => clearInterval(id);
   }, [expiresAt]);
-
   return label;
 }
 
-const STATUS_CONFIG: Record<string, { label: string; variant: 'default' | 'success' | 'warning' | 'destructive' | 'secondary' }> = {
-  pending_approval: { label: 'Pending Approval', variant: 'warning' },
-  approved: { label: 'Approved', variant: 'success' },
-  rejected: { label: 'Rejected', variant: 'destructive' },
-  executed: { label: 'Executed', variant: 'success' },
-  auto_executed: { label: 'Auto-executed', variant: 'success' },
-  expired: { label: 'Expired', variant: 'secondary' },
+const ACTION_ICONS: Record<string, React.ReactNode> = {
+  onramp: <ArrowUpFromLine className="h-4 w-4" />,
+  offramp: <ArrowDownToLine className="h-4 w-4" />,
+  no_action: <Minus className="h-4 w-4" />,
 };
 
-const ACTION_CONFIG: Record<string, { label: string; icon: React.ReactNode; colorClass: string }> = {
-  onramp: {
-    label: 'On-ramp',
-    icon: <ArrowUpFromLine className="h-4 w-4" />,
-    colorClass: 'text-green-600',
-  },
-  offramp: {
-    label: 'Off-ramp',
-    icon: <ArrowDownToLine className="h-4 w-4" />,
-    colorClass: 'text-blue-600',
-  },
-  no_action: {
-    label: 'No Action Needed',
-    icon: <Minus className="h-4 w-4" />,
-    colorClass: 'text-gray-500',
-  },
+const ACTION_LABELS: Record<string, string> = {
+  onramp: 'On-ramp',
+  offramp: 'Off-ramp',
+  no_action: 'No Action Needed',
 };
 
-interface Props {
-  rec: AiRecommendation;
-}
+const STATUS_DOT: Record<string, string> = {
+  pending_approval: 'bg-amber-500',
+  approved: 'bg-green-500',
+  rejected: 'bg-red-500',
+  executed: 'bg-green-500',
+  auto_executed: 'bg-green-500',
+  expired: 'bg-gray-400',
+};
 
-export function RecommendationCard({ rec }: Props) {
+const STATUS_LABELS: Record<string, string> = {
+  pending_approval: 'Pending',
+  approved: 'Approved',
+  rejected: 'Rejected',
+  executed: 'Executed',
+  auto_executed: 'Auto-executed',
+  expired: 'Expired',
+};
+
+export function RecommendationCard({ rec }: { rec: AiRecommendation }) {
   const [showApprove, setShowApprove] = useState(false);
   const [showReject, setShowReject] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const { toast } = useToast();
   const { data: session } = useSession();
   const countdown = useCountdown(rec.expires_at);
-
   const approve = useApproveRecommendation();
   const reject = useRejectRecommendation();
   const { data: wallets } = useWallets();
+  const { currency: dc } = useDisplayCurrency();
+  const { data: fxData } = useFxRates();
+  const fxRate = fxData?.rates?.[dc] ?? 1;
+  const fmt = (v: string | number | null) => {
+    if (v === null || v === undefined) return '—';
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: dc, maximumFractionDigits: 0 }).format(Number(v) * fxRate);
+  };
 
-  // Find the wallet matching this recommendation's chain
   const targetWallet = wallets?.find((w) => w.chain === rec.stablecoin_chain);
   const walletLabel = targetWallet?.label || (targetWallet?.address ? `${targetWallet.address.slice(0, 6)}…${targetWallet.address.slice(-4)}` : 'Wallet');
   const bankLabel = rec.bank_account
     ? `${rec.bank_account.institution_name}${rec.bank_account.last4 ? ` ****${rec.bank_account.last4}` : ''}`
     : 'Bank Account';
+  const chainLabel = rec.stablecoin_chain ? rec.stablecoin_chain.charAt(0).toUpperCase() + rec.stablecoin_chain.slice(1) : '';
 
   const isTreasuryManager = hasRole((session?.user?.role as any) ?? 'auditor', 'treasury_manager');
   const canAct = isTreasuryManager && rec.status === 'pending_approval' && new Date(rec.expires_at) > new Date();
-
-  const actionConfig = ACTION_CONFIG[rec.action] ?? ACTION_CONFIG.no_action;
-  const statusConfig = STATUS_CONFIG[rec.status] ?? { label: rec.status, variant: 'secondary' as const };
 
   const handleApprove = async () => {
     try {
@@ -127,107 +144,102 @@ export function RecommendationCard({ rec }: Props) {
   return (
     <>
       <Card className="overflow-hidden">
-        <CardContent className="p-4 space-y-4">
-          {/* Header row */}
-          <div className="flex items-start justify-between gap-2 flex-wrap">
-            <div className={`flex items-center gap-2 font-semibold ${actionConfig.colorClass}`}>
-              {actionConfig.icon}
-              <span>{actionConfig.label}</span>
+        <CardContent className="p-4 space-y-3">
+          {/* Header — action + amount + status dot */}
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2 text-foreground">
+              <span className="text-muted-foreground shrink-0">
+                {ACTION_ICONS[rec.action] ?? ACTION_ICONS.no_action}
+              </span>
+              <span className="text-sm font-medium">
+                {ACTION_LABELS[rec.action] ?? rec.action}
+              </span>
               {rec.recommended_amount_usd && (
-                <span className="text-lg tabular-nums">
-                  {formatUsd(rec.recommended_amount_usd)}
+                <span className="text-sm font-semibold tabular-nums">
+                  {fmt(rec.recommended_amount_usd)}
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
-              {rec.status === 'pending_approval' && (
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {countdown}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Context grid */}
-          <div className="grid grid-cols-3 gap-3 bg-muted/40 rounded-lg p-3 text-sm">
-            <div>
-              <div className="text-xs text-muted-foreground">Fiat Balance</div>
-              <div className="font-semibold tabular-nums">{formatUsd(rec.total_bank_balance_usd)}</div>
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground">Obligations ({rec.obligation_lookahead_days}d)</div>
-              <div className="font-semibold tabular-nums">{formatUsd(rec.obligations_in_window_usd)}</div>
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground">Safety Target</div>
-              <div className="font-semibold tabular-nums">{formatUsd(rec.safety_buffer_target_usd)}</div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[rec.status] ?? 'bg-gray-400'}`} />
+                {STATUS_LABELS[rec.status] ?? rec.status}
+              </span>
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                {rec.status === 'pending_approval' ? countdown : formatRelativeTime(rec.created_at)}
+              </span>
             </div>
           </div>
 
           {/* AI Reasoning */}
-          <div className="border-l-2 border-[#19595b] pl-3 text-sm text-foreground space-y-2">
+          <div className="text-sm text-muted-foreground space-y-2">
             <SimpleMarkdown text={rec.ai_reasoning} />
           </div>
 
-          {/* Movement details */}
-          <div className="space-y-2">
-            {rec.action !== 'no_action' && rec.stablecoin_token && (
-              <div className="flex items-center gap-2 text-xs bg-muted/40 rounded-md px-3 py-2">
-                {rec.action === 'offramp' ? (
-                  <>
-                    <span className="font-medium text-foreground">{rec.stablecoin_token} on {rec.stablecoin_chain ? rec.stablecoin_chain.charAt(0).toUpperCase() + rec.stablecoin_chain.slice(1) : ''} ({walletLabel})</span>
-                    <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
-                    <span className="font-medium text-foreground">USD ({bankLabel})</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="font-medium text-foreground">USD ({bankLabel})</span>
-                    <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
-                    <span className="font-medium text-foreground">{rec.stablecoin_token} on {rec.stablecoin_chain ? rec.stablecoin_chain.charAt(0).toUpperCase() + rec.stablecoin_chain.slice(1) : ''} ({walletLabel})</span>
-                  </>
-                )}
-              </div>
-            )}
-            <div className="text-xs text-muted-foreground">
-              <span>{new Date(rec.created_at).toLocaleDateString()} {new Date(rec.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' })}</span>
+          {/* Context grid — below reasoning, matching Insights pattern */}
+          <div className="grid grid-cols-3 gap-3 rounded-lg border border-border/50 p-3">
+            <div>
+              <div className="text-[11px] text-muted-foreground uppercase tracking-wider">Fiat Balance</div>
+              <div className="text-sm font-semibold tabular-nums mt-0.5">{fmt(rec.total_bank_balance_usd)}</div>
+            </div>
+            <div>
+              <div className="text-[11px] text-muted-foreground uppercase tracking-wider">Obligations ({rec.obligation_lookahead_days}d)</div>
+              <div className="text-sm font-semibold tabular-nums mt-0.5">{fmt(rec.obligations_in_window_usd)}</div>
+            </div>
+            <div>
+              <div className="text-[11px] text-muted-foreground uppercase tracking-wider">Safety Target</div>
+              <div className="text-sm font-semibold tabular-nums mt-0.5">{fmt(rec.safety_buffer_target_usd)}</div>
             </div>
           </div>
 
-          {/* Action buttons */}
+          {/* Movement + timestamp */}
+          {rec.action !== 'no_action' && rec.stablecoin_token && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground rounded-lg border border-border/50 px-3 py-2">
+              {rec.action === 'offramp' ? (
+                <>
+                  <span className="text-foreground font-medium">{rec.stablecoin_token} on {chainLabel} ({walletLabel})</span>
+                  <ArrowRight className="h-3 w-3 shrink-0" />
+                  <span className="text-foreground font-medium">USD ({bankLabel})</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-foreground font-medium">USD ({bankLabel})</span>
+                  <ArrowRight className="h-3 w-3 shrink-0" />
+                  <span className="text-foreground font-medium">{rec.stablecoin_token} on {chainLabel} ({walletLabel})</span>
+                </>
+              )}
+            </div>
+          )}
+
+
+          {/* Actions — text links, not heavy buttons */}
           {canAct && (
-            <div className="flex gap-2 pt-1">
-              <Button
-                size="sm"
+            <div className="flex gap-4 pt-1 text-xs font-medium">
+              <button
                 onClick={() => setShowApprove(true)}
                 disabled={approve.isPending || reject.isPending}
-                className="flex items-center gap-1"
+                className="text-teal-500 hover:text-teal-400 transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50 rounded-sm"
               >
-                <CheckCircle2 className="h-4 w-4" />
-                Approve & Execute
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
+                Approve & Execute →
+              </button>
+              <button
                 onClick={() => setShowReject(true)}
                 disabled={approve.isPending || reject.isPending}
-                className="flex items-center gap-1 text-red-600 hover:text-red-700"
+                className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50 rounded-sm"
               >
-                <XCircle className="h-4 w-4" />
                 Reject
-              </Button>
+              </button>
             </div>
           )}
 
           {rec.rejection_reason && (
-            <div className="text-xs text-red-600 bg-red-50 rounded-md p-2">
+            <div className="text-xs text-red-400 bg-red-500/10 rounded-md p-2">
               Rejection reason: {rec.rejection_reason}
             </div>
           )}
-
           {rec.execution_error && (
-            <div className="text-xs text-red-600 bg-red-50 rounded-md p-2">
+            <div className="text-xs text-red-400 bg-red-500/10 rounded-md p-2">
               Execution error: {rec.execution_error}
             </div>
           )}
@@ -241,9 +253,8 @@ export function RecommendationCard({ rec }: Props) {
             <DialogTitle>Confirm Approval</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            This will execute a{' '}
-            <strong>{rec.action}</strong> of{' '}
-            <strong>{formatUsd(rec.recommended_amount_usd)}</strong> immediately.
+            This will execute a <strong className="text-foreground">{rec.action}</strong> of{' '}
+            <strong className="text-foreground">{fmt(rec.recommended_amount_usd)}</strong> immediately.
             This action cannot be undone.
           </p>
           <DialogFooter>
@@ -266,7 +277,7 @@ export function RecommendationCard({ rec }: Props) {
               Optionally provide a reason for rejecting this recommendation.
             </p>
             <textarea
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-teal-400/50"
               rows={3}
               placeholder="Reason (optional)…"
               value={rejectReason}
@@ -277,7 +288,7 @@ export function RecommendationCard({ rec }: Props) {
             <Button variant="outline" onClick={() => setShowReject(false)}>Cancel</Button>
             <Button
               variant="outline"
-              className="text-red-600 border-red-300 hover:bg-red-50"
+              className="text-red-400 border-red-500/30 hover:bg-red-500/10"
               onClick={handleReject}
               disabled={reject.isPending}
             >
