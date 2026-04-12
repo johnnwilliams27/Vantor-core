@@ -34,7 +34,8 @@ import { createInsight } from '@/lib/insights/store';
 import { expireStaleInsights } from '@/lib/insights/store';
 import { evaluateInsightActionOrNull } from '@/lib/insights/policy-gate';
 import { NotificationService } from '@/lib/notifications/service';
-import type { DetectorContext } from '@/lib/insights/detectors/types';
+import { createForecastService } from '@/lib/forecast/service';
+import type { DetectorContext, ForecastBundle } from '@/lib/insights/detectors/types';
 import type { RiskProfileId, AumTier } from '@/lib/insights/types';
 import { getProfile } from '@/lib/insights/risk-profiles';
 import type { TreasuryRule } from '@/types/database';
@@ -139,6 +140,38 @@ export async function GET(req: NextRequest) {
       // 3. Resolve the profile
       const profile = getProfile(DEFAULT_RISK_PROFILE);
 
+      // 2b. Build forecast data for the liquidity detector.
+      // Graceful: if forecast fails (no obligations, no state), skip it.
+      let forecast: ForecastBundle | undefined;
+      try {
+        const forecastSvc = createForecastService({
+          enterpriseId,
+          db: supabase,
+          scenario: 'base',
+          consumer: 'alert_eval',
+          persist: false,
+        });
+        const windowDays = 30;
+        const [minBal, coverage, obligations] = await Promise.all([
+          forecastSvc.getProjectedMinBalance('USD', null, windowDays),
+          forecastSvc.areObligationsCovered(windowDays),
+          forecastSvc.getObligationsDueInWindow(windowDays),
+        ]);
+        const totalObligationsUsd = obligations.reduce((sum, o) => sum + o.amount, 0);
+        forecast = {
+          projectedMinBalance: minBal,
+          coverage,
+          obligationsInWindow: obligations,
+          safetyBufferUsd: totalObligationsUsd * profile.safetyBufferMultiplier,
+          windowDays,
+        };
+      } catch (err) {
+        console.warn(
+          `[cron/insights-engine] forecast build failed for ${enterpriseId}, skipping liquidity detector:`,
+          (err as Error).message,
+        );
+      }
+
       // 4. Assemble detector context
       const ctx: DetectorContext = {
         enterpriseId,
@@ -148,6 +181,7 @@ export async function GET(req: NextRequest) {
         aumTier: DEFAULT_AUM_TIER,
         yieldUniverse,
         now: runStartedAt,
+        forecast,
       };
 
       // 5. Run all detectors
