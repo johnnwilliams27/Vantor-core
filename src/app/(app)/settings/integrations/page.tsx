@@ -12,6 +12,71 @@ import { useToast } from '@/components/ui/toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, CheckCircle, XCircle, ExternalLink, Copy, Check } from 'lucide-react';
 import { SlackLogo } from '@/components/ui/icons/slack-logo';
+import {
+  MsTeamsLogo,
+  EmailLogo,
+  WebhookLogo,
+  ZapierLogo,
+  PagerDutyLogo,
+} from '@/components/ui/icons/integration-logos';
+
+interface ComingSoonIntegration {
+  name: string;
+  description: string;
+  Logo: React.ComponentType<{ size?: number; className?: string }>;
+}
+
+const COMING_SOON_INTEGRATIONS: ComingSoonIntegration[] = [
+  {
+    name: 'Microsoft Teams',
+    description: 'Post recommendations to a Teams channel and approve inline, same flow as Slack.',
+    Logo: MsTeamsLogo,
+  },
+  {
+    name: 'Email (SMTP / Resend)',
+    description: 'Send daily digests and critical alerts to a distribution list or shared inbox.',
+    Logo: EmailLogo,
+  },
+  {
+    name: 'Webhooks',
+    description: 'POST treasury events to a custom HTTPS endpoint for SIEM, Datadog, or homegrown tools.',
+    Logo: WebhookLogo,
+  },
+  {
+    name: 'Zapier',
+    description: 'Connect Vantor to 7,000+ apps without writing custom integration code.',
+    Logo: ZapierLogo,
+  },
+  {
+    name: 'PagerDuty',
+    description: 'Escalate severe compliance or execution alerts to an on-call rotation.',
+    Logo: PagerDutyLogo,
+  },
+];
+
+function ComingSoonCard({ integration }: { integration: ComingSoonIntegration }) {
+  const { Logo } = integration;
+  return (
+    <Card className="opacity-75">
+      <CardHeader>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
+              <Logo size={22} />
+            </span>
+            <div className="min-w-0">
+              <CardTitle className="text-base">{integration.name}</CardTitle>
+              <CardDescription className="mt-1 text-xs leading-relaxed">
+                {integration.description}
+              </CardDescription>
+            </div>
+          </div>
+          <Badge variant="secondary" className="shrink-0 text-[10px]">Coming soon</Badge>
+        </div>
+      </CardHeader>
+    </Card>
+  );
+}
 
 const schema = z.object({
   botToken: z.string().min(1, 'Bot token required').max(500),
@@ -121,9 +186,9 @@ export default function IntegrationsPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6 max-w-4xl">
         {/* Slack Integration Card */}
-        <Card>
+        <Card className="max-w-2xl">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -289,6 +354,23 @@ export default function IntegrationsPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Coming soon */}
+        <div className="space-y-3 pt-2">
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              Coming soon
+            </h2>
+            <span className="text-xs text-muted-foreground">
+              Want one sooner? <a href="mailto:support@vantor.xyz" className="text-teal-500 hover:underline">Let us know</a>
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {COMING_SOON_INTEGRATIONS.map((integration) => (
+              <ComingSoonCard key={integration.name} integration={integration} />
+            ))}
+          </div>
+        </div>
       </div>
   );
 }

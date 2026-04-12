@@ -120,8 +120,12 @@ export function BankAccountsTab({ bankingProvider = 'stripe_fc' }: { bankingProv
         </CardHeader>
         <CardContent>
           {!accounts?.length ? (
-            <div className="text-sm text-gray-400 text-center py-8">
-              No bank accounts connected yet. Add one above.
+            <div className="py-10 text-center space-y-3">
+              <Building2 className="h-10 w-10 text-muted-foreground/40 mx-auto" />
+              <p className="text-sm text-muted-foreground">No bank accounts connected yet.</p>
+              <p className="text-xs text-muted-foreground">
+                Connect a bank above to sync balances and enable fiat payments.
+              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">

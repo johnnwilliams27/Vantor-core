@@ -14,7 +14,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { formatDate, truncateAddress } from '@/lib/utils';
 import { TruncatedAddress } from '@/components/ui/truncated-address';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
-import { Trash2, CheckCircle, Clock, Pencil, Check, X } from 'lucide-react';
+import { Trash2, CheckCircle, Clock, Pencil, Check, X, Wallet } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
 import { TableCardSkeleton } from '@/components/ui/operations-skeletons';
 import { useQueryClient } from '@tanstack/react-query';
@@ -244,8 +244,12 @@ function CryptoWalletsTab() {
               </Table>
             </div>
           ) : (
-            <div className="text-sm text-muted-foreground text-center py-6">
-              No wallets linked yet. Connect one above.
+            <div className="py-10 text-center space-y-3">
+              <Wallet className="h-10 w-10 text-muted-foreground/40 mx-auto" />
+              <p className="text-sm text-muted-foreground">No wallets linked yet.</p>
+              <p className="text-xs text-muted-foreground">
+                Connect an Ethereum or Solana wallet above to start tracking on-chain balances.
+              </p>
             </div>
           )}
         </CardContent>

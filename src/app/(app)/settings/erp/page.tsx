@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
@@ -114,6 +115,14 @@ const USES_OAUTH: Record<ProviderId, boolean> = {
   netsuite: false,
   xero: true,
   quickbooks: true,
+};
+
+const PROVIDER_DISPLAY: Record<ProviderId, string> = {
+  sap: 'SAP',
+  oracle: 'Oracle',
+  netsuite: 'NetSuite',
+  xero: 'Xero',
+  quickbooks: 'QuickBooks',
 };
 
 export default function ERPSettingsPage() {
@@ -511,106 +520,128 @@ export default function ERPSettingsPage() {
 
         {/* Existing configs */}
         {isLoading ? (
-          <TableCardSkeleton columns={4} rows={2} />
+          <TableCardSkeleton columns={5} rows={2} />
         ) : (
           <Card>
             <CardHeader><CardTitle>Linked ERP Systems</CardTitle></CardHeader>
             <CardContent>
-        {!configs?.length ? (
-              <div className="text-sm text-muted-foreground text-center py-6">
-                No ERP systems linked yet. Connect one above.
-              </div>
-        ) : (
-              <div className="space-y-3">
-                {configs.map((cfg) => {
-                  const isEditing = editingId === cfg.id;
-                  return (
-                  <div key={cfg.id} className="flex items-center justify-between p-3 rounded-lg border">
-                    <div className="flex items-center gap-3">
-                      <Settings2 className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        {isEditing ? (
-                          <div className="flex items-center gap-1">
-                            <Input
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              placeholder="Enter nickname…"
-                              className="h-7 text-sm w-44"
-                              autoFocus
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' && editValue.trim()) handleSaveNickname(cfg.id);
-                                if (e.key === 'Escape') setEditingId(null);
-                              }}
-                              disabled={savingNickname}
-                            />
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSaveNickname(cfg.id)} disabled={savingNickname || !editValue.trim()} aria-label="Save nickname">
-                              <Check className="h-3.5 w-3.5 text-green-600" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingId(null)} disabled={savingNickname} aria-label="Cancel edit">
-                              <X className="h-3.5 w-3.5 text-muted-foreground" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-medium">{cfg.label}</span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => { setEditingId(cfg.id); setEditValue(cfg.label); }}
-                              aria-label="Edit ERP nickname"
-                            >
-                              <Pencil className="h-3 w-3 text-muted-foreground" />
-                            </Button>
-                          </div>
-                        )}
-                        <div className="text-sm text-muted-foreground">
-                          {cfg.provider.toUpperCase()} · Last synced: {cfg.last_synced ? new Date(cfg.last_synced).toLocaleDateString() : 'Never'}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {cfg.is_active ? (
-                        <>
-                          <Badge variant="success">Active</Badge>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setDeactivateTarget({ id: cfg.id, label: cfg.label })}
-                            disabled={actionPending}
-                          >
-                            Deactivate
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <Badge variant="secondary">Inactive</Badge>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleSetActive(cfg.id, true)}
-                            disabled={actionPending}
-                          >
-                            Reactivate
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setDeleteTarget({ id: cfg.id, label: cfg.label })}
-                            disabled={actionPending}
-                            aria-label={`Delete ${cfg.label} configuration`}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-400" />
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  );
-                })}
-              </div>
-        )}
+              {!configs?.length ? (
+                <div className="py-10 text-center space-y-3">
+                  <Settings2 className="h-10 w-10 text-muted-foreground/40 mx-auto" />
+                  <p className="text-sm text-muted-foreground">No ERP systems linked yet.</p>
+                  <p className="text-xs text-muted-foreground">Pick a provider above to connect invoices and vendors.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead scope="col">Nickname</TableHead>
+                        <TableHead scope="col">Provider</TableHead>
+                        <TableHead scope="col">Last Synced</TableHead>
+                        <TableHead scope="col">Status</TableHead>
+                        <TableHead scope="col" className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {configs.map((cfg) => {
+                        const isEditing = editingId === cfg.id;
+                        const provider = cfg.provider as ProviderId;
+                        return (
+                          <TableRow key={cfg.id}>
+                            <TableCell>
+                              {isEditing ? (
+                                <div className="flex items-center gap-1">
+                                  <Input
+                                    value={editValue}
+                                    onChange={(e) => setEditValue(e.target.value)}
+                                    placeholder="Enter nickname…"
+                                    className="h-7 text-sm w-44"
+                                    autoFocus
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' && editValue.trim()) handleSaveNickname(cfg.id);
+                                      if (e.key === 'Escape') setEditingId(null);
+                                    }}
+                                    disabled={savingNickname}
+                                  />
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSaveNickname(cfg.id)} disabled={savingNickname || !editValue.trim()} aria-label="Save nickname">
+                                    <Check className="h-3.5 w-3.5 text-green-600" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingId(null)} disabled={savingNickname} aria-label="Cancel edit">
+                                    <X className="h-3.5 w-3.5 text-muted-foreground" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1.5">
+                                  <Settings2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                                  <span className="text-sm font-medium">{cfg.label}</span>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6"
+                                    onClick={() => { setEditingId(cfg.id); setEditValue(cfg.label); }}
+                                    aria-label="Edit ERP nickname"
+                                  >
+                                    <Pencil className="h-3 w-3 text-muted-foreground" />
+                                  </Button>
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              <Badge variant="outline">{PROVIDER_DISPLAY[provider] ?? cfg.provider}</Badge>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                              {cfg.last_synced ? new Date(cfg.last_synced).toLocaleDateString() : 'Never'}
+                            </TableCell>
+                            <TableCell>
+                              {cfg.is_active ? (
+                                <Badge variant="success">Active</Badge>
+                              ) : (
+                                <Badge variant="secondary">Inactive</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center justify-end gap-2">
+                                {cfg.is_active ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setDeactivateTarget({ id: cfg.id, label: cfg.label })}
+                                    disabled={actionPending}
+                                  >
+                                    Deactivate
+                                  </Button>
+                                ) : (
+                                  <>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleSetActive(cfg.id, true)}
+                                      disabled={actionPending}
+                                    >
+                                      Reactivate
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      onClick={() => setDeleteTarget({ id: cfg.id, label: cfg.label })}
+                                      disabled={actionPending}
+                                      aria-label={`Delete ${cfg.label} configuration`}
+                                    >
+                                      <Trash2 className="h-4 w-4 text-red-400" />
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
