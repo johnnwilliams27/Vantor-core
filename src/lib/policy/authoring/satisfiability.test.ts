@@ -84,13 +84,43 @@ describe('checkChainSatisfiability', () => {
     expect(result.satisfiable).toBe(true);
   });
 
-  it('returns unsatisfiable for unknown/Plan-2b role (executive) with current user base', () => {
+  it('returns unsatisfiable when executive slot exists but no executive users in pool', () => {
     const chain = makeChain([{ slot_index: 0, minimum_role: 'executive' }]);
-    // Even with a treasury_manager, executive (rank 4) > treasury_manager (rank 2)
+    // treasury_manager (rank 3) cannot fill executive (rank 4) slot.
     const pool = users(['u1', 'treasury_manager']);
     const result = checkChainSatisfiability(chain, pool);
     expect(result.satisfiable).toBe(false);
     expect(result.unsatisfied_slots).toContain(0);
+  });
+
+  it('excludes enterprise_admin users from the pool (strict separation of duties)', () => {
+    // enterprise_admin authors policies; cannot approve under them. Even
+    // though their rank is numerically highest, they must not count
+    // toward satisfiability — the runtime check in sod.ts rejects them.
+    const chain = makeChain([{ slot_index: 0, minimum_role: 'auditor' }]);
+    const pool = users(['u1', 'enterprise_admin']);
+    const result = checkChainSatisfiability(chain, pool);
+    expect(result.satisfiable).toBe(false);
+    expect(result.unsatisfied_slots).toContain(0);
+  });
+
+  it('distinct users — two different users with same rank fill two equal slots', () => {
+    // Guards against any future refactor that might collapse same-rank
+    // users. Each user_id must map to exactly one filled slot.
+    const chain = makeChain([
+      { slot_index: 0, minimum_role: 'treasury_manager' },
+      { slot_index: 1, minimum_role: 'treasury_manager' },
+    ]);
+    const pool = users(['alice', 'treasury_manager'], ['bob', 'treasury_manager']);
+    const result = checkChainSatisfiability(chain, pool);
+    expect(result.satisfiable).toBe(true);
+  });
+
+  it('executive can cover a treasury_manager slot (higher rank satisfies lower)', () => {
+    const chain = makeChain([{ slot_index: 0, minimum_role: 'treasury_manager' }]);
+    const pool = users(['u1', 'executive']);
+    const result = checkChainSatisfiability(chain, pool);
+    expect(result.satisfiable).toBe(true);
   });
 
   it('returns unsatisfiable for a truly unknown role string', () => {

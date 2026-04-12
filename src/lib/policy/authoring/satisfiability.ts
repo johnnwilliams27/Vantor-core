@@ -1,8 +1,12 @@
 // src/lib/policy/authoring/satisfiability.ts
 
-import type { UserRole } from '@/types/database';
 import type { ApprovalChain } from '../types/policy-version';
 import type { ApproverRole } from '../types/verdict';
+import {
+  ROLE_RANK,
+  canFillSlot,
+  type UserRole,
+} from '@/lib/auth/roles';
 
 export type SatisfiabilityUserRow = {
   user_id: string;
@@ -17,34 +21,26 @@ export type ChainSatisfiabilityResult = {
 };
 
 /**
- * Role rank map. Includes Plan-2b roles (approver, executive) so they are
- * recognized even if no current user in the org holds them.
- *
- * auditor(0) < accountant(1) < treasury_manager(2) < approver(3) < executive(4)
- */
-const ROLE_RANK: Record<ApproverRole, number> = {
-  auditor: 0,
-  accountant: 1,
-  treasury_manager: 2,
-  approver: 3,
-  executive: 4,
-} as Record<ApproverRole, number> & Record<string, number>;
-
-/**
- * Return the numeric rank for a role string, or -1 if the role is unknown.
- */
-function getRank(role: string): number {
-  return (ROLE_RANK as Record<string, number>)[role] ?? -1;
-}
-
-/**
- * Check whether an ApprovalChain can be satisfied by the given user pool.
+ * Check whether an ApprovalChain can be satisfied by the given user
+ * pool. Authoring-time check that matches the runtime behavior
+ * enforced by src/lib/policy/approvals/sod.ts.
  *
  * Rules:
- *  - An empty slots array is unsatisfiable.
- *  - A user with rank >= slot.minimum_role rank can fill that slot.
- *  - Slots are filled greedily by minimum rank requirement; if N slots need
- *    at minimum role X, there must be at least N distinct users with rank >= X.
+ *   - Empty slots array → unsatisfiable (authors must define at
+ *     least one slot).
+ *   - Each slot is filled by a **distinct user** from the pool. One
+ *     user fills one slot; they cannot cover two slots even if their
+ *     rank theoretically qualifies for both.
+ *   - `enterprise_admin` users are EXCLUDED from the pool — strict
+ *     separation of duties (the authors of policy cannot approve
+ *     under it). Matches `canFillSlot`.
+ *   - Unknown slot role strings → that slot is unsatisfiable. Users
+ *     with unknown role strings are dropped from the pool.
+ *
+ * Greedy matching: sort slots by ascending rank, then for each slot
+ * consume the lowest-rank eligible user. This preserves higher-rank
+ * users for slots that actually need them — optimal for the
+ * assignment problem when users are fungible within rank.
  */
 export function checkChainSatisfiability(
   chain: ApprovalChain,
@@ -56,40 +52,49 @@ export function checkChainSatisfiability(
     return { chain_id, chain_name, satisfiable: false, unsatisfied_slots: [] };
   }
 
-  // Sort slots by ascending minimum rank so tightest constraints are checked first.
-  const sortedSlots = [...slots].sort(
-    (a, b) => getRank(a.minimum_role) - getRank(b.minimum_role),
-  );
+  // Eligible pool: drop enterprise_admin (strict SoD), drop users
+  // whose role isn't in the canonical rank map. Track user_id
+  // explicitly so the distinct-user accounting is obvious from
+  // reading the code, not just implied by array length.
+  const eligibleUsers = users
+    .filter((u) => u.role !== 'enterprise_admin')
+    .map((u) => ({ user_id: u.user_id, role: u.role, rank: ROLE_RANK[u.role] }))
+    .filter((u) => typeof u.rank === 'number')
+    .sort((a, b) => a.rank - b.rank);
 
-  // Build a pool of user ranks (one entry per user).
-  const userRanks = users.map((u) => getRank(u.role)).sort((a, b) => a - b);
+  // Sort slots by ascending minimum rank so tightest constraints
+  // are checked last (greedy match gives cheapest user first).
+  const sortedSlots = [...slots].sort((a, b) => {
+    const aRank = ROLE_RANK[a.minimum_role as ApproverRole];
+    const bRank = ROLE_RANK[b.minimum_role as ApproverRole];
+    return (aRank ?? -1) - (bRank ?? -1);
+  });
 
   const unsatisfied_slots: number[] = [];
-
-  // Greedy matching: for each slot (lowest rank first), consume the
-  // lowest-ranked user that still meets the requirement. This is optimal
-  // because using the cheapest-eligible user preserves higher-ranked users
-  // for slots that require them.
-  const available = [...userRanks];
+  const available = [...eligibleUsers];
 
   for (const slot of sortedSlots) {
-    const required = getRank(slot.minimum_role);
+    const slotRole = slot.minimum_role as ApproverRole;
 
-    // Unknown role → always unsatisfiable
-    if (required === -1) {
+    // Unknown slot role → always unsatisfiable. Guard before
+    // canFillSlot so we don't paper over a typo'd role.
+    if (ROLE_RANK[slotRole] === undefined) {
       unsatisfied_slots.push(slot.slot_index);
       continue;
     }
 
-    const idx = available.findIndex((rank) => rank >= required);
+    // Find the lowest-ranked eligible user. canFillSlot consults
+    // the same canonical hierarchy used at runtime, so
+    // authoring-time and runtime verdicts stay in lockstep.
+    const idx = available.findIndex((u) => canFillSlot(u.role, slotRole));
     if (idx === -1) {
       unsatisfied_slots.push(slot.slot_index);
     } else {
+      // Consume the user — same user_id can never fill another slot.
       available.splice(idx, 1);
     }
   }
 
-  // Deduplicate (slot_index should be unique but guard anyway).
   const deduped = Array.from(new Set(unsatisfied_slots));
 
   return {
