@@ -85,7 +85,7 @@ export function groupByTime<T extends Record<string, unknown>>(
   }
 
   const result: TimeSeriesPoint[] = [];
-  for (const [date, values] of buckets) {
+  for (const [date, values] of Array.from(buckets)) {
     result.push({ date, value: round2(aggregateValues(values, agg)) });
   }
   result.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
@@ -113,7 +113,7 @@ export function groupByColumn<T extends Record<string, unknown>>(
   }
 
   const result: GroupedPoint[] = [];
-  for (const [group, values] of buckets) {
+  for (const [group, values] of Array.from(buckets)) {
     result.push({ group, value: round2(aggregateValues(values, agg)) });
   }
   return result;
