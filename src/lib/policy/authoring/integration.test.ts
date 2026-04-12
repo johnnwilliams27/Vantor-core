@@ -228,7 +228,7 @@ describe('PolicyAuthoringService — end-to-end integration smoke test', () => {
         op: '>',
         value: { amount: '50000', currency: 'USD' },
       },
-      verdict: 'allow',
+      verdict: 'allow_auto',
       priority: 10,
     });
     expect(afterRule.rules).toHaveLength(1);
@@ -283,7 +283,7 @@ describe('PolicyAuthoringService — end-to-end integration smoke test', () => {
         op: '>',
         value: { amount: '50000', currency: 'USD' },
       },
-      verdict: 'allow',
+      verdict: 'allow_auto',
       priority: 20, // updated
     });
     expect(afterEdit.rules).toHaveLength(1);

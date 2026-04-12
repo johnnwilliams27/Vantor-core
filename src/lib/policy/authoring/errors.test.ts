@@ -49,7 +49,7 @@ describe('AuthoringError', () => {
       details: { version_id: 'v-1', status: 'active' },
       path: ['status'],
     });
-    const json = err.toJSON() as Record<string, unknown>;
+    const json = err.toJSON();
     expect(json.reason_code).toBe('version_not_draft');
     expect(json.path).toEqual(['status']);
   });

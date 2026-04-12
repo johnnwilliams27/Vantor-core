@@ -1,14 +1,38 @@
-import { describe, it, expect } from 'vitest';
-import { generateInsightReasoning } from './claude';
+import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import type { DetectedInsight } from './types';
 
 /**
  * Tests for the insight reasoning generator.
  *
- * Without ANTHROPIC_API_KEY, the function runs in mock mode — returns
- * a template reasoning string with model='mock'. These tests verify
- * the mock path and the output shape.
+ * These tests exercise the module's mock branch — model='mock' and
+ * the 3-section template output. `src/lib/insights/claude.ts` decides
+ * MOCK_MODE at module load time (`!process.env.ANTHROPIC_API_KEY`),
+ * so if `.env.local` provides a real key, tests would otherwise hit
+ * the live Claude API and fail their template assertions.
+ *
+ * We deliberately force mock mode here by clearing the env var and
+ * re-importing the module inside `beforeAll`, then restore the
+ * original value in `afterAll` so other tests in the same worker
+ * are unaffected.
  */
+
+const originalApiKey = process.env.ANTHROPIC_API_KEY;
+let generateInsightReasoning: (
+  insight: DetectedInsight,
+) => Promise<{ reasoning: string; model: string }>;
+
+beforeAll(async () => {
+  delete process.env.ANTHROPIC_API_KEY;
+  vi.resetModules();
+  const mod = await import('./claude');
+  generateInsightReasoning = mod.generateInsightReasoning;
+});
+
+afterAll(() => {
+  if (originalApiKey !== undefined) {
+    process.env.ANTHROPIC_API_KEY = originalApiKey;
+  }
+});
 
 function buildInsight(overrides: Partial<DetectedInsight> = {}): DetectedInsight {
   return {

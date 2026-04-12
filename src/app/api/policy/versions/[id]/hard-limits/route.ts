@@ -9,7 +9,7 @@ import { REASON_CODES } from '@/lib/policy/errors/reason-codes';
 import { hardLimitTypeSchema, assetCodeSchema } from '@/lib/policy/schemas/primitives';
 
 const hardLimitScopeSchema = z.object({
-  asset: z.string().optional(),
+  asset: assetCodeSchema.optional(),
   venue: z.string().optional(),
   include_venues: z.array(z.string()).optional(),
 });

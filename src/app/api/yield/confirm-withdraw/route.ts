@@ -156,12 +156,15 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // Fire insight detectors inline (non-blocking)
-  fireInlineInsights(supabase, {
-    enterpriseId,
-    userId: session.user.id,
-    trigger: 'yield_withdraw',
-  }).catch(() => {});
+  // Fire insight detectors inline (non-blocking). Skip for non-enterprise
+  // users — detectors require enterprise scope to be meaningful.
+  if (enterpriseId) {
+    fireInlineInsights(supabase, {
+      enterpriseId,
+      userId: session.user.id,
+      trigger: 'yield_withdraw',
+    }).catch(() => {});
+  }
 
   return NextResponse.json({ positionId, txHash }, { status: 200 });
 }

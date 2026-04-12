@@ -13,7 +13,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authOptions } from '@/lib/auth/nextauth.config';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
-import { PolicyAuthoringService } from './service';
+import { PolicyAuthoringService, type SupabaseLike } from './service';
 import { AuthoringError } from './errors';
 import type { AuthoringActor } from './types';
 import type { ReasonCode } from '../errors/reason-codes';
@@ -64,7 +64,10 @@ export async function resolveAuthoringContext(
     enterprise_id,
   };
 
-  return { actor, service: new PolicyAuthoringService(supabase) };
+  // The real SupabaseClient satisfies SupabaseLike structurally at runtime
+  // but TS can't prove it because `rpc`'s return type diverges (PostgrestFilterBuilder
+  // vs Promise). Cast via unknown is intentional.
+  return { actor, service: new PolicyAuthoringService(supabase as unknown as SupabaseLike) };
 }
 
 // ─── Error → HTTP mapping ─────────────────────────────────────────────────────

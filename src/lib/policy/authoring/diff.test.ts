@@ -8,7 +8,6 @@ import type { HardLimit } from '../types/hard-limit';
 // ---------------------------------------------------------------------------
 
 const mkRule = (overrides: Partial<PolicyRule> & { id: string }): PolicyRule => ({
-  id: overrides.id,
   version_id: 'v1',
   rule_type: 'approval_threshold',
   name: 'Rule A',
@@ -23,7 +22,6 @@ const mkRule = (overrides: Partial<PolicyRule> & { id: string }): PolicyRule => 
 });
 
 const mkHardLimit = (overrides: Partial<HardLimit> & { id: string }): HardLimit => ({
-  id: overrides.id,
   limit_type: 'min_cash_reserve_usd',
   name: 'Cash Floor',
   limit_value: '500000',
@@ -33,10 +31,9 @@ const mkHardLimit = (overrides: Partial<HardLimit> & { id: string }): HardLimit 
 });
 
 const mkChain = (overrides: Partial<ApprovalChain> & { id: string }): ApprovalChain => ({
-  id: overrides.id,
   version_id: 'v1',
   name: 'Finance Approval',
-  slots: [{ minimum_role: 'finance_manager', required_count: 1 }],
+  slots: [{ slot_index: 0, minimum_role: 'treasury_manager' }],
   trigger_condition: undefined,
   priority: 10,
   expiration_hours: 48,
