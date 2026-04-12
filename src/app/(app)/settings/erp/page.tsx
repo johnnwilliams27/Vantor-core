@@ -19,18 +19,102 @@ import type { ErpConfiguration } from '@/types/database';
 import { Loader2, CheckCircle, XCircle, Settings2, Trash2, Pencil, Check, X } from 'lucide-react';
 import { CardSpinner } from '@/components/ui/spinner';
 
-const schema = z.object({
-  provider: z.enum(['sap', 'oracle', 'xero', 'netsuite', 'quickbooks']),
-  label: z.string().min(1, 'Nickname required'),
-  apiUrl: z.string().url('Enter a valid URL'),
-  clientId: z.string().min(1, 'Client ID required'),
-  clientSecret: z.string().min(1, 'Client secret required'),
-  companyCode: z.string().optional(),
-  tenantId: z.string().optional(),
-  accountId: z.string().optional(),
-});
+/**
+ * ERP credentials are provider-specific. The base schema keeps every field
+ * optional so the form can swap inputs without re-rendering the resolver;
+ * the .superRefine() below enforces which fields are required per provider.
+ */
+const schema = z
+  .object({
+    provider: z.enum(['sap', 'oracle', 'xero', 'netsuite', 'quickbooks']),
+    label: z.string().min(1, 'Nickname required'),
+    apiUrl: z.string().url('Enter a valid URL').optional().or(z.literal('')),
+    clientId: z.string().optional(),
+    clientSecret: z.string().optional(),
+    companyCode: z.string().optional(),
+    tenantId: z.string().optional(),
+    accountId: z.string().optional(),
+    landscape: z.enum(['dev', 'qa', 'prod']).optional(),
+    consumerKey: z.string().optional(),
+    consumerSecret: z.string().optional(),
+    tokenId: z.string().optional(),
+    tokenSecret: z.string().optional(),
+    realmId: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    const required: Array<{ key: keyof typeof data; label: string }> = [];
+    switch (data.provider) {
+      case 'sap':
+        required.push(
+          { key: 'apiUrl', label: 'API URL' },
+          { key: 'clientId', label: 'Client ID' },
+          { key: 'clientSecret', label: 'Client Secret' },
+          { key: 'companyCode', label: 'Company Code' },
+        );
+        break;
+      case 'oracle':
+        required.push(
+          { key: 'apiUrl', label: 'API URL' },
+          { key: 'clientId', label: 'Client ID' },
+          { key: 'clientSecret', label: 'Client Secret' },
+          { key: 'tenantId', label: 'Tenant / Instance ID' },
+        );
+        break;
+      case 'netsuite':
+        required.push(
+          { key: 'accountId', label: 'Account ID' },
+          { key: 'consumerKey', label: 'Consumer Key' },
+          { key: 'consumerSecret', label: 'Consumer Secret' },
+          { key: 'tokenId', label: 'Token ID' },
+          { key: 'tokenSecret', label: 'Token Secret' },
+        );
+        break;
+      case 'xero':
+        required.push(
+          { key: 'clientId', label: 'Client ID' },
+          { key: 'clientSecret', label: 'Client Secret' },
+          { key: 'tenantId', label: 'Tenant ID' },
+        );
+        break;
+      case 'quickbooks':
+        required.push(
+          { key: 'clientId', label: 'Client ID' },
+          { key: 'clientSecret', label: 'Client Secret' },
+          { key: 'realmId', label: 'Realm ID' },
+        );
+        break;
+    }
+    for (const { key, label } of required) {
+      const value = data[key];
+      if (!value || (typeof value === 'string' && value.trim() === '')) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [key],
+          message: `${label} required`,
+        });
+      }
+    }
+  });
 
 type FormData = z.infer<typeof schema>;
+
+type ProviderId = FormData['provider'];
+
+const PROVIDER_DOCS: Record<ProviderId, string> = {
+  sap: 'https://help.sap.com/docs/SAP_S4HANA_CLOUD',
+  oracle: 'https://docs.oracle.com/en/cloud/saas/financials/',
+  netsuite: 'https://docs.oracle.com/en/cloud/saas/netsuite/',
+  xero: 'https://developer.xero.com/documentation/',
+  quickbooks: 'https://developer.intuit.com/app/developer/qbo/docs/get-started',
+};
+
+const USES_OAUTH: Record<ProviderId, boolean> = {
+  sap: false,
+  oracle: false,
+  netsuite: false,
+  xero: true,
+  quickbooks: true,
+};
 
 export default function ERPSettingsPage() {
   const { toast } = useToast();
@@ -64,11 +148,16 @@ export default function ERPSettingsPage() {
     register,
     handleSubmit,
     getValues,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { provider: 'sap' },
+    defaultValues: { provider: 'sap', landscape: 'prod' },
   });
+
+  const selectedProvider = watch('provider');
+  const docsUrl = PROVIDER_DOCS[selectedProvider];
+  const isOAuth = USES_OAUTH[selectedProvider];
 
   const handleSetActive = async (id: string, is_active: boolean) => {
     setActionPending(true);
@@ -132,6 +221,21 @@ export default function ERPSettingsPage() {
     }
   };
 
+  const buildCredentials = (data: FormData) => ({
+    apiUrl: data.apiUrl,
+    clientId: data.clientId,
+    clientSecret: data.clientSecret,
+    companyCode: data.companyCode,
+    tenantId: data.tenantId,
+    accountId: data.accountId,
+    landscape: data.landscape,
+    consumerKey: data.consumerKey,
+    consumerSecret: data.consumerSecret,
+    tokenId: data.tokenId,
+    tokenSecret: data.tokenSecret,
+    realmId: data.realmId,
+  });
+
   const handleTest = async () => {
     const data = getValues();
     setTesting(true);
@@ -143,14 +247,7 @@ export default function ERPSettingsPage() {
         body: JSON.stringify({
           provider: data.provider,
           label: data.label || 'Test',
-          credentials: {
-            apiUrl: data.apiUrl,
-            clientId: data.clientId,
-            clientSecret: data.clientSecret,
-            companyCode: data.companyCode,
-            tenantId: data.tenantId,
-            accountId: data.accountId,
-          },
+          credentials: buildCredentials(data),
           testOnly: true,
         }),
       });
@@ -171,14 +268,7 @@ export default function ERPSettingsPage() {
         body: JSON.stringify({
           provider: data.provider,
           label: data.label,
-          credentials: {
-            apiUrl: data.apiUrl,
-            clientId: data.clientId,
-            clientSecret: data.clientSecret,
-            companyCode: data.companyCode,
-            tenantId: data.tenantId,
-            accountId: data.accountId,
-          },
+          credentials: buildCredentials(data),
         }),
       });
       const json = await res.json();
@@ -230,39 +320,169 @@ export default function ERPSettingsPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>API URL</Label>
-                <Input placeholder="https://api.example.com" {...register('apiUrl')} />
-                {errors.apiUrl && <p className="text-sm text-red-500">{errors.apiUrl.message}</p>}
-              </div>
+              {isOAuth && (
+                <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-300/90 leading-relaxed">
+                  {selectedProvider === 'xero'
+                    ? 'Xero uses OAuth 2.0 — hosted Connect-with-Xero flow is coming soon. In the meantime, enter the Client ID / Secret and Tenant ID from your app registration below.'
+                    : 'QuickBooks uses OAuth 2.0 — hosted Connect-with-Intuit flow is coming soon. In the meantime, enter the Client ID / Secret and Realm ID from your Intuit developer app below.'}
+                </div>
+              )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Client ID</Label>
-                  <Input placeholder="client-id" {...register('clientId')} />
-                  {errors.clientId && <p className="text-sm text-red-500">{errors.clientId.message}</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label>Client Secret</Label>
-                  <Input type="password" placeholder="••••••••" {...register('clientSecret')} />
-                  {errors.clientSecret && <p className="text-sm text-red-500">{errors.clientSecret.message}</p>}
-                </div>
-              </div>
+              {/* SAP fields */}
+              {selectedProvider === 'sap' && (
+                <>
+                  <div className="space-y-2">
+                    <Label>API URL</Label>
+                    <Input placeholder="https://my123456.s4hana.ondemand.com" {...register('apiUrl')} />
+                    {errors.apiUrl && <p className="text-sm text-red-500">{errors.apiUrl.message}</p>}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Client ID</Label>
+                      <Input placeholder="client-id" {...register('clientId')} autoComplete="off" />
+                      {errors.clientId && <p className="text-sm text-red-500">{errors.clientId.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Client Secret</Label>
+                      <Input type="password" placeholder="••••••••" {...register('clientSecret')} autoComplete="new-password" />
+                      {errors.clientSecret && <p className="text-sm text-red-500">{errors.clientSecret.message}</p>}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Company Code</Label>
+                      <Input placeholder="1000" {...register('companyCode')} />
+                      {errors.companyCode && <p className="text-sm text-red-500">{errors.companyCode.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Landscape</Label>
+                      <Select {...register('landscape')}>
+                        <option value="prod">Production</option>
+                        <option value="qa">QA</option>
+                        <option value="dev">Development</option>
+                      </Select>
+                    </div>
+                  </div>
+                </>
+              )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Company Code <span className="text-gray-400">(SAP)</span></Label>
-                  <Input placeholder="1000" {...register('companyCode')} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Tenant ID <span className="text-gray-400">(Oracle/Xero)</span></Label>
-                  <Input placeholder="tenant-id" {...register('tenantId')} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Account ID <span className="text-gray-400">(NetSuite)</span></Label>
-                  <Input placeholder="TSTDRV123456" {...register('accountId')} />
-                </div>
-              </div>
+              {/* Oracle fields */}
+              {selectedProvider === 'oracle' && (
+                <>
+                  <div className="space-y-2">
+                    <Label>API URL</Label>
+                    <Input placeholder="https://your-tenant.fa.us6.oraclecloud.com" {...register('apiUrl')} />
+                    {errors.apiUrl && <p className="text-sm text-red-500">{errors.apiUrl.message}</p>}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Client ID</Label>
+                      <Input placeholder="client-id" {...register('clientId')} autoComplete="off" />
+                      {errors.clientId && <p className="text-sm text-red-500">{errors.clientId.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Client Secret</Label>
+                      <Input type="password" placeholder="••••••••" {...register('clientSecret')} autoComplete="new-password" />
+                      {errors.clientSecret && <p className="text-sm text-red-500">{errors.clientSecret.message}</p>}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Tenant / Instance ID</Label>
+                    <Input placeholder="tenant-id" {...register('tenantId')} />
+                    {errors.tenantId && <p className="text-sm text-red-500">{errors.tenantId.message}</p>}
+                  </div>
+                </>
+              )}
+
+              {/* NetSuite fields — token-based auth (TBA) */}
+              {selectedProvider === 'netsuite' && (
+                <>
+                  <div className="space-y-2">
+                    <Label>Account ID</Label>
+                    <Input placeholder="TSTDRV123456" {...register('accountId')} />
+                    {errors.accountId && <p className="text-sm text-red-500">{errors.accountId.message}</p>}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Consumer Key</Label>
+                      <Input placeholder="consumer-key" {...register('consumerKey')} autoComplete="off" />
+                      {errors.consumerKey && <p className="text-sm text-red-500">{errors.consumerKey.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Consumer Secret</Label>
+                      <Input type="password" placeholder="••••••••" {...register('consumerSecret')} autoComplete="new-password" />
+                      {errors.consumerSecret && <p className="text-sm text-red-500">{errors.consumerSecret.message}</p>}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Token ID</Label>
+                      <Input placeholder="token-id" {...register('tokenId')} autoComplete="off" />
+                      {errors.tokenId && <p className="text-sm text-red-500">{errors.tokenId.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Token Secret</Label>
+                      <Input type="password" placeholder="••••••••" {...register('tokenSecret')} autoComplete="new-password" />
+                      {errors.tokenSecret && <p className="text-sm text-red-500">{errors.tokenSecret.message}</p>}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Xero fields */}
+              {selectedProvider === 'xero' && (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Client ID</Label>
+                      <Input placeholder="client-id" {...register('clientId')} autoComplete="off" />
+                      {errors.clientId && <p className="text-sm text-red-500">{errors.clientId.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Client Secret</Label>
+                      <Input type="password" placeholder="••••••••" {...register('clientSecret')} autoComplete="new-password" />
+                      {errors.clientSecret && <p className="text-sm text-red-500">{errors.clientSecret.message}</p>}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Tenant ID</Label>
+                    <Input placeholder="tenant-id" {...register('tenantId')} />
+                    {errors.tenantId && <p className="text-sm text-red-500">{errors.tenantId.message}</p>}
+                  </div>
+                </>
+              )}
+
+              {/* QuickBooks fields */}
+              {selectedProvider === 'quickbooks' && (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Client ID</Label>
+                      <Input placeholder="client-id" {...register('clientId')} autoComplete="off" />
+                      {errors.clientId && <p className="text-sm text-red-500">{errors.clientId.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Client Secret</Label>
+                      <Input type="password" placeholder="••••••••" {...register('clientSecret')} autoComplete="new-password" />
+                      {errors.clientSecret && <p className="text-sm text-red-500">{errors.clientSecret.message}</p>}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Realm ID</Label>
+                    <Input placeholder="1234567890123456" {...register('realmId')} />
+                    {errors.realmId && <p className="text-sm text-red-500">{errors.realmId.message}</p>}
+                  </div>
+                </>
+              )}
+
+              <a
+                href={docsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
+              >
+                Where do I find these? →
+              </a>
 
               {testResult && (
                 <div className={`flex items-center gap-2 p-3 rounded-lg text-sm ${
