@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Inbox } from 'lucide-react';
 import type { ViewResult } from '@/lib/analytics/types';
 
 interface ViewTableProps {
@@ -14,8 +15,12 @@ export function ViewTable({ result, pageSize = 25 }: ViewTableProps) {
 
   if (rows.length === 0) {
     return (
-      <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
-        No data for this period.
+      <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+        <Inbox className="h-8 w-8 text-muted-foreground/40" aria-hidden="true" />
+        <p className="text-sm font-medium text-muted-foreground">No data for this period</p>
+        <p className="text-xs text-muted-foreground/60">
+          Try widening the date range, or pick a different view.
+        </p>
       </div>
     );
   }
