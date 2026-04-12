@@ -26,6 +26,7 @@ export function useCreateFiatPayment() {
       toAccountHolder: string;
       amount: string;
       currency: string;
+      paymentRail?: string;
       scheduledFor?: string;
       invoiceId?: string;
       memo?: string;

@@ -10,10 +10,10 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
-import { Loader2, Calendar, ArrowDownLeft, ArrowUpRight, ArrowDown } from 'lucide-react';
+import { Loader2, Calendar, ArrowDownLeft, ArrowUpRight, ArrowDown, CircleAlert } from 'lucide-react';
 import { DateTimePicker } from '@/components/ui/datetime-picker';
 import { useCreateScheduledOperation } from '@/hooks/useScheduledOperations';
-import { InfoTooltip } from '@/components/ui/info-tooltip';
+import { sanitizeErrorMessage } from '@/lib/utils';
 import { useWallets } from '@/hooks/useWallets';
 import { useWalletTokenHoldings, formatWalletTokensLabel } from '@/hooks/useBalances';
 import type { BankAccount } from '@/types/database';
@@ -82,6 +82,7 @@ export function ScheduleRampForm() {
 
   const direction = watch('direction');
   const selectedBankId = watch('bankAccountId');
+  const memo = watch('memo');
   const isOfframp = direction === 'offramp';
 
   const selectedBank = bankAccounts?.find((a) => a.id === selectedBankId);
@@ -114,7 +115,7 @@ export function ScheduleRampForm() {
       toast({ title: 'Ramp scheduled', description: `Scheduled for ${data.scheduledFor}`, variant: 'success' });
       reset();
     } catch (err) {
-      toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
+      toast({ title: 'Error', description: sanitizeErrorMessage((err as Error).message), variant: 'destructive' });
     }
   };
 
@@ -154,33 +155,36 @@ export function ScheduleRampForm() {
   );
 
   return (
-    <Card>
+    <Card className="border-t-2 border-t-amber-500/40">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Calendar className="h-5 w-5" />
           Schedule Ramp
-          <InfoTooltip content="Convert between fiat currency and stablecoins. Scheduled for a future date." />
         </CardTitle>
+        <p className="text-xs text-muted-foreground mt-1">Auto-executes within 50bps of quoted rate. Approval required for larger deviations.</p>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Direction toggle */}
-          <div className="flex rounded-lg border overflow-hidden">
-            <label className="flex-1">
-              <input type="radio" value="offramp" {...register('direction')} className="sr-only" />
-              <div className={`flex items-center justify-center gap-2 py-2 text-sm font-medium cursor-pointer transition-colors ${isOfframp ? 'bg-muted text-foreground border-r border-border' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground/70 border-r border-border'}`}>
-                <ArrowUpRight className="h-4 w-4" />
-                Off-ramp (Crypto → Fiat)
-              </div>
-            </label>
-            <label className="flex-1">
-              <input type="radio" value="onramp" {...register('direction')} className="sr-only" />
-              <div className={`flex items-center justify-center gap-2 py-2 text-sm font-medium cursor-pointer transition-colors ${!isOfframp ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground/70'}`}>
-                <ArrowDownLeft className="h-4 w-4" />
-                On-ramp (Fiat → Crypto)
-              </div>
-            </label>
-          </div>
+          <fieldset>
+            <legend className="sr-only">Transfer direction</legend>
+            <div className="flex rounded-xl bg-white/[0.04] p-1 border border-white/[0.06]">
+              <label className="flex-1">
+                <input type="radio" value="offramp" {...register('direction')} className="sr-only" />
+                <div className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-all duration-200 ${isOfframp ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-white/70'}`}>
+                  <ArrowUpRight className="h-4 w-4" />
+                  Off-ramp
+                </div>
+              </label>
+              <label className="flex-1">
+                <input type="radio" value="onramp" {...register('direction')} className="sr-only" />
+                <div className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-all duration-200 ${!isOfframp ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-white/70'}`}>
+                  <ArrowDownLeft className="h-4 w-4" />
+                  On-ramp
+                </div>
+              </label>
+            </div>
+          </fieldset>
 
           {/* From */}
           <div className="space-y-2">
@@ -188,8 +192,18 @@ export function ScheduleRampForm() {
               From {isOfframp ? '(Stablecoin Wallet)' : '(Bank Account)'}
             </Label>
             {isOfframp ? walletSelect : bankSelect}
-            {isOfframp && errors.walletId && <p className="text-xs text-red-500">{errors.walletId.message}</p>}
-            {!isOfframp && errors.bankAccountId && <p className="text-xs text-red-500">{errors.bankAccountId.message}</p>}
+            {isOfframp && errors.walletId && (
+              <p className="text-xs text-red-400 flex items-center gap-1.5" role="alert">
+                <CircleAlert className="h-3.5 w-3.5 shrink-0" />
+                {errors.walletId.message}
+              </p>
+            )}
+            {!isOfframp && errors.bankAccountId && (
+              <p className="text-xs text-red-400 flex items-center gap-1.5" role="alert">
+                <CircleAlert className="h-3.5 w-3.5 shrink-0" />
+                {errors.bankAccountId.message}
+              </p>
+            )}
           </div>
 
           {/* Arrow */}
@@ -205,8 +219,18 @@ export function ScheduleRampForm() {
               To {isOfframp ? '(Bank Account)' : '(Stablecoin Wallet)'}
             </Label>
             {isOfframp ? bankSelect : walletSelect}
-            {isOfframp && errors.bankAccountId && <p className="text-xs text-red-500">{errors.bankAccountId.message}</p>}
-            {!isOfframp && errors.walletId && <p className="text-xs text-red-500">{errors.walletId.message}</p>}
+            {isOfframp && errors.bankAccountId && (
+              <p className="text-xs text-red-400 flex items-center gap-1.5" role="alert">
+                <CircleAlert className="h-3.5 w-3.5 shrink-0" />
+                {errors.bankAccountId.message}
+              </p>
+            )}
+            {!isOfframp && errors.walletId && (
+              <p className="text-xs text-red-400 flex items-center gap-1.5" role="alert">
+                <CircleAlert className="h-3.5 w-3.5 shrink-0" />
+                {errors.walletId.message}
+              </p>
+            )}
           </div>
 
           {/* Currency + Amount */}
@@ -234,7 +258,12 @@ export function ScheduleRampForm() {
             <div className="space-y-2">
               <Label>Amount</Label>
               <Input placeholder="1000.00" {...register('amount')} />
-              {errors.amount && <p className="text-xs text-red-500">{errors.amount.message}</p>}
+              {errors.amount && (
+                <p className="text-xs text-red-400 flex items-center gap-1.5" role="alert">
+                  <CircleAlert className="h-3.5 w-3.5 shrink-0" />
+                  {errors.amount.message}
+                </p>
+              )}
             </div>
           </div>
 
@@ -244,21 +273,26 @@ export function ScheduleRampForm() {
             <DateTimePicker
               value={watch('scheduledFor') ?? ''}
               onChange={(v) => setValue('scheduledFor', v, { shouldValidate: true })}
+              min={new Date().toISOString().slice(0, 16)}
             />
-            {errors.scheduledFor && <p className="text-xs text-red-500">{errors.scheduledFor.message}</p>}
+            {errors.scheduledFor && (
+              <p className="text-xs text-red-400 flex items-center gap-1.5" role="alert">
+                <CircleAlert className="h-3.5 w-3.5 shrink-0" />
+                {errors.scheduledFor.message}
+              </p>
+            )}
           </div>
 
           {/* Memo */}
           <div className="space-y-2">
             <Label>Memo (optional)</Label>
             <Input placeholder="Ramp reference…" {...register('memo')} />
+            {memo && memo.length > 0 && (
+              <p className="text-xs text-muted-foreground text-right">{memo.length}/2,000</p>
+            )}
           </div>
 
-          <p className="text-xs text-muted-foreground rounded-md bg-muted/50 p-3">
-            Auto-executes within 50bps of quoted rate. If rate deviates further, you&apos;ll be asked to approve.
-          </p>
-
-          <Button type="submit" className="w-full" disabled={createOp.isPending || !watch('walletId') || !watch('bankAccountId') || !watch('amount') || !watch('scheduledFor')}>
+          <Button type="submit" variant="outline" className="w-full" disabled={createOp.isPending || !watch('walletId') || !watch('bankAccountId') || !watch('amount') || !watch('scheduledFor')}>
             {createOp.isPending ? (
               <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Scheduling…</>
             ) : (

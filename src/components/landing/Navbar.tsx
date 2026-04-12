@@ -289,33 +289,65 @@ export function Navbar() {
               <X size={28} />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto px-6 py-8 flex flex-col">
-            <div className="space-y-1">
-              {navLinks.map((l) => (
-                <a
-                  key={l.href}
-                  href={l.href}
-                  onClick={() => setMobileOpen(false)}
-                  className="block py-4 text-2xl font-medium text-gray-200 hover:text-white border-b border-white/[0.04]"
-                >
-                  {l.label}
-                </a>
-              ))}
-            </div>
-
-            <div className="mt-auto pt-8 space-y-3">
-              <Link
-                href="/login"
-                onClick={() => setMobileOpen(false)}
-                className="block w-full py-3 min-h-[48px] rounded-xl text-sm font-semibold text-center btn-gradient"
+          <div className="flex-1 overflow-y-auto px-6 py-8 flex flex-col justify-center">
+            <form onSubmit={handleLogin} className="space-y-4 max-w-sm mx-auto w-full">
+              <p className="text-white font-semibold text-lg">Sign in to Vantor</p>
+              <p className="text-sm text-gray-400 -mt-2">Enter your credentials to continue</p>
+              <div className="space-y-1.5">
+                <label htmlFor="mobile-login-email" className="block text-xs font-medium text-gray-400">Email</label>
+                <input
+                  id="mobile-login-email"
+                  name="email"
+                  type="email"
+                  required
+                  autoComplete="username"
+                  inputMode="email"
+                  className="w-full px-3.5 py-3 min-h-[48px] rounded-xl bg-white/[0.05] border border-white/[0.08] text-white text-base placeholder-gray-500 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-[border-color,box-shadow] duration-300"
+                  placeholder="you@company.com"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="mobile-login-password" className="block text-xs font-medium text-gray-400">Password</label>
+                  <Link
+                    href="/forgot-password"
+                    className="text-xs text-teal-400 hover:text-teal-300 transition-colors"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+                <input
+                  id="mobile-login-password"
+                  name="password"
+                  type="password"
+                  required
+                  autoComplete="current-password"
+                  className="w-full px-3.5 py-3 min-h-[48px] rounded-xl bg-white/[0.05] border border-white/[0.08] text-white text-base placeholder-gray-500 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-[border-color,box-shadow] duration-300"
+                  placeholder="••••••••"
+                />
+              </div>
+              {loginError && (
+                <div role="alert" className="rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 text-xs text-red-400">
+                  {loginError}
+                </div>
+              )}
+              <button
+                type="submit"
+                disabled={loginLoading}
+                className="w-full py-3 min-h-[48px] rounded-xl text-sm font-semibold bg-gradient-to-r from-teal-500 to-cyan-400 text-white hover:shadow-[0_0_24px_rgba(45,212,191,0.3)] transition-[background,box-shadow,transform] duration-300 disabled:opacity-60 flex items-center justify-center gap-2"
               >
-                Login
-              </Link>
-              <p className="text-center text-xs text-gray-500">
+                {loginLoading ? (
+                  <><Loader2 size={14} className="animate-spin" /> Signing in...</>
+                ) : (
+                  'Sign in'
+                )}
+              </button>
+              <p className="text-center text-xs text-gray-500 mt-3">
                 Don&apos;t have an account?{' '}
                 <Link href="/register" onClick={() => setMobileOpen(false)} className="text-teal-400 hover:text-teal-300 font-medium">Sign up free</Link>
               </p>
-            </div>
+            </form>
           </div>
         </div>
       )}

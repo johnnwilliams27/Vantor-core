@@ -29,7 +29,7 @@ const PREVIEWS: PreviewEntry[] = [
       obligationsInWindowUsd: '45000',
       safetyBufferTargetUsd: '67500',
       obligationLookaheadDays: 7,
-      aiReasoning: '\u{1F4CA} Current Position\nYour fiat balance of $150,000 exceeds the safety buffer target of $67,500 by $82,500.\n\n\u{1F4A1} Reasoning\nWith $45,000 in obligations over the next 7 days and a 1.5x safety multiplier, you have significant surplus capital that could be earning yield.\n\n\u2705 Recommendation\nConvert $25,000 to USDC on Ethereum to optimize your treasury allocation.',
+      aiReasoning: '\u{1F4CA} Current Position\nYour bank balance of $150,000 exceeds the safety buffer target of $67,500 by $82,500.\n\n\u{1F4A1} Reasoning\nWith $45,000 in obligations over the next 7 days and a 1.5x safety multiplier, you have significant surplus capital that could be earning yield.\n\n\u2705 Recommendation\nConvert $25,000 to USDC on Ethereum to optimize your treasury allocation.',
       stablecoinToken: 'USDC',
       stablecoinChain: 'ethereum',
       bankLabel: 'Chase ****4521',
@@ -50,7 +50,7 @@ const PREVIEWS: PreviewEntry[] = [
       obligationsInWindowUsd: '20000',
       safetyBufferTargetUsd: '30000',
       obligationLookaheadDays: 7,
-      aiReasoning: '\u{1F4CA} Current Position\nYour fiat balance of $80,000 has a surplus of $50,000 above the safety target.\n\n\u{1F4A1} Reasoning\nThe recommended amount of $5,000 is below your approval threshold, so this was automatically executed.\n\n\u2705 Recommendation\nConverted $5,000 to USDC on Ethereum.',
+      aiReasoning: '\u{1F4CA} Current Position\nYour bank balance of $80,000 has a surplus of $50,000 above the safety target.\n\n\u{1F4A1} Reasoning\nThe recommended amount of $5,000 is below your approval threshold, so this was automatically executed.\n\n\u2705 Recommendation\nConverted $5,000 to USDC on Ethereum.',
       stablecoinToken: 'USDC',
       stablecoinChain: 'ethereum',
       bankLabel: 'Chase ****4521',
@@ -70,7 +70,7 @@ const PREVIEWS: PreviewEntry[] = [
       obligationsInWindowUsd: '55000',
       safetyBufferTargetUsd: '82500',
       obligationLookaheadDays: 7,
-      aiReasoning: '\u{1F4CA} Current Position\nYour fiat balance of $30,000 is below the safety buffer target of $82,500.\n\n\u{1F4A1} Reasoning\nUpcoming obligations require additional fiat liquidity.\n\n\u2705 Recommendation\nOff-ramp $15,000 USDC to cover upcoming obligations.',
+      aiReasoning: '\u{1F4CA} Current Position\nYour bank balance of $30,000 is below the safety buffer target of $82,500.\n\n\u{1F4A1} Reasoning\nUpcoming obligations require additional liquidity.\n\n\u2705 Recommendation\nOff-ramp $15,000 USDC to cover upcoming obligations.',
       stablecoinToken: 'USDC',
       stablecoinChain: 'ethereum',
       bankLabel: 'Chase ****4521',
@@ -138,8 +138,8 @@ const PREVIEWS: PreviewEntry[] = [
     html: actionNotificationEmail({
       title: 'On-Ramp Completed',
       details: [
-        { label: 'Fiat Amount', value: '$25,000' },
-        { label: 'Crypto Received', value: '25,000 USDC' },
+        { label: 'Bank Amount', value: '$25,000' },
+        { label: 'Stablecoin Received', value: '25,000 USDC' },
         { label: 'Chain', value: 'Ethereum' },
         { label: 'Fee', value: '$12.50' },
       ],
@@ -169,7 +169,7 @@ const PREVIEWS: PreviewEntry[] = [
     label: 'Payment Sent',
     category: 'Payments',
     html: actionNotificationEmail({
-      title: 'Fiat Payment Sent',
+      title: 'Payment Sent',
       details: [
         { label: 'Amount', value: '$10,000' },
         { label: 'From', value: 'Chase ****4521' },

@@ -157,7 +157,7 @@ export function TreasuryReportPanel() {
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 {[
                   { label: 'Avg Bank Balance', value: fmt(report.summary.avgBankBalanceUsd) },
-                  { label: 'Avg Crypto Balance', value: fmt(report.summary.avgCryptoBalanceUsd) },
+                  { label: 'Avg Stablecoin Balance', value: fmt(report.summary.avgCryptoBalanceUsd) },
                   { label: 'Total On-Ramp', value: fmt(report.summary.totalOnrampUsd) },
                   { label: 'Total Off-Ramp', value: fmt(report.summary.totalOfframpUsd) },
                   { label: 'Net Ramp', value: fmt(report.summary.netRampUsd) },
@@ -307,7 +307,7 @@ export function TreasuryReportPanel() {
                       <tr className="bg-muted/50 border-b">
                         <th className="text-left px-3 py-2 font-medium text-muted-foreground">Date</th>
                         <th className="text-left px-3 py-2 font-medium text-muted-foreground">Direction</th>
-                        <th className="text-left px-3 py-2 font-medium text-muted-foreground">Fiat Amount</th>
+                        <th className="text-left px-3 py-2 font-medium text-muted-foreground">Bank Amount</th>
                         <th className="text-left px-3 py-2 font-medium text-muted-foreground">Currency</th>
                         <th className="text-left px-3 py-2 font-medium text-muted-foreground">Token</th>
                         <th className="text-left px-3 py-2 font-medium text-muted-foreground">Status</th>

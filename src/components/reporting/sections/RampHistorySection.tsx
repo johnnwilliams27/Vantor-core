@@ -43,7 +43,7 @@ export function RampHistorySection({ data }: { data: FiatTransaction[] }) {
               <tr className="bg-muted/50 border-b">
                 <th className="text-left px-3 py-2 font-medium text-muted-foreground">Date</th>
                 <th className="text-left px-3 py-2 font-medium text-muted-foreground">Direction</th>
-                <th className="text-left px-3 py-2 font-medium text-muted-foreground">Fiat Amount</th>
+                <th className="text-left px-3 py-2 font-medium text-muted-foreground">Bank Amount</th>
                 <th className="text-left px-3 py-2 font-medium text-muted-foreground">Currency</th>
                 <th className="text-left px-3 py-2 font-medium text-muted-foreground">Token</th>
                 <th className="text-left px-3 py-2 font-medium text-muted-foreground">Status</th>

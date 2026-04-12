@@ -87,7 +87,7 @@ export async function seedTreasury(ctx: SeedContext): Promise<void> {
       obligations_in_window_usd: '895000', safety_buffer_target_usd: '1342500',
       obligation_lookahead_days: 30, action: 'onramp', recommended_amount_usd: '500000',
       stablecoin_token: 'USDC', stablecoin_chain: 'ethereum',
-      ai_reasoning: 'Projected obligations of $895K in the next 30 days require maintaining a safety buffer of $1.34M (1.5x multiplier). Current crypto balance of $2.15M provides adequate coverage, but an onramp of $500K from bank reserves would optimize the buffer for upcoming payroll cycles.',
+      ai_reasoning: 'Projected obligations of $895K in the next 30 days require maintaining a safety buffer of $1.34M (1.5x multiplier). Current stablecoin balance of $2.15M provides adequate coverage, but an onramp of $500K from bank reserves would optimize the buffer for upcoming payroll cycles.',
       ai_model: 'claude-sonnet-4-6', status: 'executed', executed_at: daysAgo(56), created_at: daysAgo(57),
     },
     {
@@ -96,7 +96,7 @@ export async function seedTreasury(ctx: SeedContext): Promise<void> {
       obligations_in_window_usd: '420000', safety_buffer_target_usd: '630000',
       obligation_lookahead_days: 30, action: 'offramp', recommended_amount_usd: '200000',
       stablecoin_token: 'USDC', stablecoin_chain: 'ethereum',
-      ai_reasoning: 'Crypto holdings exceed the safety buffer target by $2.02M. Recommend offramping $200K to bank accounts to reduce on-chain exposure while maintaining comfortable coverage.',
+      ai_reasoning: 'Stablecoin holdings exceed the safety buffer target by $2.02M. Recommend offramping $200K to bank accounts to reduce on-chain exposure while maintaining comfortable coverage.',
       ai_model: 'claude-sonnet-4-6', status: 'executed', executed_at: daysAgo(21), created_at: daysAgo(22),
     },
     {
@@ -122,7 +122,7 @@ export async function seedTreasury(ctx: SeedContext): Promise<void> {
       obligations_in_window_usd: '650000', safety_buffer_target_usd: '975000',
       obligation_lookahead_days: 30, action: 'offramp', recommended_amount_usd: '150000',
       stablecoin_token: 'USDC', stablecoin_chain: 'ethereum',
-      ai_reasoning: 'Moderate obligation window. Suggest offramping $150K to optimize bank-to-crypto ratio and reduce smart contract risk exposure.',
+      ai_reasoning: 'Moderate obligation window. Suggest offramping $150K to optimize bank-to-stablecoin ratio and reduce smart contract risk exposure.',
       ai_model: 'claude-sonnet-4-6', status: 'rejected', rejected_at: daysAgo(28),
       rejection_reason: 'Prefer to maintain higher on-chain liquidity for upcoming vendor payments', created_at: daysAgo(30),
     },

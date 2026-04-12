@@ -142,9 +142,9 @@ function mapRamps(ramps: FiatTransaction[], wallets?: Wallet[]): UnifiedRow[] {
       rate: r.exchange_rate ? parseFloat(r.exchange_rate).toFixed(4) : null,
       memo: (r as any).memo ?? null,
       details: {
-        'Direction': isOfframp ? 'Off-ramp (Crypto → Fiat)' : 'On-ramp (Fiat → Crypto)',
-        'Crypto': `${formatCurrency(r.crypto_amount)} ${r.crypto_token}`,
-        'Fiat': fiatFormatted,
+        'Direction': isOfframp ? 'Off-ramp (Wallet → Bank)' : 'On-ramp (Bank → Wallet)',
+        'Stablecoin': `${formatCurrency(r.crypto_amount)} ${r.crypto_token}`,
+        'Bank Amount': fiatFormatted,
         'Bank': bankName,
         'Wallet': wLabel,
         ...(r.exchange_rate ? { 'Rate': parseFloat(r.exchange_rate).toFixed(4) } : {}),

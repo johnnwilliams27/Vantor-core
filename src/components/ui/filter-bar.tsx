@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Search, X, ChevronDown, ChevronLeft, ChevronRight, Check, Calendar, Download, FileText } from 'lucide-react';
+import { Search, X, ChevronDown, ChevronLeft, ChevronRight, Check, Calendar, Download, FileText, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
@@ -26,8 +26,8 @@ interface FilterBarProps {
   totalCount: number;
   activeFilterCount: number;
   onClear: () => void;
-  onExportCsv?: () => void;
-  onExportPdf?: () => void;
+  onExportCsv?: () => void | Promise<void>;
+  onExportPdf?: () => void | Promise<void>;
   className?: string;
 }
 
@@ -85,14 +85,14 @@ function FilterDropdown({
           'flex h-8 items-center gap-1.5 rounded-md border border-input bg-background px-2.5 text-sm shadow-sm transition-colors',
           'hover:border-ring/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           open && 'ring-2 ring-ring',
-          isActive && 'border-[#19595b]/50 bg-[#19595b]/5 text-[#19595b]',
+          isActive && 'border-primary/50 bg-primary/5 text-primary',
         )}
       >
         <span className="truncate max-w-[120px]">{displayLabel}</span>
         <ChevronDown className={cn(
           'h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200',
           open && 'rotate-180',
-          isActive && 'text-[#19595b]',
+          isActive && 'text-primary',
         )} />
       </button>
 
@@ -261,18 +261,18 @@ function DatePickerDropdown({
           'flex h-8 items-center gap-1.5 rounded-md border border-input bg-background px-2.5 text-sm shadow-sm transition-colors',
           'hover:border-ring/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           open && 'ring-2 ring-ring',
-          isActive && 'border-[#19595b]/50 bg-[#19595b]/5 text-[#19595b]',
+          isActive && 'border-primary/50 bg-primary/5 text-primary',
         )}
       >
         <Calendar className={cn(
           'h-3.5 w-3.5 shrink-0 text-muted-foreground',
-          isActive && 'text-[#19595b]',
+          isActive && 'text-primary',
         )} />
         <span className="truncate">{displayLabel}</span>
         <ChevronDown className={cn(
           'h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200',
           open && 'rotate-180',
-          isActive && 'text-[#19595b]',
+          isActive && 'text-primary',
         )} />
       </button>
 
@@ -331,8 +331,8 @@ function DatePickerDropdown({
                     'h-8 w-full text-sm rounded-md transition-colors',
                     isOtherMonth && 'text-muted-foreground/40',
                     !isOtherMonth && !isSelected && 'hover:bg-accent',
-                    isToday && !isSelected && 'font-semibold text-[#19595b]',
-                    isSelected && 'bg-[#19595b] text-white font-medium',
+                    isToday && !isSelected && 'font-semibold text-primary',
+                    isSelected && 'bg-primary text-white font-medium',
                   )}
                 >
                   {day.day}
@@ -346,7 +346,7 @@ function DatePickerDropdown({
             <button
               type="button"
               onClick={() => { setViewYear(today.getFullYear()); setViewMonth(today.getMonth()); selectDay(todayStr); }}
-              className="text-xs text-[#19595b] hover:underline"
+              className="text-xs text-primary hover:underline"
             >
               Today
             </button>
@@ -386,6 +386,8 @@ export function FilterBar({
   onExportPdf,
   className,
 }: FilterBarProps) {
+  const [exportingCsv, setExportingCsv] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const isFiltered = activeFilterCount > 0;
   const hasExport = !!onExportCsv || !!onExportPdf;
 
@@ -452,21 +454,29 @@ export function FilterBar({
             <div className={cn('flex items-center gap-1', isFiltered && 'ml-2 pl-2 border-l border-border')}>
               {onExportCsv && (
                 <button
-                  onClick={onExportCsv}
-                  className="flex items-center gap-1 h-7 px-2 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  onClick={async () => {
+                    setExportingCsv(true);
+                    try { await onExportCsv(); } finally { setExportingCsv(false); }
+                  }}
+                  disabled={exportingCsv}
+                  className="flex items-center gap-1 h-7 px-2 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
                   title="Export CSV"
                 >
-                  <Download className="h-3 w-3" />
+                  {exportingCsv ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
                   CSV
                 </button>
               )}
               {onExportPdf && (
                 <button
-                  onClick={onExportPdf}
-                  className="flex items-center gap-1 h-7 px-2 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  onClick={async () => {
+                    setExportingPdf(true);
+                    try { await onExportPdf(); } finally { setExportingPdf(false); }
+                  }}
+                  disabled={exportingPdf}
+                  className="flex items-center gap-1 h-7 px-2 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
                   title="Export PDF"
                 >
-                  <FileText className="h-3 w-3" />
+                  {exportingPdf ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />}
                   PDF
                 </button>
               )}

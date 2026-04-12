@@ -5,24 +5,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { CancelScheduledDialog } from '@/components/ui/cancel-scheduled-dialog';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { useTableFilter } from '@/hooks/useTableFilter';
 import { useToast } from '@/components/ui/toast';
-import { formatCurrency, formatDateTime, capitalize } from '@/lib/utils';
+import { formatCurrency, formatDateTime, formatRelativeOrDate, capitalize, formatScheduledStatus, walletDisplayName } from '@/lib/utils';
 import { exportCsv, exportPdf } from '@/lib/export';
 import type { ExportColumn } from '@/lib/export';
 import type { BridgeTransfer } from '@/types/database';
-import { CardSpinner } from '@/components/ui/spinner';
-import { ArrowRight } from 'lucide-react';
+import { TableCardSkeleton } from '@/components/ui/operations-skeletons';
+import { ArrowRight, Check, Clock, XCircle } from 'lucide-react';
 import { useScheduledOperations, useCancelScheduledOperation } from '@/hooks/useScheduledOperations';
 import type { BridgeParams } from '@/types/scheduled-operations';
-
-function walletDisplayName(wallet?: { label?: string | null; address: string } | null): string {
-  if (!wallet) return '—';
-  return wallet.label || `${wallet.address.slice(0, 6)}…${wallet.address.slice(-4)}`;
-}
 
 const PROVIDER_LABELS: Record<string, string> = {
   cctp: 'Circle CCTP',
@@ -66,6 +61,10 @@ const BRIDGE_FILTER_CONFIG = {
     { key: 'token', accessor: (item: UnifiedBridgeRow) => item.token },
   ],
   dateField: (item: UnifiedBridgeRow) => item.created_at,
+  sortColumns: [
+    { key: 'amount', accessor: (item: UnifiedBridgeRow) => parseFloat(item.amount), type: 'number' as const },
+    { key: 'date', accessor: (item: UnifiedBridgeRow) => item.created_at, type: 'date' as const },
+  ],
 };
 
 export function BridgeHistory() {
@@ -121,7 +120,7 @@ export function BridgeHistory() {
           fromWalletLabel: truncated,
           toWalletLabel: truncated,
           bridge_fee: null,
-          status: op.status === 'awaiting_authorization' ? 'awaiting approval' : op.status,
+          status: formatScheduledStatus(op.status),
           created_at: op.created_at,
           scheduled_for: op.scheduled_for,
           isScheduled: true,
@@ -147,18 +146,20 @@ export function BridgeHistory() {
     row.isScheduled && (row.status === 'pending' || row.status === 'awaiting approval');
 
   if (bridgesLoading) {
-    return (
-      <Card>
-        <CardHeader><CardTitle>Bridge History</CardTitle></CardHeader>
-        <CardContent><CardSpinner /></CardContent>
-      </Card>
-    );
+    return <TableCardSkeleton columns={10} rows={5} />;
   }
 
   return (
     <>
-    <Card>
-      <CardHeader><CardTitle>Bridge History</CardTitle></CardHeader>
+    <Card data-history-table>
+      <CardHeader><CardTitle className="flex items-center gap-2">
+          Bridge History
+          {filter.totalCount > 0 && (
+            <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-white/[0.06] text-muted-foreground">
+              {filter.totalCount}
+            </span>
+          )}
+        </CardTitle></CardHeader>
       <CardContent className="space-y-4">
         <FilterBar
           search={filter.search}
@@ -182,35 +183,68 @@ export function BridgeHistory() {
           onExportCsv={() => exportCsv('bridge-history', BRIDGE_EXPORT_COLUMNS, filter.filteredData as any)}
           onExportPdf={() => exportPdf('bridge-history', 'Bridge History', BRIDGE_EXPORT_COLUMNS, filter.filteredData as any, 'landscape')}
         />
-        <div className="overflow-x-auto">
+        <div className="relative overflow-x-auto">
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-black/40 to-transparent lg:hidden z-10" />
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Token</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>From</TableHead>
-                <TableHead>To</TableHead>
-                <TableHead>Route</TableHead>
-                <TableHead>Fee</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Scheduled</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead></TableHead>
+                <TableHead scope="col">Token</TableHead>
+                <TableHead scope="col">
+                  <button
+                    type="button"
+                    onClick={() => filter.toggleSort('amount')}
+                    className="flex items-center gap-1 hover:text-white transition-colors group"
+                    aria-sort={filter.sortKey === 'amount' ? (filter.sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                  >
+                    Amount
+                    <span className={`text-[10px] ${filter.sortKey === 'amount' ? 'text-teal-400' : 'opacity-0 group-hover:opacity-40'}`}>
+                      {filter.sortKey === 'amount' ? (filter.sortDir === 'asc' ? '↑' : '↓') : '↕'}
+                    </span>
+                  </button>
+                </TableHead>
+                <TableHead scope="col">From</TableHead>
+                <TableHead scope="col">To</TableHead>
+                <TableHead scope="col">Route</TableHead>
+                <TableHead scope="col">Fee</TableHead>
+                <TableHead scope="col">Status</TableHead>
+                <TableHead scope="col">Scheduled</TableHead>
+                <TableHead scope="col">
+                  <button
+                    type="button"
+                    onClick={() => filter.toggleSort('date')}
+                    className="flex items-center gap-1 hover:text-white transition-colors group"
+                    aria-sort={filter.sortKey === 'date' ? (filter.sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                  >
+                    Date
+                    <span className={`text-[10px] ${filter.sortKey === 'date' ? 'text-teal-400' : 'opacity-0 group-hover:opacity-40'}`}>
+                      {filter.sortKey === 'date' ? (filter.sortDir === 'asc' ? '↑' : '↓') : '↕'}
+                    </span>
+                  </button>
+                </TableHead>
+                <TableHead scope="col"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filter.pagedData.length ? (
                 filter.pagedData.map((b) => (
-                  <TableRow key={b.id}>
+                  <TableRow key={b.id} className="hover:bg-white/[0.02]">
                     <TableCell><Badge variant="outline">{b.token}</Badge></TableCell>
                     <TableCell className="text-sm font-semibold">{formatCurrency(b.amount)}</TableCell>
                     <TableCell className="text-sm text-foreground">{b.fromWalletLabel}</TableCell>
                     <TableCell className="text-sm text-foreground">{b.toWalletLabel}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1.5 text-sm">
-                        <Badge variant={b.from_chain === 'ethereum' ? 'ethereum' : 'solana'}>{capitalize(b.from_chain)}</Badge>
-                        <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                        <Badge variant={b.to_chain === 'ethereum' ? 'ethereum' : 'solana'}>{capitalize(b.to_chain)}</Badge>
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <span className={`w-2 h-2 rounded-full ${b.from_chain === 'ethereum' ? 'bg-blue-400' : 'bg-purple-400'}`} />
+                        <span className="text-muted-foreground">{capitalize(b.from_chain)}</span>
+                        {b.status === 'completed' ? (
+                          <Check className="h-3 w-3 text-teal-400" />
+                        ) : b.status === 'pending' || b.status === 'awaiting approval' ? (
+                          <ArrowRight className="h-3 w-3 text-white/40 animate-pulse" />
+                        ) : (
+                          <ArrowRight className="h-3 w-3 text-white/20" />
+                        )}
+                        <span className={`w-2 h-2 rounded-full ${b.to_chain === 'ethereum' ? 'bg-blue-400' : 'bg-purple-400'}`} />
+                        <span className="text-muted-foreground">{capitalize(b.to_chain)}</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
@@ -224,21 +258,24 @@ export function BridgeHistory() {
                         b.status === 'failed' || b.status === 'cancelled' ? 'destructive' :
                         'warning' as any
                       }>
+                        {b.status === 'completed' ? <Check className="h-3 w-3 mr-1" /> :
+                         b.status === 'failed' || b.status === 'cancelled' ? <XCircle className="h-3 w-3 mr-1" /> :
+                         <Clock className="h-3 w-3 mr-1" />}
                         {capitalize(b.status)}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                      {b.scheduled_for ? formatDateTime(b.scheduled_for) : 'Immediate'}
+                      {b.scheduled_for ? formatDateTime(b.scheduled_for) : '—'}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                      {formatDateTime(b.created_at)}
+                    <TableCell className="text-sm text-muted-foreground whitespace-nowrap" title={formatRelativeOrDate(b.created_at).full}>
+                      {formatRelativeOrDate(b.created_at).text}
                     </TableCell>
                     <TableCell>
                       {canCancel(b) && (
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-7 text-xs px-3 text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400"
+                          className="h-9 text-xs px-3 text-red-400 border-red-500/20 hover:bg-red-500/10 hover:border-red-500/30"
                           onClick={() => setConfirmCancelOp(b)}
                         >
                           Cancel
@@ -249,8 +286,17 @@ export function BridgeHistory() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
-                    {filter.activeFilterCount > 0 ? 'No matching bridges.' : 'No bridge transfers yet.'}
+                  <TableCell colSpan={10} className="text-center py-12">
+                    {filter.activeFilterCount > 0 ? (
+                      <span className="text-muted-foreground">No matching results.</span>
+                    ) : (
+                      <div className="space-y-2">
+                        <p className="text-muted-foreground">No bridge transfers yet.</p>
+                        <p className="text-xs text-teal-400 hover:text-teal-300 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+                          Create your first bridge transfers ↑
+                        </p>
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
               )}
@@ -269,48 +315,18 @@ export function BridgeHistory() {
       </CardContent>
     </Card>
 
-    <Dialog open={!!confirmCancelOp} onOpenChange={(o) => !o && setConfirmCancelOp(null)}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Cancel Scheduled Bridge</DialogTitle>
-        </DialogHeader>
-        {confirmCancelOp && (
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Are you sure you want to cancel this scheduled bridge?
-            </p>
-            <div className="text-sm bg-muted/40 rounded-md p-3 space-y-1">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Amount</span>
-                <span className="font-medium">{formatCurrency(confirmCancelOp.amount)} {confirmCancelOp.token}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Route</span>
-                <span>{capitalize(confirmCancelOp.from_chain)} → {capitalize(confirmCancelOp.to_chain)}</span>
-              </div>
-              {confirmCancelOp.scheduled_for && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Scheduled</span>
-                  <span>{formatDateTime(confirmCancelOp.scheduled_for)}</span>
-                </div>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">This action cannot be undone.</p>
-          </div>
-        )}
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => setConfirmCancelOp(null)}>Go Back</Button>
-          <Button
-            variant="outline"
-            className="text-red-600 border-red-300 hover:bg-red-50"
-            onClick={handleCancel}
-            disabled={cancelOp.isPending}
-          >
-            {cancelOp.isPending ? 'Cancelling…' : 'Confirm Cancel'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <CancelScheduledDialog
+      open={!!confirmCancelOp}
+      onOpenChange={(o) => !o && setConfirmCancelOp(null)}
+      title="Cancel Scheduled Bridge"
+      details={confirmCancelOp ? [
+        { label: 'Amount', value: `${formatCurrency(confirmCancelOp.amount)} ${confirmCancelOp.token}` },
+        { label: 'Route', value: `${capitalize(confirmCancelOp.from_chain)} → ${capitalize(confirmCancelOp.to_chain)}` },
+        ...(confirmCancelOp.scheduled_for ? [{ label: 'Scheduled', value: formatDateTime(confirmCancelOp.scheduled_for) }] : []),
+      ] : []}
+      onConfirm={handleCancel}
+      isPending={cancelOp.isPending}
+    />
     </>
   );
 }

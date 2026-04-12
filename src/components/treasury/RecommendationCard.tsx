@@ -180,7 +180,7 @@ export function RecommendationCard({ rec }: { rec: AiRecommendation }) {
           {/* Context grid — below reasoning, matching Insights pattern */}
           <div className="grid grid-cols-3 gap-3 rounded-lg border border-border/50 p-3">
             <div>
-              <div className="text-[11px] text-muted-foreground uppercase tracking-wider">Fiat Balance</div>
+              <div className="text-[11px] text-muted-foreground uppercase tracking-wider">Bank Balance</div>
               <div className="text-sm font-semibold tabular-nums mt-0.5">{fmt(rec.total_bank_balance_usd)}</div>
             </div>
             <div>

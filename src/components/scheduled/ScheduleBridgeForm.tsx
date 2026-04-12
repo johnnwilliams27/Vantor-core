@@ -12,10 +12,10 @@ import { useToast } from '@/components/ui/toast';
 import { useWallets } from '@/hooks/useWallets';
 import { useWalletTokenBalance, useWalletTokenHoldings, formatWalletTokensLabel } from '@/hooks/useBalances';
 import { BalanceHint } from '@/components/ui/balance-hint';
-import { Loader2, Calendar } from 'lucide-react';
+import { Loader2, Calendar, CircleAlert } from 'lucide-react';
 import { DateTimePicker } from '@/components/ui/datetime-picker';
 import { useCreateScheduledOperation } from '@/hooks/useScheduledOperations';
-import { InfoTooltip } from '@/components/ui/info-tooltip';
+import { sanitizeErrorMessage } from '@/lib/utils';
 
 const CHAIN_LABELS: Record<string, string> = { ethereum: 'Ethereum', solana: 'Solana' };
 
@@ -52,6 +52,7 @@ export function ScheduleBridgeForm() {
   const toWalletId = watch('toWalletId');
   const token = watch('token');
   const amount = watch('amount');
+  const memo = watch('memo');
 
   const fromWallet = wallets?.find((w) => w.id === fromWalletId);
   const toWallet = wallets?.find((w) => w.id === toWalletId);
@@ -96,18 +97,18 @@ export function ScheduleBridgeForm() {
       toast({ title: 'Bridge scheduled', description: `Scheduled for ${data.scheduledFor}`, variant: 'success' });
       reset();
     } catch (err) {
-      toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
+      toast({ title: 'Error', description: sanitizeErrorMessage((err as Error).message), variant: 'destructive' });
     }
   };
 
   return (
-    <Card>
+    <Card className="border-t-2 border-t-amber-500/40">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Calendar className="h-5 w-5" />
           Schedule Bridge
-          <InfoTooltip content="Move the same stablecoin across different blockchains. Scheduled for a future date. Auto-executes within 25bps of quoted rate; you'll be asked to approve if it deviates further." />
         </CardTitle>
+        <p className="text-xs text-muted-foreground mt-1">Auto-executes within 25bps of quoted rate. Approval required for larger deviations.</p>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -136,7 +137,12 @@ export function ScheduleBridgeForm() {
                   );
                 })}
               </Select>
-              {errors.fromWalletId && <p className="text-sm text-red-500">{errors.fromWalletId.message}</p>}
+              {errors.fromWalletId && (
+                <p className="text-sm text-red-400 flex items-center gap-1.5" role="alert">
+                  <CircleAlert className="h-3.5 w-3.5 shrink-0" />
+                  {errors.fromWalletId.message}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -155,8 +161,18 @@ export function ScheduleBridgeForm() {
                   );
                 })}
               </Select>
-              {errors.toWalletId && <p className="text-sm text-red-500">{errors.toWalletId.message}</p>}
-              {sameChain && <p className="text-sm text-red-500">Destination must be on a different chain.</p>}
+              {errors.toWalletId && (
+                <p className="text-sm text-red-400 flex items-center gap-1.5" role="alert">
+                  <CircleAlert className="h-3.5 w-3.5 shrink-0" />
+                  {errors.toWalletId.message}
+                </p>
+              )}
+              {sameChain && (
+                <p className="text-sm text-red-400 flex items-center gap-1.5" role="alert">
+                  <CircleAlert className="h-3.5 w-3.5 shrink-0" />
+                  Destination must be on a different chain.
+                </p>
+              )}
             </div>
           </div>
 
@@ -170,24 +186,38 @@ export function ScheduleBridgeForm() {
                 currentAmount={amount}
                 onMax={(max) => setValue('amount', max)}
               />
-              {errors.amount && <p className="text-sm text-red-500">{errors.amount.message}</p>}
+              {errors.amount && (
+                <p className="text-sm text-red-400 flex items-center gap-1.5" role="alert">
+                  <CircleAlert className="h-3.5 w-3.5 shrink-0" />
+                  {errors.amount.message}
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Schedule For</Label>
               <DateTimePicker
                 value={watch('scheduledFor') ?? ''}
                 onChange={(v) => setValue('scheduledFor', v, { shouldValidate: true })}
+                min={new Date().toISOString().slice(0, 16)}
               />
-              {errors.scheduledFor && <p className="text-sm text-red-500">{errors.scheduledFor.message}</p>}
+              {errors.scheduledFor && (
+                <p className="text-sm text-red-400 flex items-center gap-1.5" role="alert">
+                  <CircleAlert className="h-3.5 w-3.5 shrink-0" />
+                  {errors.scheduledFor.message}
+                </p>
+              )}
             </div>
           </div>
 
           <div className="space-y-2">
             <Label>Memo (optional)</Label>
             <Input placeholder="Bridge reference…" {...register('memo')} />
+            {memo && memo.length > 0 && (
+              <p className="text-xs text-muted-foreground text-right">{memo.length}/2,000</p>
+            )}
           </div>
 
-          <Button type="submit" className="w-full" disabled={createOp.isPending || exceeds || !!sameChain || !fromWalletId || !toWalletId || !amount || !watch('scheduledFor')}>
+          <Button type="submit" variant="outline" className="w-full" disabled={createOp.isPending || exceeds || !!sameChain || !fromWalletId || !toWalletId || !amount || !watch('scheduledFor')}>
             {isSubmitting ? (
               <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Scheduling…</>
             ) : (

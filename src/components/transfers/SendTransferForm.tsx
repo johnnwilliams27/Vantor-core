@@ -1,5 +1,7 @@
 'use client';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { InlineSuccess } from '@/components/ui/inline-success';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -12,10 +14,10 @@ import { useWallets } from '@/hooks/useWallets';
 import { useWalletTokenBalance, useWalletTokenHoldings, formatWalletTokensLabel } from '@/hooks/useBalances';
 import { BalanceHint } from '@/components/ui/balance-hint';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, Send } from 'lucide-react';
+import { Loader2, Send, CircleAlert, ChevronDown } from 'lucide-react';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { useInvoices } from '@/hooks/useInvoices';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, sanitizeErrorMessage } from '@/lib/utils';
 import { VANTOR_FEE_RATE } from '@/lib/billing/tiers';
 import { useOnChainTransfer, type TransferStep } from '@/hooks/useOnChainTransfer';
 import { useSolanaTransfer, type SolanaTransferStep } from '@/hooks/useSolanaTransfer';
@@ -70,6 +72,8 @@ export function SendTransferForm() {
     staleTime: 60_000,
   });
   const { toast } = useToast();
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const evmTransfer = useOnChainTransfer();
   const solTransfer = useSolanaTransfer();
   const {
@@ -84,6 +88,7 @@ export function SendTransferForm() {
   const selectedWalletId = watch('fromWalletId');
   const selectedToken = watch('token');
   const amount = watch('amount');
+  const memo = watch('memo');
   const selectedWallet = wallets?.find((w) => w.id === selectedWalletId);
   const balance = useWalletTokenBalance(selectedWalletId, selectedToken);
   const exceeds = balance !== null && amount ? parseFloat(amount) > balance : false;
@@ -129,7 +134,7 @@ export function SendTransferForm() {
     } catch (err) {
       toast({
         title: 'Transfer failed',
-        description: (err as Error).message,
+        description: sanitizeErrorMessage((err as Error).message),
         variant: 'destructive',
       });
       return;
@@ -159,11 +164,12 @@ export function SendTransferForm() {
       (selectedWallet.chain === 'solana' && solTransfer.step === 'done')
     ) {
       reset();
+      setSuccessMessage('Transfer sent');
     }
   };
 
   return (
-    <Card>
+    <Card className="border-t-2 border-t-teal-500/50">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Send className="h-5 w-5" />
@@ -172,10 +178,13 @@ export function SendTransferForm() {
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {successMessage && (
+          <InlineSuccess message={successMessage} onDismiss={() => setSuccessMessage(null)} />
+        )}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
             <Label>From Wallet</Label>
-            <Select {...register('fromWalletId')}>
+            <Select {...register('fromWalletId')} aria-required="true">
               <option value="">Select wallet…</option>
               {wallets?.map((w) => {
                 const chain = w.chain.charAt(0).toUpperCase() + w.chain.slice(1);
@@ -192,7 +201,12 @@ export function SendTransferForm() {
                 );
               })}
             </Select>
-            {errors.fromWalletId && <p className="text-sm text-red-500">{errors.fromWalletId.message}</p>}
+            {errors.fromWalletId && (
+              <p className="text-sm text-red-400 flex items-center gap-1.5" role="alert">
+                <CircleAlert className="h-3.5 w-3.5 shrink-0" />
+                {errors.fromWalletId.message}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -206,54 +220,80 @@ export function SendTransferForm() {
           <div className="space-y-2">
             <Label>To Address</Label>
             <Input placeholder="0x… or base58…" {...register('toAddress')} />
-            {errors.toAddress && <p className="text-sm text-red-500">{errors.toAddress.message}</p>}
+            {errors.toAddress && (
+              <p className="text-sm text-red-400 flex items-center gap-1.5" role="alert">
+                <CircleAlert className="h-3.5 w-3.5 shrink-0" />
+                {errors.toAddress.message}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
             <Label>Amount</Label>
-            <Input placeholder="100.00" {...register('amount')} />
+            <Input placeholder="100.00" {...register('amount')} aria-required="true" />
             <BalanceHint
               balance={balance}
               token={selectedToken ?? 'USDC'}
               currentAmount={amount}
               onMax={(max) => setValue('amount', max)}
             />
-            {errors.amount && <p className="text-sm text-red-500">{errors.amount.message}</p>}
+            {errors.amount && (
+              <p className="text-sm text-red-400 flex items-center gap-1.5" role="alert">
+                <CircleAlert className="h-3.5 w-3.5 shrink-0" />
+                {errors.amount.message}
+              </p>
+            )}
           </div>
 
-          {erpConfigs && erpConfigs.length > 0 && (
-            <div className="space-y-2">
-              <Label>ERP System <span className="text-gray-400">(optional)</span></Label>
-              <Select {...register('erpConfigId')}>
-                <option value="">None</option>
-                {erpConfigs.map((cfg) => (
-                  <option key={cfg.id} value={cfg.id}>
-                    {cfg.label} ({cfg.provider.toUpperCase()})
-                  </option>
-                ))}
-              </Select>
-            </div>
-          )}
+          <button
+            type="button"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-white/70 transition-colors"
+          >
+            <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${showAdvanced ? 'rotate-180' : ''}`} />
+            Advanced options
+          </button>
 
-          {unpaidInvoices && unpaidInvoices.filter((inv) => ['USDC', 'USDT'].includes(inv.currency ?? inv.token ?? '')).length > 0 && (
-            <div className="space-y-2">
-              <Label>Apply to Invoice <span className="text-muted-foreground">(optional)</span></Label>
-              <Select {...register('invoiceId')}>
-                <option value="">None</option>
-                {unpaidInvoices
-                  .filter((inv) => ['USDC', 'USDT'].includes(inv.currency ?? inv.token ?? ''))
-                  .map((inv) => (
-                    <option key={inv.id} value={inv.id}>
-                      {inv.invoice_number} — {inv.vendor_name ?? 'Unknown'} ({formatCurrency(inv.amount)} {inv.currency ?? inv.token})
-                    </option>
-                  ))}
-              </Select>
+          {showAdvanced && (
+            <div className="space-y-4 pt-1">
+              {erpConfigs && erpConfigs.length > 0 && (
+                <div className="space-y-2">
+                  <Label>ERP System <span className="text-gray-400">(optional)</span></Label>
+                  <Select {...register('erpConfigId')}>
+                    <option value="">None</option>
+                    {erpConfigs.map((cfg) => (
+                      <option key={cfg.id} value={cfg.id}>
+                        {cfg.label} ({cfg.provider.toUpperCase()})
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              )}
+
+              {unpaidInvoices && unpaidInvoices.filter((inv) => ['USDC', 'USDT'].includes(inv.currency ?? inv.token ?? '')).length > 0 && (
+                <div className="space-y-2">
+                  <Label>Apply to Invoice <span className="text-muted-foreground">(optional)</span></Label>
+                  <Select {...register('invoiceId')}>
+                    <option value="">None</option>
+                    {unpaidInvoices
+                      .filter((inv) => ['USDC', 'USDT'].includes(inv.currency ?? inv.token ?? ''))
+                      .map((inv) => (
+                        <option key={inv.id} value={inv.id}>
+                          {inv.invoice_number} — {inv.vendor_name ?? 'Unknown'} ({formatCurrency(inv.amount)} {inv.currency ?? inv.token})
+                        </option>
+                      ))}
+                  </Select>
+                </div>
+              )}
             </div>
           )}
 
           <div className="space-y-2">
             <Label>Memo (optional)</Label>
             <Input placeholder="Transfer reference…" {...register('memo')} />
+            {memo && memo.length > 0 && (
+              <p className="text-xs text-muted-foreground text-right">{memo.length}/2,000</p>
+            )}
           </div>
 
           {amount && parseFloat(amount) > 0 && (
@@ -274,7 +314,7 @@ export function SendTransferForm() {
 
           <Button
             type="submit"
-            className="w-full"
+            className="w-full btn-gradient"
             disabled={isProcessing || exceeds || !selectedWalletId || !watch('toAddress') || !amount}
           >
             {isProcessing ? (
@@ -286,6 +326,27 @@ export function SendTransferForm() {
               stepLabel || 'Send Transfer'
             )}
           </Button>
+
+          {activeStep !== 'idle' && activeStep !== 'done' && activeStep !== 'error' && (
+            <div className="flex items-center justify-center gap-1.5 mt-2">
+              {(isEvmWallet
+                ? ['signing', 'confirming', 'recording']
+                : ['checking', 'building', 'signing', 'confirming', 'recording']
+              ).map((step, i, arr) => {
+                const activeIdx = arr.indexOf(activeStep);
+                return (
+                  <div
+                    key={step}
+                    className={`h-1.5 rounded-full transition-all duration-300 ${
+                      i < activeIdx ? 'w-1.5 bg-teal-500' :
+                      i === activeIdx ? 'w-4 bg-teal-400' :
+                      'w-1.5 bg-white/10'
+                    }`}
+                  />
+                );
+              })}
+            </div>
+          )}
         </form>
       </CardContent>
 

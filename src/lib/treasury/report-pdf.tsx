@@ -154,7 +154,7 @@ export function TreasuryReportPdf({ data }: Props): React.ReactElement {
             <Text style={styles.summaryValue}>{fmt(summary.avgBankBalanceUsd)}</Text>
           </View>
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>Avg Crypto Balance</Text>
+            <Text style={styles.summaryLabel}>Avg Stablecoin Balance</Text>
             <Text style={styles.summaryValue}>{fmt(summary.avgCryptoBalanceUsd)}</Text>
           </View>
           <View style={styles.summaryCard}>
@@ -181,7 +181,7 @@ export function TreasuryReportPdf({ data }: Props): React.ReactElement {
           <View style={styles.tableHeader}>
             <Text style={[styles.th, styles.col1]}>Date</Text>
             <Text style={[styles.th, styles.col2]}>Bank (USD)</Text>
-            <Text style={[styles.th, styles.col3]}>Crypto (USD)</Text>
+            <Text style={[styles.th, styles.col3]}>Stablecoins (USD)</Text>
           </View>
           {balanceHistory.slice(0, 60).map((row, i) => (
             <View key={row.date} style={i % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
@@ -228,7 +228,7 @@ export function TreasuryReportPdf({ data }: Props): React.ReactElement {
           <View style={styles.tableHeader}>
             <Text style={[styles.th, styles.col1]}>Date</Text>
             <Text style={[styles.th, styles.col2m]}>Direction</Text>
-            <Text style={[styles.th, styles.col3m]}>Fiat Amount</Text>
+            <Text style={[styles.th, styles.col3m]}>Bank Amount</Text>
             <Text style={[styles.th, styles.col4m]}>Currency</Text>
             <Text style={[styles.th, styles.col5m]}>Status</Text>
           </View>

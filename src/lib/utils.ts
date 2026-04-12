@@ -38,7 +38,50 @@ export function formatDateTime(iso: string): string {
   return `${mm}/${dd}/${yyyy} ${h12}:${min} ${ampm}`;
 }
 
+/** Relative time for recent items, full datetime for older ones */
+export function formatRelativeOrDate(iso: string): { text: string; full: string } {
+  const d = new Date(iso);
+  const now = Date.now();
+  const diffMs = now - d.getTime();
+  const full = formatDateTime(iso);
+  if (diffMs < 0 || diffMs > 86_400_000) return { text: full, full };
+  const diffMin = Math.floor(diffMs / 60_000);
+  if (diffMin < 1) return { text: 'Just now', full };
+  if (diffMin < 60) return { text: `${diffMin}m ago`, full };
+  const diffHr = Math.floor(diffMin / 60);
+  return { text: `${diffHr}h ago`, full };
+}
+
+/** Normalize scheduled operation status for display */
+export function formatScheduledStatus(status: string): string {
+  if (status === 'awaiting_authorization') return 'awaiting approval';
+  return status;
+}
+
 /** Capitalizes each word; converts underscores to spaces. e.g. "payment_execute" → "Payment Execute" */
 export function capitalize(str: string): string {
   return str.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/** Sanitize API error messages for user display */
+export function sanitizeErrorMessage(message: string): string {
+  // Pass through known user-friendly patterns
+  if (/insufficient|balance|exceed|invalid|not found|unauthorized|forbidden|expired|limit|duplicate/i.test(message)) {
+    return message;
+  }
+  // Hide internal/technical errors
+  if (/relation|column|constraint|violates|syntax|ECONNREFUSED|timeout|500|internal/i.test(message)) {
+    return 'Something went wrong. Please try again.';
+  }
+  // Default: pass through if it's short and doesn't look technical
+  if (message.length > 200 || /\{|\[|stack|trace/i.test(message)) {
+    return 'Something went wrong. Please try again.';
+  }
+  return message;
+}
+
+/** Format wallet for display: prefer label, fall back to truncated address */
+export function walletDisplayName(wallet?: { label?: string | null; address: string } | null): string {
+  if (!wallet) return '—';
+  return wallet.label || `${wallet.address.slice(0, 6)}…${wallet.address.slice(-4)}`;
 }

@@ -164,7 +164,7 @@ export function ReviewRecommendationModal({ recommendationId, onClose }: Props) 
 
           <div className="grid grid-cols-3 gap-2 text-xs bg-muted/40 rounded-md p-2">
             <div>
-              <span className="text-muted-foreground">Fiat</span>
+              <span className="text-muted-foreground">Bank Cash</span>
               <div className="font-medium tabular-nums">{formatUsd(rec.total_bank_balance_usd)}</div>
             </div>
             <div>
