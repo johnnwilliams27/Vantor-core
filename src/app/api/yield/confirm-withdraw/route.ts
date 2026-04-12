@@ -9,6 +9,7 @@ import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
 import { z } from 'zod';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 import { requirePaidTier, tierGateResponse, TierGateError } from '@/lib/auth/tier-gate';
+import { fireInlineInsights } from '@/lib/insights/inline';
 
 const confirmWithdrawSchema = z.object({
   positionId: z.string().uuid(),
@@ -154,6 +155,13 @@ export async function POST(req: NextRequest) {
       onChain: true,
     },
   });
+
+  // Fire insight detectors inline (non-blocking)
+  fireInlineInsights(supabase, {
+    enterpriseId,
+    userId: session.user.id,
+    trigger: 'yield_withdraw',
+  }).catch(() => {});
 
   return NextResponse.json({ positionId, txHash }, { status: 200 });
 }

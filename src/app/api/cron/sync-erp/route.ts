@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getERPAdapter, decryptCredentials } from '@/lib/erp/factory';
 import type { ErpProvider } from '@/types/database';
+import { fireInlineInsights } from '@/lib/insights/inline';
 
 // Cross-enterprise system job: syncs all active ERP configurations across all enterprises.
 // Authenticated via CRON_SECRET. Data isolation enforced by erp_config ownership.
@@ -104,6 +105,18 @@ export async function GET(req: NextRequest) {
         .from('erp_configurations')
         .update({ last_synced: new Date().toISOString() })
         .eq('id', erpConfig.id);
+
+      // Fire insight detectors for this enterprise if invoices changed (non-blocking).
+      // Skip forecast — invoice sync changes obligations, not balances. The liquidity
+      // detector will pick up the new obligations on the next cron cycle's forecast build.
+      if (synced > 0) {
+        fireInlineInsights(supabase, {
+          enterpriseId: erpConfig.enterprise_id,
+          userId: erpConfig.user_id,
+          trigger: 'invoice_sync',
+          skipForecast: true,
+        }).catch(() => {});
+      }
 
       totalSynced += synced;
     } catch (err) {

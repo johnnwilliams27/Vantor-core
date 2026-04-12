@@ -12,6 +12,7 @@ import { updateBalancesAfterTransfer } from '@/lib/balances/update-after-movemen
 import { z } from 'zod';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 import { requirePaidTier, tierGateResponse, TierGateError } from '@/lib/auth/tier-gate';
+import { fireInlineInsights } from '@/lib/insights/inline';
 
 const schema = z.object({
   transferId: z.string().uuid(),
@@ -141,6 +142,13 @@ export async function POST(req: NextRequest) {
       onChain: true,
     },
   });
+
+  // Fire insight detectors inline (non-blocking)
+  fireInlineInsights(supabase, {
+    enterpriseId,
+    userId: session.user.id,
+    trigger: 'transfer_confirm',
+  }).catch(() => {});
 
   // Notify (non-blocking)
   if (enterpriseId) {

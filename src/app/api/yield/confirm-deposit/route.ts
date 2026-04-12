@@ -8,6 +8,7 @@ import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
 import { z } from 'zod';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 import { requirePaidTier, tierGateResponse, TierGateError } from '@/lib/auth/tier-gate';
+import { fireInlineInsights } from '@/lib/insights/inline';
 
 const confirmDepositSchema = z.object({
   protocol: z.string().min(1),
@@ -174,6 +175,13 @@ export async function POST(req: NextRequest) {
     entityId: positionId,
     details: { protocol, token, amount, txHash, onChain: true },
   });
+
+  // Fire insight detectors inline (non-blocking)
+  fireInlineInsights(supabase, {
+    enterpriseId,
+    userId: session.user.id,
+    trigger: 'yield_deposit',
+  }).catch(() => {});
 
   return NextResponse.json({ positionId, txHash }, { status: 201 });
 }
