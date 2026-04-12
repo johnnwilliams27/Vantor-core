@@ -5,8 +5,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
 import { Building2, Loader2, Globe } from 'lucide-react';
-import { ManualBankForm } from './ManualBankForm';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { UpgradeGate } from '@/components/ui/upgrade-gate';
 
 // Belvo Connect widget is loaded via CDN script injection
@@ -51,7 +49,6 @@ export function BankLinkButton({ onSuccess, bankingProvider }: BankLinkButtonPro
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
-  const [showManual, setShowManual] = useState(false);
 
   const startStripeFC = useCallback(async () => {
     setLoading(true);
@@ -157,52 +154,26 @@ export function BankLinkButton({ onSuccess, bankingProvider }: BankLinkButtonPro
     );
   }
 
-  if (showManual) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="h-4 w-4" />
-            Link Bank Account
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ManualBankForm onSuccess={onSuccess} />
-        </CardContent>
-      </Card>
-    );
-  }
-
   if (bankingProvider === 'stripe_fc') {
     return (
-      <div className="space-y-3">
-        <Button onClick={startStripeFC} disabled={loading} className="w-full">
-          {loading ? (
-            <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Connecting…</>
-          ) : (
-            <><Building2 className="mr-2 h-4 w-4" />Connect Bank Account</>
-          )}
-        </Button>
-        <Button variant="outline" className="w-full" onClick={() => setShowManual(true)}>
-          Add Manually Instead
-        </Button>
-      </div>
+      <Button onClick={startStripeFC} disabled={loading} className="w-full">
+        {loading ? (
+          <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Connecting…</>
+        ) : (
+          <><Building2 className="mr-2 h-4 w-4" />Connect via Stripe</>
+        )}
+      </Button>
     );
   }
 
   // Belvo flow
   return (
-    <div className="space-y-3">
-      <Button onClick={startBelvo} disabled={loading} className="w-full">
-        {loading ? (
-          <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Connecting…</>
-        ) : (
-          <><Globe className="mr-2 h-4 w-4" />Connect Bank via Belvo</>
-        )}
-      </Button>
-      <Button variant="outline" className="w-full" onClick={() => setShowManual(true)}>
-        Add Manually Instead
-      </Button>
-    </div>
+    <Button onClick={startBelvo} disabled={loading} className="w-full">
+      {loading ? (
+        <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Connecting…</>
+      ) : (
+        <><Globe className="mr-2 h-4 w-4" />Connect via Belvo</>
+      )}
+    </Button>
   );
 }
