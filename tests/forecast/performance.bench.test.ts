@@ -58,6 +58,12 @@ describe('ForecastEngine performance (warn-only)', () => {
       totalFiatBaseUsd: 10_000_000,
       totalStablecoinBaseUsd: 0,
       totalDefiBaseUsd: 0,
+      totalBankBaseUsd: 10_000_000,
+      totalStablecoinIdleBaseUsd: 0,
+      totalMmfBaseUsd: 0,
+      totalDefiVaultBaseUsd: 0,
+      totalDefiLendingBaseUsd: 0,
+      totalOtherBaseUsd: 0,
       positions: {
         bankAccounts: [
           {

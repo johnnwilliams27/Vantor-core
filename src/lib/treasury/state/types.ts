@@ -69,9 +69,19 @@ export interface TreasuryStateSnapshot {
   trigger: SnapshotTrigger;
   baseCurrency: string;
   totalValueBaseUsd: number;
+  /** @deprecated — replaced by totalBankBaseUsd. Dual-written through C-1.5a migration window. */
   totalFiatBaseUsd: number;
+  /** @deprecated — replaced by totalStablecoinIdleBaseUsd + a slice of totalOtherBaseUsd. Dual-written through C-1.5a migration window. */
   totalStablecoinBaseUsd: number;
+  /** @deprecated — replaced by totalMmfBaseUsd + totalDefiVaultBaseUsd + totalDefiLendingBaseUsd. Dual-written through C-1.5a migration window. */
   totalDefiBaseUsd: number;
+  // Canonical L3 leaves — Phase C-1.5a. See holdings-category.ts taxonomy.
+  totalBankBaseUsd: number;
+  totalStablecoinIdleBaseUsd: number;
+  totalMmfBaseUsd: number;
+  totalDefiVaultBaseUsd: number;
+  totalDefiLendingBaseUsd: number;
+  totalOtherBaseUsd: number;
   positions: TreasuryPositions;
   fxRates: Record<string, number>;
 }
