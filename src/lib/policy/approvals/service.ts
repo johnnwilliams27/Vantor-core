@@ -309,38 +309,84 @@ export class ApprovalWorkflowService {
 
   private async reEvaluate(request: ApprovalRequest): Promise<ApprovalRequest> {
     if (!this.evaluateFn) {
-      // No evaluate function injected — mark as executed (stub behavior for Plan 2b)
-      return this.resolveRequest(request, 'executed');
+      // Plan 2b stub path: no evaluate fn injected. This is INTENDED for unit
+      // tests and the integration smoke test only. Production callers (the
+      // HTTP handler wired via Plan 3+) MUST inject an evaluate function —
+      // the API gateway should assert this at boot. Here we mark 'executed'
+      // with an audit note so forensic analysis can tell stub-executions
+      // from real-engine-executions.
+      return this.resolveRequest(request, 'executed', undefined, {
+        reeval_mode: 'stub_no_engine',
+      });
     }
 
-    const evalResult = await this.evaluateFn(
-      request.proposed_movement,
-      request.enterprise_id,
-    );
+    // Wrap evaluate in try/catch: if the engine throws (network blip, policy
+    // engine down), fail CLOSED -- deny the request with a dedicated reason
+    // rather than leaving the row stuck in 'approved' status forever.
+    let evalResult;
+    try {
+      evalResult = await this.evaluateFn(
+        request.proposed_movement,
+        request.enterprise_id,
+      );
+    } catch (err) {
+      return this.resolveRequest(request, 'denied', 'stale_reeval', {
+        reeval_mode: 'engine_threw',
+        error_message: err instanceof Error ? err.message : String(err),
+      });
+    }
 
-    // Decision matrix
+    // Decision matrix (with audit trail in resolution_notes)
     if (evalResult.verdict === 'allow_auto') {
-      // Policy relaxed since request was created — auto-execute
-      return this.resolveRequest(request, 'executed');
+      // Policy was relaxed since request was created. The humans pre-approved,
+      // and the movement no longer requires approvals -- execute.
+      return this.resolveRequest(request, 'executed', undefined, {
+        reeval_mode: 'engine',
+        reeval_verdict: 'allow_auto',
+        original_chain_id: request.chain_id,
+      });
     }
 
     if (evalResult.verdict === 'require_approval') {
-      // Check if same chain
-      if (evalResult.required_chain?.chain_id === request.chain_id) {
-        return this.resolveRequest(request, 'executed');
+      // Defense-in-depth: compare BOTH chain_id and version_id when available.
+      // A policy admin editing a chain in place would keep chain_id stable
+      // but bump version_id. We treat that as "policy changed" -> stale.
+      const sameChain = evalResult.required_chain?.chain_id === request.chain_id;
+      const sameVersion =
+        !('version_id' in (evalResult.required_chain ?? {})) ||
+        (evalResult.required_chain as { version_id?: string } | undefined)?.version_id ===
+          request.version_id;
+
+      if (sameChain && sameVersion) {
+        return this.resolveRequest(request, 'executed', undefined, {
+          reeval_mode: 'engine',
+          reeval_verdict: 'require_approval',
+          chain_id: request.chain_id,
+        });
       }
-      // Different chain — deny with stale_reeval
-      return this.resolveRequest(request, 'denied', 'stale_reeval');
+
+      // Different chain or different version -- deny with stale_reeval
+      return this.resolveRequest(request, 'denied', 'stale_reeval', {
+        reeval_mode: 'engine',
+        reeval_verdict: 'require_approval',
+        original_chain_id: request.chain_id,
+        new_chain_id: evalResult.required_chain?.chain_id,
+      });
     }
 
     // block or block_hard_limit
-    return this.resolveRequest(request, 'denied', 'stale_reeval');
+    return this.resolveRequest(request, 'denied', 'stale_reeval', {
+      reeval_mode: 'engine',
+      reeval_verdict: evalResult.verdict,
+      reason_codes: evalResult.reason_codes ?? [],
+    });
   }
 
   private async resolveRequest(
     request: ApprovalRequest,
     status: 'executed' | 'denied',
     denialReason?: 'stale_reeval',
+    resolutionNotes?: Record<string, unknown>,
   ): Promise<ApprovalRequest> {
     const now = new Date().toISOString();
     const table = this.supabase.from('policy_approval_requests') as any;
@@ -350,6 +396,7 @@ export class ApprovalWorkflowService {
       denial_reason: denialReason ?? null,
       resolved_at: now,
       version: request.version + 1,
+      ...(resolutionNotes ? { resolution_notes: resolutionNotes } : {}),
     };
 
     const updateBuilder = table
@@ -358,11 +405,32 @@ export class ApprovalWorkflowService {
       .eq('enterprise_id', request.enterprise_id)
       .eq('version', request.version);
 
-    const { data: updated } = await (
+    const { data: updated, error } = await (
       typeof updateBuilder.select === 'function' ? updateBuilder.select() : updateBuilder
     );
+
+    if (error) {
+      throw new ApprovalError({
+        reason_code: REASON_CODES.gate_internal_error,
+        human_readable: 'Database error while resolving approval request.',
+        user_action: 'Retry the operation or contact support.',
+        details: { request_id: request.id, target_status: status },
+        cause: error,
+      });
+    }
+
     const rows = (Array.isArray(updated) ? updated : updated ? [updated] : []) as ApprovalRequest[];
-    return rows[0] ?? ({ ...request, ...updatePayload } as unknown as ApprovalRequest);
+    if (rows.length === 0) {
+      // Zero rows matched the version predicate. Do NOT fabricate a success
+      // response -- that would gaslight the caller. Raise a concrete error.
+      throw new ApprovalError({
+        reason_code: REASON_CODES.approval_concurrent_modification,
+        human_readable: 'Request was modified concurrently while being resolved.',
+        user_action: 'Reload and inspect the request state.',
+        details: { request_id: request.id, expected_version: request.version },
+      });
+    }
+    return rows[0];
   }
 
   // ─── Deny ──────────────────────────────────────────────────────────

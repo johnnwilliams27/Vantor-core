@@ -744,7 +744,7 @@ describe('ApprovalWorkflowService reEvaluate', () => {
     expect(result.status).toBe('executed');
   });
 
-  it('no evaluate fn => executed (stub behavior)', async () => {
+  it('no evaluate fn => executed (stub behavior; audit tag stub_no_engine)', async () => {
     const sb = mockSupabase({
       policy_approval_requests: [makeSingleSlotPending()],
       policy_rules: [{ id: 'rule-1', created_by: 'user-other' }],
@@ -753,5 +753,57 @@ describe('ApprovalWorkflowService reEvaluate', () => {
 
     const result = await svc.fillSlot(managerActor, 'req-reeval', 'ok');
     expect(result.status).toBe('executed');
+    // Audit-trail: should be tagged as stub execution so forensics can
+    // distinguish from engine-backed executions.
+    expect(result.resolution_notes).toEqual(
+      expect.objectContaining({ reeval_mode: 'stub_no_engine' }),
+    );
+  });
+
+  it('evaluate throws => denied(stale_reeval) (fail-closed)', async () => {
+    const sb = mockSupabase({
+      policy_approval_requests: [makeSingleSlotPending()],
+      policy_rules: [{ id: 'rule-1', created_by: 'user-other' }],
+    });
+    const svc = new ApprovalWorkflowService(sb, {
+      evaluate: async () => {
+        throw new Error('policy engine unreachable');
+      },
+    });
+
+    const result = await svc.fillSlot(managerActor, 'req-reeval', 'ok');
+    expect(result.status).toBe('denied');
+    expect(result.denial_reason).toBe('stale_reeval');
+    expect(result.resolution_notes).toEqual(
+      expect.objectContaining({
+        reeval_mode: 'engine_threw',
+        error_message: 'policy engine unreachable',
+      }),
+    );
+  });
+
+  it('require_approval with same chain_id but DIFFERENT version_id => denied(stale_reeval)', async () => {
+    const sb = mockSupabase({
+      policy_approval_requests: [makeSingleSlotPending()],
+      policy_rules: [{ id: 'rule-1', created_by: 'user-other' }],
+    });
+    const svc = new ApprovalWorkflowService(sb, {
+      evaluate: async () => ({
+        verdict: 'require_approval',
+        trace: {} as any,
+        reason_codes: [],
+        required_chain: {
+          chain_id: 'chain-001', // same chain_id
+          chain_name: 'Dual Approval',
+          slots: [],
+          expiration_hours: 24,
+          version_id: 'ver-DIFFERENT', // but different version
+        } as any,
+      }),
+    });
+
+    const result = await svc.fillSlot(managerActor, 'req-reeval', 'ok');
+    expect(result.status).toBe('denied');
+    expect(result.denial_reason).toBe('stale_reeval');
   });
 });
