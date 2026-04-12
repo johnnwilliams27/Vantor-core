@@ -2,44 +2,127 @@ import type { ResolverContext, ViewResult } from '../types';
 import { parseNumeric, round2, groupByTime } from '../utils';
 
 /**
+ * Shape of the per-row shim consumed by `groupByTime`. The resolver computes
+ * both legacy and new-taxonomy values per snapshot before bucketing so the
+ * caller can pull whichever measures they asked for out of the series map.
+ */
+type EnrichedSnapshotRow = {
+  taken_at: string;
+  total_value_base_usd: number;
+  total_fiat_base_usd: number;
+  total_stablecoin_base_usd: number;
+  total_defi_base_usd: number;
+  total_bank_base_usd: number;
+  total_stablecoin_idle_base_usd: number;
+  total_mmf_base_usd: number;
+  total_defi_vault_base_usd: number;
+  total_defi_lending_base_usd: number;
+  total_other_base_usd: number;
+  // Computed rollups
+  cash_and_equivalents_usd: number;
+  defi_protocols_usd: number;
+  yield_positions_usd: number;
+} & Record<string, unknown>;
+
+function enrich(r: Record<string, unknown>): EnrichedSnapshotRow {
+  const bank = parseNumeric(r.total_bank_base_usd);
+  const stable = parseNumeric(r.total_stablecoin_idle_base_usd);
+  const mmf = parseNumeric(r.total_mmf_base_usd);
+  const vault = parseNumeric(r.total_defi_vault_base_usd);
+  const lending = parseNumeric(r.total_defi_lending_base_usd);
+  return {
+    taken_at: String(r.taken_at),
+    total_value_base_usd: parseNumeric(r.total_value_base_usd),
+    total_fiat_base_usd: parseNumeric(r.total_fiat_base_usd),
+    total_stablecoin_base_usd: parseNumeric(r.total_stablecoin_base_usd),
+    total_defi_base_usd: parseNumeric(r.total_defi_base_usd),
+    total_bank_base_usd: bank,
+    total_stablecoin_idle_base_usd: stable,
+    total_mmf_base_usd: mmf,
+    total_defi_vault_base_usd: vault,
+    total_defi_lending_base_usd: lending,
+    total_other_base_usd: parseNumeric(r.total_other_base_usd),
+    cash_and_equivalents_usd: bank + stable,
+    defi_protocols_usd: vault + lending,
+    yield_positions_usd: mmf + vault + lending,
+  };
+}
+
+/**
  * KPI view: key treasury balance metrics.
- * Fetches latest treasury_state_snapshots row + confirmed outflow obligations.
+ *
+ * Fetches the latest treasury_state_snapshot as of `to` plus confirmed
+ * outgoing obligations in the window. Emits scalars for every legacy and
+ * new-taxonomy measure so the standard-view config can pick which ones
+ * to display.
+ *
+ * Coverage ratio is Cash & Equivalents ÷ obligations (what the treasurer
+ * can actually deploy to settle). Falls back to legacy total_fiat_base_usd
+ * when the new leaves are NULL (pre-migration snapshots).
  */
 export async function resolveTreasurySummary(ctx: ResolverContext): Promise<ViewResult> {
-  const { data: snapshot } = await ctx.supabase
+  const { data: snapRow } = await ctx.supabase
     .from('treasury_state_snapshots')
-    .select('*')
+    .select(
+      'taken_at, total_value_base_usd, total_fiat_base_usd, total_stablecoin_base_usd, total_defi_base_usd, total_bank_base_usd, total_stablecoin_idle_base_usd, total_mmf_base_usd, total_defi_vault_base_usd, total_defi_lending_base_usd, total_other_base_usd',
+    )
     .eq('enterprise_id', ctx.enterpriseId)
-    .lte('snapshot_date', ctx.to)
-    .order('snapshot_date', { ascending: false })
+    .lte('taken_at', ctx.to + 'T23:59:59Z')
+    .order('taken_at', { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
 
   const { data: obligations } = await ctx.supabase
-    .from('outflow_obligations')
+    .from('obligations')
     .select('amount_usd')
     .eq('enterprise_id', ctx.enterpriseId)
-    .eq('status', 'confirmed');
+    .eq('direction', 'outflow')
+    .eq('status', 'upcoming')
+    .eq('is_active', true)
+    .gte('due_date', ctx.from)
+    .lte('due_date', ctx.to);
 
-  const totalBalance = parseNumeric(snapshot?.total_balance_usd);
-  const fiatBalance = parseNumeric(snapshot?.fiat_balance_usd);
-  const stablecoinBalance = parseNumeric(snapshot?.stablecoin_balance_usd);
-  const defiBalance = parseNumeric(snapshot?.defi_balance_usd);
+  const e = snapRow
+    ? enrich(snapRow as Record<string, unknown>)
+    : null;
+
+  // Cash & Equivalents with legacy fallback: if the new columns are NULL
+  // (pre-migration snapshot), derive from the legacy total_fiat_base_usd.
+  // This ensures Coverage doesn't silently go to 0 just because a snapshot
+  // predates C-1.5.
+  const cashAndEquivalents = e
+    ? e.cash_and_equivalents_usd || e.total_fiat_base_usd
+    : 0;
+
   const obligationTotal = (obligations ?? []).reduce(
     (sum: number, o: Record<string, unknown>) => sum + parseNumeric(o.amount_usd),
     0,
   );
-  const idleCash = stablecoinBalance - obligationTotal;
-  const coverageRatio = obligationTotal > 0 ? fiatBalance / obligationTotal : 0;
+  const coverageRatio = obligationTotal > 0 ? cashAndEquivalents / obligationTotal : 0;
+  const idleCash = cashAndEquivalents - obligationTotal;
 
   return {
     view: { slug: 'treasury-summary', label: 'Treasury Summary', chartType: 'kpi' },
     query: { from: ctx.from, to: ctx.to },
     scalar: {
-      total_balance_usd: round2(totalBalance),
-      fiat_balance_usd: round2(fiatBalance),
-      stablecoin_balance_usd: round2(stablecoinBalance),
-      defi_balance_usd: round2(defiBalance),
+      // Total + rollups (primary KPI)
+      total_balance_usd: round2(e?.total_value_base_usd ?? 0),
+      cash_and_equivalents_usd: round2(cashAndEquivalents),
+      yield_positions_usd: round2(e?.yield_positions_usd ?? 0),
+      defi_protocols_usd: round2(e?.defi_protocols_usd ?? 0),
+      // L3 leaves (detail)
+      bank_balance_usd: round2(e?.total_bank_base_usd ?? 0),
+      stablecoin_idle_balance_usd: round2(e?.total_stablecoin_idle_base_usd ?? 0),
+      mmf_balance_usd: round2(e?.total_mmf_base_usd ?? 0),
+      defi_vault_balance_usd: round2(e?.total_defi_vault_base_usd ?? 0),
+      defi_lending_balance_usd: round2(e?.total_defi_lending_base_usd ?? 0),
+      other_balance_usd: round2(e?.total_other_base_usd ?? 0),
+      // Legacy (back-compat, deprecated)
+      fiat_balance_usd: round2(e?.total_fiat_base_usd ?? 0),
+      stablecoin_balance_usd: round2(e?.total_stablecoin_base_usd ?? 0),
+      defi_balance_usd: round2(e?.total_defi_base_usd ?? 0),
+      // Derived
+      obligation_total_usd: round2(obligationTotal),
       idle_cash_usd: round2(idleCash),
       coverage_ratio: round2(coverageRatio),
     },
@@ -47,85 +130,105 @@ export async function resolveTreasurySummary(ctx: ResolverContext): Promise<View
 }
 
 /**
- * Line chart: treasury balance trends over time by asset type.
- * Uses 'latest' aggregation within each time bucket.
+ * Line chart: treasury balance trends over time by taxonomy leaf.
+ *
+ * Returns every leaf + rollup series so the consumer's view config picks
+ * whichever line set they want to display.
  */
 export async function resolveBalanceHistory(ctx: ResolverContext): Promise<ViewResult> {
   const { data: snapshots } = await ctx.supabase
     .from('treasury_state_snapshots')
-    .select('snapshot_date, fiat_balance_usd, stablecoin_balance_usd, defi_balance_usd')
+    .select(
+      'taken_at, total_value_base_usd, total_fiat_base_usd, total_stablecoin_base_usd, total_defi_base_usd, total_bank_base_usd, total_stablecoin_idle_base_usd, total_mmf_base_usd, total_defi_vault_base_usd, total_defi_lending_base_usd, total_other_base_usd',
+    )
     .eq('enterprise_id', ctx.enterpriseId)
-    .gte('snapshot_date', ctx.from)
-    .lte('snapshot_date', ctx.to + 'T23:59:59Z')
-    .order('snapshot_date', { ascending: true });
+    .gte('taken_at', ctx.from)
+    .lte('taken_at', ctx.to + 'T23:59:59Z')
+    .order('taken_at', { ascending: true });
 
-  const rows = (snapshots ?? []) as Record<string, unknown>[];
+  const rows = ((snapshots ?? []) as Record<string, unknown>[]).map(enrich);
+
+  // Helper to emit a series from a row accessor.
+  const series = (pick: (r: EnrichedSnapshotRow) => number) =>
+    groupByTime(rows, 'taken_at', pick, 'latest', ctx.granularity);
 
   return {
     view: { slug: 'balance-history', label: 'Balance History', chartType: 'line' },
     query: { from: ctx.from, to: ctx.to },
     series: {
-      fiat_balance_usd: groupByTime(
-        rows, 'snapshot_date', (r) => parseNumeric(r.fiat_balance_usd), 'latest', ctx.granularity,
-      ),
-      stablecoin_balance_usd: groupByTime(
-        rows, 'snapshot_date', (r) => parseNumeric(r.stablecoin_balance_usd), 'latest', ctx.granularity,
-      ),
-      defi_balance_usd: groupByTime(
-        rows, 'snapshot_date', (r) => parseNumeric(r.defi_balance_usd), 'latest', ctx.granularity,
-      ),
+      // Rollups
+      cash_and_equivalents_usd: series((r) => r.cash_and_equivalents_usd),
+      yield_positions_usd: series((r) => r.yield_positions_usd),
+      defi_protocols_usd: series((r) => r.defi_protocols_usd),
+      // Leaves
+      bank_balance_usd: series((r) => r.total_bank_base_usd),
+      stablecoin_idle_balance_usd: series((r) => r.total_stablecoin_idle_base_usd),
+      mmf_balance_usd: series((r) => r.total_mmf_base_usd),
+      defi_vault_balance_usd: series((r) => r.total_defi_vault_base_usd),
+      defi_lending_balance_usd: series((r) => r.total_defi_lending_base_usd),
+      other_balance_usd: series((r) => r.total_other_base_usd),
+      // Legacy (back-compat, deprecated)
+      fiat_balance_usd: series((r) => r.total_fiat_base_usd),
+      stablecoin_balance_usd: series((r) => r.total_stablecoin_base_usd),
+      defi_balance_usd: series((r) => r.total_defi_base_usd),
     },
   };
 }
 
 /**
- * Line chart: idle cash vs stablecoin balance over time.
- * For each snapshot: idle = stablecoin_balance - confirmed outflows within lookahead days.
+ * Line chart: idle cash vs cash & equivalents over time.
+ *
+ * Idle cash = Cash & Equivalents at snapshot time - confirmed outflows in
+ * the forward lookahead window (from treasury_rules, default 30 days).
  */
 export async function resolveIdleCash(ctx: ResolverContext): Promise<ViewResult> {
-  // Fetch treasury rules for obligation_lookahead_days
   const { data: rules } = await ctx.supabase
     .from('treasury_rules')
     .select('obligation_lookahead_days')
     .eq('enterprise_id', ctx.enterpriseId)
     .limit(1)
-    .single();
+    .maybeSingle();
 
   const lookaheadDays = parseNumeric(rules?.obligation_lookahead_days) || 30;
 
   const { data: snapshots } = await ctx.supabase
     .from('treasury_state_snapshots')
-    .select('snapshot_date, stablecoin_balance_usd')
+    .select(
+      'taken_at, total_fiat_base_usd, total_bank_base_usd, total_stablecoin_idle_base_usd',
+    )
     .eq('enterprise_id', ctx.enterpriseId)
-    .gte('snapshot_date', ctx.from)
-    .lte('snapshot_date', ctx.to + 'T23:59:59Z')
-    .order('snapshot_date', { ascending: true });
+    .gte('taken_at', ctx.from)
+    .lte('taken_at', ctx.to + 'T23:59:59Z')
+    .order('taken_at', { ascending: true });
 
   const { data: obligations } = await ctx.supabase
-    .from('outflow_obligations')
+    .from('obligations')
     .select('amount_usd, due_date')
     .eq('enterprise_id', ctx.enterpriseId)
-    .eq('status', 'confirmed');
+    .eq('direction', 'outflow')
+    .eq('status', 'upcoming')
+    .eq('is_active', true);
 
   const obRows = (obligations ?? []) as Record<string, unknown>[];
   const snapRows = (snapshots ?? []) as Record<string, unknown>[];
 
-  // For each snapshot, compute idle cash by subtracting obligations
-  // within lookahead days of that snapshot's date
   const enriched = snapRows.map((s) => {
-    const snapDate = new Date(String(s.snapshot_date));
-    const cutoff = new Date(snapDate.getTime() + lookaheadDays * 86400000);
+    const snapDate = new Date(String(s.taken_at));
+    const cutoff = new Date(snapDate.getTime() + lookaheadDays * 86_400_000);
     const obTotal = obRows
       .filter((o) => {
         const due = new Date(String(o.due_date));
         return due >= snapDate && due <= cutoff;
       })
       .reduce((sum, o) => sum + parseNumeric(o.amount_usd), 0);
-    const stablecoin = parseNumeric(s.stablecoin_balance_usd);
+    // Prefer new-taxonomy Cash & Equivalents; fall back to legacy fiat.
+    const bank = parseNumeric(s.total_bank_base_usd);
+    const stableIdle = parseNumeric(s.total_stablecoin_idle_base_usd);
+    const cashAndEquivalents = bank + stableIdle || parseNumeric(s.total_fiat_base_usd);
     return {
-      snapshot_date: String(s.snapshot_date),
-      stablecoin_balance_usd: stablecoin,
-      idle_cash_usd: stablecoin - obTotal,
+      taken_at: String(s.taken_at),
+      cash_and_equivalents_usd: cashAndEquivalents,
+      idle_cash_usd: cashAndEquivalents - obTotal,
     };
   });
 
@@ -134,10 +237,18 @@ export async function resolveIdleCash(ctx: ResolverContext): Promise<ViewResult>
     query: { from: ctx.from, to: ctx.to },
     series: {
       idle_cash_usd: groupByTime(
-        enriched, 'snapshot_date', (r) => r.idle_cash_usd, 'latest', ctx.granularity,
+        enriched,
+        'taken_at',
+        (r) => r.idle_cash_usd,
+        'latest',
+        ctx.granularity,
       ),
-      stablecoin_balance_usd: groupByTime(
-        enriched, 'snapshot_date', (r) => r.stablecoin_balance_usd, 'latest', ctx.granularity,
+      cash_and_equivalents_usd: groupByTime(
+        enriched,
+        'taken_at',
+        (r) => r.cash_and_equivalents_usd,
+        'latest',
+        ctx.granularity,
       ),
     },
   };

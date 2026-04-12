@@ -49,7 +49,8 @@ describe('measures registry', () => {
 
   it('getMeasures returns all measures', () => {
     expect(getMeasures()).toEqual(MEASURES);
-    expect(getMeasures().length).toBe(26);
+    // 26 baseline + 6 L3 leaves + 3 rollups (Phase C-1.5a) = 35
+    expect(getMeasures().length).toBe(35);
   });
 
   it('every measure has at least one dimension', () => {
