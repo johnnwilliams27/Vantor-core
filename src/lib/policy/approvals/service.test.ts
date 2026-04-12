@@ -268,3 +268,201 @@ describe('ApprovalWorkflowService.listRequests', () => {
     expect(results.every((r) => r.status === 'pending')).toBe(true);
   });
 });
+
+// ─── fillSlot ──────────────────────────────────────────────────────────
+
+describe('ApprovalWorkflowService.fillSlot', () => {
+  function makePendingRequest(overrides?: Partial<Row>): Row {
+    return {
+      id: 'req-fill',
+      enterprise_id: ENTERPRISE_ID,
+      version_id: 'ver-001',
+      movement_id: 'mov-fill',
+      proposed_movement: MOVEMENT,
+      triggered_rule_ids: ['rule-1'],
+      chain_id: 'chain-001',
+      slot_assignments: [
+        { slot_index: 0, minimum_role: 'treasury_manager' },
+        { slot_index: 1, minimum_role: 'treasury_manager' },
+      ],
+      status: 'pending',
+      expires_at: '2026-04-13T00:00:00Z',
+      created_by: USER_ID,
+      created_at: '2026-04-12T00:00:00Z',
+      version: 0,
+      ...overrides,
+    };
+  }
+
+  it('fills the first unfilled slot and returns the updated request', async () => {
+    const sb = mockSupabase({
+      policy_approval_requests: [makePendingRequest()],
+      policy_rules: [{ id: 'rule-1', created_by: 'user-other' }],
+    });
+    const svc = new ApprovalWorkflowService(sb);
+
+    const result = await svc.fillSlot(managerActor, 'req-fill', 'Looks good');
+
+    expect(result.slot_assignments[0].filled_by).toBe('user-approver-1');
+    expect(result.slot_assignments[0].justification).toBe('Looks good');
+    expect(result.slot_assignments[1].filled_by).toBeUndefined();
+    expect(result.status).toBe('pending');
+    expect(result.version).toBe(1);
+  });
+
+  it('marks request as approved when all slots are filled (triggers reEvaluate)', async () => {
+    // One slot already filled, fill the second
+    const req = makePendingRequest({
+      slot_assignments: [
+        { slot_index: 0, minimum_role: 'treasury_manager', filled_by: 'user-other', filled_at: '2026-04-12T01:00:00Z' },
+        { slot_index: 1, minimum_role: 'treasury_manager' },
+      ],
+    });
+    const sb = mockSupabase({
+      policy_approval_requests: [req],
+      policy_rules: [{ id: 'rule-1', created_by: 'user-unrelated' }],
+    });
+    // No evaluate fn => stub: marks as executed
+    const svc = new ApprovalWorkflowService(sb);
+
+    const result = await svc.fillSlot(managerActor, 'req-fill', 'LGTM');
+
+    expect(result.slot_assignments[1].filled_by).toBe('user-approver-1');
+    expect(result.status).toBe('executed');
+    expect(result.resolved_at).toBeDefined();
+  });
+
+  it('throws approval_not_pending when request is already denied', async () => {
+    const req = makePendingRequest({ status: 'denied' });
+    const sb = mockSupabase({
+      policy_approval_requests: [req],
+    });
+    const svc = new ApprovalWorkflowService(sb);
+
+    await expect(
+      svc.fillSlot(managerActor, 'req-fill', 'too late'),
+    ).rejects.toThrow(ApprovalError);
+
+    try {
+      await svc.fillSlot(managerActor, 'req-fill', 'too late');
+    } catch (e) {
+      expect((e as ApprovalError).reason_code).toBe('approval_not_pending');
+    }
+  });
+
+  it('throws sod_initiator_conflict when approver is the initiator', async () => {
+    const initiatorActor: ApprovalActor = {
+      user_id: USER_ID, // same as created_by
+      role: 'treasury_manager',
+      enterprise_id: ENTERPRISE_ID,
+    };
+    const sb = mockSupabase({
+      policy_approval_requests: [makePendingRequest()],
+      policy_rules: [{ id: 'rule-1', created_by: 'user-other' }],
+    });
+    const svc = new ApprovalWorkflowService(sb);
+
+    await expect(
+      svc.fillSlot(initiatorActor, 'req-fill', 'self approve'),
+    ).rejects.toThrow(ApprovalError);
+
+    try {
+      await svc.fillSlot(initiatorActor, 'req-fill', 'self approve');
+    } catch (e) {
+      expect((e as ApprovalError).reason_code).toBe('sod_initiator_conflict');
+    }
+  });
+
+  it('throws sod_rule_editor_conflict when approver authored a triggering rule', async () => {
+    const editorActor: ApprovalActor = {
+      user_id: 'user-rule-author',
+      role: 'treasury_manager',
+      enterprise_id: ENTERPRISE_ID,
+    };
+    const sb = mockSupabase({
+      policy_approval_requests: [makePendingRequest()],
+      policy_rules: [{ id: 'rule-1', created_by: 'user-rule-author' }],
+    });
+    const svc = new ApprovalWorkflowService(sb);
+
+    await expect(
+      svc.fillSlot(editorActor, 'req-fill', 'my rule'),
+    ).rejects.toThrow(ApprovalError);
+
+    try {
+      await svc.fillSlot(editorActor, 'req-fill', 'my rule');
+    } catch (e) {
+      expect((e as ApprovalError).reason_code).toBe('sod_rule_editor_conflict');
+    }
+  });
+
+  it('throws sod_already_filled when approver already filled a slot', async () => {
+    const req = makePendingRequest({
+      slot_assignments: [
+        { slot_index: 0, minimum_role: 'treasury_manager', filled_by: 'user-approver-1', filled_at: '2026-04-12T01:00:00Z' },
+        { slot_index: 1, minimum_role: 'treasury_manager' },
+      ],
+    });
+    const sb = mockSupabase({
+      policy_approval_requests: [req],
+      policy_rules: [{ id: 'rule-1', created_by: 'user-other' }],
+    });
+    const svc = new ApprovalWorkflowService(sb);
+
+    await expect(
+      svc.fillSlot(managerActor, 'req-fill', 'again'),
+    ).rejects.toThrow(ApprovalError);
+
+    try {
+      await svc.fillSlot(managerActor, 'req-fill', 'again');
+    } catch (e) {
+      expect((e as ApprovalError).reason_code).toBe('sod_already_filled');
+    }
+  });
+
+  it('throws no_matching_slot when approver role is too low', async () => {
+    const req = makePendingRequest({
+      slot_assignments: [
+        { slot_index: 0, minimum_role: 'executive' },
+      ],
+    });
+    const lowActor: ApprovalActor = {
+      user_id: 'user-low',
+      role: 'accountant',
+      enterprise_id: ENTERPRISE_ID,
+    };
+    const sb = mockSupabase({
+      policy_approval_requests: [req],
+      policy_rules: [{ id: 'rule-1', created_by: 'user-other' }],
+    });
+    const svc = new ApprovalWorkflowService(sb);
+
+    await expect(
+      svc.fillSlot(lowActor, 'req-fill', 'try'),
+    ).rejects.toThrow(ApprovalError);
+
+    try {
+      await svc.fillSlot(lowActor, 'req-fill', 'try');
+    } catch (e) {
+      expect((e as ApprovalError).reason_code).toBe('no_matching_slot');
+    }
+  });
+
+  it('single slot request: fills and auto-executes', async () => {
+    const req = makePendingRequest({
+      slot_assignments: [
+        { slot_index: 0, minimum_role: 'treasury_manager' },
+      ],
+    });
+    const sb = mockSupabase({
+      policy_approval_requests: [req],
+      policy_rules: [{ id: 'rule-1', created_by: 'user-other' }],
+    });
+    const svc = new ApprovalWorkflowService(sb);
+
+    const result = await svc.fillSlot(managerActor, 'req-fill', 'approved');
+
+    expect(result.status).toBe('executed');
+    expect(result.slot_assignments[0].filled_by).toBe('user-approver-1');
+  });
+});
