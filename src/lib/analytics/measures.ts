@@ -16,10 +16,13 @@ export const MEASURES: MeasureDefinition[] = [
     },
     dimensions: ['time'],
   },
+  // ─── Legacy balance measures (Phase C-1.5 dual-write window) ───
+  // Kept for backwards-compat while 10 other consumers migrate.
+  // Scheduled for deletion in Phase C-1.5b along with their source columns.
   {
     slug: 'fiat_balance_usd',
     label: 'Fiat Balance',
-    description: 'Total fiat currency balance in USD',
+    description: 'DEPRECATED: use bank_balance_usd. Legacy fiat aggregate from pre-C-1.5 schema.',
     unit: 'usd',
     source: {
       table: 'treasury_state_snapshots',
@@ -33,7 +36,7 @@ export const MEASURES: MeasureDefinition[] = [
   {
     slug: 'stablecoin_balance_usd',
     label: 'Stablecoin Balance',
-    description: 'Total stablecoin balance in USD',
+    description: 'DEPRECATED: use stablecoin_idle_balance_usd. Legacy wallet aggregate.',
     unit: 'usd',
     source: {
       table: 'treasury_state_snapshots',
@@ -47,7 +50,7 @@ export const MEASURES: MeasureDefinition[] = [
   {
     slug: 'defi_balance_usd',
     label: 'DeFi Balance',
-    description: 'Total DeFi/yield protocol balance in USD',
+    description: 'DEPRECATED: use defi_vault_balance_usd + defi_lending_balance_usd. Legacy DeFi aggregate included MMFs by mistake.',
     unit: 'usd',
     source: {
       table: 'treasury_state_snapshots',
@@ -56,6 +59,119 @@ export const MEASURES: MeasureDefinition[] = [
       enterpriseColumn: 'enterprise_id',
       aggregation: 'latest',
     },
+    dimensions: ['time'],
+  },
+
+  // ─── Phase C-1.5a — canonical L3-leaf balance measures ────────────
+  // See docs/architecture/forecast-analytics.md for the full taxonomy.
+  {
+    slug: 'bank_balance_usd',
+    label: 'Bank',
+    description: 'Off-chain bank account balances (multi-currency, USD base). L3 leaf of Cash & Equivalents.',
+    unit: 'usd',
+    source: {
+      table: 'treasury_state_snapshots',
+      valueColumn: 'total_bank_base_usd',
+      dateColumn: 'taken_at',
+      enterpriseColumn: 'enterprise_id',
+      aggregation: 'latest',
+    },
+    dimensions: ['time'],
+  },
+  {
+    slug: 'stablecoin_idle_balance_usd',
+    label: 'Stablecoins',
+    description: 'Idle USDC/USDT in self-custody wallets (not deployed). L3 leaf of Cash & Equivalents.',
+    unit: 'usd',
+    source: {
+      table: 'treasury_state_snapshots',
+      valueColumn: 'total_stablecoin_idle_base_usd',
+      dateColumn: 'taken_at',
+      enterpriseColumn: 'enterprise_id',
+      aggregation: 'latest',
+    },
+    dimensions: ['time'],
+  },
+  {
+    slug: 'mmf_balance_usd',
+    label: 'Tokenized MMFs',
+    description: 'Tokenized money-market-fund positions (Spiko, BUIDL, USYC, Ondo USDY, etc.). L3 leaf of Yield Positions.',
+    unit: 'usd',
+    source: {
+      table: 'treasury_state_snapshots',
+      valueColumn: 'total_mmf_base_usd',
+      dateColumn: 'taken_at',
+      enterpriseColumn: 'enterprise_id',
+      aggregation: 'latest',
+    },
+    dimensions: ['time'],
+  },
+  {
+    slug: 'defi_vault_balance_usd',
+    label: 'DeFi Vaults',
+    description: 'DeFi vault protocol positions (Kamino Multiply, Morpho Reservoir, Morpho Steakhouse). L3 leaf of DeFi Protocols.',
+    unit: 'usd',
+    source: {
+      table: 'treasury_state_snapshots',
+      valueColumn: 'total_defi_vault_base_usd',
+      dateColumn: 'taken_at',
+      enterpriseColumn: 'enterprise_id',
+      aggregation: 'latest',
+    },
+    dimensions: ['time'],
+  },
+  {
+    slug: 'defi_lending_balance_usd',
+    label: 'DeFi Lending',
+    description: 'DeFi lending protocol positions (Aave V3, Compound V3, Kamino Lend). L3 leaf of DeFi Protocols.',
+    unit: 'usd',
+    source: {
+      table: 'treasury_state_snapshots',
+      valueColumn: 'total_defi_lending_base_usd',
+      dateColumn: 'taken_at',
+      enterpriseColumn: 'enterprise_id',
+      aggregation: 'latest',
+    },
+    dimensions: ['time'],
+  },
+  {
+    slug: 'other_balance_usd',
+    label: 'Other',
+    description: 'Non-stable wallet tokens (ETH, SOL, etc.) and unknown yield venues.',
+    unit: 'usd',
+    source: {
+      table: 'treasury_state_snapshots',
+      valueColumn: 'total_other_base_usd',
+      dateColumn: 'taken_at',
+      enterpriseColumn: 'enterprise_id',
+      aggregation: 'latest',
+    },
+    dimensions: ['time'],
+  },
+
+  // ─── Phase C-1.5a — rollup measures (computed by resolver) ────────
+  {
+    slug: 'cash_and_equivalents_usd',
+    label: 'Cash & Equivalents',
+    description: 'Bank + idle stablecoins. Liquid, USD-pegged balances available to settle obligations immediately.',
+    unit: 'usd',
+    computed: true,
+    dimensions: ['time'],
+  },
+  {
+    slug: 'defi_protocols_usd',
+    label: 'DeFi Protocols',
+    description: 'DeFi Vaults + DeFi Lending. The deployed-to-DeFi portion of the yield portfolio.',
+    unit: 'usd',
+    computed: true,
+    dimensions: ['time'],
+  },
+  {
+    slug: 'yield_positions_usd',
+    label: 'Yield Positions',
+    description: 'Tokenized MMFs + DeFi Protocols. Capital earning a yield.',
+    unit: 'usd',
+    computed: true,
     dimensions: ['time'],
   },
 
