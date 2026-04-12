@@ -25,14 +25,12 @@ import { getProfile } from '@/lib/insights/risk-profiles';
 import { createForecastService } from '@/lib/forecast/service';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { generateInsightReasoning } from '@/lib/insights/claude';
+import { resolveInsightSettings } from '@/lib/insights/settings';
 import type { DetectorContext, ForecastBundle } from '@/lib/insights/detectors/types';
-import type { RiskProfileId, AumTier } from '@/lib/insights/types';
 import type { NotificationEventType } from '@/types/notifications';
 
-// ─── Defaults (same as cron) ────────────────────────────────────────
+// ─── Constants ──────────────────────────────────────────────────────
 
-const DEFAULT_RISK_PROFILE: RiskProfileId = 'balanced';
-const DEFAULT_AUM_TIER: AumTier = 'scale';
 const PRIMARY_ASSET = 'USDC' as const;
 const FORECAST_WINDOW_DAYS = 30;
 
@@ -59,18 +57,21 @@ export async function buildInlineContext(
 ): Promise<DetectorContext> {
   const { enterpriseId, userId } = input;
 
+  // 0. Resolve per-enterprise insight settings (risk profile + AUM tier)
+  const settings = await resolveInsightSettings(enterpriseId, supabase);
+
   // 1. Treasury snapshot
   const { prices } = await getStablecoinPrices();
   const snapshot = await buildTreasurySnapshot(supabase, userId, prices, enterpriseId);
 
   // 2. Yield universe
   const yieldUniverse = await buildYieldUniverse(
-    { riskProfileId: DEFAULT_RISK_PROFILE, aumTier: DEFAULT_AUM_TIER, asset: PRIMARY_ASSET },
+    { riskProfileId: settings.riskProfileId, aumTier: settings.aumTier, asset: PRIMARY_ASSET },
     supabase,
   );
 
   // 3. Profile
-  const profile = getProfile(DEFAULT_RISK_PROFILE);
+  const profile = getProfile(settings.riskProfileId);
 
   // 4. Forecast (optional — skip for speed when caller doesn't need it)
   let forecast: ForecastBundle | undefined;
@@ -106,7 +107,7 @@ export async function buildInlineContext(
     userId,
     snapshot,
     profile,
-    aumTier: DEFAULT_AUM_TIER,
+    aumTier: settings.aumTier,
     yieldUniverse,
     now: new Date(),
     forecast,

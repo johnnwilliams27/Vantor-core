@@ -18,9 +18,10 @@
  * register later when their dependencies land (forecast-analytics for
  * forecast queries, feature/policy-engine types for the policy gate).
  *
- * Risk profile and AUM tier are currently hardcoded to 'balanced' /
- * 'scale' for v1. A follow-up PR will read these from a new
- * customer_insight_settings table or extend treasury_rules.
+ * Risk profile and AUM tier are resolved per-enterprise via
+ * `resolveInsightSettings()`, which reads the customer_insight_settings
+ * table and lazily inserts defaults for enterprises that haven't been
+ * seen before.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -36,20 +37,13 @@ import { evaluateInsightActionOrNull } from '@/lib/insights/policy-gate';
 import { NotificationService } from '@/lib/notifications/service';
 import { createForecastService } from '@/lib/forecast/service';
 import { generateInsightReasoning } from '@/lib/insights/claude';
+import { resolveInsightSettings } from '@/lib/insights/settings';
 import type { DetectorContext, ForecastBundle } from '@/lib/insights/detectors/types';
-import type { RiskProfileId, AumTier } from '@/lib/insights/types';
 import { getProfile } from '@/lib/insights/risk-profiles';
 import type { TreasuryRule } from '@/types/database';
 import type { NotificationEventType } from '@/types/notifications';
 
 const BATCH_SIZE = 50;
-
-/**
- * v1 defaults until per-customer insight settings exist.
- * Follow-up PR will read these from a customer_insight_settings table.
- */
-const DEFAULT_RISK_PROFILE: RiskProfileId = 'balanced';
-const DEFAULT_AUM_TIER: AumTier = 'scale';
 const PRIMARY_ASSET = 'USDC' as const;
 
 export async function GET(req: NextRequest) {
@@ -120,6 +114,9 @@ export async function GET(req: NextRequest) {
     const enterpriseId = rule.user_profiles.enterprise_id;
 
     try {
+      // 0. Resolve per-enterprise insight settings (risk profile + AUM tier)
+      const settings = await resolveInsightSettings(enterpriseId, supabase);
+
       // 1. Build the treasury snapshot
       const snapshot = await buildTreasurySnapshot(
         supabase,
@@ -131,15 +128,15 @@ export async function GET(req: NextRequest) {
       // 2. Build the yield universe view for the customer's primary asset
       const yieldUniverse = await buildYieldUniverse(
         {
-          riskProfileId: DEFAULT_RISK_PROFILE,
-          aumTier: DEFAULT_AUM_TIER,
+          riskProfileId: settings.riskProfileId,
+          aumTier: settings.aumTier,
           asset: PRIMARY_ASSET,
         },
         supabase,
       );
 
       // 3. Resolve the profile
-      const profile = getProfile(DEFAULT_RISK_PROFILE);
+      const profile = getProfile(settings.riskProfileId);
 
       // 2b. Build forecast data for the liquidity detector.
       // Graceful: if forecast fails (no obligations, no state), skip it.
@@ -179,7 +176,7 @@ export async function GET(req: NextRequest) {
         userId,
         snapshot,
         profile,
-        aumTier: DEFAULT_AUM_TIER,
+        aumTier: settings.aumTier,
         yieldUniverse,
         now: runStartedAt,
         forecast,
