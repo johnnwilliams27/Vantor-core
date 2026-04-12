@@ -807,3 +807,164 @@ describe('ApprovalWorkflowService reEvaluate', () => {
     expect(result.denial_reason).toBe('stale_reeval');
   });
 });
+
+// ─── deny ──────────────────────────────────────────────────────────────
+
+describe('ApprovalWorkflowService.deny', () => {
+  const PENDING_REQ = {
+    id: 'req-deny',
+    enterprise_id: ENTERPRISE_ID,
+    version_id: 'ver-001',
+    movement_id: 'mov-deny',
+    proposed_movement: MOVEMENT,
+    triggered_rule_ids: [],
+    chain_id: 'chain-001',
+    slot_assignments: [{ slot_index: 0, minimum_role: 'treasury_manager' }],
+    status: 'pending',
+    expires_at: '2026-04-13T00:00:00Z',
+    created_by: USER_ID,
+    created_at: '2026-04-12T00:00:00Z',
+    version: 0,
+  };
+
+  it('denies a pending request with manual reason', async () => {
+    const sb = mockSupabase({
+      policy_approval_requests: [{ ...PENDING_REQ }],
+    });
+    const svc = new ApprovalWorkflowService(sb);
+
+    const result = await svc.deny(managerActor, 'req-deny', 'Not authorized');
+
+    expect(result.status).toBe('denied');
+    expect(result.denial_reason).toBe('manual');
+    expect(result.resolved_at).toBeDefined();
+    expect(result.resolution_notes).toEqual({
+      justification: 'Not authorized',
+      denied_by: 'user-approver-1',
+    });
+  });
+
+  it('throws approval_not_pending on already-executed request', async () => {
+    const sb = mockSupabase({
+      policy_approval_requests: [{ ...PENDING_REQ, status: 'executed' }],
+    });
+    const svc = new ApprovalWorkflowService(sb);
+
+    await expect(
+      svc.deny(managerActor, 'req-deny', 'too late'),
+    ).rejects.toThrow(ApprovalError);
+
+    try {
+      await svc.deny(managerActor, 'req-deny', 'too late');
+    } catch (e) {
+      expect((e as ApprovalError).reason_code).toBe('approval_not_pending');
+    }
+  });
+
+  it('throws requires_policy_admin for insufficient role', async () => {
+    const auditorActor: ApprovalActor = {
+      user_id: 'user-auditor',
+      role: 'auditor',
+      enterprise_id: ENTERPRISE_ID,
+    };
+    const sb = mockSupabase({
+      policy_approval_requests: [{ ...PENDING_REQ }],
+    });
+    const svc = new ApprovalWorkflowService(sb);
+
+    await expect(
+      svc.deny(auditorActor, 'req-deny', 'nope'),
+    ).rejects.toThrow(ApprovalError);
+
+    try {
+      await svc.deny(auditorActor, 'req-deny', 'nope');
+    } catch (e) {
+      expect((e as ApprovalError).reason_code).toBe('requires_policy_admin');
+    }
+  });
+});
+
+// ─── cancel ────────────────────────────────────────────────────────────
+
+describe('ApprovalWorkflowService.cancel', () => {
+  const PENDING_REQ = {
+    id: 'req-cancel',
+    enterprise_id: ENTERPRISE_ID,
+    version_id: 'ver-001',
+    movement_id: 'mov-cancel',
+    proposed_movement: MOVEMENT,
+    triggered_rule_ids: [],
+    chain_id: 'chain-001',
+    slot_assignments: [{ slot_index: 0, minimum_role: 'treasury_manager' }],
+    status: 'pending',
+    expires_at: '2026-04-13T00:00:00Z',
+    created_by: USER_ID,
+    created_at: '2026-04-12T00:00:00Z',
+    version: 0,
+  };
+
+  it('cancel by initiator succeeds', async () => {
+    const initiatorActor: ApprovalActor = {
+      user_id: USER_ID,
+      role: 'accountant',
+      enterprise_id: ENTERPRISE_ID,
+    };
+    const sb = mockSupabase({
+      policy_approval_requests: [{ ...PENDING_REQ }],
+    });
+    const svc = new ApprovalWorkflowService(sb);
+
+    const result = await svc.cancel(initiatorActor, 'req-cancel', 'Changed my mind');
+
+    expect(result.status).toBe('cancelled');
+    expect(result.resolved_at).toBeDefined();
+    expect(result.resolution_notes).toEqual({
+      reason: 'Changed my mind',
+      cancelled_by: USER_ID,
+    });
+  });
+
+  it('cancel by treasury_manager (admin) succeeds', async () => {
+    const sb = mockSupabase({
+      policy_approval_requests: [{ ...PENDING_REQ }],
+    });
+    const svc = new ApprovalWorkflowService(sb);
+
+    const result = await svc.cancel(managerActor, 'req-cancel', 'Admin cancel');
+
+    expect(result.status).toBe('cancelled');
+  });
+
+  it('throws approval_not_pending on already-cancelled request', async () => {
+    const sb = mockSupabase({
+      policy_approval_requests: [{ ...PENDING_REQ, status: 'cancelled' }],
+    });
+    const svc = new ApprovalWorkflowService(sb);
+
+    await expect(
+      svc.cancel(managerActor, 'req-cancel'),
+    ).rejects.toThrow(ApprovalError);
+  });
+
+  it('throws requires_policy_admin for non-initiator non-admin', async () => {
+    const nonInitiatorAuditor: ApprovalActor = {
+      user_id: 'user-random-auditor',
+      role: 'auditor',
+      enterprise_id: ENTERPRISE_ID,
+    };
+    const sb = mockSupabase({
+      policy_approval_requests: [{ ...PENDING_REQ }],
+    });
+    const svc = new ApprovalWorkflowService(sb);
+
+    await expect(
+      svc.cancel(nonInitiatorAuditor, 'req-cancel'),
+    ).rejects.toThrow(ApprovalError);
+
+    try {
+      await svc.cancel(nonInitiatorAuditor, 'req-cancel');
+    } catch (e) {
+      expect((e as ApprovalError).reason_code).toBe('requires_policy_admin');
+    }
+  });
+});
