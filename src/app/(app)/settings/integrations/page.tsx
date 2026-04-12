@@ -264,32 +264,47 @@ export default function IntegrationsPage() {
             {/* Setup Instructions */}
             {!isConnected && (
               <div className="space-y-4">
+                {/* Quick link to Slack app directory — saves users from having to
+                    find step 1 inside the ordered list. */}
+                <a
+                  href="https://api.slack.com/apps"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Open api.slack.com/apps <ExternalLink className="h-3 w-3" />
+                </a>
+
                 <div className="rounded-lg border p-4 space-y-3 text-sm">
                   <p className="font-medium">Setup Instructions</p>
                   <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
-                    <li>
-                      <a
-                        href="https://api.slack.com/apps"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-500 hover:underline inline-flex items-center gap-1"
-                      >
-                        Create a Slack app <ExternalLink className="h-3 w-3" />
-                      </a>
-                      {' '}at api.slack.com/apps
-                    </li>
+                    <li>Create a Slack app at api.slack.com/apps (link above)</li>
                     <li>Under <strong>OAuth &amp; Permissions</strong>, add bot scopes: <code className="bg-muted px-1 rounded">chat:write</code>, <code className="bg-muted px-1 rounded">chat:write.public</code></li>
                     <li>Install the app to your workspace and copy the <strong>Bot User OAuth Token</strong></li>
                     <li>Under <strong>Basic Information</strong>, copy the <strong>Signing Secret</strong></li>
                     <li>
-                      Under <strong>Interactivity &amp; Shortcuts</strong>, enable interactivity and paste this callback URL:
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <code className="bg-muted px-2 py-1 rounded text-xs flex-1 break-all">{callbackUrl}</code>
-                        <Button type="button" variant="outline" size="sm" onClick={handleCopy} className="shrink-0">
-                          {copied ? <><Check className="h-3 w-3 mr-1" />Copied</> : <><Copy className="h-3 w-3 mr-1" />Copy</>}
-                        </Button>
+                      <div className="inline">
+                        Under <strong>Interactivity &amp; Shortcuts</strong>, enable interactivity and paste this callback URL:
                       </div>
-                      <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                      {/* Field-shaped read-only URL with inline copy button */}
+                      <div className="relative mt-2">
+                        <code className="block bg-muted/50 border border-input rounded-md pl-3 pr-20 py-2 font-mono text-xs break-all text-foreground">
+                          {callbackUrl}
+                        </code>
+                        <button
+                          type="button"
+                          onClick={handleCopy}
+                          className="absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors text-muted-foreground hover:text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40"
+                          aria-label="Copy callback URL to clipboard"
+                        >
+                          {copied ? (
+                            <><Check className="h-3 w-3 text-emerald-500" />Copied</>
+                          ) : (
+                            <><Copy className="h-3 w-3" />Copy</>
+                          )}
+                        </button>
+                      </div>
+                      <p className="text-xs text-amber-600 dark:text-amber-400 mt-1.5">
                         ⚠️ This URL must be publicly reachable. Use your production URL or an ngrok tunnel in dev.
                       </p>
                     </li>
