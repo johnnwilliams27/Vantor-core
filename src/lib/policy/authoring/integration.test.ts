@@ -170,9 +170,11 @@ class InMemorySupabase {
 
 const ENTERPRISE_ID = 'ent-1';
 
+// Authoring is now gated on role === 'enterprise_admin'. Promoted
+// from 'treasury_manager' during the RBAC hierarchy rework.
 const adminActor: AuthoringActor = {
   user_id: 'user-admin',
-  role: 'treasury_manager',
+  role: 'enterprise_admin',
   enterprise_id: ENTERPRISE_ID,
 };
 
@@ -186,7 +188,7 @@ describe('PolicyAuthoringService — end-to-end integration smoke test', () => {
         {
           id: 'user-admin',
           enterprise_id: ENTERPRISE_ID,
-          role: 'treasury_manager',
+          role: 'enterprise_admin',
           is_policy_admin: true,
           is_app_admin: false,
         },
