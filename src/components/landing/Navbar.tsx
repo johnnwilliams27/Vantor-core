@@ -20,7 +20,6 @@ export function Navbar() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loginLoading, setLoginLoading] = useState(false);
   const loginRef = useRef<HTMLDivElement>(null);
-  const mobileLoginRef = useRef<HTMLFormElement>(null);
   const mobileSheetRef = useRef<HTMLDivElement>(null);
   const hamburgerRef = useRef<HTMLButtonElement>(null);
 
@@ -93,7 +92,6 @@ export function Navbar() {
     const onClick = (e: MouseEvent) => {
       const target = e.target as globalThis.Node;
       if (loginRef.current && loginRef.current.contains(target)) return;
-      if (mobileLoginRef.current && mobileLoginRef.current.contains(target)) return;
       setLoginOpen(false);
     };
     document.addEventListener('mousedown', onClick);
@@ -279,7 +277,7 @@ export function Navbar() {
           role="dialog"
           aria-modal="true"
           aria-label="Navigation menu"
-          className="lg:hidden fixed inset-0 z-[60] bg-[var(--bg-void)]/98 backdrop-blur-xl flex flex-col"
+          className="lg:hidden fixed inset-0 z-[100] bg-[var(--bg-void)] flex flex-col"
         >
           <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.06]">
             <Image src="/logo-dark.png" alt="Vantor" width={140} height={44} className="object-contain" priority unoptimized />
@@ -291,8 +289,8 @@ export function Navbar() {
               <X size={28} />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto px-6 py-8">
-            <div className="space-y-1 mb-8">
+          <div className="flex-1 overflow-y-auto px-6 py-8 flex flex-col">
+            <div className="space-y-1">
               {navLinks.map((l) => (
                 <a
                   key={l.href}
@@ -305,56 +303,19 @@ export function Navbar() {
               ))}
             </div>
 
-            <form ref={mobileLoginRef} onSubmit={handleLogin} className="space-y-3 pt-2 border-t border-white/[0.06]">
-              <p className="text-white font-semibold text-sm mt-4">Sign in to Vantor</p>
-              <label htmlFor="mobile-login-email" className="sr-only">Email</label>
-              <input
-                id="mobile-login-email"
-                name="email"
-                type="email"
-                required
-                autoComplete="username"
-                inputMode="email"
-                className="w-full px-3.5 py-3 min-h-[48px] rounded-xl bg-white/[0.05] border border-white/[0.08] text-white text-base placeholder-gray-500 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-[border-color,box-shadow] duration-300"
-                placeholder="you@company.com"
-              />
-              <label htmlFor="mobile-login-password" className="sr-only">Password</label>
-              <input
-                id="mobile-login-password"
-                name="password"
-                type="password"
-                required
-                autoComplete="current-password"
-                className="w-full px-3.5 py-3 min-h-[48px] rounded-xl bg-white/[0.05] border border-white/[0.08] text-white text-base placeholder-gray-500 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-[border-color,box-shadow] duration-300"
-                placeholder="••••••••"
-              />
+            <div className="mt-auto pt-8 space-y-3">
               <Link
-                href="/forgot-password"
-                className="block text-right text-xs text-teal-400 hover:text-teal-300 transition-colors"
+                href="/login"
+                onClick={() => setMobileOpen(false)}
+                className="block w-full py-3 min-h-[48px] rounded-xl text-sm font-semibold text-center btn-gradient"
               >
-                Forgot password?
+                Login
               </Link>
-              {loginError && (
-                <div role="alert" className="rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 text-xs text-red-400">
-                  {loginError}
-                </div>
-              )}
-              <button
-                type="submit"
-                disabled={loginLoading}
-                className="w-full py-3 min-h-[48px] rounded-xl text-sm font-semibold bg-gradient-to-r from-teal-500 to-cyan-400 text-white hover:shadow-[0_0_24px_rgba(45,212,191,0.3)] transition-[background,box-shadow,transform] duration-300 disabled:opacity-60 flex items-center justify-center gap-2"
-              >
-                {loginLoading ? (
-                  <><Loader2 size={14} className="animate-spin" /> Signing in...</>
-                ) : (
-                  'Sign in'
-                )}
-              </button>
-              <p className="text-center text-xs text-gray-500 mt-3">
+              <p className="text-center text-xs text-gray-500">
                 Don&apos;t have an account?{' '}
-                <Link href="/register" className="text-teal-400 hover:text-teal-300 font-medium">Sign up free</Link>
+                <Link href="/register" onClick={() => setMobileOpen(false)} className="text-teal-400 hover:text-teal-300 font-medium">Sign up free</Link>
               </p>
-            </form>
+            </div>
           </div>
         </div>
       )}

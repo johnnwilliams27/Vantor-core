@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 type Slide = {
@@ -8,10 +9,7 @@ type Slide = {
   title: string;
   body: string;
   bullets: string[];
-  mockup: {
-    kpis: { label: string; value: string; accent?: boolean }[];
-    ai: string;
-  };
+  screenshot: string;
 };
 
 const SLIDES: Slide[] = [
@@ -20,42 +18,21 @@ const SLIDES: Slide[] = [
     title: 'Dashboard',
     body: 'Real-time visibility across every bank, wallet, and protocol — with AI insights surfaced the moment they matter.',
     bullets: ['Cash Visibility', 'AI Insights', 'Asset Management', 'AI Agent Chat'],
-    mockup: {
-      kpis: [
-        { label: 'TOTAL AUM', value: '$24.8M', accent: true },
-        { label: 'IDLE CASH', value: '$2.3M' },
-        { label: 'YIELD EARNED', value: '$127K' },
-      ],
-      ai: '$2.3M idle → Spiko USD · +4.9% APY',
-    },
+    screenshot: '/screenshots/dashboard.png',
   },
   {
     label: 'Treasury',
     title: 'Treasury',
     body: 'AI-drafted moves on your balances and obligations, queued with full reasoning. You approve, edit, or reject — nothing executes without a human in the loop.',
     bullets: ['AI Treasury Rules', 'Payments Operations', 'Approval Workflows', 'FX Rebalancing'],
-    mockup: {
-      kpis: [
-        { label: 'TOTAL AUM', value: '$24.8M' },
-        { label: 'PENDING', value: '$4.5M', accent: true },
-        { label: 'APPROVED', value: '$18.1M' },
-      ],
-      ai: '$2.8M quarterly tax → Schedule USD payment',
-    },
+    screenshot: '/screenshots/treasury-ai.png',
   },
   {
     label: 'Yield',
     title: 'Yield',
     body: 'Tokenized MMFs and on-chain protocols side-by-side on one rate board. Slippage, risk scores, and one-click deposits — no DeFi expertise required.',
     bullets: ['Tokenized MMFs', 'DeFi Yield Protocols', 'AI Risk Management', 'AI Yield Insights'],
-    mockup: {
-      kpis: [
-        { label: 'TOTAL AUM', value: '$24.8M' },
-        { label: 'IDLE CASH', value: '$2.3M' },
-        { label: 'YIELD EARNED', value: '$127K', accent: true },
-      ],
-      ai: '$1.2M Spiko USD · 4.9% → Circle USYC · +5.1% APY',
-    },
+    screenshot: '/screenshots/yield.png',
   },
 ];
 
@@ -185,13 +162,13 @@ export function FeatureCarousel() {
             style={{ gridTemplateColumns: 'minmax(0, 1fr)' }}
           >
             <div className="hidden lg:grid gap-10 items-center" style={{ gridTemplateColumns: '58% 42%' }}>
-              <DashboardMockup key={`mockup-${active}`} slide={slide} />
+              <ProductScreenshot key={`shot-${active}`} slide={slide} />
               <SlideCopy key={`copy-${active}`} slide={slide} />
             </div>
             {/* Mobile stacked */}
             <div className="lg:hidden space-y-10">
               <SlideCopy key={`m-copy-${active}`} slide={slide} />
-              <DashboardMockup key={`m-mockup-${active}`} slide={slide} />
+              <ProductScreenshot key={`m-shot-${active}`} slide={slide} />
             </div>
           </div>
 
@@ -266,12 +243,7 @@ function SlideCopy({ slide }: { slide: Slide }) {
   );
 }
 
-/**
- * Dashboard-style mockup inside a card frame. Mirrors the HTML preview's
- * fake Dashboard screenshot — dots bar, KPI row, AI strip, charts —
- * so the carousel feels like a product preview, not an empty placeholder.
- */
-function DashboardMockup({ slide }: { slide: Slide }) {
+function ProductScreenshot({ slide }: { slide: Slide }) {
   return (
     <div className="relative landing-fade-in">
       <div
@@ -284,132 +256,19 @@ function DashboardMockup({ slide }: { slide: Slide }) {
         aria-hidden
       />
       <div
-        className="landing-card p-[18px]"
+        className="rounded-2xl overflow-hidden border border-white/[0.08] shadow-[0_20px_60px_rgba(0,0,0,0.4)]"
         style={{ background: 'var(--bg-elevated)' }}
       >
-        {/* Dots header */}
-        <div className="flex items-center gap-1.5 mb-3.5">
-          <span className="w-2 h-2 rounded-full bg-white/[0.14]" />
-          <span className="w-2 h-2 rounded-full bg-white/[0.14]" />
-          <span className="w-2 h-2 rounded-full bg-white/[0.14]" />
-          <span
-            className="ml-2.5 text-[10px] uppercase text-[var(--text-300)]"
-            style={{ letterSpacing: '0.02em' }}
-          >
-            {slide.label}
-          </span>
-        </div>
-
-        {/* KPI row */}
-        <div className="grid grid-cols-3 gap-2.5 mb-3">
-          {slide.mockup.kpis.map((kpi) => (
-            <MockKpi key={kpi.label} label={kpi.label} value={kpi.value} accent={kpi.accent} />
-          ))}
-        </div>
-
-        {/* AI strip */}
-        <div
-          className="flex items-center gap-2.5 px-3 py-3 rounded-[10px] mb-3"
-          style={{
-            border: '1px solid rgba(45,212,191,0.35)',
-            background: 'rgba(45,212,191,0.06)',
-          }}
-        >
-          <span
-            className="landing-orb w-[18px] h-[18px] rounded-full shrink-0"
-            style={{ background: 'rgba(45,212,191,0.3)' }}
-          />
-          <span className="flex-1 text-[11px] text-[var(--text-100)] leading-[1.4]">
-            <strong className="text-[var(--teal-400)]">AI:</strong> {slide.mockup.ai}
-          </span>
-          <span
-            className="text-[9px] font-semibold rounded-full px-2 py-0.5"
-            style={{
-              color: 'var(--teal-400)',
-              border: '1px solid rgba(45,212,191,0.45)',
-            }}
-          >
-            Approve?
-          </span>
-        </div>
-
-        {/* Charts row */}
-        <div className="grid grid-cols-2 gap-2.5">
-          <div
-            className="p-2.5 rounded-[8px]"
-            style={{ border: '1px solid rgba(255,255,255,0.08)' }}
-          >
-            <div
-              className="text-[9px] uppercase text-[var(--text-300)] mb-2"
-              style={{ letterSpacing: '0.03em' }}
-            >
-              BALANCES
-            </div>
-            <div className="h-[5px] rounded-[3px] mb-1.5" style={{ background: 'rgba(45,212,191,0.4)' }} />
-            <div className="h-[5px] rounded-[3px] mb-1.5 w-[72%]" style={{ background: 'rgba(45,212,191,0.28)' }} />
-            <div className="h-[5px] rounded-[3px] w-[48%]" style={{ background: 'rgba(45,212,191,0.18)' }} />
-          </div>
-          <div
-            className="p-2.5 rounded-[8px]"
-            style={{ border: '1px solid rgba(255,255,255,0.08)' }}
-          >
-            <div
-              className="text-[9px] uppercase text-[var(--text-300)] mb-2"
-              style={{ letterSpacing: '0.03em' }}
-            >
-              FLOWS
-            </div>
-            <div className="flex items-end gap-[3px] h-9">
-              {[60, 85, 45, 90, 68, 52].map((h, i) => (
-                <div
-                  key={i}
-                  className="flex-1 rounded-t-[2px]"
-                  style={{
-                    height: `${h}%`,
-                    background:
-                      'linear-gradient(180deg, rgba(45,212,191,0.5), rgba(45,212,191,0.15))',
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MockKpi({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: string;
-  accent?: boolean;
-}) {
-  return (
-    <div
-      className="p-3 rounded-[8px]"
-      style={{
-        border: `1px solid ${accent ? 'rgba(45,212,191,0.3)' : 'rgba(255,255,255,0.08)'}`,
-        background: accent ? 'rgba(45,212,191,0.05)' : 'transparent',
-      }}
-    >
-      <div
-        className="text-[9px] uppercase text-[var(--text-300)] mb-1 font-medium"
-        style={{ letterSpacing: '0.04em' }}
-      >
-        {label}
-      </div>
-      <div
-        className="text-[18px] font-bold"
-        style={{
-          letterSpacing: '-0.02em',
-          color: accent ? 'var(--teal-400)' : '#fff',
-        }}
-      >
-        {value}
+        <Image
+          src={slide.screenshot}
+          alt={`Vantor ${slide.label} screenshot`}
+          width={960}
+          height={600}
+          className="w-full h-auto"
+          quality={90}
+          priority
+          unoptimized
+        />
       </div>
     </div>
   );
