@@ -2,6 +2,12 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getMockFxRates } from '@/lib/fx/rates';
 
+// Opt out of static generation: this handler reads SUPABASE_SERVICE_ROLE_KEY
+// via createAdminClient(), which is not available during the preview build
+// environment. Forcing dynamic means Next.js evaluates the handler per
+// request, not at build time.
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const supabase = createAdminClient();
 
