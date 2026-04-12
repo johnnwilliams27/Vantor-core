@@ -510,15 +510,52 @@ export default function ERPSettingsPage() {
               </a>
 
               {testResult && (
-                <div className={`flex items-center gap-2 p-3 rounded-lg text-sm ${
-                  testResult.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
-                }`}>
-                  {testResult.success ? (
-                    <CheckCircle className="h-4 w-4" />
-                  ) : (
-                    <XCircle className="h-4 w-4" />
-                  )}
-                  {testResult.message}
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className={`rounded-lg p-3 text-sm border ${
+                    testResult.success
+                      ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                      : 'bg-red-500/5 border-red-500/20 text-red-700 dark:text-red-300'
+                  }`}
+                >
+                  <div className="flex items-start gap-2">
+                    {testResult.success ? (
+                      <CheckCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                    ) : (
+                      <XCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                    )}
+                    <div className="flex-1 space-y-2">
+                      <div>
+                        <div className="font-medium">
+                          {testResult.success ? 'Connection successful' : 'Connection failed'}
+                        </div>
+                        <div className="text-xs mt-0.5 opacity-90 leading-relaxed">
+                          {testResult.message}
+                        </div>
+                      </div>
+                      {!testResult.success && (
+                        <div className="flex items-center gap-3 pt-1">
+                          <button
+                            type="button"
+                            onClick={handleTest}
+                            disabled={testing || !isValid}
+                            className="text-xs font-medium underline-offset-2 hover:underline disabled:opacity-50 disabled:no-underline"
+                          >
+                            {testing ? 'Retrying…' : 'Retry'}
+                          </button>
+                          <a
+                            href={docsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-medium underline-offset-2 hover:underline"
+                          >
+                            View {PROVIDER_DISPLAY[selectedProvider]} docs →
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
 
