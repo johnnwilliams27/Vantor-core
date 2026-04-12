@@ -118,7 +118,7 @@ export default function AdminDashboardPage() {
               <div>
                 <p className="text-sm text-muted-foreground">Total Enterprises</p>
                 <p className="text-2xl font-bold">
-                  {health.isLoading ? '...' : health.data?.totalEnterprises ?? 0}
+                  {health.isLoading ? '...' : health.data?.total_enterprises ?? 0}
                 </p>
               </div>
             </CardContent>
@@ -131,7 +131,7 @@ export default function AdminDashboardPage() {
               <div>
                 <p className="text-sm text-muted-foreground">Total Users</p>
                 <p className="text-2xl font-bold">
-                  {health.isLoading ? '...' : health.data?.totalUsers ?? 0}
+                  {health.isLoading ? '...' : health.data?.total_users ?? 0}
                 </p>
               </div>
             </CardContent>
@@ -144,7 +144,7 @@ export default function AdminDashboardPage() {
               <div>
                 <p className="text-sm text-muted-foreground">Total Transactions</p>
                 <p className="text-2xl font-bold">
-                  {health.isLoading ? '...' : health.data?.totalTransactions ?? 0}
+                  {health.isLoading ? '...' : health.data?.total_transactions ?? 0}
                 </p>
               </div>
             </CardContent>

@@ -4,12 +4,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 // ---- Types ----
 
 export interface SystemHealth {
-  totalEnterprises: number;
-  totalUsers: number;
-  totalTransactions: number;
-  activeEnterprises: number;
-  frozenEnterprises: number;
-  pendingKycEnterprises: number;
+  total_enterprises: number;
+  total_users: number;
+  total_transactions: number;
+  frozen_enterprises: number;
 }
 
 export interface EnterpriseRow {
