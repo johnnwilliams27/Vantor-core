@@ -4,6 +4,7 @@ import { SAPMockAdapter } from './mock/sap-mock';
 import { OracleMockAdapter } from './mock/oracle-mock';
 import { XeroMockAdapter } from './mock/xero-mock';
 import { NetsuiteMockAdapter } from './mock/netsuite-mock';
+import { QuickBooksMockAdapter } from './mock/quickbooks-mock';
 
 export function getERPAdapter(
   provider: ErpProvider,
@@ -21,6 +22,8 @@ export function getERPAdapter(
         return new XeroMockAdapter(credentials);
       case 'netsuite':
         return new NetsuiteMockAdapter(credentials);
+      case 'quickbooks':
+        return new QuickBooksMockAdapter(credentials);
       default:
         throw new Error(`Unknown ERP provider: ${provider}`);
     }

@@ -20,7 +20,7 @@ export class OracleMockAdapter implements IERPAdapter {
     if (!this.credentials.apiUrl || !this.credentials.tenantId) {
       return { success: false, message: 'Missing required Oracle credentials' };
     }
-    return { success: true, message: 'Oracle ERP Cloud connection successful (mock)' };
+    return { success: true, message: 'Oracle connection successful (mock)' };
   }
 
   async fetchVendors(): Promise<ERPVendorRaw[]> {

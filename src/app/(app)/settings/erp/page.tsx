@@ -19,7 +19,7 @@ import { Loader2, CheckCircle, XCircle, Settings2, Trash2, Pencil, Check, X } fr
 import { CardSpinner } from '@/components/ui/spinner';
 
 const schema = z.object({
-  provider: z.enum(['sap', 'oracle', 'xero', 'netsuite']),
+  provider: z.enum(['sap', 'oracle', 'xero', 'netsuite', 'quickbooks']),
   label: z.string().min(1, 'Nickname required'),
   apiUrl: z.string().url('Enter a valid URL'),
   clientId: z.string().min(1, 'Client ID required'),
@@ -207,7 +207,7 @@ export default function ERPSettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Link ERP System</CardTitle>
-            <CardDescription>Connect SAP, Oracle, Xero, or NetSuite to sync invoices and vendors</CardDescription>
+            <CardDescription>Connect SAP, Oracle, NetSuite, Xero, or QuickBooks to sync invoices and vendors</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -215,10 +215,11 @@ export default function ERPSettingsPage() {
                 <div className="space-y-2">
                   <Label>ERP Provider</Label>
                   <Select {...register('provider')}>
-                    <option value="sap">SAP Digital Currency Hub</option>
-                    <option value="oracle">Oracle ERP Cloud</option>
-                    <option value="xero">Xero</option>
+                    <option value="sap">SAP</option>
+                    <option value="oracle">Oracle</option>
                     <option value="netsuite">NetSuite</option>
+                    <option value="xero">Xero</option>
+                    <option value="quickbooks">QuickBooks</option>
                   </Select>
                 </div>
                 <div className="space-y-2">
