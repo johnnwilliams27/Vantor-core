@@ -109,14 +109,17 @@ INSERT INTO analytics_views (slug, label, description, kind, chart_type, config,
    12)
 ON CONFLICT DO NOTHING;
 
--- Audit actions
-INSERT INTO audit_action_registry (action, description)
-VALUES
-  ('analytics_view_create', 'Custom analytics view created'),
-  ('analytics_view_update', 'Analytics view configuration updated'),
-  ('analytics_view_delete', 'Custom analytics view deleted'),
-  ('analytics_query', 'Analytics view query executed')
-ON CONFLICT (action) DO NOTHING;
+-- Audit actions (only if audit_action_registry exists)
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE tablename = 'audit_action_registry') THEN
+    INSERT INTO audit_action_registry (action, description) VALUES
+      ('analytics_view_create', 'Custom analytics view created'),
+      ('analytics_view_update', 'Analytics view configuration updated'),
+      ('analytics_view_delete', 'Custom analytics view deleted'),
+      ('analytics_query', 'Analytics view query executed')
+    ON CONFLICT (action) DO NOTHING;
+  END IF;
+END $$;
 
 -- Reload PostgREST schema
 NOTIFY pgrst, 'reload schema';
