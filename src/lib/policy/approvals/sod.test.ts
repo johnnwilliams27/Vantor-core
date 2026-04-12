@@ -12,7 +12,7 @@ const MOVEMENT: ProposedMovement = {
   kind: 'crypto_transfer',
   source: { venue: 'ethereum', asset: 'USDC' },
   destination: { venue: 'ethereum', asset: 'USDC', address: '0xabc' },
-  amount: { value: '10000', currency: 'USD' },
+  amount: { amount: '10000', asset: 'USDC' },
   initiator: { type: 'human', user_id: 'user-initiator' },
   requested_at: '2026-04-12T00:00:00Z',
 };

@@ -180,7 +180,7 @@ describe('Approval workflow integration', () => {
       kind: 'crypto_transfer',
       source: { venue: 'ethereum', asset: 'USDC' },
       destination: { venue: 'ethereum', asset: 'USDC', address: '0xabc' },
-      amount: { value: '50000', currency: 'USD' },
+      amount: { amount: '50000', asset: 'USDC' },
       initiator: { type: 'human', user_id: 'user-initiator' },
       requested_at: '2026-04-12T10:00:00Z',
     };

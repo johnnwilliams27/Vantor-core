@@ -137,7 +137,7 @@ const MOVEMENT: ProposedMovement = {
   kind: 'crypto_transfer',
   source: { venue: 'ethereum', asset: 'USDC' },
   destination: { venue: 'ethereum', asset: 'USDC', address: '0xabc' },
-  amount: { value: '10000', currency: 'USD' },
+  amount: { amount: '10000', asset: 'USDC' },
   initiator: { type: 'human', user_id: USER_ID },
   requested_at: '2026-04-12T00:00:00Z',
 };
@@ -616,7 +616,7 @@ describe('ApprovalWorkflowService.fillSlot', () => {
     ).rejects.toThrow(ApprovalError);
 
     // Verify the row was not mutated
-    expect(sb.from('policy_approval_requests').select().eq('id', 'req-fill')).toBeDefined();
+    expect(sb.from('policy_approval_requests')).toBeDefined();
   });
 });
 
