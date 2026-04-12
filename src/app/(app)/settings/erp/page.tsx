@@ -10,6 +10,8 @@ import { Select } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { InfoTooltip } from '@/components/ui/info-tooltip';
+import { PasswordField } from '@/components/ui/password-field';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
@@ -158,10 +160,11 @@ export default function ERPSettingsPage() {
     handleSubmit,
     getValues,
     watch,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isValid },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { provider: 'sap', landscape: 'prod' },
+    mode: 'onChange',
   });
 
   const selectedProvider = watch('provider');
@@ -353,18 +356,24 @@ export default function ERPSettingsPage() {
                     </div>
                     <div className="space-y-2">
                       <Label>Client Secret</Label>
-                      <Input type="password" placeholder="••••••••" {...register('clientSecret')} autoComplete="new-password" />
+                      <PasswordField placeholder="••••••••" {...register('clientSecret')} />
                       {errors.clientSecret && <p className="text-sm text-red-500">{errors.clientSecret.message}</p>}
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Company Code</Label>
+                      <Label className="flex items-center gap-1.5">
+                        Company Code
+                        <InfoTooltip content="The client/company ID in your SAP environment. Find it under System Information or ask your SAP admin." />
+                      </Label>
                       <Input placeholder="1000" {...register('companyCode')} />
                       {errors.companyCode && <p className="text-sm text-red-500">{errors.companyCode.message}</p>}
                     </div>
                     <div className="space-y-2">
-                      <Label>Landscape</Label>
+                      <Label className="flex items-center gap-1.5">
+                        Landscape
+                        <InfoTooltip content="Which SAP landscape to hit. Production is live data. Use QA or Development for testing without touching real transactions." />
+                      </Label>
                       <Select {...register('landscape')}>
                         <option value="prod">Production</option>
                         <option value="qa">QA</option>
@@ -391,12 +400,15 @@ export default function ERPSettingsPage() {
                     </div>
                     <div className="space-y-2">
                       <Label>Client Secret</Label>
-                      <Input type="password" placeholder="••••••••" {...register('clientSecret')} autoComplete="new-password" />
+                      <PasswordField placeholder="••••••••" {...register('clientSecret')} />
                       {errors.clientSecret && <p className="text-sm text-red-500">{errors.clientSecret.message}</p>}
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>Tenant / Instance ID</Label>
+                    <Label className="flex items-center gap-1.5">
+                      Tenant / Instance ID
+                      <InfoTooltip content="Your Oracle Fusion tenant identifier. Find it in the Cloud console URL or under Setup & Maintenance → Tenant." />
+                    </Label>
                     <Input placeholder="tenant-id" {...register('tenantId')} />
                     {errors.tenantId && <p className="text-sm text-red-500">{errors.tenantId.message}</p>}
                   </div>
@@ -407,7 +419,10 @@ export default function ERPSettingsPage() {
               {selectedProvider === 'netsuite' && (
                 <>
                   <div className="space-y-2">
-                    <Label>Account ID</Label>
+                    <Label className="flex items-center gap-1.5">
+                      Account ID
+                      <InfoTooltip content="Your NetSuite account ID (e.g. TSTDRV123456). Visible under Setup → Company → Company Information." />
+                    </Label>
                     <Input placeholder="TSTDRV123456" {...register('accountId')} />
                     {errors.accountId && <p className="text-sm text-red-500">{errors.accountId.message}</p>}
                   </div>
@@ -419,7 +434,7 @@ export default function ERPSettingsPage() {
                     </div>
                     <div className="space-y-2">
                       <Label>Consumer Secret</Label>
-                      <Input type="password" placeholder="••••••••" {...register('consumerSecret')} autoComplete="new-password" />
+                      <PasswordField placeholder="••••••••" {...register('consumerSecret')} />
                       {errors.consumerSecret && <p className="text-sm text-red-500">{errors.consumerSecret.message}</p>}
                     </div>
                   </div>
@@ -431,7 +446,7 @@ export default function ERPSettingsPage() {
                     </div>
                     <div className="space-y-2">
                       <Label>Token Secret</Label>
-                      <Input type="password" placeholder="••••••••" {...register('tokenSecret')} autoComplete="new-password" />
+                      <PasswordField placeholder="••••••••" {...register('tokenSecret')} />
                       {errors.tokenSecret && <p className="text-sm text-red-500">{errors.tokenSecret.message}</p>}
                     </div>
                   </div>
@@ -449,12 +464,15 @@ export default function ERPSettingsPage() {
                     </div>
                     <div className="space-y-2">
                       <Label>Client Secret</Label>
-                      <Input type="password" placeholder="••••••••" {...register('clientSecret')} autoComplete="new-password" />
+                      <PasswordField placeholder="••••••••" {...register('clientSecret')} />
                       {errors.clientSecret && <p className="text-sm text-red-500">{errors.clientSecret.message}</p>}
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>Tenant ID</Label>
+                    <Label className="flex items-center gap-1.5">
+                      Tenant ID
+                      <InfoTooltip content="Returned by the Xero OAuth flow after you install the app. Visible in the Xero developer app connection list." />
+                    </Label>
                     <Input placeholder="tenant-id" {...register('tenantId')} />
                     {errors.tenantId && <p className="text-sm text-red-500">{errors.tenantId.message}</p>}
                   </div>
@@ -472,12 +490,15 @@ export default function ERPSettingsPage() {
                     </div>
                     <div className="space-y-2">
                       <Label>Client Secret</Label>
-                      <Input type="password" placeholder="••••••••" {...register('clientSecret')} autoComplete="new-password" />
+                      <PasswordField placeholder="••••••••" {...register('clientSecret')} />
                       {errors.clientSecret && <p className="text-sm text-red-500">{errors.clientSecret.message}</p>}
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>Realm ID</Label>
+                    <Label className="flex items-center gap-1.5">
+                      Realm ID
+                      <InfoTooltip content="Your QuickBooks Online company ID. Returned by the Intuit OAuth callback, also visible at qbo.intuit.com under Settings → Billing & Subscription." />
+                    </Label>
                     <Input placeholder="1234567890123456" {...register('realmId')} />
                     {errors.realmId && <p className="text-sm text-red-500">{errors.realmId.message}</p>}
                   </div>
@@ -506,11 +527,17 @@ export default function ERPSettingsPage() {
                 </div>
               )}
 
-              <div className="flex gap-3">
-                <Button type="button" variant="outline" onClick={handleTest} disabled={testing}>
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleTest}
+                  disabled={testing || !isValid}
+                  title={!isValid ? 'Fill required fields to enable' : undefined}
+                >
                   {testing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Testing…</> : 'Test Connection'}
                 </Button>
-                <Button type="submit" disabled={isSubmitting}>
+                <Button type="submit" disabled={isSubmitting || !isValid}>
                   {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Connecting…</> : 'Save & Connect'}
                 </Button>
               </div>

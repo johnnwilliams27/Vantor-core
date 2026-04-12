@@ -12,6 +12,7 @@ import { useToast } from '@/components/ui/toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, CheckCircle, XCircle, ExternalLink, Copy, Check } from 'lucide-react';
 import { SlackLogo } from '@/components/ui/icons/slack-logo';
+import { PasswordField } from '@/components/ui/password-field';
 import {
   MsTeamsLogo,
   EmailLogo,
@@ -299,21 +300,13 @@ export default function IntegrationsPage() {
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                   <div className="space-y-2">
                     <Label>Bot User OAuth Token</Label>
-                    <Input
-                      type="password"
-                      placeholder="xoxb-…"
-                      {...register('botToken')}
-                    />
+                    <PasswordField placeholder="xoxb-…" {...register('botToken')} />
                     {errors.botToken && <p className="text-sm text-red-500">{errors.botToken.message}</p>}
                   </div>
 
                   <div className="space-y-2">
                     <Label>Signing Secret</Label>
-                    <Input
-                      type="password"
-                      placeholder="••••••••••••"
-                      {...register('signingSecret')}
-                    />
+                    <PasswordField placeholder="••••••••••••" {...register('signingSecret')} />
                     {errors.signingSecret && <p className="text-sm text-red-500">{errors.signingSecret.message}</p>}
                   </div>
 
