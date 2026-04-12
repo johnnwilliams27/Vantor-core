@@ -357,3 +357,38 @@ Phase B deliberately left these for later:
   but no current consumer turns it on. Phase C agent work will need
   hypothetical forecasts to leave an audit trail via
   `forecast_snapshots.is_hypothetical`.
+
+## Phase C-1 — Custom Views + Export
+
+Phase C-1 adds the Analytics page, custom view forking, and export.
+
+### Analytics page (`/analytics`)
+
+Pinned + browse hybrid layout:
+- Treasury Summary KPI banner (always shown)
+- Up to 4 user-pinned views rendered inline as mini charts
+- Compact list of all standard + custom views with quick actions
+- Pin preferences stored in `analytics_pin_preferences` table
+
+### Drill-in (`/analytics/[slug]`)
+
+Full-page view with date range, granularity controls, and export
+buttons. Charts rendered via Recharts, tables via ViewTable component.
+
+### Custom views (fork flow)
+
+Users fork any standard or custom view via a modal. Customizable:
+filters, chart type, and granularity. Measures locked to source view's
+set. Custom views stored in `analytics_views` with `kind='custom'` and
+`forked_from` FK.
+
+### Export
+
+- Per-view CSV/PDF: client-side via `exportCsv()` / `exportPdf()`
+- Page-level: server-side multi-section CSV of all pinned views via
+  `POST /api/analytics/export/report`
+
+### Database changes (migration 0048)
+
+- `analytics_pin_preferences` table (user + enterprise scoped)
+- `forked_from UUID` column on `analytics_views`
