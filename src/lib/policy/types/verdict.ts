@@ -47,4 +47,4 @@ export interface ApprovalSlotRequirement {
  * In phase 1 of this plan, only the shape is defined; the database-side
  * enum update happens in Plan 2.
  */
-export type ApproverRole = 'accountant' | 'treasury_manager' | 'approver' | 'executive';
+export type ApproverRole = 'auditor' | 'accountant' | 'treasury_manager' | 'approver' | 'executive';

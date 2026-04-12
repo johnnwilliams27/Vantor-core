@@ -48,21 +48,21 @@ function diffCollection<T extends { id: string }>(
   const modified: Array<{ before: T; after: T; changed_fields: string[] }> = [];
 
   // Items in after but not in before
-  for (const [id, afterItem] of afterMap) {
+  for (const [id, afterItem] of Array.from(afterMap)) {
     if (!beforeMap.has(id)) {
       added.push(afterItem);
     }
   }
 
   // Items in before but not in after
-  for (const [id, beforeItem] of beforeMap) {
+  for (const [id, beforeItem] of Array.from(beforeMap)) {
     if (!afterMap.has(id)) {
       removed.push(beforeItem);
     }
   }
 
   // Items in both — compare specified fields
-  for (const [id, beforeItem] of beforeMap) {
+  for (const [id, beforeItem] of Array.from(beforeMap)) {
     const afterItem = afterMap.get(id);
     if (!afterItem) continue;
 

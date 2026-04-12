@@ -10,7 +10,7 @@ import {
 import { PolicyVersionSnapshot } from '../types/policy-version';
 import { AssetCode } from '../types/assets';
 
-const RATE_SUPPORTED_ASSETS: ReadonlySet<AssetCode> = new Set(['USD', 'USDC', 'USDT']);
+const RATE_SUPPORTED_ASSETS: ReadonlySet<AssetCode> = new Set<AssetCode>(['USD', 'USDC', 'USDT']);
 
 /** Roles accepted in approval chain slots. */
 const VALID_SLOT_ROLES: ReadonlySet<string> = new Set([

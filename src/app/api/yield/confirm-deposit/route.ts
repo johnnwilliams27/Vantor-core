@@ -176,12 +176,15 @@ export async function POST(req: NextRequest) {
     details: { protocol, token, amount, txHash, onChain: true },
   });
 
-  // Fire insight detectors inline (non-blocking)
-  fireInlineInsights(supabase, {
-    enterpriseId,
-    userId: session.user.id,
-    trigger: 'yield_deposit',
-  }).catch(() => {});
+  // Fire insight detectors inline (non-blocking). Skip for non-enterprise
+  // users — detectors require enterprise scope to be meaningful.
+  if (enterpriseId) {
+    fireInlineInsights(supabase, {
+      enterpriseId,
+      userId: session.user.id,
+      trigger: 'yield_deposit',
+    }).catch(() => {});
+  }
 
   return NextResponse.json({ positionId, txHash }, { status: 201 });
 }

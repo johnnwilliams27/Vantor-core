@@ -90,7 +90,7 @@ export function checkChainSatisfiability(
   }
 
   // Deduplicate (slot_index should be unique but guard anyway).
-  const deduped = [...new Set(unsatisfied_slots)];
+  const deduped = Array.from(new Set(unsatisfied_slots));
 
   return {
     chain_id,
