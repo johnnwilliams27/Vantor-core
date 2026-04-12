@@ -7,10 +7,13 @@ import {
 import { AuthoringError } from '@/lib/policy/authoring/errors';
 import { REASON_CODES } from '@/lib/policy/errors/reason-codes';
 import { conditionSchema } from '@/lib/policy/schemas/ir.schema';
+import { APPROVER_ROLES } from '@/lib/auth/roles';
 
 const slotSchema = z.object({
   slot_index: z.number().int().nonnegative(),
-  minimum_role: z.enum(['auditor', 'accountant', 'treasury_manager', 'approver', 'executive']),
+  // Sourced from the single source of truth — stays in lockstep with
+  // the TS union + runtime Set. Legacy 'approver' literal removed.
+  minimum_role: z.enum(APPROVER_ROLES),
 });
 
 const patchChainBodySchema = z.object({

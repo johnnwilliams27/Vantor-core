@@ -1,13 +1,7 @@
 'use client';
 import { useSession } from 'next-auth/react';
 import type { UserRole } from '@/types/database';
-
-const ROLE_RANK: Record<UserRole, number> = {
-  auditor: 0,
-  accountant: 1,
-  treasury_manager: 2,
-  enterprise_admin: 3,
-};
+import { ROLE_RANK } from '@/lib/auth/roles';
 
 interface RoleGateProps {
   requiredRole: UserRole;

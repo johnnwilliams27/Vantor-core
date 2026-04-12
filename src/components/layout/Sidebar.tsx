@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import type { UserRole } from '@/types/database';
+import { ROLE_RANK } from '@/lib/auth/roles';
 
 interface NavItem {
   label: string;
@@ -102,12 +103,7 @@ const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-const ROLE_RANK: Record<UserRole, number> = {
-  auditor: 0,
-  accountant: 1,
-  treasury_manager: 2,
-  enterprise_admin: 3,
-};
+// ROLE_RANK sourced from the single source of truth.
 
 function hasAccess(userRole: string, minRole?: UserRole): boolean {
   if (!minRole) return true;

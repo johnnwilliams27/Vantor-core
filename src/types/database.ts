@@ -1,4 +1,8 @@
-export type UserRole = 'enterprise_admin' | 'treasury_manager' | 'accountant' | 'auditor';
+// UserRole moved to src/lib/auth/roles.ts as the single source of truth.
+// Imported for local use below + re-exported so existing imports from
+// @/types/database keep working.
+import type { UserRole } from '@/lib/auth/roles';
+export type { UserRole };
 export type EnterpriseStatus = 'active' | 'frozen' | 'suspended' | 'pending_kyc';
 export type KycStatus = 'none' | 'pending' | 'verified' | 'rejected';
 

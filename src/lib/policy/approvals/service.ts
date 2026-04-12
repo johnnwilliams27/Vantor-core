@@ -12,6 +12,8 @@ import type {
 import type { EvaluationResult } from '../types/verdict';
 import type { ProposedMovement } from '../types/movement';
 import { validateSoD } from './sod';
+import { resolveRbacSettings } from '@/lib/auth/rbac-settings';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 // ─── Minimal SupabaseLike type ──────────────────────────────────────────
 
@@ -210,12 +212,24 @@ export class ApprovalWorkflowService {
     // 3. Load rule authors for triggered_rule_ids
     const ruleAuthors = await this.loadRuleAuthors(request.triggered_rule_ids);
 
+    // 3b. Resolve per-enterprise RBAC settings — specifically the
+    //     author-approver separation toggle. Default is on; orgs can
+    //     opt out via enterprise_rbac_settings. The SupabaseLike
+    //     interface here doesn't declare the methods resolveRbacSettings
+    //     needs, but the underlying client is the real SupabaseClient
+    //     structurally, so we narrow the cast just for this call.
+    const rbacSettings = await resolveRbacSettings(
+      request.enterprise_id,
+      this.supabase as unknown as SupabaseClient,
+    );
+
     // 4. Call validateSoD
     const sodResult = validateSoD({
       request,
       approverId: actor.user_id,
       approverRole: actor.role,
       ruleAuthors,
+      authorApproverSeparationEnabled: rbacSettings.authorApproverSeparationEnabled,
     });
 
     if (!sodResult.ok) {

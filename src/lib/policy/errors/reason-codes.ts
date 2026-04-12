@@ -31,6 +31,7 @@ export const REASON_CODES = {
   sod_initiator_conflict:            'sod_initiator_conflict',
   sod_rule_editor_conflict:          'sod_rule_editor_conflict',
   sod_already_filled:                'sod_already_filled',
+  enterprise_admin_cannot_approve:   'enterprise_admin_cannot_approve',
   no_matching_slot:                  'no_matching_slot',
   approval_concurrent_modification:  'approval_concurrent_modification',
   stale_approval_chain_mismatch:     'stale_approval_chain_mismatch',
@@ -60,6 +61,8 @@ export const REASON_CODES = {
   version_not_draft:                 'version_not_draft',
   hard_limit_value_out_of_range:     'hard_limit_value_out_of_range',
   obligation_coverage_advisory_only: 'obligation_coverage_advisory_only',
+  chain_insufficient_slots_for_amount:     'chain_insufficient_slots_for_amount',
+  chain_missing_executive_slot_for_amount: 'chain_missing_executive_slot_for_amount',
 
   // ─── Gate / execution ────────────────────────────────────────────────
   movement_validation_failed:        'movement_validation_failed',

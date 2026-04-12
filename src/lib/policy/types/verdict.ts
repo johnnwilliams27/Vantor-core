@@ -42,9 +42,11 @@ export interface ApprovalSlotRequirement {
 }
 
 /**
- * Approver roles recognized for slot filling. Extends the existing
- * user_profiles.role enum with the two new roles added in Plan 2.
- * In phase 1 of this plan, only the shape is defined; the database-side
- * enum update happens in Plan 2.
+ * Approver roles — re-exported from the single source of truth at
+ * `src/lib/auth/roles.ts`. Canonical set:
+ *   auditor | accountant | treasury_manager | executive
+ * `enterprise_admin` is strictly excluded (separation of duties).
+ * The legacy 'approver' literal was removed during RBAC consolidation.
  */
-export type ApproverRole = 'auditor' | 'accountant' | 'treasury_manager' | 'approver' | 'executive';
+export type { ApproverRole } from '@/lib/auth/roles';
+import type { ApproverRole } from '@/lib/auth/roles';

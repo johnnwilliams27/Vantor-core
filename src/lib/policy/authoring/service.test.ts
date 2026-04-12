@@ -155,9 +155,12 @@ function mockSupabase(
 const ENTERPRISE_ID = 'ent-001';
 const USER_ID = 'user-001';
 
+// Authoring is now gated on role === 'enterprise_admin'. These fixtures
+// were 'treasury_manager' pre-RBAC-hierarchy; promoted to match the new
+// gate so existing test coverage continues to exercise the happy path.
 const adminActor: AuthoringActor = {
   user_id: USER_ID,
-  role: 'treasury_manager',
+  role: 'enterprise_admin',
   enterprise_id: ENTERPRISE_ID,
 };
 
@@ -169,7 +172,7 @@ const auditorActor: AuthoringActor = {
 
 const otherEnterpriseActor: AuthoringActor = {
   user_id: USER_ID,
-  role: 'treasury_manager',
+  role: 'enterprise_admin',
   enterprise_id: 'ent-other',
 };
 
@@ -606,21 +609,23 @@ describe('Task 9 — deleteRule', () => {
 
 // ─── Task 10: Hard limit CRUD ────────────────────────────────────────────────
 
+// Profile fixtures for Task 10 hard-limit gate checks.
+// requirePolicyAdmin now reads role + is_app_admin (is_policy_admin retired).
 const policyAdminProfile = {
   id: USER_ID,
-  is_policy_admin: true,
+  role: 'enterprise_admin',
   is_app_admin: false,
 };
 
 const appAdminProfile = {
   id: 'user-app-admin',
-  is_policy_admin: false,
+  role: 'treasury_manager', // deliberately not enterprise_admin — tests is_app_admin bypass
   is_app_admin: true,
 };
 
 const noAdminProfile = {
   id: 'user-no-admin',
-  is_policy_admin: false,
+  role: 'treasury_manager',
   is_app_admin: false,
 };
 
@@ -632,9 +637,11 @@ const validLimitReq = {
   scope: {},
 };
 
+// Post-RBAC-hierarchy: requirePolicyAdmin gates on role === 'enterprise_admin'.
+// (Was treasury_manager + is_policy_admin=true pre-rework.)
 const policyAdminActor: AuthoringActor = {
   user_id: USER_ID,
-  role: 'treasury_manager',
+  role: 'enterprise_admin',
   enterprise_id: ENTERPRISE_ID,
 };
 
@@ -873,7 +880,8 @@ const ACTIVATABLE_DRAFT = {
 const POLICY_ADMIN_PROFILE = {
   id: USER_ID,
   enterprise_id: ENTERPRISE_ID,
-  role: 'treasury_manager',
+  // See policyAdminActor — role now drives requirePolicyAdmin.
+  role: 'enterprise_admin',
   is_policy_admin: true,
   is_app_admin: false,
 };

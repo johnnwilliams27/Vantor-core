@@ -9,44 +9,49 @@ import {
 import { AuthoringError } from './errors';
 
 describe('canViewActivePolicy', () => {
-  it('returns true for auditor and higher', () => {
+  it('returns true for auditor and higher (everyone — read is safe)', () => {
     expect(canViewActivePolicy('auditor')).toBe(true);
     expect(canViewActivePolicy('accountant')).toBe(true);
     expect(canViewActivePolicy('treasury_manager')).toBe(true);
+    expect(canViewActivePolicy('executive')).toBe(true);
+    expect(canViewActivePolicy('enterprise_admin')).toBe(true);
   });
 });
 
 describe('canCreateDraft / canEditDraftRules / canEditDraftChains', () => {
-  it('returns true only for treasury_manager and higher', () => {
-    expect(canCreateDraft('auditor')).toBe(false);
-    expect(canCreateDraft('accountant')).toBe(false);
-    expect(canCreateDraft('treasury_manager')).toBe(true);
-
-    expect(canEditDraftRules('auditor')).toBe(false);
-    expect(canEditDraftRules('treasury_manager')).toBe(true);
-
-    expect(canEditDraftChains('accountant')).toBe(false);
-    expect(canEditDraftChains('treasury_manager')).toBe(true);
+  it('returns true only for enterprise_admin (authoring is strict-role gated)', () => {
+    // Non-author roles — all false, including the new executive
+    for (const role of ['auditor', 'accountant', 'treasury_manager', 'executive'] as const) {
+      expect(canCreateDraft(role)).toBe(false);
+      expect(canEditDraftRules(role)).toBe(false);
+      expect(canEditDraftChains(role)).toBe(false);
+    }
+    // Author role
+    expect(canCreateDraft('enterprise_admin')).toBe(true);
+    expect(canEditDraftRules('enterprise_admin')).toBe(true);
+    expect(canEditDraftChains('enterprise_admin')).toBe(true);
   });
 });
 
 describe('requirePolicyAdmin', () => {
-  it('resolves when the user has is_policy_admin=true', async () => {
-    const supabase = mkSupabase({ is_policy_admin: true, is_app_admin: false });
+  it('resolves when the user has role=enterprise_admin', async () => {
+    const supabase = mkSupabase({ role: 'enterprise_admin', is_app_admin: false });
     await expect(requirePolicyAdmin(supabase, 'user-1')).resolves.toMatchObject({
-      source: 'policy_admin',
+      source: 'enterprise_admin',
     });
   });
 
-  it('resolves when the user has is_app_admin=true (with actor_source=vantor_staff)', async () => {
-    const supabase = mkSupabase({ is_policy_admin: false, is_app_admin: true });
+  it('resolves when the user has is_app_admin=true (Vantor staff bypass)', async () => {
+    // is_app_admin wins even when role is a non-admin — Vantor staff
+    // elevation is independent of org role.
+    const supabase = mkSupabase({ role: 'treasury_manager', is_app_admin: true });
     await expect(requirePolicyAdmin(supabase, 'user-1')).resolves.toMatchObject({
       source: 'vantor_staff',
     });
   });
 
-  it('throws AuthoringError with reason_code=requires_policy_admin when neither flag is set', async () => {
-    const supabase = mkSupabase({ is_policy_admin: false, is_app_admin: false });
+  it('throws requires_policy_admin when role is not enterprise_admin and not app admin', async () => {
+    const supabase = mkSupabase({ role: 'treasury_manager', is_app_admin: false });
     await expect(requirePolicyAdmin(supabase, 'user-1')).rejects.toMatchObject({
       reason_code: 'requires_policy_admin',
     });
@@ -68,7 +73,7 @@ describe('requirePolicyAdmin', () => {
   });
 });
 
-function mkSupabase(profile: { is_policy_admin: boolean; is_app_admin: boolean }) {
+function mkSupabase(profile: { role: string; is_app_admin: boolean }) {
   return {
     from: vi.fn().mockReturnValue({
       select: vi.fn().mockReturnValue({

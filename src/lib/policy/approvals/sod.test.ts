@@ -49,6 +49,105 @@ function makeRequest(overrides?: Partial<ApprovalRequest>): ApprovalRequest {
 
 const EMPTY_RULE_AUTHORS = new Map<string, string>();
 
+describe('validateSoD — configurable author-approver separation', () => {
+  it('rejects rule-editor approver when separation is enabled (default)', () => {
+    const request = makeRequest({
+      triggered_rule_ids: ['rule-A'],
+    });
+    const result = validateSoD({
+      request,
+      approverId: 'user-editor',
+      approverRole: 'treasury_manager',
+      ruleAuthors: new Map([['rule-A', 'user-editor']]),
+      authorApproverSeparationEnabled: true,
+    });
+    expect(result).toEqual({ ok: false, reason_code: 'sod_rule_editor_conflict' });
+  });
+
+  it('allows rule-editor approver when separation is disabled', () => {
+    // Same setup as the strict-enabled case — only the flag changes.
+    const request = makeRequest({
+      triggered_rule_ids: ['rule-A'],
+    });
+    const result = validateSoD({
+      request,
+      approverId: 'user-editor',
+      approverRole: 'treasury_manager',
+      ruleAuthors: new Map([['rule-A', 'user-editor']]),
+      authorApproverSeparationEnabled: false,
+    });
+    // Should fall through to finding a matching slot (slot 0 is treasury_manager min).
+    expect(result).toEqual({ ok: true, slot_index: 0 });
+  });
+
+  it('initiator-conflict still fires even when separation is disabled', () => {
+    // Disabling separation must NOT disable the initiator check — that
+    // would let a user approve their own movement.
+    const request = makeRequest({ created_by: 'user-self' });
+    const result = validateSoD({
+      request,
+      approverId: 'user-self',
+      approverRole: 'treasury_manager',
+      ruleAuthors: EMPTY_RULE_AUTHORS,
+      authorApproverSeparationEnabled: false,
+    });
+    expect(result).toEqual({ ok: false, reason_code: 'sod_initiator_conflict' });
+  });
+
+  it('defaults to strict when the flag is omitted (backward compat)', () => {
+    const request = makeRequest({
+      triggered_rule_ids: ['rule-A'],
+    });
+    const result = validateSoD({
+      request,
+      approverId: 'user-editor',
+      approverRole: 'treasury_manager',
+      ruleAuthors: new Map([['rule-A', 'user-editor']]),
+      // no authorApproverSeparationEnabled — should default to true
+    });
+    expect(result).toEqual({ ok: false, reason_code: 'sod_rule_editor_conflict' });
+  });
+});
+
+describe('validateSoD — enterprise_admin strict exclusion', () => {
+  it('rejects enterprise_admin approver with enterprise_admin_cannot_approve', () => {
+    const request = makeRequest({
+      created_by: 'user-initiator',
+      slot_assignments: [makeSlot(0, 'treasury_manager')],
+    });
+    const result = validateSoD({
+      request,
+      approverId: 'user-admin',
+      approverRole: 'enterprise_admin',
+      ruleAuthors: EMPTY_RULE_AUTHORS,
+    });
+    expect(result).toEqual({
+      ok: false,
+      reason_code: 'enterprise_admin_cannot_approve',
+    });
+  });
+
+  it('enterprise_admin check precedes all other SoD checks — fires even when the admin is also the initiator', () => {
+    // If the exclusion check came AFTER initiator, this admin-as-initiator
+    // case would resolve to sod_initiator_conflict and hide the real reason.
+    // Strict-first ordering keeps the error specific and debuggable.
+    const request = makeRequest({
+      created_by: 'user-admin',
+      slot_assignments: [makeSlot(0, 'treasury_manager')],
+    });
+    const result = validateSoD({
+      request,
+      approverId: 'user-admin',
+      approverRole: 'enterprise_admin',
+      ruleAuthors: EMPTY_RULE_AUTHORS,
+    });
+    expect(result).toEqual({
+      ok: false,
+      reason_code: 'enterprise_admin_cannot_approve',
+    });
+  });
+});
+
 describe('validateSoD', () => {
   it('returns ok with slot_index when all checks pass', () => {
     const result = validateSoD({
@@ -166,7 +265,7 @@ describe('validateSoD', () => {
     const request = makeRequest({
       slot_assignments: [
         makeSlot(0, 'executive'),
-        makeSlot(1, 'approver'),
+        makeSlot(1, 'treasury_manager'),
         makeSlot(2, 'treasury_manager'),
       ],
     });
@@ -182,10 +281,10 @@ describe('validateSoD', () => {
     expect(result).toEqual({ ok: false, reason_code: 'no_matching_slot' });
   });
 
-  it('approver role satisfies executive slot', () => {
+  it('higher-rank user satisfies lower-rank slot minimum', () => {
     const request = makeRequest({
       slot_assignments: [
-        makeSlot(0, 'approver'),
+        makeSlot(0, 'treasury_manager'),
       ],
     });
 

@@ -1,4 +1,5 @@
 import type { UserRole } from '@/types/database';
+import { ROLE_RANK as CANONICAL_ROLE_RANK } from '@/lib/auth/roles';
 
 /** Routes that require minimum role level (enterprise users) */
 export const ROLE_ROUTES: Record<string, UserRole> = {
@@ -60,12 +61,9 @@ const APP_ADMIN_BLOCKED_PATHS = [
   '/api/balances',
 ];
 
-const ROLE_RANK: Record<UserRole, number> = {
-  auditor: 0,
-  accountant: 1,
-  treasury_manager: 2,
-  enterprise_admin: 3,
-};
+// Canonical ROLE_RANK lives in @/lib/auth/roles. Aliased here so the
+// existing `hasRole` implementation below stays untouched.
+const ROLE_RANK = CANONICAL_ROLE_RANK;
 
 export function hasRole(userRole: UserRole, requiredRole: UserRole): boolean {
   return ROLE_RANK[userRole] >= ROLE_RANK[requiredRole];
