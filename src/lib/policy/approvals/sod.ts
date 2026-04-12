@@ -3,36 +3,17 @@
 import type { ReasonCode } from '../errors/reason-codes';
 import { REASON_CODES } from '../errors/reason-codes';
 import type { ApprovalRequest } from './types';
-
-/**
- * Combined role rank for SoD slot matching. Includes both UserRole
- * values (auditor, accountant, treasury_manager) and ApproverRole
- * values (approver, executive). The existing `hasRole` from
- * `src/lib/auth/rbac.ts` only handles UserRole, so we maintain a
- * local rank map that covers the full slot role spectrum.
- */
-const COMBINED_ROLE_RANK: Record<string, number> = {
-  auditor: 0,
-  accountant: 1,
-  treasury_manager: 2,
-  approver: 3,
-  executive: 4,
-};
-
-function roleRankOf(role: string): number {
-  return COMBINED_ROLE_RANK[role] ?? -1;
-}
-
-function roleSatisfiesSlot(approverRole: string, slotMinimumRole: string): boolean {
-  const approverRank = roleRankOf(approverRole);
-  const slotRank = roleRankOf(slotMinimumRole);
-  if (approverRank < 0 || slotRank < 0) return false;
-  return approverRank >= slotRank;
-}
+import { canFillSlot, type UserRole, type ApproverRole } from '@/lib/auth/roles';
 
 export interface ValidateSoDParams {
   request: ApprovalRequest;
   approverId: string;
+  /**
+   * Caller-supplied role string (read from user_profiles.role or the
+   * session). Typed as `string` because the DB column is a string enum
+   * and upstream code hasn't always narrowed before reaching us.
+   * `canFillSlot` safely returns false for unknown values.
+   */
   approverRole: string;
   /** Map from rule_id to the user_id who created/last-edited that rule */
   ruleAuthors: Map<string, string>;
@@ -46,10 +27,15 @@ export type SoDResult =
  * Pure function: validates Separation of Duties for an approval action.
  *
  * Check order (first failure stops):
- * 1. sod_initiator_conflict - approver is the movement initiator
- * 2. sod_rule_editor_conflict - approver authored a triggering rule
- * 3. sod_already_filled - approver already filled a slot on this request
- * 4. no_matching_slot - no unfilled slot at the approver's role level
+ * 0. enterprise_admin_cannot_approve — strict separation of duties:
+ *    the role that authors policies cannot approve transfers under them
+ * 1. sod_initiator_conflict — approver is the movement initiator
+ * 2. sod_rule_editor_conflict — approver authored a triggering rule
+ * 3. sod_already_filled — approver already filled a slot on this request
+ * 4. no_matching_slot — no unfilled slot at the approver's role level
+ *
+ * Slot matching delegates to `canFillSlot` from `@/lib/auth/roles`, the
+ * single source of truth for the role hierarchy.
  */
 export function validateSoD(params: ValidateSoDParams): SoDResult {
   const { request, approverId, approverRole, ruleAuthors } = params;
@@ -59,6 +45,13 @@ export function validateSoD(params: ValidateSoDParams): SoDResult {
   // disable the initiator check (because `'' && x === ''` short-circuits).
   if (!approverId || approverId.trim() === '') {
     return { ok: false, reason_code: REASON_CODES.no_matching_slot };
+  }
+
+  // 0. Strict separation of duties. Checked before any other SoD rule
+  //    so the caller gets a specific, debuggable reason code rather
+  //    than the generic `no_matching_slot` fallthrough.
+  if (approverRole === 'enterprise_admin') {
+    return { ok: false, reason_code: REASON_CODES.enterprise_admin_cannot_approve };
   }
 
   // 1. Initiator conflict
@@ -84,7 +77,9 @@ export function validateSoD(params: ValidateSoDParams): SoDResult {
 
   // 4. Find first unfilled slot matching the approver's role
   const matchingSlotIndex = request.slot_assignments.findIndex(
-    (slot) => !slot.filled_by && roleSatisfiesSlot(approverRole, slot.minimum_role),
+    (slot) =>
+      !slot.filled_by &&
+      canFillSlot(approverRole as UserRole, slot.minimum_role as ApproverRole),
   );
   if (matchingSlotIndex === -1) {
     return { ok: false, reason_code: REASON_CODES.no_matching_slot };

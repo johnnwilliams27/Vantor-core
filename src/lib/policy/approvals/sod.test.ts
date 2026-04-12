@@ -49,6 +49,45 @@ function makeRequest(overrides?: Partial<ApprovalRequest>): ApprovalRequest {
 
 const EMPTY_RULE_AUTHORS = new Map<string, string>();
 
+describe('validateSoD — enterprise_admin strict exclusion', () => {
+  it('rejects enterprise_admin approver with enterprise_admin_cannot_approve', () => {
+    const request = makeRequest({
+      created_by: 'user-initiator',
+      slot_assignments: [makeSlot(0, 'treasury_manager')],
+    });
+    const result = validateSoD({
+      request,
+      approverId: 'user-admin',
+      approverRole: 'enterprise_admin',
+      ruleAuthors: EMPTY_RULE_AUTHORS,
+    });
+    expect(result).toEqual({
+      ok: false,
+      reason_code: 'enterprise_admin_cannot_approve',
+    });
+  });
+
+  it('enterprise_admin check precedes all other SoD checks — fires even when the admin is also the initiator', () => {
+    // If the exclusion check came AFTER initiator, this admin-as-initiator
+    // case would resolve to sod_initiator_conflict and hide the real reason.
+    // Strict-first ordering keeps the error specific and debuggable.
+    const request = makeRequest({
+      created_by: 'user-admin',
+      slot_assignments: [makeSlot(0, 'treasury_manager')],
+    });
+    const result = validateSoD({
+      request,
+      approverId: 'user-admin',
+      approverRole: 'enterprise_admin',
+      ruleAuthors: EMPTY_RULE_AUTHORS,
+    });
+    expect(result).toEqual({
+      ok: false,
+      reason_code: 'enterprise_admin_cannot_approve',
+    });
+  });
+});
+
 describe('validateSoD', () => {
   it('returns ok with slot_index when all checks pass', () => {
     const result = validateSoD({
@@ -166,7 +205,7 @@ describe('validateSoD', () => {
     const request = makeRequest({
       slot_assignments: [
         makeSlot(0, 'executive'),
-        makeSlot(1, 'approver'),
+        makeSlot(1, 'treasury_manager'),
         makeSlot(2, 'treasury_manager'),
       ],
     });
@@ -182,10 +221,10 @@ describe('validateSoD', () => {
     expect(result).toEqual({ ok: false, reason_code: 'no_matching_slot' });
   });
 
-  it('approver role satisfies executive slot', () => {
+  it('higher-rank user satisfies lower-rank slot minimum', () => {
     const request = makeRequest({
       slot_assignments: [
-        makeSlot(0, 'approver'),
+        makeSlot(0, 'treasury_manager'),
       ],
     });
 
