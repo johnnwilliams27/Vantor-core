@@ -7,10 +7,17 @@ interface DropdownConfig<T> {
   accessor: (item: T) => string;
 }
 
+interface SortConfig<T> {
+  key: string;
+  accessor: (item: T) => string | number;
+  type?: 'string' | 'number' | 'date';
+}
+
 interface FilterConfig<T> {
   searchFields: Accessor<T>[];
   dropdowns?: DropdownConfig<T>[];
   dateField?: (item: T) => string | null | undefined;
+  sortColumns?: SortConfig<T>[];
 }
 
 export type PageSize = 25 | 50;
@@ -22,6 +29,8 @@ export function useTableFilter<T>(data: T[] | undefined, config: FilterConfig<T>
   const [dateTo, setDateTo] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSizeState] = useState<PageSize>(25);
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   const deferredSearch = useDeferredValue(search);
 
@@ -78,14 +87,44 @@ export function useTableFilter<T>(data: T[] | undefined, config: FilterConfig<T>
     return result;
   }, [items, deferredSearch, filters, dateFrom, dateTo, config]);
 
+  // Sorting
+  const toggleSort = useCallback((key: string) => {
+    if (sortKey === key) {
+      setSortDir((d) => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortDir('desc');
+    }
+    setPage(1);
+  }, [sortKey]);
+
+  const sortedData = useMemo(() => {
+    if (!sortKey || !config.sortColumns) return filteredData;
+    const col = config.sortColumns.find((c) => c.key === sortKey);
+    if (!col) return filteredData;
+    return [...filteredData].sort((a, b) => {
+      const aVal = col.accessor(a);
+      const bVal = col.accessor(b);
+      let cmp = 0;
+      if (col.type === 'date') {
+        cmp = new Date(aVal as string).getTime() - new Date(bVal as string).getTime();
+      } else if (col.type === 'number') {
+        cmp = Number(aVal) - Number(bVal);
+      } else {
+        cmp = String(aVal).localeCompare(String(bVal));
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [filteredData, sortKey, sortDir, config.sortColumns]);
+
   // Pagination
-  const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(sortedData.length / pageSize));
   const safePage = Math.min(page, totalPages);
 
   const pagedData = useMemo(() => {
     const start = (safePage - 1) * pageSize;
-    return filteredData.slice(start, start + pageSize);
-  }, [filteredData, safePage, pageSize]);
+    return sortedData.slice(start, start + pageSize);
+  }, [sortedData, safePage, pageSize]);
 
   // Reset to page 1 when filters change
   const setSearchWrapped = useCallback((v: string) => { setSearch(v); setPage(1); }, []);
@@ -130,12 +169,16 @@ export function useTableFilter<T>(data: T[] | undefined, config: FilterConfig<T>
     activeFilterCount,
     clearAll,
     totalCount: items.length,
+    // Sorting
+    sortKey,
+    sortDir,
+    toggleSort,
     // Pagination
     page: safePage,
     setPage,
     pageSize,
     setPageSize,
     totalPages,
-    filteredCount: filteredData.length,
+    filteredCount: sortedData.length,
   };
 }

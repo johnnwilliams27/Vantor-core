@@ -87,7 +87,7 @@ export function TreasuryRulesForm() {
           Treasury Rules
         </CardTitle>
         {!rule && (
-          <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 rounded-md p-2 mt-1">
+          <div className="flex items-center gap-2 text-sm text-amber-400 bg-amber-500/10 rounded-md p-2 mt-1">
             <AlertCircle className="h-4 w-4 shrink-0" />
             No rule configured. Set one up to enable AI recommendations.
           </div>

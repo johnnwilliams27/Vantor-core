@@ -4,25 +4,21 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { CancelScheduledDialog } from '@/components/ui/cancel-scheduled-dialog';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { useTableFilter } from '@/hooks/useTableFilter';
 import { useToast } from '@/components/ui/toast';
-import { formatDateTime, capitalize } from '@/lib/utils';
+import { formatDateTime, formatRelativeOrDate, capitalize, formatScheduledStatus, walletDisplayName } from '@/lib/utils';
 import { exportCsv, exportPdf } from '@/lib/export';
 import type { ExportColumn } from '@/lib/export';
 import type { FiatTransaction } from '@/types/database';
-import { ArrowDownLeft, ArrowUpRight, History } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Check, Clock, History, XCircle } from 'lucide-react';
 import { CardSpinner } from '@/components/ui/spinner';
+import { TableCardSkeleton } from '@/components/ui/operations-skeletons';
 import { useScheduledOperations, useCancelScheduledOperation } from '@/hooks/useScheduledOperations';
 import { useWallets } from '@/hooks/useWallets';
 import type { RampParams } from '@/types/scheduled-operations';
-
-function walletDisplayName(wallet?: { label?: string | null; address: string } | null): string {
-  if (!wallet) return '—';
-  return wallet.label || `${wallet.address.slice(0, 6)}…${wallet.address.slice(-4)}`;
-}
 
 function bankDisplayName(bank?: FiatTransaction['bank_account']): string {
   if (!bank) return '—';
@@ -65,7 +61,15 @@ function StatusBadge({ status }: { status: string }) {
     failed: 'destructive',
     cancelled: 'destructive',
   };
-  return <Badge variant={variantMap[status] ?? 'secondary'}>{capitalize(status)}</Badge>;
+  const variant = variantMap[status] ?? 'secondary';
+  return (
+    <Badge variant={variant}>
+      {variant === 'success' ? <Check className="h-3 w-3 mr-1" /> :
+       variant === 'destructive' ? <XCircle className="h-3 w-3 mr-1" /> :
+       <Clock className="h-3 w-3 mr-1" />}
+      {capitalize(status)}
+    </Badge>
+  );
 }
 
 function DirectionBadge({ direction }: { direction: 'onramp' | 'offramp' }) {
@@ -87,10 +91,10 @@ function DirectionBadge({ direction }: { direction: 'onramp' | 'offramp' }) {
 
 const RAMP_EXPORT_COLUMNS: ExportColumn<UnifiedRampRow>[] = [
   { header: 'Direction', accessor: (r) => capitalize(r.direction) },
-  { header: 'Crypto Amount', accessor: (r) => parseFloat(r.crypto_amount).toLocaleString() },
-  { header: 'Crypto Token', accessor: (r) => r.crypto_token },
-  { header: 'Fiat Amount', accessor: (r) => parseFloat(r.fiat_amount).toLocaleString() },
-  { header: 'Fiat Currency', accessor: (r) => r.fiat_currency },
+  { header: 'Stablecoin Amount', accessor: (r) => parseFloat(r.crypto_amount).toLocaleString() },
+  { header: 'Token', accessor: (r) => r.crypto_token },
+  { header: 'Bank Amount', accessor: (r) => parseFloat(r.fiat_amount).toLocaleString() },
+  { header: 'Currency', accessor: (r) => r.fiat_currency },
   { header: 'Rate', accessor: (r) => r.exchange_rate ? parseFloat(r.exchange_rate).toFixed(4) : '' },
   { header: 'Fee', accessor: (r) => r.fee_amount ? parseFloat(r.fee_amount).toLocaleString() : '' },
   { header: 'From', accessor: (r) => r.fromLabel },
@@ -111,6 +115,10 @@ const RAMP_FILTER_CONFIG = {
     { key: 'status', accessor: (item: UnifiedRampRow) => item.status },
   ],
   dateField: (item: UnifiedRampRow) => item.created_at,
+  sortColumns: [
+    { key: 'amount', accessor: (item: UnifiedRampRow) => parseFloat(item.crypto_amount), type: 'number' as const },
+    { key: 'date', accessor: (item: UnifiedRampRow) => item.created_at, type: 'date' as const },
+  ],
 };
 
 export function FiatTransactionTable() {
@@ -176,7 +184,7 @@ export function FiatTransactionTable() {
           bankLabel: bLabel,
           fromLabel: p.direction === 'offramp' ? wLabel : bLabel,
           toLabel: p.direction === 'offramp' ? bLabel : wLabel,
-          status: op.status === 'awaiting_authorization' ? 'awaiting approval' : op.status,
+          status: formatScheduledStatus(op.status),
           created_at: op.created_at,
           scheduled_for: op.scheduled_for,
           isScheduled: true,
@@ -203,16 +211,21 @@ export function FiatTransactionTable() {
 
   return (
     <>
-    <Card>
+    <Card data-history-table>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <History className="h-4 w-4" />
           Ramp History
+          {filter.totalCount > 0 && (
+            <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-white/[0.06] text-muted-foreground">
+              {filter.totalCount}
+            </span>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent>
         {txsLoading ? (
-          <CardSpinner />
+          <TableCardSkeleton columns={11} rows={5} />
         ) : (
           <div className="space-y-4">
           <FilterBar
@@ -238,32 +251,64 @@ export function FiatTransactionTable() {
             onExportPdf={() => exportPdf('ramp-transactions', 'Ramp History', RAMP_EXPORT_COLUMNS, filter.filteredData, 'landscape')}
           />
           {!filter.filteredData.length ? (
-            <div className="text-sm text-muted-foreground text-center py-8">
-              {filter.activeFilterCount > 0
-                ? 'No matching transactions.'
-                : 'No ramp transactions yet. Use the form above to get started.'}
+            <div className="text-center py-12">
+              {filter.activeFilterCount > 0 ? (
+                <span className="text-muted-foreground">No matching results.</span>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-muted-foreground">No transactions yet.</p>
+                  <p className="text-xs text-teal-400 hover:text-teal-300 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+                    Create your first transactions ↑
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
+            <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-black/40 to-transparent lg:hidden z-10" />
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-muted-foreground text-sm font-medium">
-                  <th className="text-left py-2 pr-4">Direction</th>
-                  <th className="text-right py-2 pr-4">Crypto</th>
-                  <th className="text-right py-2 pr-4">Fiat</th>
-                  <th className="text-right py-2 pr-4">Rate</th>
-                  <th className="text-right py-2 pr-4">Fee</th>
-                  <th className="text-left py-2 pr-4">From</th>
-                  <th className="text-left py-2 pr-4">To</th>
-                  <th className="text-left py-2 pr-4">Status</th>
-                  <th className="text-left py-2 pr-4">Scheduled</th>
-                  <th className="text-left py-2 pr-4">Date</th>
-                  <th className="py-2"></th>
+                  <th scope="col" className="text-left py-2 pr-4">Direction</th>
+                  <th scope="col" className="text-right py-2 pr-4">
+                    <button
+                      type="button"
+                      onClick={() => filter.toggleSort('amount')}
+                      className="ml-auto flex items-center gap-1 hover:text-white transition-colors group"
+                      aria-sort={filter.sortKey === 'amount' ? (filter.sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                    >
+                      Stablecoin
+                      <span className={`text-[10px] ${filter.sortKey === 'amount' ? 'text-teal-400' : 'opacity-0 group-hover:opacity-40'}`}>
+                        {filter.sortKey === 'amount' ? (filter.sortDir === 'asc' ? '↑' : '↓') : '↕'}
+                      </span>
+                    </button>
+                  </th>
+                  <th scope="col" className="text-right py-2 pr-4">Bank</th>
+                  <th scope="col" className="hidden lg:table-cell text-right py-2 pr-4">Rate</th>
+                  <th scope="col" className="hidden lg:table-cell text-right py-2 pr-4"><span title="Includes Vantor fee (0.25%) + provider fee">Total Fee</span></th>
+                  <th scope="col" className="text-left py-2 pr-4">From</th>
+                  <th scope="col" className="text-left py-2 pr-4">To</th>
+                  <th scope="col" className="text-left py-2 pr-4">Status</th>
+                  <th scope="col" className="text-left py-2 pr-4">Scheduled</th>
+                  <th scope="col" className="text-left py-2 pr-4">
+                    <button
+                      type="button"
+                      onClick={() => filter.toggleSort('date')}
+                      className="flex items-center gap-1 hover:text-white transition-colors group"
+                      aria-sort={filter.sortKey === 'date' ? (filter.sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                    >
+                      Date
+                      <span className={`text-[10px] ${filter.sortKey === 'date' ? 'text-teal-400' : 'opacity-0 group-hover:opacity-40'}`}>
+                        {filter.sortKey === 'date' ? (filter.sortDir === 'asc' ? '↑' : '↓') : '↕'}
+                      </span>
+                    </button>
+                  </th>
+                  <th scope="col" className="py-2"></th>
                 </tr>
               </thead>
               <tbody>
                 {filter.pagedData.map((row) => (
-                  <tr key={row.id} className="border-b last:border-0 hover:bg-gray-50/50">
+                  <tr key={row.id} className="border-b last:border-0 hover:bg-white/[0.02]">
                     <td className="py-2 pr-4">
                       <DirectionBadge direction={row.direction} />
                     </td>
@@ -273,10 +318,10 @@ export function FiatTransactionTable() {
                     <td className="py-2 pr-4 text-sm text-right">
                       {parseFloat(row.fiat_amount).toLocaleString(undefined, { style: 'currency', currency: row.fiat_currency })}
                     </td>
-                    <td className="py-2 pr-4 text-right text-muted-foreground">
+                    <td className="hidden lg:table-cell py-2 pr-4 text-right text-muted-foreground">
                       {row.exchange_rate ? parseFloat(row.exchange_rate).toFixed(4) : '—'}
                     </td>
-                    <td className="py-2 pr-4 text-right text-muted-foreground">
+                    <td className="hidden lg:table-cell py-2 pr-4 text-right text-muted-foreground">
                       {row.fee_amount
                         ? parseFloat(row.fee_amount).toLocaleString(undefined, { style: 'currency', currency: row.fiat_currency })
                         : '—'}
@@ -291,17 +336,17 @@ export function FiatTransactionTable() {
                       <StatusBadge status={row.status} />
                     </td>
                     <td className="py-2 pr-4 text-sm text-muted-foreground whitespace-nowrap">
-                      {row.scheduled_for ? formatDateTime(row.scheduled_for) : 'Immediate'}
+                      {row.scheduled_for ? formatDateTime(row.scheduled_for) : '—'}
                     </td>
-                    <td className="py-2 pr-4 text-sm text-muted-foreground whitespace-nowrap">
-                      {formatDateTime(row.created_at)}
+                    <td className="py-2 pr-4 text-sm text-muted-foreground whitespace-nowrap" title={formatRelativeOrDate(row.created_at).full}>
+                      {formatRelativeOrDate(row.created_at).text}
                     </td>
                     <td className="py-2">
                       {canCancel(row) && (
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-7 text-xs px-3 text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400"
+                          className="h-9 text-xs px-3 text-red-400 border-red-500/20 hover:bg-red-500/10 hover:border-red-500/30"
                           onClick={() => setConfirmCancelOp(row)}
                         >
                           Cancel
@@ -328,56 +373,19 @@ export function FiatTransactionTable() {
       </CardContent>
     </Card>
 
-    <Dialog open={!!confirmCancelOp} onOpenChange={(o) => !o && setConfirmCancelOp(null)}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Cancel Scheduled Ramp</DialogTitle>
-        </DialogHeader>
-        {confirmCancelOp && (
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Are you sure you want to cancel this scheduled ramp?
-            </p>
-            <div className="text-sm bg-muted/40 rounded-md p-3 space-y-1">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Direction</span>
-                <span className="font-medium">{capitalize(confirmCancelOp.direction)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Crypto</span>
-                <span className="font-medium">
-                  {parseFloat(confirmCancelOp.crypto_amount).toLocaleString(undefined, { maximumFractionDigits: 2 })} {confirmCancelOp.crypto_token}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Fiat</span>
-                <span>
-                  {parseFloat(confirmCancelOp.fiat_amount).toLocaleString(undefined, { style: 'currency', currency: confirmCancelOp.fiat_currency })}
-                </span>
-              </div>
-              {confirmCancelOp.scheduled_for && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Scheduled</span>
-                  <span>{formatDateTime(confirmCancelOp.scheduled_for)}</span>
-                </div>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">This action cannot be undone.</p>
-          </div>
-        )}
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => setConfirmCancelOp(null)}>Go Back</Button>
-          <Button
-            variant="outline"
-            className="text-red-600 border-red-300 hover:bg-red-50"
-            onClick={handleCancel}
-            disabled={cancelOp.isPending}
-          >
-            {cancelOp.isPending ? 'Cancelling…' : 'Confirm Cancel'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <CancelScheduledDialog
+      open={!!confirmCancelOp}
+      onOpenChange={(o) => !o && setConfirmCancelOp(null)}
+      title="Cancel Scheduled Ramp"
+      details={confirmCancelOp ? [
+        { label: 'Direction', value: capitalize(confirmCancelOp.direction) },
+        { label: 'Stablecoin', value: `${parseFloat(confirmCancelOp.crypto_amount).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${confirmCancelOp.crypto_token}` },
+        { label: 'Bank Amount', value: parseFloat(confirmCancelOp.fiat_amount).toLocaleString(undefined, { style: 'currency', currency: confirmCancelOp.fiat_currency }) },
+        ...(confirmCancelOp.scheduled_for ? [{ label: 'Scheduled', value: formatDateTime(confirmCancelOp.scheduled_for) }] : []),
+      ] : []}
+      onConfirm={handleCancel}
+      isPending={cancelOp.isPending}
+    />
     </>
   );
 }

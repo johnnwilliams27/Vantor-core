@@ -225,7 +225,7 @@ export function reportToCsv(data: ReportData): string {
 
   // Section 1: Balance History
   sections.push('# Balance History');
-  sections.push(csvRow(['Date', 'Bank Balance (USD)', 'Crypto Balance (USD)']));
+  sections.push(csvRow(['Date', 'Bank Balance (USD)', 'Stablecoin Balance (USD)']));
   for (const row of data.balanceHistory) {
     sections.push(csvRow([row.date, row.bankUsd, row.cryptoUsd]));
   }
@@ -256,7 +256,7 @@ export function reportToCsv(data: ReportData): string {
   // Section 3: Ramp History
   sections.push('# Ramp History');
   sections.push(
-    csvRow(['Date', 'Direction', 'Crypto Amount', 'Crypto Token', 'Fiat Amount', 'Fiat Currency', 'Fee', 'Status', 'Provider'])
+    csvRow(['Date', 'Direction', 'Stablecoin Amount', 'Token', 'Bank Amount', 'Currency', 'Fee', 'Status', 'Provider'])
   );
   for (const ramp of data.rampSummary) {
     sections.push(

@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { InlineSuccess } from '@/components/ui/inline-success';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -13,13 +14,14 @@ import { useWallets } from '@/hooks/useWallets';
 import { useWalletTokenBalance, useWalletTokenHoldings, formatWalletTokensLabel } from '@/hooks/useBalances';
 import { BalanceHint } from '@/components/ui/balance-hint';
 import { useQueryClient } from '@tanstack/react-query';
-import { Loader2, ArrowLeftRight, ArrowRight } from 'lucide-react';
+import { Loader2, ArrowLeftRight, ArrowRight, ArrowUpDown, CircleAlert } from 'lucide-react';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { SlippageWarning } from '@/components/yield/SlippageWarning';
 import { useSlippageCheck } from '@/hooks/useYield';
 import type { SlippageEstimate } from '@/lib/yield/slippage';
 import type { SwapQuoteResponse } from '@/types/api';
 import { TOLERANCE_BPS } from '@/lib/scheduled-operations/tolerances';
+import { sanitizeErrorMessage } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
 const schema = z.object({
@@ -46,6 +48,43 @@ export function SwapForm() {
   const [executing, setExecuting] = useState(false);
   const [slippageEstimate, setSlippageEstimate] = useState<SlippageEstimate | null>(null);
   const [showRateApproval, setShowRateApproval] = useState(false);
+  const [pendingHighValue, setPendingHighValue] = useState(false);
+  const [pendingHighValueHandler, setPendingHighValueHandler] = useState<(() => void) | null>(null);
+  const [quoteSecondsLeft, setQuoteSecondsLeft] = useState<number | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [tokenSwitchHint, setTokenSwitchHint] = useState<string | null>(null);
+
+  // Quote expiry countdown
+  useEffect(() => {
+    if (!quote) { setQuoteSecondsLeft(null); return; }
+    setQuoteSecondsLeft(60);
+    const interval = setInterval(() => {
+      setQuoteSecondsLeft((prev) => {
+        if (prev === null || prev <= 1) {
+          clearInterval(interval);
+          setQuote(null);
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [quote]);
+
+  // Clear quote if tab was hidden for >60s
+  useEffect(() => {
+    if (!quote) return;
+    let hiddenAt: number | null = null;
+    const onVisibility = () => {
+      if (document.hidden) {
+        hiddenAt = Date.now();
+      } else if (hiddenAt && Date.now() - hiddenAt > 60_000) {
+        setQuote(null);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [quote]);
 
   const {
     register,
@@ -63,6 +102,7 @@ export function SwapForm() {
   const fromToken = watch('fromToken');
   const toToken = watch('toToken');
   const amount = watch('amount');
+  const memo = watch('memo');
 
   const TOKENS = ['USDC', 'USDT'] as const;
   const toTokenOptions = TOKENS.filter((t) => t !== fromToken);
@@ -71,11 +111,30 @@ export function SwapForm() {
   useEffect(() => {
     if (fromToken && fromToken === toToken) {
       const next = toTokenOptions[0];
-      if (next) setValue('toToken', next);
+      if (next) {
+        setValue('toToken', next);
+        setTokenSwitchHint(`Switched to ${next}`);
+        setTimeout(() => setTokenSwitchHint(null), 3000);
+      }
     }
   }, [fromToken]);
   const selectedWallet = wallets?.find((w) => w.id === selectedWalletId);
   const selectedChain = selectedWallet?.chain;
+
+  // Pre-check slippage when quote loads
+  const preCheckedSlippage = useRef<SlippageEstimate | null>(null);
+  useEffect(() => {
+    if (!quote || !selectedWallet) return;
+    preCheckedSlippage.current = null;
+    slippageCheck.mutate({
+      protocol: 'aave_v3',
+      token: fromToken,
+      chain: selectedWallet.chain,
+      amountUsd: parseFloat(quote.fromAmount),
+    }, {
+      onSuccess: (estimate) => { preCheckedSlippage.current = estimate; },
+    });
+  }, [quote]);
   const dexLabel = selectedChain ? 'Bridge.xyz' : null;
   const balance = useWalletTokenBalance(selectedWalletId, fromToken);
   const exceeds = balance !== null && amount ? parseFloat(amount) > balance : false;
@@ -107,7 +166,7 @@ export function SwapForm() {
       if (!res.ok) throw new Error(json.error);
       setQuote(json.data);
     } catch (err) {
-      toast({ title: 'Quote failed', description: (err as Error).message, variant: 'destructive' });
+      toast({ title: 'Quote failed', description: sanitizeErrorMessage((err as Error).message), variant: 'destructive' });
     } finally {
       setQuoting(false);
     }
@@ -135,19 +194,59 @@ export function SwapForm() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
       toast({ title: 'Swap recorded', description: `${quote.fromAmount} ${data.fromToken} → ${quote.toAmount} ${data.toToken}`, variant: 'success' });
+      setSuccessMessage('Swap executed successfully');
       setQuote(null);
       setSlippageEstimate(null);
       queryClient.invalidateQueries({ queryKey: ['swaps'] });
       queryClient.invalidateQueries({ queryKey: ['balances'] });
+
+      // Optimistic insert into swap history
+      queryClient.setQueryData<any[]>(['swaps'], (old) => {
+        if (!old) return old;
+        const optimisticRow = {
+          id: `optimistic-${Date.now()}`,
+          from_amount: quote.fromAmount,
+          from_token: data.fromToken,
+          to_amount: quote.toAmount,
+          to_token: data.toToken,
+          chain: selectedWallet?.chain ?? 'ethereum',
+          status: 'completed',
+          created_at: new Date().toISOString(),
+          rate: quote.rate,
+        };
+        return [optimisticRow, ...old];
+      });
     } catch (err) {
-      toast({ title: 'Swap failed', description: (err as Error).message, variant: 'destructive' });
+      toast({ title: 'Swap failed', description: sanitizeErrorMessage((err as Error).message), variant: 'destructive' });
     } finally {
       setExecuting(false);
     }
   };
 
+  const checkHighValue = (proceed: () => void) => {
+    if (parseFloat(amount) >= 100_000) {
+      setPendingHighValueHandler(() => proceed);
+      setPendingHighValue(true);
+      return;
+    }
+    proceed();
+  };
+
   const handleExecuteWithSlippageCheck = async () => {
     if (!quote || !selectedWallet) return;
+
+    // Use pre-checked result if available (avoids 1-3s delay)
+    if (preCheckedSlippage.current) {
+      const estimate = preCheckedSlippage.current;
+      if (estimate.severity === 'green') {
+        await executeSwap();
+        return;
+      }
+      setSlippageEstimate(estimate);
+      return;
+    }
+
+    // Fall through to live fetch if pre-check wasn't ready
     try {
       const estimate = await slippageCheck.mutateAsync({
         protocol: 'aave_v3', // Use deep-liquidity protocol as proxy
@@ -168,7 +267,7 @@ export function SwapForm() {
   };
 
   return (
-    <Card>
+    <Card className="border-t-2 border-t-teal-500/50">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <ArrowLeftRight className="h-5 w-5" />
@@ -177,10 +276,30 @@ export function SwapForm() {
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {/* Step indicator */}
+        <div className="flex items-center gap-1.5 mb-5 text-xs">
+          {['Configure', 'Review', 'Execute'].map((label, i) => {
+            const step = !quote ? 0 : executing ? 2 : 1;
+            return (
+              <div key={label} className="flex items-center gap-1.5">
+                {i > 0 && <div className={`w-6 h-px ${i <= step ? 'bg-teal-500/60' : 'bg-white/10'}`} />}
+                <div className={`flex items-center gap-1 ${i <= step ? 'text-teal-400' : 'text-white/25'}`}>
+                  <span className={`w-4.5 h-4.5 rounded-full flex items-center justify-center text-[10px] font-bold ${i < step ? 'bg-teal-500/20 text-teal-400' : i === step ? 'bg-teal-500 text-white' : 'bg-white/5 text-white/25'}`}>
+                    {i + 1}
+                  </span>
+                  <span className="font-medium">{label}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {successMessage && (
+          <InlineSuccess message={successMessage} onDismiss={() => setSuccessMessage(null)} />
+        )}
         <form className="space-y-4">
           <div className="space-y-2">
             <Label>Wallet</Label>
-            <Select {...register('walletId')}>
+            <Select {...register('walletId')} aria-required="true">
               <option value="">Select wallet…</option>
               {wallets?.map((w) => {
                 const chain = w.chain.charAt(0).toUpperCase() + w.chain.slice(1);
@@ -197,7 +316,12 @@ export function SwapForm() {
                 );
               })}
             </Select>
-            {errors.walletId && <p className="text-sm text-red-500">{errors.walletId.message}</p>}
+            {errors.walletId && (
+              <p className="text-sm text-red-400 flex items-center gap-1.5" role="alert">
+                <CircleAlert className="h-3.5 w-3.5 shrink-0" />
+                {errors.walletId.message}
+              </p>
+            )}
             {dexLabel && (
               <p className="text-xs text-muted-foreground">Provider: {dexLabel}</p>
             )}
@@ -211,8 +335,20 @@ export function SwapForm() {
                 <option value="USDT">USDT</option>
               </Select>
             </div>
-            <div className="flex justify-center pb-2">
-              <ArrowRight className="h-5 w-5 text-gray-400" />
+            <div className="flex flex-col items-center justify-end pb-2 gap-1">
+              <button
+                type="button"
+                onClick={() => {
+                  const from = getValues('fromToken');
+                  const to = getValues('toToken');
+                  setValue('fromToken', to);
+                  setValue('toToken', from);
+                }}
+                className="w-8 h-8 rounded-full border border-white/10 bg-white/[0.03] flex items-center justify-center text-muted-foreground hover:text-white hover:border-white/20 transition-colors mx-auto"
+                aria-label="Swap token direction"
+              >
+                <ArrowUpDown className="h-3.5 w-3.5" />
+              </button>
             </div>
             <div className="col-span-2 space-y-2">
               <Label>To Token</Label>
@@ -221,56 +357,77 @@ export function SwapForm() {
                   <option key={t} value={t}>{t}</option>
                 ))}
               </Select>
+              {tokenSwitchHint && (
+                <p className="text-xs text-teal-400/70 animate-pulse">{tokenSwitchHint}</p>
+              )}
             </div>
           </div>
 
           <div className="space-y-2">
             <Label>Amount</Label>
-            <Input placeholder="100.00" {...register('amount')} />
+            <Input placeholder="100.00" {...register('amount')} aria-required="true" />
             <BalanceHint
               balance={balance}
               token={fromToken ?? 'USDC'}
               currentAmount={amount}
               onMax={(max) => setValue('amount', max)}
             />
-            {errors.amount && <p className="text-sm text-red-500">{errors.amount.message}</p>}
+            {errors.amount && (
+              <p className="text-sm text-red-400 flex items-center gap-1.5" role="alert">
+                <CircleAlert className="h-3.5 w-3.5 shrink-0" />
+                {errors.amount.message}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
             <Label>Memo <span className="text-muted-foreground">(optional)</span></Label>
             <Input placeholder="Swap reference…" {...register('memo')} />
+            {memo && memo.length > 0 && (
+              <p className="text-xs text-muted-foreground text-right">{memo.length}/2,000</p>
+            )}
           </div>
 
-          <Button type="button" className="w-full" onClick={getQuote} disabled={quoting || exceeds || !selectedWalletId || !fromToken || !toToken || !amount}>
+          <Button type="button" variant="outline" className="w-full" onClick={getQuote} disabled={quoting || exceeds || !selectedWalletId || !fromToken || !toToken || !amount}>
             {quoting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Getting Quote…</> : 'Get Quote'}
           </Button>
         </form>
 
         {/* Quote display */}
+        <div aria-live="polite" aria-atomic="true">
         {quote && (() => {
           const rateVal = parseFloat(quote.rate);
           const deviationBps = Math.round(Math.abs(rateVal - 1) * 10_000);
           const exceedsTolerance = deviationBps > TOLERANCE_BPS.swap;
 
           return (
-          <div className="mt-4 p-4 rounded-lg bg-[#19595b]/5 border border-[#19595b]/20 space-y-2">
-            <div className="text-sm font-semibold text-[#134849]">Quote</div>
+          <div className="mt-4 rounded-xl border border-teal-500/20 bg-[#0a2a2a] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="h-0.5 bg-gradient-to-r from-teal-500/60 to-cyan-500/40" />
+          <div className="p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-white">Swap Quote</span>
+              {quoteSecondsLeft !== null && (
+                <span className={`text-xs font-mono ${quoteSecondsLeft <= 10 ? 'text-red-400' : 'text-muted-foreground'}`}>
+                  Expires in {quoteSecondsLeft}s
+                </span>
+              )}
+            </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600">You pay</span>
+              <span className="text-muted-foreground">You pay</span>
               <span className="font-mono font-semibold">{quote.fromAmount} {quote.fromToken}</span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600">You receive</span>
-              <span className="font-mono font-semibold text-green-700">{quote.toAmount} {quote.toToken}</span>
+              <span className="text-muted-foreground">You receive</span>
+              <span className="font-mono text-lg font-bold text-teal-400">{quote.toAmount} {quote.toToken}</span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600">Rate</span>
-              <span className="font-mono text-gray-700">1 {quote.fromToken} = {quote.rate} {quote.toToken}</span>
+              <span className="text-muted-foreground">Rate</span>
+              <span className="font-mono text-white/70">1 {quote.fromToken} = {quote.rate} {quote.toToken}</span>
             </div>
             {quote.priceImpact && (
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">Price Impact</span>
-                <span className="text-orange-600">{quote.priceImpact}%</span>
+                <span className="text-muted-foreground">Price Impact</span>
+                <span className="text-orange-400">{quote.priceImpact}%</span>
               </div>
             )}
             {quote.vantor_fee != null && quote.vantor_fee > 0 && (
@@ -281,7 +438,7 @@ export function SwapForm() {
             )}
 
             {exceedsTolerance && (
-              <div className="text-xs text-amber-600 bg-amber-50 rounded-md p-2">
+              <div className="text-xs text-amber-400 bg-amber-500/10 rounded-md p-2">
                 Rate deviates {deviationBps}bps from par (limit: {TOLERANCE_BPS.swap}bps). Approval required.
               </div>
             )}
@@ -298,8 +455,8 @@ export function SwapForm() {
 
             {!slippageEstimate && (
               <Button
-                className="w-full mt-2"
-                onClick={exceedsTolerance ? () => setShowRateApproval(true) : handleExecuteWithSlippageCheck}
+                className="w-full mt-2 btn-gradient"
+                onClick={() => checkHighValue(exceedsTolerance ? () => setShowRateApproval(true) : handleExecuteWithSlippageCheck)}
                 disabled={executing || slippageCheck.isPending}
               >
                 {slippageCheck.isPending ? (
@@ -314,8 +471,30 @@ export function SwapForm() {
               </Button>
             )}
           </div>
+          </div>
           );
         })()}
+        </div>
+
+        {/* High-value transaction confirmation */}
+        <Dialog open={pendingHighValue} onOpenChange={setPendingHighValue}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Confirm Large Transaction</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                You are about to execute a transaction for <span className="font-semibold text-white">{parseFloat(amount || '0').toLocaleString()} {fromToken}</span>. This action cannot be reversed.
+              </p>
+            </div>
+            <DialogFooter className="gap-2">
+              <Button onClick={() => setPendingHighValue(false)}>Cancel</Button>
+              <Button className="btn-gradient" onClick={() => { setPendingHighValue(false); pendingHighValueHandler?.(); }}>
+                Confirm
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Rate deviation approval dialog */}
         <Dialog open={showRateApproval} onOpenChange={setShowRateApproval}>
@@ -339,7 +518,7 @@ export function SwapForm() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Deviation</span>
-                    <span className="font-mono font-medium text-amber-600">
+                    <span className="font-mono font-medium text-amber-400">
                       {Math.round(Math.abs(parseFloat(quote.rate) - 1) * 10_000)}bps
                     </span>
                   </div>
@@ -350,7 +529,7 @@ export function SwapForm() {
               </div>
             )}
             <DialogFooter className="gap-2">
-              <Button variant="outline" onClick={() => setShowRateApproval(false)}>Cancel</Button>
+              <Button onClick={() => setShowRateApproval(false)}>Cancel</Button>
               <Button onClick={() => { setShowRateApproval(false); handleExecuteWithSlippageCheck(); }} disabled={executing}>
                 {executing ? 'Executing…' : 'Approve & Execute'}
               </Button>

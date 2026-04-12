@@ -11,9 +11,11 @@ interface DateTimePickerProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  /** Minimum selectable datetime in "YYYY-MM-DDTHH:MM" format. Days before this are disabled. */
+  min?: string;
 }
 
-export function DateTimePicker({ value, onChange, placeholder = 'Select date & time' }: DateTimePickerProps) {
+export function DateTimePicker({ value, onChange, placeholder = 'Select date & time', min }: DateTimePickerProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -104,6 +106,7 @@ export function DateTimePicker({ value, onChange, placeholder = 'Select date & t
   };
 
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const minDateStr = min ? min.slice(0, 10) : undefined;
 
   const isActive = !!value;
   const displayLabel = isActive && selectedDate
@@ -189,22 +192,28 @@ export function DateTimePicker({ value, onChange, placeholder = 'Select date & t
           </div>
 
           {/* Days grid */}
-          <div className="grid grid-cols-7">
+          <div className="grid grid-cols-7" role="grid">
             {calendarDays.map((day, i) => {
               const isSelected = pickedDate === day.dateStr;
               const isToday = day.dateStr === todayStr;
               const isOtherMonth = day.month !== 'current';
+              const isBeforeMin = !!(minDateStr && day.dateStr < minDateStr);
               return (
                 <button
                   key={i}
                   type="button"
-                  onClick={() => selectDay(day.dateStr)}
+                  role="gridcell"
+                  aria-selected={isSelected}
+                  aria-label={new Date(day.dateStr).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                  onClick={() => !isBeforeMin && selectDay(day.dateStr)}
+                  disabled={isBeforeMin}
                   className={cn(
                     'h-8 w-full text-sm rounded-md transition-colors',
-                    isOtherMonth && 'text-muted-foreground/40',
-                    !isOtherMonth && !isSelected && 'hover:bg-accent',
-                    isToday && !isSelected && 'font-semibold text-[#19595b]',
-                    isSelected && 'bg-[#19595b] text-white font-medium',
+                    isBeforeMin && 'text-muted-foreground/20 cursor-not-allowed',
+                    isOtherMonth && !isBeforeMin && 'text-muted-foreground/40',
+                    !isOtherMonth && !isSelected && !isBeforeMin && 'hover:bg-accent',
+                    isToday && !isSelected && !isBeforeMin && 'font-semibold text-primary',
+                    isSelected && 'bg-primary text-white font-medium',
                   )}
                 >
                   {day.day}
@@ -249,7 +258,7 @@ export function DateTimePicker({ value, onChange, placeholder = 'Select date & t
                 setViewMonth(today.getMonth());
                 selectDay(todayStr);
               }}
-              className="text-xs text-[#19595b] hover:underline"
+              className="text-xs text-primary hover:underline"
             >
               Today
             </button>
