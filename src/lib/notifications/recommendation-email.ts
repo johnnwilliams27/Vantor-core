@@ -1,7 +1,7 @@
 import { emailLayout, ctaButton, fmtUsd } from './email-templates';
 
 const ACTION_LABELS: Record<string, string> = { onramp: 'On-Ramp', offramp: 'Off-Ramp', no_action: 'No Action Needed' };
-const ACTION_COLORS: Record<string, string> = { onramp: '#16a34a', offramp: '#2563eb', no_action: '#6b7280' };
+const ACTION_COLORS: Record<string, string> = { onramp: '#34d399', offramp: '#60a5fa', no_action: '#6b7280' };
 
 interface RecommendationEmailParams {
   id: string;
@@ -20,12 +20,9 @@ interface RecommendationEmailParams {
   expiresAt?: string;
 }
 
-/** Format AI reasoning for email: convert **markdown bold** to HTML and bold section headers */
 function formatReasoning(text: string): string {
-  // First convert **bold** markdown to <strong> tags
-  let formatted = text.replace(/\*\*([^*]+)\*\*/g, '<strong style="font-weight:700;color:#111">$1</strong>');
+  let formatted = text.replace(/\*\*([^*]+)\*\*/g, '<strong style="font-weight:700;color:#fff">$1</strong>');
 
-  // Also bold any remaining header lines (emoji + plain text, no markdown)
   const headerPatterns = [
     'Current Position', 'Reasoning', 'Recommendation',
     'Obligations', 'Analysis', 'Summary', 'Action', 'Overview',
@@ -38,7 +35,7 @@ function formatReasoning(text: string): string {
       const isHeader = trimmed.length < 60 && !trimmed.endsWith('.') &&
         headerPatterns.some((h) => trimmed.includes(h));
       if (isHeader) {
-        return `<strong style="font-weight:700;color:#111">${line}</strong>`;
+        return `<strong style="font-weight:700;color:#fff">${line}</strong>`;
       }
       return line;
     })
@@ -64,15 +61,15 @@ export function recommendationEmailHtml(params: RecommendationEmailParams): stri
       ? `USD (${params.bankLabel})`
       : `${params.stablecoinToken} on ${chainLabel} (${params.walletLabel})`;
     movementHtml = `
-      <div style="background:#f0faf9;border-radius:8px;padding:12px 16px;margin-top:16px;font-size:13px">
-        <span style="color:#111;font-weight:600">${from}</span>
-        <span style="color:#999;margin:0 8px">&rarr;</span>
-        <span style="color:#111;font-weight:600">${to}</span>
+      <div style="background:rgba(45,212,191,0.08);border:1px solid rgba(45,212,191,0.2);border-radius:8px;padding:12px 16px;margin-top:16px;font-size:13px">
+        <span style="color:#e5e7eb;font-weight:600">${from}</span>
+        <span style="color:#6b7280;margin:0 8px">&rarr;</span>
+        <span style="color:#e5e7eb;font-weight:600">${to}</span>
       </div>`;
   }
 
   const expirationHtml = isPending && params.expiresAt
-    ? `<p style="color:#f59e0b;font-size:12px;margin:16px 0 0;text-align:center">This recommendation expires in 24 hours.</p>`
+    ? `<p style="color:#fbbf24;font-size:12px;margin:16px 0 0;text-align:center">This recommendation expires in 24 hours.</p>`
     : '';
 
   const ctaHtml = isPending
@@ -99,28 +96,28 @@ export function recommendationEmailHtml(params: RecommendationEmailParams): stri
     <div style="padding:32px">
       <div style="margin-bottom:20px">
         <span style="color:${actionColor};font-weight:700;font-size:16px">${actionLabel}</span>
-        ${params.recommendedAmountUsd ? `<span style="font-size:20px;font-weight:700;color:#111;margin-left:8px">${fmtUsd(params.recommendedAmountUsd)}</span>` : ''}
-        <span style="float:right;background:#f0f0f0;color:#666;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:600">${statusLabel}</span>
+        ${params.recommendedAmountUsd ? `<span style="font-size:20px;font-weight:700;color:#fff;margin-left:8px">${fmtUsd(params.recommendedAmountUsd)}</span>` : ''}
+        <span style="float:right;background:rgba(255,255,255,0.06);color:#9ca3af;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:600">${statusLabel}</span>
       </div>
 
-      <table style="width:100%;border-collapse:collapse;background:#fafafa;border-radius:8px;overflow:hidden">
+      <table style="width:100%;border-collapse:collapse;background:rgba(255,255,255,0.03);border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.08)">
         <tr>
           <td style="padding:12px 16px;text-align:center;width:33%">
-            <div style="color:#999;font-size:11px;margin-bottom:4px">Fiat Balance</div>
-            <div style="font-size:14px;font-weight:700;color:#111">${fmtUsd(params.totalBankBalanceUsd)}</div>
+            <div style="color:#6b7280;font-size:11px;margin-bottom:4px">Fiat Balance</div>
+            <div style="font-size:14px;font-weight:700;color:#e5e7eb">${fmtUsd(params.totalBankBalanceUsd)}</div>
           </td>
-          <td style="padding:12px 16px;text-align:center;width:33%;border-left:1px solid #eee;border-right:1px solid #eee">
-            <div style="color:#999;font-size:11px;margin-bottom:4px">Obligations (${params.obligationLookaheadDays}d)</div>
-            <div style="font-size:14px;font-weight:700;color:#111">${fmtUsd(params.obligationsInWindowUsd)}</div>
+          <td style="padding:12px 16px;text-align:center;width:33%;border-left:1px solid rgba(255,255,255,0.08);border-right:1px solid rgba(255,255,255,0.08)">
+            <div style="color:#6b7280;font-size:11px;margin-bottom:4px">Obligations (${params.obligationLookaheadDays}d)</div>
+            <div style="font-size:14px;font-weight:700;color:#e5e7eb">${fmtUsd(params.obligationsInWindowUsd)}</div>
           </td>
           <td style="padding:12px 16px;text-align:center;width:33%">
-            <div style="color:#999;font-size:11px;margin-bottom:4px">Safety Target</div>
-            <div style="font-size:14px;font-weight:700;color:#111">${fmtUsd(params.safetyBufferTargetUsd)}</div>
+            <div style="color:#6b7280;font-size:11px;margin-bottom:4px">Safety Target</div>
+            <div style="font-size:14px;font-weight:700;color:#e5e7eb">${fmtUsd(params.safetyBufferTargetUsd)}</div>
           </td>
         </tr>
       </table>
 
-      <div style="border-left:3px solid ${actionColor};padding:12px 16px;margin-top:16px;font-size:13px;color:#333;line-height:1.6;white-space:pre-line">${formatReasoning(params.aiReasoning)}</div>
+      <div style="border-left:3px solid ${actionColor};padding:12px 16px;margin-top:16px;font-size:13px;color:#d1d5db;line-height:1.6;white-space:pre-line">${formatReasoning(params.aiReasoning)}</div>
 
       ${movementHtml}
       ${ctaHtml}

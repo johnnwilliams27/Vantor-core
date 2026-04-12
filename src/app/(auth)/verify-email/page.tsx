@@ -5,12 +5,12 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { CheckCircle2, XCircle, Clock, Mail } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { LoginBackground } from '@/components/auth/LoginBackground';
 
 const statusConfig = {
   success: {
     icon: CheckCircle2,
-    iconColor: 'text-teal-400',
+    iconColor: 'text-[var(--teal-400)]',
     title: 'Email Verified',
     message: 'Your email has been verified. You can now sign in to your account.',
     showLogin: true,
@@ -31,14 +31,14 @@ const statusConfig = {
   },
   already: {
     icon: CheckCircle2,
-    iconColor: 'text-teal-400',
+    iconColor: 'text-[var(--teal-400)]',
     title: 'Already Verified',
     message: 'Your email is already verified. You can sign in to your account.',
     showLogin: true,
   },
   pending: {
     icon: Mail,
-    iconColor: 'text-teal-400',
+    iconColor: 'text-[var(--teal-400)]',
     title: 'Check Your Email',
     message: 'We sent a verification link to your email address. Please click the link to activate your account.',
     showLogin: false,
@@ -61,7 +61,6 @@ function VerifyEmailContent() {
   const config = statusConfig[status] || statusConfig.pending;
   const Icon = config.icon;
 
-  // Poll for email verification when in pending state
   const checkVerification = useCallback(async () => {
     if (!email) return false;
     try {
@@ -79,7 +78,6 @@ function VerifyEmailContent() {
 
   useEffect(() => {
     if (status !== 'pending' || !email) return;
-
     const interval = setInterval(async () => {
       const verified = await checkVerification();
       if (verified) {
@@ -87,57 +85,57 @@ function VerifyEmailContent() {
         router.replace('/verify-email?status=success');
       }
     }, 3000);
-
     return () => clearInterval(interval);
   }, [status, email, checkVerification, router]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#060d1f] px-4">
-      <Card className="w-full max-w-sm shadow-lg border-white/10 bg-white/[0.03] backdrop-blur-sm">
-        <CardContent className="p-0">
-          <div className="bg-[#19595b] rounded-t-xl px-8 py-6 flex flex-col items-center">
-            <Image
-              src="/logo-dark.png"
-              alt="Vantor"
-              width={200}
-              height={78}
-              className="object-contain"
-              priority
-              unoptimized
-            />
-          </div>
+    <div className="relative flex min-h-screen items-center justify-center bg-[var(--bg-void)] px-4">
+      <LoginBackground />
+      <div className="relative z-10 w-full max-w-md landing-card p-0 overflow-hidden">
+        {/* Header */}
+        <div className="px-8 pt-8 pb-6 flex flex-col items-center border-b border-white/[0.06]">
+          <Image
+            src="/logo-dark.png"
+            alt="Vantor"
+            width={160}
+            height={52}
+            className="object-contain"
+            priority
+            unoptimized
+          />
+        </div>
 
-          <div className="px-8 py-8 text-center">
-            <Icon className={`w-12 h-12 mx-auto mb-4 ${config.iconColor}`} />
-            <h2 className="text-lg font-semibold text-white mb-2">{config.title}</h2>
-            <p className="text-sm text-gray-400 leading-relaxed">{config.message}</p>
+        {/* Body */}
+        <div className="px-8 py-8 text-center">
+          <Icon className={`w-12 h-12 mx-auto mb-4 ${config.iconColor}`} />
+          <h2 className="text-lg font-semibold text-white mb-2">{config.title}</h2>
+          <p className="text-sm text-[var(--text-300)] leading-relaxed">{config.message}</p>
 
-            {config.showLogin && (
-              <Link
-                href="/login"
-                className="inline-block mt-6 px-6 py-2.5 rounded-lg bg-[#19595b] hover:bg-[#134849] text-white text-sm font-medium transition-colors"
-              >
-                Sign in
-              </Link>
-            )}
+          {config.showLogin && (
+            <Link
+              href="/login"
+              className="inline-block mt-6 min-h-[44px] px-6 py-2.5 text-sm btn-gradient"
+            >
+              Sign in
+            </Link>
+          )}
 
-            {status === 'pending' && email && (
-              <p className="text-xs text-gray-500 mt-4 animate-pulse">
-                This page will update automatically once verified.
-              </p>
-            )}
+          {status === 'pending' && email && (
+            <p className="text-xs text-[var(--text-400)] mt-4 animate-pulse">
+              This page will update automatically once verified.
+            </p>
+          )}
 
-            {status === 'expired' && (
-              <Link
-                href="/register"
-                className="inline-block mt-6 px-6 py-2.5 rounded-lg bg-[#19595b] hover:bg-[#134849] text-white text-sm font-medium transition-colors"
-              >
-                Register again
-              </Link>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+          {status === 'expired' && (
+            <Link
+              href="/register"
+              className="inline-block mt-6 min-h-[44px] px-6 py-2.5 text-sm btn-gradient"
+            >
+              Register again
+            </Link>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

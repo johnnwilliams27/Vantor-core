@@ -1,18 +1,28 @@
-const BRAND_COLOR = '#19595b';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.vantor.xyz';
+
+// Dark palette matching landing page tokens
+const BG = '#060d1f';
+const CARD = '#0a1628';
+const BORDER = 'rgba(255,255,255,0.08)';
+const TEXT_1 = '#e5e7eb';
+const TEXT_2 = '#d1d5db';
+const TEXT_3 = '#9ca3af';
+const TEXT_4 = '#6b7280';
+const TEAL = '#2dd4bf';
+const CYAN = '#67e8f9';
 
 export function emailLayout(content: string): string {
   return `<!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f7f7f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
-  <div style="max-width:560px;margin:40px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1)">
-    <div style="background:${BRAND_COLOR};padding:28px 32px;text-align:center">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"></head>
+<body style="margin:0;padding:0;background:${BG};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${TEXT_2}">
+  <div style="max-width:560px;margin:40px auto;background:${CARD};border-radius:16px;overflow:hidden;border:1px solid ${BORDER}">
+    <div style="padding:28px 32px;text-align:center;border-bottom:1px solid ${BORDER}">
       <img src="https://vantor.xyz/logo-dark.png" alt="Vantor" style="height:40px" />
     </div>
     ${content}
-    <div style="padding:16px 32px;background:#fafafa;border-top:1px solid #eee;text-align:center">
-      <p style="color:#999;font-size:11px;margin:0">&copy; 2026 Vantor Treasury, Inc. All rights reserved.</p>
+    <div style="padding:16px 32px;border-top:1px solid ${BORDER};text-align:center">
+      <p style="color:${TEXT_4};font-size:11px;margin:0">&copy; 2026 Vantor Treasury, Inc. All rights reserved.</p>
     </div>
   </div>
 </body>
@@ -22,9 +32,9 @@ export function emailLayout(content: string): string {
 export function ctaButton(label: string, href: string, variant: 'primary' | 'outline' = 'primary'): string {
   const fullHref = href.startsWith('http') ? href : `${APP_URL}${href}`;
   if (variant === 'outline') {
-    return `<a href="${fullHref}" style="display:inline-block;padding:12px 24px;border:2px solid ${BRAND_COLOR};color:${BRAND_COLOR};text-decoration:none;border-radius:8px;font-weight:600;font-size:14px">${label}</a>`;
+    return `<a href="${fullHref}" style="display:inline-block;padding:12px 24px;border:1px solid rgba(45,212,191,0.5);color:${TEAL};text-decoration:none;border-radius:999px;font-weight:600;font-size:14px">${label}</a>`;
   }
-  return `<a href="${fullHref}" style="display:inline-block;padding:12px 24px;background:${BRAND_COLOR};color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px">${label}</a>`;
+  return `<a href="${fullHref}" style="display:inline-block;padding:12px 24px;background:linear-gradient(90deg,${TEAL},${CYAN});color:${BG};text-decoration:none;border-radius:999px;font-weight:600;font-size:14px">${label}</a>`;
 }
 
 export function fmtUsd(v: string | number | null): string {
@@ -42,21 +52,21 @@ export function actionNotificationEmail(params: {
   const detailRows = params.details
     .map((d) => `
       <tr>
-        <td style="padding:6px 12px;color:#666;font-size:13px;border-bottom:1px solid #f0f0f0">${d.label}</td>
-        <td style="padding:6px 12px;font-size:13px;font-weight:600;color:#111;border-bottom:1px solid #f0f0f0;text-align:right">${d.value}</td>
+        <td style="padding:8px 14px;color:${TEXT_3};font-size:13px;border-bottom:1px solid ${BORDER}">${d.label}</td>
+        <td style="padding:8px 14px;font-size:13px;font-weight:600;color:${TEXT_1};border-bottom:1px solid ${BORDER};text-align:right">${d.value}</td>
       </tr>`)
     .join('');
 
   const deviationHtml = params.scheduledDeviation
-    ? `<div style="background:#fef3c7;border:1px solid #f59e0b33;border-radius:8px;padding:12px;margin-top:16px;font-size:13px;color:#92400e">
+    ? `<div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:12px;margin-top:16px;font-size:13px;color:#fbbf24">
         Rate deviation: ${params.scheduledDeviation.actualBps}bps (tolerance: ${params.scheduledDeviation.toleranceBps}bps)
       </div>`
     : '';
 
   return emailLayout(`
     <div style="padding:32px">
-      <h1 style="font-size:20px;color:#111;margin:0 0 20px">${params.title}</h1>
-      <table style="width:100%;border-collapse:collapse;background:#fafafa;border-radius:8px;overflow:hidden">
+      <h1 style="font-size:20px;color:#fff;margin:0 0 20px">${params.title}</h1>
+      <table style="width:100%;border-collapse:collapse;background:rgba(255,255,255,0.03);border-radius:8px;overflow:hidden;border:1px solid ${BORDER}">
         ${detailRows}
       </table>
       ${deviationHtml}
@@ -73,14 +83,15 @@ export function alertEmail(params: {
   ctaHref: string;
   severity?: 'warning' | 'error';
 }): string {
-  const severityColor = params.severity === 'error' ? '#dc2626' : '#f59e0b';
-  const severityBg = params.severity === 'error' ? '#fef2f2' : '#fffbeb';
+  const severityColor = params.severity === 'error' ? '#f87171' : '#fbbf24';
+  const severityBg = params.severity === 'error' ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)';
+  const severityBorder = params.severity === 'error' ? 'rgba(239,68,68,0.3)' : 'rgba(245,158,11,0.3)';
 
   return emailLayout(`
     <div style="padding:32px">
-      <div style="background:${severityBg};border-left:4px solid ${severityColor};border-radius:0 8px 8px 0;padding:16px 20px;margin-bottom:24px">
-        <h1 style="font-size:18px;color:#111;margin:0 0 8px">${params.title}</h1>
-        <p style="color:#666;font-size:14px;margin:0;line-height:1.5">${params.description}</p>
+      <div style="background:${severityBg};border-left:4px solid ${severityColor};border:1px solid ${severityBorder};border-left-width:4px;border-radius:0 8px 8px 0;padding:16px 20px;margin-bottom:24px">
+        <h1 style="font-size:18px;color:#fff;margin:0 0 8px">${params.title}</h1>
+        <p style="color:${TEXT_2};font-size:14px;margin:0;line-height:1.5">${params.description}</p>
       </div>
       <div style="text-align:center">
         ${ctaButton(params.ctaLabel, params.ctaHref)}
@@ -96,8 +107,8 @@ export function infoEmail(params: {
 }): string {
   return emailLayout(`
     <div style="padding:32px;text-align:center">
-      <h1 style="font-size:20px;color:#111;margin:0 0 12px">${params.title}</h1>
-      <p style="color:#666;font-size:14px;margin:0 0 24px;line-height:1.5">${params.description}</p>
+      <h1 style="font-size:20px;color:#fff;margin:0 0 12px">${params.title}</h1>
+      <p style="color:${TEXT_3};font-size:14px;margin:0 0 24px;line-height:1.5">${params.description}</p>
       ${ctaButton(params.ctaLabel, params.ctaHref)}
     </div>`);
 }
