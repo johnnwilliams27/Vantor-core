@@ -1,9 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getStablecoinPrices, priceToken } from '@/lib/treasury/oracle';
 import { getFxRate, SUPPORTED_FIAT_CURRENCIES, type FiatCurrency } from '@/lib/fx/rates';
-import { getHoldingTaxonomy } from '@/lib/treasury/holdings-category';
-import type { YieldProtocolId } from '@/lib/yield/interface';
-import type { TokenSymbol } from '@/types/database';
+import { computeSegmentationBuckets } from './segmentation';
 import type {
   BankAccountPosition,
   DefiPosition,
@@ -219,61 +217,17 @@ export class TreasuryStateService {
       pendingTransfers: pending,
     };
 
-    // ── Canonical L3 leaves (Phase C-1.5a taxonomy) ──────────────
-    // See src/lib/treasury/holdings-category.ts for the full taxonomy.
-    let totalBankBaseUsd = 0;
-    let totalStablecoinIdleBaseUsd = 0;
-    let totalMmfBaseUsd = 0;
-    let totalDefiVaultBaseUsd = 0;
-    let totalDefiLendingBaseUsd = 0;
-    let totalOtherBaseUsd = 0;
+    const buckets = computeSegmentationBuckets({ bankAccounts, wallets, defiPositions });
 
-    for (const b of bankAccounts) {
-      totalBankBaseUsd += b.balanceBaseUsd;
-    }
-    for (const w of wallets) {
-      const tax = getHoldingTaxonomy({
-        kind: 'wallet_balance',
-        token: w.token as TokenSymbol,
-      });
-      if (tax === 'stablecoin') totalStablecoinIdleBaseUsd += w.balanceBaseUsd;
-      else totalOtherBaseUsd += w.balanceBaseUsd;
-    }
-    for (const p of defiPositions) {
-      const tax = getHoldingTaxonomy({
-        kind: 'yield_position',
-        protocol: p.protocol as YieldProtocolId,
-      });
-      if (tax === 'mmf') totalMmfBaseUsd += p.currentValueBaseUsd;
-      else if (tax === 'defi_vault') totalDefiVaultBaseUsd += p.currentValueBaseUsd;
-      else if (tax === 'defi_lending') totalDefiLendingBaseUsd += p.currentValueBaseUsd;
-      else totalOtherBaseUsd += p.currentValueBaseUsd;
-    }
-
-    // ── Legacy aggregates (dual-write for C-1.5 migration window) ──
-    const totalFiatBaseUsd = bankAccounts.reduce((a, b) => a + b.balanceBaseUsd, 0);
-    const totalStablecoinBaseUsd = wallets.reduce((a, b) => a + b.balanceBaseUsd, 0);
-    const totalDefiBaseUsd = defiPositions.reduce(
-      (a, b) => a + b.currentValueBaseUsd,
-      0,
-    );
-
-    const totalValueBaseUsd =
-      totalBankBaseUsd +
-      totalStablecoinIdleBaseUsd +
-      totalMmfBaseUsd +
-      totalDefiVaultBaseUsd +
-      totalDefiLendingBaseUsd +
-      totalOtherBaseUsd;
-
-    // Invariant — new-model sum must equal legacy sum. If this diverges,
-    // either the legacy logic has a bug or a new venue category needs
-    // adding to holdings-category.ts.
+    // Invariant — new-leaf sum must equal legacy sum. If this diverges, a
+    // new venue category was added to the registry but not to the
+    // taxonomy in holdings-category.ts.
     if (process.env.NODE_ENV !== 'production') {
-      const legacySum = totalFiatBaseUsd + totalStablecoinBaseUsd + totalDefiBaseUsd;
-      if (Math.abs(totalValueBaseUsd - legacySum) > 0.01) {
+      const legacySum =
+        buckets.totalFiatBaseUsd + buckets.totalStablecoinBaseUsd + buckets.totalDefiBaseUsd;
+      if (Math.abs(buckets.totalValueBaseUsd - legacySum) > 0.01) {
         console.warn(
-          `[TreasuryStateService] Taxonomy drift detected: new=${totalValueBaseUsd}, legacy=${legacySum} for enterprise ${enterpriseId}`,
+          `[TreasuryStateService] Taxonomy drift: new=${buckets.totalValueBaseUsd}, legacy=${legacySum} for enterprise ${enterpriseId}`,
         );
       }
     }
@@ -283,16 +237,16 @@ export class TreasuryStateService {
       takenBy: null,
       trigger,
       baseCurrency: 'USD',
-      totalValueBaseUsd,
-      totalFiatBaseUsd,
-      totalStablecoinBaseUsd,
-      totalDefiBaseUsd,
-      totalBankBaseUsd,
-      totalStablecoinIdleBaseUsd,
-      totalMmfBaseUsd,
-      totalDefiVaultBaseUsd,
-      totalDefiLendingBaseUsd,
-      totalOtherBaseUsd,
+      totalValueBaseUsd: buckets.totalValueBaseUsd,
+      totalFiatBaseUsd: buckets.totalFiatBaseUsd,
+      totalStablecoinBaseUsd: buckets.totalStablecoinBaseUsd,
+      totalDefiBaseUsd: buckets.totalDefiBaseUsd,
+      totalBankBaseUsd: buckets.totalBankBaseUsd,
+      totalStablecoinIdleBaseUsd: buckets.totalStablecoinIdleBaseUsd,
+      totalMmfBaseUsd: buckets.totalMmfBaseUsd,
+      totalDefiVaultBaseUsd: buckets.totalDefiVaultBaseUsd,
+      totalDefiLendingBaseUsd: buckets.totalDefiLendingBaseUsd,
+      totalOtherBaseUsd: buckets.totalOtherBaseUsd,
       positions,
       fxRates,
     };
