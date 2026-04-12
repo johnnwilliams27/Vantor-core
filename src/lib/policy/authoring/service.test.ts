@@ -1009,3 +1009,72 @@ describe('Task 12 — activateVersion', () => {
   });
 });
 
+// ─── Task 13: diffVersions + checkSatisfiability wrappers ────────────────────
+
+const VERSION_A = {
+  ...DRAFT_VERSION,
+  id: 'ver-a',
+  version_number: 1,
+};
+
+const VERSION_B = {
+  ...DRAFT_VERSION,
+  id: 'ver-b',
+  version_number: 2,
+};
+
+describe('Task 13 — diffVersions', () => {
+  it('returns a VersionDiff between two versions', async () => {
+    const ruleInA = { ...SAMPLE_RULE, id: 'rule-a1', version_id: 'ver-a' };
+    const ruleInB = { ...SAMPLE_RULE, id: 'rule-b1', version_id: 'ver-b', name: 'Changed Rule Name' };
+    const ruleOnlyInB = { ...SAMPLE_RULE, id: 'rule-b2', version_id: 'ver-b', name: 'New Rule', priority: 20 };
+
+    const db = mockSupabase({
+      policy_versions: [VERSION_A, VERSION_B],
+      policy_rules: [ruleInA, ruleInB, ruleOnlyInB],
+      policy_hard_limits: [],
+      policy_approval_chains: [],
+    });
+    const svc = new PolicyAuthoringService(db);
+    const diff = await svc.diffVersions(adminActor, 'ver-a', 'ver-b');
+    expect(diff.from_version_id).toBe('ver-a');
+    expect(diff.to_version_id).toBe('ver-b');
+    // rule-a1 exists in A but not B → removed; rule-b2 only in B → added
+    expect(diff.rules.added.some((r) => r.id === 'rule-b2')).toBe(true);
+    expect(diff.rules.removed.some((r) => r.id === 'rule-a1')).toBe(true);
+  });
+});
+
+describe('Task 13 — checkSatisfiability', () => {
+  it('returns SatisfiabilityResult for a version with chains', async () => {
+    const chainWithSlot = {
+      ...SAMPLE_CHAIN,
+      id: 'chain-sat',
+      version_id: 'ver-a',
+    };
+    const enterpriseUserRow = {
+      id: 'user-tm',
+      enterprise_id: ENTERPRISE_ID,
+      role: 'treasury_manager',
+      is_policy_admin: false,
+      is_app_admin: false,
+    };
+    const db = mockSupabase({
+      policy_versions: [VERSION_A],
+      policy_rules: [],
+      policy_hard_limits: [],
+      policy_approval_chains: [chainWithSlot],
+      user_profiles: [enterpriseUserRow],
+    });
+    const svc = new PolicyAuthoringService(db);
+    const result = await svc.checkSatisfiability(adminActor, 'ver-a');
+    expect(result.version_id).toBe('ver-a');
+    expect(typeof result.all_satisfiable).toBe('boolean');
+    expect(Array.isArray(result.chain_results)).toBe(true);
+    // Chain has one slot requiring treasury_manager — enterpriseUserRow qualifies
+    expect(result.all_satisfiable).toBe(true);
+    expect(result.chain_results[0].chain_id).toBe('chain-sat');
+    expect(result.chain_results[0].satisfiable).toBe(true);
+  });
+});
+
