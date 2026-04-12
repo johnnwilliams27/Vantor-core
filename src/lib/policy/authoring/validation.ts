@@ -9,7 +9,9 @@ import {
 } from './types';
 import { PolicyVersionSnapshot } from '../types/policy-version';
 import { AssetCode } from '../types/assets';
-import { APPROVER_ROLES } from '@/lib/auth/roles';
+import { APPROVER_ROLES, ROLE_RANK } from '@/lib/auth/roles';
+import type { Condition } from '../types/ir';
+import type { ApproverRole } from '../types/verdict';
 
 const RATE_SUPPORTED_ASSETS: ReadonlySet<AssetCode> = new Set<AssetCode>(['USD', 'USDC', 'USDT']);
 
@@ -352,6 +354,12 @@ export function validateVersionCoherent(version: PolicyVersionSnapshot): void {
     }
   }
 
+  // Chain-size guardrails for high-value approval thresholds. Prevents
+  // policy authors from shipping a "$10M → single accountant approval"
+  // chain. Applied at version activation only — draft state is allowed
+  // to be incomplete while the author iterates.
+  validateChainSizeGuardrails(version);
+
   const seenLimits = new Map<string, string>();
   for (const limit of version.hard_limits) {
     const key = `${limit.limit_type}:${limit.scope.asset ?? ''}`;
@@ -366,5 +374,120 @@ export function validateVersionCoherent(version: PolicyVersionSnapshot): void {
       });
     }
     seenLimits.set(key, limit.id);
+  }
+}
+
+// ─── Chain-size guardrails ──────────────────────────────────────────────────
+
+/**
+ * Thresholds (in USD) at which additional chain requirements kick in.
+ * Matches the product-level default ladder: $50K is single-approver,
+ * $500K requires dual approval, $1M requires an executive slot.
+ */
+export const CHAIN_SIZE_THRESHOLDS = {
+  /** At or above this amount, the chain must have >= 2 slots. */
+  DUAL_APPROVAL_USD: 500_000,
+  /** At or above this amount, at least one slot must require executive. */
+  EXECUTIVE_REQUIRED_USD: 1_000_000,
+} as const;
+
+/**
+ * Walks a Condition tree and collects every USD `transfer.amount`
+ * comparison with op '>' or '>='. Conservative heuristic: returns
+ * the MAX value found — if a rule mentions a $1M check anywhere in
+ * its tree, the guardrail treats it as a rule that CAN fire on
+ * $1M+ movements. Under-classifying is worse than over-classifying
+ * here; the cost of a false positive is the author must split the
+ * chain, the cost of a false negative is a single-approver rubber
+ * stamp on a seven-figure transfer.
+ *
+ * Exported for testing only.
+ */
+export function maxUsdAmountThreshold(condition: Condition): number {
+  let max = 0;
+  const visit = (node: Condition): void => {
+    switch (node.kind) {
+      case 'and':
+      case 'or':
+        node.children.forEach(visit);
+        return;
+      case 'not':
+        visit(node.child);
+        return;
+      case 'amount_compare': {
+        if (
+          node.attr === 'transfer.amount' &&
+          (node.op === '>' || node.op === '>=') &&
+          node.value.currency === 'USD'
+        ) {
+          const parsed = Number(node.value.amount);
+          if (Number.isFinite(parsed) && parsed > max) max = parsed;
+        }
+        return;
+      }
+      default:
+        return;
+    }
+  };
+  visit(condition);
+  return max;
+}
+
+function validateChainSizeGuardrails(version: PolicyVersionSnapshot): void {
+  const chainsById = new Map(version.approval_chains.map((c) => [c.id, c]));
+
+  for (const rule of version.rules) {
+    if (rule.verdict !== 'require_approval' || !rule.verdict_chain_id) continue;
+    const chain = chainsById.get(rule.verdict_chain_id);
+    // Chain-reference integrity is enforced separately above; a missing
+    // chain here means that earlier check will throw, so skip quietly.
+    if (!chain) continue;
+
+    const ruleThreshold = maxUsdAmountThreshold(rule.condition);
+    if (ruleThreshold === 0) continue; // no USD amount gate — guardrail N/A
+
+    // $500K: require dual approval
+    if (
+      ruleThreshold >= CHAIN_SIZE_THRESHOLDS.DUAL_APPROVAL_USD &&
+      chain.slots.length < 2
+    ) {
+      throw new AuthoringError({
+        reason_code: REASON_CODES.chain_insufficient_slots_for_amount,
+        human_readable:
+          `Rule '${rule.name}' fires on USD transfers at or above $${CHAIN_SIZE_THRESHOLDS.DUAL_APPROVAL_USD.toLocaleString()} but routes to chain '${chain.name}' which only has ${chain.slots.length} slot(s). High-value transfers require dual approval.`,
+        user_action: `Add a second slot to chain '${chain.name}', or split this rule so the high-value branch routes to a different chain.`,
+        details: {
+          rule_id: rule.id,
+          chain_id: chain.id,
+          rule_threshold_usd: ruleThreshold,
+          chain_slot_count: chain.slots.length,
+          required_slot_count: 2,
+        },
+        path: ['approval_chains'],
+      });
+    }
+
+    // $1M: additionally require at least one executive-level slot
+    if (ruleThreshold >= CHAIN_SIZE_THRESHOLDS.EXECUTIVE_REQUIRED_USD) {
+      const hasExecSlot = chain.slots.some(
+        (s) =>
+          ROLE_RANK[s.minimum_role as ApproverRole] >= ROLE_RANK.executive,
+      );
+      if (!hasExecSlot) {
+        throw new AuthoringError({
+          reason_code: REASON_CODES.chain_missing_executive_slot_for_amount,
+          human_readable:
+            `Rule '${rule.name}' fires on USD transfers at or above $${CHAIN_SIZE_THRESHOLDS.EXECUTIVE_REQUIRED_USD.toLocaleString()} but routes to chain '${chain.name}' which has no slot requiring executive or higher. Seven-figure transfers must include an executive approver.`,
+          user_action: `Change at least one slot in chain '${chain.name}' to require minimum_role='executive', or route this rule to a different chain.`,
+          details: {
+            rule_id: rule.id,
+            chain_id: chain.id,
+            rule_threshold_usd: ruleThreshold,
+            slot_roles: chain.slots.map((s) => s.minimum_role),
+          },
+          path: ['approval_chains'],
+        });
+      }
+    }
   }
 }

@@ -431,3 +431,197 @@ describe('adversarial: N1 — duplicate hard limit detection', () => {
     expect(() => validateVersionCoherent(v)).toThrow(AuthoringError);
   });
 });
+
+// ─── Chain-size guardrails ──────────────────────────────────────────────────
+// See CHAIN_SIZE_THRESHOLDS in validation.ts. These live in
+// validateVersionCoherent because the check needs both rules and chains.
+
+import { maxUsdAmountThreshold, CHAIN_SIZE_THRESHOLDS } from './validation';
+import type { Condition } from '../types/ir';
+
+function mkChain(
+  overrides: Partial<PolicyVersionSnapshot['approval_chains'][number]>,
+): PolicyVersionSnapshot['approval_chains'][number] {
+  return {
+    id: 'chain-1',
+    version_id: 'v-1',
+    name: 'Default Chain',
+    slots: [{ slot_index: 0, minimum_role: 'treasury_manager' }],
+    priority: 0,
+    expiration_hours: 24,
+    created_by: 'user-1',
+    created_at: new Date(),
+    ...overrides,
+  };
+}
+
+function mkRule(
+  overrides: Partial<PolicyVersionSnapshot['rules'][number]>,
+): PolicyVersionSnapshot['rules'][number] {
+  return {
+    id: 'rule-1',
+    version_id: 'v-1',
+    rule_type: 'approval_threshold',
+    name: 'High-value rule',
+    rationale: '',
+    condition: {
+      kind: 'amount_compare',
+      attr: 'transfer.amount',
+      op: '>',
+      value: { amount: '100', currency: 'USD' },
+    },
+    verdict: 'require_approval',
+    verdict_chain_id: 'chain-1',
+    priority: 1,
+    created_by: 'user-1',
+    created_at: new Date(),
+    ...overrides,
+  };
+}
+
+describe('maxUsdAmountThreshold — condition tree walker', () => {
+  it('extracts the threshold from a flat amount_compare node', () => {
+    const cond: Condition = {
+      kind: 'amount_compare',
+      attr: 'transfer.amount',
+      op: '>',
+      value: { amount: '500000', currency: 'USD' },
+    };
+    expect(maxUsdAmountThreshold(cond)).toBe(500_000);
+  });
+
+  it('returns 0 for non-amount conditions', () => {
+    const cond: Condition = {
+      kind: 'string_compare',
+      attr: 'transfer.counterparty_id',
+      op: '==',
+      value: 'abc',
+    };
+    expect(maxUsdAmountThreshold(cond)).toBe(0);
+  });
+
+  it('ignores non-USD amount thresholds', () => {
+    const cond: Condition = {
+      kind: 'amount_compare',
+      attr: 'transfer.amount',
+      op: '>',
+      value: { amount: '500000', currency: 'USDC' },
+    };
+    expect(maxUsdAmountThreshold(cond)).toBe(0);
+  });
+
+  it('ignores amount comparisons that are not > or >=', () => {
+    // A < comparison means "rule fires below threshold" — not a high-value
+    // guard; should not contribute to the max.
+    const cond: Condition = {
+      kind: 'amount_compare',
+      attr: 'transfer.amount',
+      op: '<',
+      value: { amount: '500000', currency: 'USD' },
+    };
+    expect(maxUsdAmountThreshold(cond)).toBe(0);
+  });
+
+  it('walks AND trees and returns the max threshold across branches', () => {
+    const cond: Condition = {
+      kind: 'and',
+      children: [
+        { kind: 'amount_compare', attr: 'transfer.amount', op: '>', value: { amount: '100', currency: 'USD' } },
+        { kind: 'amount_compare', attr: 'transfer.amount', op: '>=', value: { amount: '1000000', currency: 'USD' } },
+      ],
+    };
+    expect(maxUsdAmountThreshold(cond)).toBe(1_000_000);
+  });
+
+  it('walks OR and NOT nodes', () => {
+    const cond: Condition = {
+      kind: 'or',
+      children: [
+        { kind: 'not', child: { kind: 'amount_compare', attr: 'transfer.amount', op: '>', value: { amount: '750000', currency: 'USD' } } },
+        { kind: 'string_compare', attr: 'transfer.rail', op: '==', value: 'wire' },
+      ],
+    };
+    // Recurses through `not` — conservative: we capture any amount the
+    // author wrote, even under negation. Flagging is safer than missing.
+    expect(maxUsdAmountThreshold(cond)).toBe(750_000);
+  });
+});
+
+describe('validateVersionCoherent — chain-size guardrails', () => {
+  it('rejects a $500K rule routing to a single-slot chain', () => {
+    const v = mkEmptyVersion();
+    v.approval_chains = [mkChain({ id: 'chain-1', slots: [{ slot_index: 0, minimum_role: 'treasury_manager' }] })];
+    v.rules = [mkRule({
+      condition: { kind: 'amount_compare', attr: 'transfer.amount', op: '>', value: { amount: String(CHAIN_SIZE_THRESHOLDS.DUAL_APPROVAL_USD), currency: 'USD' } },
+    })];
+    expect(() => validateVersionCoherent(v)).toThrow(/chain_insufficient_slots_for_amount|dual approval/i);
+  });
+
+  it('accepts a $500K rule routing to a two-slot chain', () => {
+    const v = mkEmptyVersion();
+    v.approval_chains = [mkChain({
+      id: 'chain-1',
+      slots: [
+        { slot_index: 0, minimum_role: 'treasury_manager' },
+        { slot_index: 1, minimum_role: 'treasury_manager' },
+      ],
+    })];
+    v.rules = [mkRule({
+      condition: { kind: 'amount_compare', attr: 'transfer.amount', op: '>=', value: { amount: '500000', currency: 'USD' } },
+    })];
+    expect(() => validateVersionCoherent(v)).not.toThrow();
+  });
+
+  it('rejects a $1M rule routing to a two-slot chain without an executive slot', () => {
+    const v = mkEmptyVersion();
+    v.approval_chains = [mkChain({
+      id: 'chain-1',
+      slots: [
+        { slot_index: 0, minimum_role: 'treasury_manager' },
+        { slot_index: 1, minimum_role: 'treasury_manager' },
+      ],
+    })];
+    v.rules = [mkRule({
+      condition: { kind: 'amount_compare', attr: 'transfer.amount', op: '>', value: { amount: String(CHAIN_SIZE_THRESHOLDS.EXECUTIVE_REQUIRED_USD), currency: 'USD' } },
+    })];
+    expect(() => validateVersionCoherent(v)).toThrow(/chain_missing_executive_slot_for_amount|executive/i);
+  });
+
+  it('accepts a $1M rule routing to a chain with an executive slot', () => {
+    const v = mkEmptyVersion();
+    v.approval_chains = [mkChain({
+      id: 'chain-1',
+      slots: [
+        { slot_index: 0, minimum_role: 'treasury_manager' },
+        { slot_index: 1, minimum_role: 'executive' },
+      ],
+    })];
+    v.rules = [mkRule({
+      condition: { kind: 'amount_compare', attr: 'transfer.amount', op: '>=', value: { amount: '1000000', currency: 'USD' } },
+    })];
+    expect(() => validateVersionCoherent(v)).not.toThrow();
+  });
+
+  it('ignores non-USD amount thresholds (guardrail is USD-denominated)', () => {
+    // A rule gating on 500K USDC (a stablecoin) shouldn't trigger the
+    // guardrail — USD-only for now. If we ever extend to other fiat
+    // equivalents this test needs updating.
+    const v = mkEmptyVersion();
+    v.approval_chains = [mkChain({ slots: [{ slot_index: 0, minimum_role: 'treasury_manager' }] })];
+    v.rules = [mkRule({
+      condition: { kind: 'amount_compare', attr: 'transfer.amount', op: '>', value: { amount: '500000', currency: 'USDC' } },
+    })];
+    expect(() => validateVersionCoherent(v)).not.toThrow();
+  });
+
+  it('leaves rules that do not require approval unaffected', () => {
+    const v = mkEmptyVersion();
+    v.approval_chains = [mkChain({ slots: [{ slot_index: 0, minimum_role: 'treasury_manager' }] })];
+    v.rules = [mkRule({
+      verdict: 'allow_auto',
+      verdict_chain_id: undefined,
+      condition: { kind: 'amount_compare', attr: 'transfer.amount', op: '>', value: { amount: '5000000', currency: 'USD' } },
+    })];
+    expect(() => validateVersionCoherent(v)).not.toThrow();
+  });
+});

@@ -61,6 +61,8 @@ export const REASON_CODES = {
   version_not_draft:                 'version_not_draft',
   hard_limit_value_out_of_range:     'hard_limit_value_out_of_range',
   obligation_coverage_advisory_only: 'obligation_coverage_advisory_only',
+  chain_insufficient_slots_for_amount:     'chain_insufficient_slots_for_amount',
+  chain_missing_executive_slot_for_amount: 'chain_missing_executive_slot_for_amount',
 
   // ─── Gate / execution ────────────────────────────────────────────────
   movement_validation_failed:        'movement_validation_failed',
