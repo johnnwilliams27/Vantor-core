@@ -17,14 +17,19 @@ type WriteOp = {
   filter?: Record<string, unknown>;
 };
 
-function mockSupabase(fixtures: {
-  policy_policies?: Array<Record<string, unknown>>;
-  policy_versions?: Array<Record<string, unknown>>;
-  policy_rules?: Array<Record<string, unknown>>;
-  policy_hard_limits?: Array<Record<string, unknown>>;
-  policy_approval_chains?: Array<Record<string, unknown>>;
-  user_profiles?: Array<Record<string, unknown>>;
-}) {
+type RpcHandler = (fn: string, params: Record<string, unknown>) => Promise<{ data: unknown; error: { code?: string; message?: string } | null }>;
+
+function mockSupabase(
+  fixtures: {
+    policy_policies?: Array<Record<string, unknown>>;
+    policy_versions?: Array<Record<string, unknown>>;
+    policy_rules?: Array<Record<string, unknown>>;
+    policy_hard_limits?: Array<Record<string, unknown>>;
+    policy_approval_chains?: Array<Record<string, unknown>>;
+    user_profiles?: Array<Record<string, unknown>>;
+  },
+  rpcHandler?: RpcHandler,
+) {
   const writes: WriteOp[] = [];
 
   function makeQB(table: string, rows: Array<Record<string, unknown>>) {
@@ -138,6 +143,7 @@ function mockSupabase(fixtures: {
       const rows = tableMap[table] ?? [];
       return makeQB(table, rows);
     },
+    rpc: rpcHandler ?? (async (_fn: string, _params: Record<string, unknown>) => ({ data: null, error: null })),
     _writes: writes,
   };
 
@@ -847,3 +853,159 @@ describe('Task 11 — deleteApprovalChain', () => {
     ).rejects.toThrow(AuthoringError);
   });
 });
+
+// ─── Task 12: activateVersion ────────────────────────────────────────────────
+
+// A minimal valid draft for activation (no rules, no hard limits, no chains —
+// so validateVersionCoherent passes without needing cross-references).
+const ACTIVATABLE_DRAFT = {
+  id: 'ver-activatable',
+  enterprise_id: ENTERPRISE_ID,
+  version_number: 3,
+  status: 'draft' as const,
+  name: 'Activatable Draft',
+  created_by: USER_ID,
+  activated_at: null,
+  activated_by: null,
+};
+
+// A user_profile row that makes requirePolicyAdmin pass
+const POLICY_ADMIN_PROFILE = {
+  id: USER_ID,
+  enterprise_id: ENTERPRISE_ID,
+  role: 'treasury_manager',
+  is_policy_admin: true,
+  is_app_admin: false,
+};
+
+// A user in the enterprise that satisfies chain slots
+const ENTERPRISE_USER = {
+  id: 'user-approver',
+  enterprise_id: ENTERPRISE_ID,
+  role: 'treasury_manager',
+  is_policy_admin: false,
+  is_app_admin: false,
+};
+
+const VALID_ACTIVATION_REASON = 'Approved by board resolution on 2026-04-12 per meeting minutes.';
+
+describe('Task 12 — activateVersion', () => {
+  it('rejects when reason is shorter than 20 characters', async () => {
+    const db = mockSupabase({
+      policy_versions: [ACTIVATABLE_DRAFT],
+      policy_rules: [],
+      policy_hard_limits: [],
+      policy_approval_chains: [],
+      user_profiles: [POLICY_ADMIN_PROFILE, ENTERPRISE_USER],
+    });
+    const svc = new PolicyAuthoringService(db);
+    const err = await svc
+      .activateVersion(policyAdminActor, 'ver-activatable', { reason: 'too short' })
+      .catch((e) => e);
+    expect(err).toBeInstanceOf(AuthoringError);
+    expect((err as AuthoringError).reason_code).toBe('activation_reason_too_short');
+  });
+
+  it('rejects when actor does not have policy_admin permission', async () => {
+    const db = mockSupabase({
+      policy_versions: [ACTIVATABLE_DRAFT],
+      policy_rules: [],
+      policy_hard_limits: [],
+      policy_approval_chains: [],
+      user_profiles: [{ id: 'user-no-admin', enterprise_id: ENTERPRISE_ID, role: 'treasury_manager', is_policy_admin: false, is_app_admin: false }],
+    });
+    const noAdminActorForActivation: AuthoringActor = {
+      user_id: 'user-no-admin',
+      role: 'treasury_manager',
+      enterprise_id: ENTERPRISE_ID,
+    };
+    const svc = new PolicyAuthoringService(db);
+    const err = await svc
+      .activateVersion(noAdminActorForActivation, 'ver-activatable', { reason: VALID_ACTIVATION_REASON })
+      .catch((e) => e);
+    expect(err).toBeInstanceOf(AuthoringError);
+    expect((err as AuthoringError).reason_code).toBe('requires_policy_admin');
+  });
+
+  it('rejects when draft fails re-validation (priority collision)', async () => {
+    const collisionRule1 = { ...SAMPLE_RULE, id: 'rule-c1', version_id: 'ver-activatable', priority: 10 };
+    const collisionRule2 = { ...SAMPLE_RULE, id: 'rule-c2', version_id: 'ver-activatable', priority: 10, name: 'Duplicate Priority Rule' };
+    const db = mockSupabase({
+      policy_versions: [ACTIVATABLE_DRAFT],
+      policy_rules: [collisionRule1, collisionRule2],
+      policy_hard_limits: [],
+      policy_approval_chains: [],
+      user_profiles: [POLICY_ADMIN_PROFILE],
+    });
+    const svc = new PolicyAuthoringService(db);
+    const err = await svc
+      .activateVersion(policyAdminActor, 'ver-activatable', { reason: VALID_ACTIVATION_REASON })
+      .catch((e) => e);
+    expect(err).toBeInstanceOf(AuthoringError);
+    expect((err as AuthoringError).reason_code).toBe('activation_blocked_by_validation');
+  });
+
+  it('calls the RPC with correct args on success', async () => {
+    const rpcCalls: Array<{ fn: string; params: Record<string, unknown> }> = [];
+    const db = mockSupabase(
+      {
+        policy_versions: [ACTIVATABLE_DRAFT],
+        policy_rules: [],
+        policy_hard_limits: [],
+        policy_approval_chains: [],
+        user_profiles: [POLICY_ADMIN_PROFILE, ENTERPRISE_USER],
+      },
+      async (fn, params) => {
+        rpcCalls.push({ fn, params });
+        return { data: null, error: null };
+      },
+    );
+    const svc = new PolicyAuthoringService(db);
+    await svc.activateVersion(policyAdminActor, 'ver-activatable', { reason: VALID_ACTIVATION_REASON });
+    expect(rpcCalls).toHaveLength(1);
+    expect(rpcCalls[0].fn).toBe('policy_activate_draft');
+    expect(rpcCalls[0].params.p_version_id).toBe('ver-activatable');
+    expect(rpcCalls[0].params.p_enterprise_id).toBe(ENTERPRISE_ID);
+    expect(rpcCalls[0].params.p_activated_by).toBe(USER_ID);
+    expect(rpcCalls[0].params.p_reason).toBe(VALID_ACTIVATION_REASON);
+  });
+
+  it('maps P0001 RPC error to activation_reason_too_short', async () => {
+    const db = mockSupabase(
+      {
+        policy_versions: [ACTIVATABLE_DRAFT],
+        policy_rules: [],
+        policy_hard_limits: [],
+        policy_approval_chains: [],
+        user_profiles: [POLICY_ADMIN_PROFILE, ENTERPRISE_USER],
+      },
+      async () => ({ data: null, error: { code: 'P0001', message: 'reason too short' } }),
+    );
+    const svc = new PolicyAuthoringService(db);
+    const err = await svc
+      .activateVersion(policyAdminActor, 'ver-activatable', { reason: VALID_ACTIVATION_REASON })
+      .catch((e) => e);
+    expect(err).toBeInstanceOf(AuthoringError);
+    expect((err as AuthoringError).reason_code).toBe('activation_reason_too_short');
+  });
+
+  it('maps P0002 RPC error to version_not_draft', async () => {
+    const db = mockSupabase(
+      {
+        policy_versions: [ACTIVATABLE_DRAFT],
+        policy_rules: [],
+        policy_hard_limits: [],
+        policy_approval_chains: [],
+        user_profiles: [POLICY_ADMIN_PROFILE, ENTERPRISE_USER],
+      },
+      async () => ({ data: null, error: { code: 'P0002', message: 'not draft' } }),
+    );
+    const svc = new PolicyAuthoringService(db);
+    const err = await svc
+      .activateVersion(policyAdminActor, 'ver-activatable', { reason: VALID_ACTIVATION_REASON })
+      .catch((e) => e);
+    expect(err).toBeInstanceOf(AuthoringError);
+    expect((err as AuthoringError).reason_code).toBe('version_not_draft');
+  });
+});
+
