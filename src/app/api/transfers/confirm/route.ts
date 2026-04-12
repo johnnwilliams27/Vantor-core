@@ -63,10 +63,46 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ data: transfer });
   }
 
+  // ─── Lazy materialization of approval outcome onto transfer row ──
+  // When the transfer went through the policy gate and required approval,
+  // the workflow service wrote only to policy_approval_requests — not to
+  // transfers. Reflect the outcome here before gating on status.
+  if (transfer.status === 'awaiting_approval') {
+    const { data: approval } = await supabase
+      .from('policy_approval_requests')
+      .select('status, denial_reason')
+      .eq('movement_id', transfer.id)
+      .eq('enterprise_id', enterpriseId)
+      .maybeSingle();
+
+    if (approval?.status === 'executed') {
+      await supabase
+        .from('transfers')
+        .update({ status: 'pending' })
+        .eq('id', transfer.id);
+      transfer.status = 'pending';
+    } else if (approval?.status === 'denied' || approval?.status === 'cancelled') {
+      const nextDenialReason = approval.denial_reason ?? approval.status;
+      await supabase
+        .from('transfers')
+        .update({ status: 'denied', denial_reason: nextDenialReason })
+        .eq('id', transfer.id);
+      transfer.status = 'denied';
+      (transfer as Record<string, unknown>).denial_reason = nextDenialReason;
+    }
+    // else: approval still pending — transfer stays awaiting_approval below.
+  }
+
   if (transfer.status !== 'pending' && transfer.status !== 'processing') {
     return NextResponse.json(
-      { error: `Cannot confirm transfer in state: ${transfer.status}` },
-      { status: 400 },
+      {
+        error: `Cannot confirm transfer in state: ${transfer.status}`,
+        status: transfer.status,
+        ...((transfer as Record<string, unknown>).denial_reason
+          ? { denial_reason: (transfer as Record<string, unknown>).denial_reason }
+          : {}),
+      },
+      { status: 409 },
     );
   }
 
