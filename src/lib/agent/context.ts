@@ -45,13 +45,16 @@ export async function buildSystemPrompt(
     const fmt = (n: number) =>
       n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+    const totalCashStablecoins = snapshot.totalBankBalanceUsd + snapshot.totalCryptoBalanceUsd;
+    const totalYieldPositions = snapshot.totalMmfPositionsUsd + snapshot.totalDefiPositionsUsd;
+
     snapshotSummary = [
       `Total AUM: $${fmt(totalAum)}`,
-      `Cash & cash equivalents: $${fmt(cashEquivalents)} (bank $${fmt(snapshot.totalBankBalanceUsd)} + tokenized MMFs $${fmt(snapshot.totalMmfPositionsUsd)})`,
+      `Cash & Stablecoins: $${fmt(totalCashStablecoins)} (bank $${fmt(snapshot.totalBankBalanceUsd)} + stablecoin wallets $${fmt(snapshot.totalCryptoBalanceUsd)})`,
       `Bank balances: $${fmt(snapshot.totalBankBalanceUsd)} across ${snapshot.bankAccounts.length} account(s)`,
       bankDetails,
-      `Idle stablecoin wallets (USDC/USDT): $${fmt(snapshot.totalCryptoBalanceUsd)} across ${snapshot.cryptoPositions.length} wallet position(s)`,
-      `DeFi positions: $${fmt(snapshot.totalDefiPositionsUsd)} (instantly-liquid yield only NOT covered here — see Yield positions below for protocol-level detail)`,
+      `Stablecoin wallets: $${fmt(snapshot.totalCryptoBalanceUsd)} across ${snapshot.cryptoPositions.length} wallet position(s)`,
+      `Yield positions: $${fmt(totalYieldPositions)} (tokenized MMFs $${fmt(snapshot.totalMmfPositionsUsd)} + DeFi protocols $${fmt(snapshot.totalDefiPositionsUsd)})`,
     ].join('\n');
   } catch {
     // Non-fatal — proceed without snapshot

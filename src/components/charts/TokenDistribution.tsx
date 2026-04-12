@@ -5,10 +5,12 @@ import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CardSpinner } from '@/components/ui/spinner';
+import { CardError, ChartSkeleton } from '@/components/ui/spinner';
 import { getVenueDisplayName } from '@/lib/yield/venues';
 import { getHoldingCardPlacement } from '@/lib/treasury/holdings-category';
 import type { YieldProtocolId } from '@/lib/yield/interface';
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency';
+import { useFxRates } from '@/hooks/useFxRates';
 
 const COLORS: Record<string, string> = {
   USDC: '#3b82f6',
@@ -17,7 +19,7 @@ const COLORS: Record<string, string> = {
 };
 
 // Fiat accounts get assigned from this palette in order
-const FIAT_PALETTE = ['#19595b', '#2d9ea2', '#3bc4c9', '#14b8a6', '#0d9488'];
+const FIAT_PALETTE = ['#14b8a6', '#2dd4bf', '#5eead4', '#0d9488', '#0f766e'];
 
 // Tokenized MMFs — warm amber/orange palette so they read as cash-class
 // but are visually distinct from bank balances.
@@ -26,18 +28,16 @@ const MMF_PALETTE = ['#eab308', '#f97316', '#ea580c', '#dc2626', '#d97706', '#ca
 // DeFi positions — cool indigo/violet palette to read as on-chain yield.
 const DEFI_PALETTE = ['#6366f1', '#8b5cf6', '#3b82f6', '#1d4ed8', '#06b6d4', '#7c3aed'];
 
-function formatUsd(v: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(v);
-}
-
-function formatCompact(v: number): string {
-  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
-  if (v >= 1_000) return `$${(v / 1_000).toFixed(0)}K`;
-  return `$${v.toFixed(0)}`;
+function makeFmt(currency: string) {
+  const full = (v: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(v);
+  const compact = (v: number) => {
+    const sym = currency === 'USD' ? '$' : currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : `${currency} `;
+    if (v >= 1_000_000) return `${sym}${(v / 1_000_000).toFixed(1)}M`;
+    if (v >= 1_000) return `${sym}${(v / 1_000).toFixed(0)}K`;
+    return `${sym}${v.toFixed(0)}`;
+  };
+  return { full, compact };
 }
 
 interface SliceData {
@@ -47,10 +47,12 @@ interface SliceData {
   category: 'fiat' | 'stablecoin' | 'mmf' | 'defi';
 }
 
-function CustomTooltip({ active, payload }: any) {
+function CustomTooltip({ active, payload, fmtFull, fxRate }: any) {
   if (!active || !payload?.length) return null;
   const d = payload[0]?.payload as SliceData | undefined;
   if (!d) return null;
+  const fmt = fmtFull ?? ((v: number) => `$${v.toFixed(0)}`);
+  const rate = fxRate ?? 1;
 
   return (
     <div className="rounded-lg border bg-background/95 backdrop-blur-sm px-3 py-2 shadow-lg">
@@ -58,7 +60,7 @@ function CustomTooltip({ active, payload }: any) {
         <span className="h-2 w-2 rounded-full" style={{ backgroundColor: d.color }} />
         <span className="text-xs font-medium">{d.name}</span>
       </div>
-      <p className="text-xs tabular-nums mt-0.5 ml-4">{formatUsd(d.value)}</p>
+      <p className="text-xs tabular-nums mt-0.5 ml-4">{fmt(d.value * rate)}</p>
     </div>
   );
 }
@@ -78,9 +80,14 @@ function renderCustomLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent
 }
 
 export function TokenDistribution() {
-  const { data: overview, isLoading: overviewLoading } = useTreasuryOverview();
-  const { data: yieldPositions, isLoading: yieldLoading } = useYieldPositions();
+  const { data: overview, isLoading: overviewLoading, isError: overviewError, refetch: refetchOverview } = useTreasuryOverview();
+  const { data: yieldPositions, isLoading: yieldLoading, isError: yieldError, refetch: refetchYield } = useYieldPositions();
   const isLoading = overviewLoading || yieldLoading;
+  const isError = overviewError || yieldError;
+  const { currency: dc } = useDisplayCurrency();
+  const { data: fxData } = useFxRates();
+  const fxRate = fxData?.rates?.[dc] ?? 1;
+  const { full: fmtFull, compact: fmtCompact } = makeFmt(dc);
 
   const slices: SliceData[] = [];
 
@@ -169,7 +176,18 @@ export function TokenDistribution() {
       <Card>
         <CardHeader><CardTitle>Asset Distribution</CardTitle></CardHeader>
         <CardContent>
-          <CardSpinner />
+          <ChartSkeleton />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Card>
+        <CardHeader><CardTitle>Asset Distribution</CardTitle></CardHeader>
+        <CardContent>
+          <CardError message="Failed to load asset data." onRetry={() => { refetchOverview(); refetchYield(); }} />
         </CardContent>
       </Card>
     );
@@ -194,7 +212,7 @@ export function TokenDistribution() {
         <div className="flex items-center justify-between">
           <CardTitle>Asset Distribution</CardTitle>
           {total > 0 && (
-            <span className="text-lg font-semibold tabular-nums">{formatUsd(total)}</span>
+            <span className="text-lg font-semibold tabular-nums">{fmtFull(total * fxRate)}</span>
           )}
         </div>
       </CardHeader>
@@ -205,7 +223,7 @@ export function TokenDistribution() {
                   data={slices}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
+                  innerRadius={65}
                   outerRadius={110}
                   dataKey="value"
                   label={renderCustomLabel}
@@ -217,7 +235,27 @@ export function TokenDistribution() {
                     <Cell key={`${entry.name}-${i}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<CustomTooltip fmtFull={fmtFull} fxRate={fxRate} />} />
+                {/* Center label — total AUM */}
+                <text
+                  x="50%"
+                  y="48%"
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  className="text-xs fill-muted-foreground"
+                >
+                  Total
+                </text>
+                <text
+                  x="50%"
+                  y="56%"
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  className="text-sm font-semibold fill-foreground"
+                  style={{ fontVariantNumeric: 'tabular-nums' }}
+                >
+                  {fmtCompact(total * fxRate)}
+                </text>
               </PieChart>
             </ResponsiveContainer>
             <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 mt-2">
@@ -225,7 +263,7 @@ export function TokenDistribution() {
                 <div key={`${s.name}-${i}`} className="flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
                   <span className="text-xs text-foreground">{s.name}</span>
-                  <span className="text-xs tabular-nums text-foreground">{formatCompact(s.value)}</span>
+                  <span className="text-xs tabular-nums text-foreground">{fmtCompact(s.value * fxRate)}</span>
                 </div>
               ))}
             </div>

@@ -12,8 +12,8 @@ import {
 const capabilities = [
   {
     icon: LayoutDashboard,
-    title: 'Command Center',
-    desc: 'Unified view across every bank, wallet, and protocol.',
+    title: 'Dashboard',
+    desc: 'Unified view across every bank account, stablecoin wallet, and yield protocol.',
   },
   {
     icon: Coins,

@@ -5,8 +5,8 @@ import { LayoutDashboard, Coins, TrendingUp, Shield, Plug, BarChart3 } from 'luc
 const CAPABILITIES = [
   {
     icon: LayoutDashboard,
-    title: 'Command Center',
-    desc: 'Unified view across every bank, wallet, and protocol.',
+    title: 'Dashboard',
+    desc: 'Unified view across every bank account, stablecoin wallet, and yield protocol.',
     bullets: ['Cash Visibility', 'AI Insights', 'Asset Management', 'AI Agent Chat'],
     badge: 'Real-time',
   },

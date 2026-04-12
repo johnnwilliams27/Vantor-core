@@ -72,26 +72,43 @@
   }
 }
 
-/* Themed scrollbars */
-.scrollbar-thin {
+/* Global scrollbar — slim, dark, unobtrusive */
+* {
   scrollbar-width: thin;
-  scrollbar-color: hsl(var(--border)) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
 }
-.scrollbar-thin:hover {
-  scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+*:hover {
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
-.scrollbar-thin::-webkit-scrollbar {
+::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
-.scrollbar-thin::-webkit-scrollbar-track {
+::-webkit-scrollbar-track {
   background: transparent;
 }
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  background: hsl(var(--border));
-  border-radius: 3px;
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
 }
-.scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.3);
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Utility to hide scrollbar entirely (sidebar nav, etc.) */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
 }
 
 @layer utilities {
@@ -106,6 +123,10 @@
   }
   .animate-dropdown {
     animation: dropdownIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  /* Tabular numerals for financial data */
+  .nums {
+    font-variant-numeric: tabular-nums;
   }
 }
 

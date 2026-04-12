@@ -18,7 +18,7 @@ import {
 import { usePendingApprovals } from '@/hooks/useScheduledOperations';
 import { useSession } from 'next-auth/react';
 import { hasRole } from '@/lib/auth/rbac';
-import { CardSpinner } from '@/components/ui/spinner';
+import { CardError, CardSkeleton } from '@/components/ui/spinner';
 import {
   BrainCircuit,
   ArrowUpFromLine,
@@ -110,44 +110,40 @@ function CompactScheduledOp({
     op.type === 'swap' ? 'Swap' : op.type === 'bridge' ? 'Bridge' : 'Ramp';
 
   return (
-    <div className="py-2 border-b last:border-b-0">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
-            {typeLabel}
-          </Badge>
-          <p className="text-xs text-muted-foreground truncate">
+    <div className="py-3 border-b border-border/50 last:border-b-0">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="text-[11px] font-medium text-muted-foreground shrink-0 w-10">{typeLabel}</span>
+          <p className="text-sm text-foreground truncate">
             {scheduledOpSummary(op)}
           </p>
         </div>
 
         <div className="shrink-0">
           {isResolved ? (
-            <Badge
-              variant={
-                op.status === 'completed'
-                  ? 'success'
-                  : op.status === 'cancelled'
-                  ? 'destructive'
-                  : 'secondary'
-              }
-              className="text-[10px] px-1.5 py-0"
-            >
+            <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${
+              op.status === 'completed' ? 'text-green-600 dark:text-green-400'
+              : op.status === 'cancelled' ? 'text-red-600 dark:text-red-400'
+              : 'text-muted-foreground'
+            }`}>
+              <span className={`h-1.5 w-1.5 rounded-full ${
+                op.status === 'completed' ? 'bg-green-500'
+                : op.status === 'cancelled' ? 'bg-red-500'
+                : 'bg-gray-400'
+              }`} />
               {op.status === 'completed'
                 ? 'Approved'
                 : op.status === 'cancelled'
                 ? 'Denied'
                 : op.status.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
-            </Badge>
+            </span>
           ) : (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-6 text-xs px-3 py-0 bg-[#19595b] text-white hover:bg-[#134849] border-0"
+            <button
               onClick={() => onReview(op)}
+              className="text-xs font-medium text-teal-500 hover:text-teal-400 transition-colors"
             >
-              Review
-            </Button>
+              Review →
+            </button>
           )}
         </div>
       </div>
@@ -202,9 +198,9 @@ function CompactRec({ rec }: { rec: AiRecommendation }) {
 
   return (
     <>
-      <div className="py-2 border-b last:border-b-0">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
+      <div className="py-3 border-b border-border/50 last:border-b-0">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
             <span className="text-muted-foreground shrink-0">
               {ACTION_ICONS[rec.action] ?? ACTION_ICONS.no_action}
             </span>
@@ -215,7 +211,7 @@ function CompactRec({ rec }: { rec: AiRecommendation }) {
                   <span className="tabular-nums">{formatUsd(rec.recommended_amount_usd)}</span>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground truncate">
+              <p className="text-xs text-muted-foreground truncate mt-0.5">
                 {rec.action !== 'no_action' && rec.stablecoin_token ? (
                   rec.action === 'offramp'
                     ? `${rec.stablecoin_token} on ${chainLabel} (${walletLabel}) → USD (${bankLabel})`
@@ -227,32 +223,36 @@ function CompactRec({ rec }: { rec: AiRecommendation }) {
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="shrink-0">
             {canAct ? (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-6 text-xs px-3 py-0 bg-[#19595b] text-white hover:bg-[#134849] border-0"
+              <button
                 onClick={() => setShowReview(true)}
                 disabled={approve.isPending || reject.isPending}
+                className="text-xs font-medium text-teal-500 hover:text-teal-400 transition-colors disabled:opacity-50"
               >
-                Review
-              </Button>
+                Review →
+              </button>
             ) : (
-              <Badge
-                variant={
+              <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${
+                rec.status === 'approved' || rec.status === 'executed' || rec.status === 'auto_executed'
+                  ? 'text-green-600 dark:text-green-400'
+                  : rec.status === 'rejected'
+                    ? 'text-red-600 dark:text-red-400'
+                    : rec.status === 'expired'
+                      ? 'text-muted-foreground'
+                      : 'text-amber-600 dark:text-amber-400'
+              }`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${
                   rec.status === 'approved' || rec.status === 'executed' || rec.status === 'auto_executed'
-                    ? 'success'
+                    ? 'bg-green-500'
                     : rec.status === 'rejected'
-                      ? 'destructive'
+                      ? 'bg-red-500'
                       : rec.status === 'expired'
-                        ? 'secondary'
-                        : 'warning'
-                }
-                className="text-[10px] px-1.5 py-0"
-              >
+                        ? 'bg-gray-400'
+                        : 'bg-amber-500'
+                }`} />
                 {rec.status === 'pending_approval' ? 'Pending' : rec.status.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
-              </Badge>
+              </span>
             )}
           </div>
         </div>
@@ -278,7 +278,7 @@ function CompactRec({ rec }: { rec: AiRecommendation }) {
               )}
             </div>
 
-            <div className="border-l-2 border-[#19595b] pl-3 text-sm text-foreground space-y-2">
+            <div className="border-l-2 border-teal-500 pl-3 text-sm text-foreground space-y-2">
               <SimpleMarkdown text={rec.ai_reasoning} />
             </div>
 
@@ -323,7 +323,7 @@ function CompactRec({ rec }: { rec: AiRecommendation }) {
           <DialogFooter className="gap-2">
             <Button
               variant="outline"
-              className="text-red-600 border-red-300 hover:bg-red-50"
+              className="text-red-400 border-red-500/30 hover:bg-red-500/10"
               onClick={() => { setShowReview(false); setShowReject(true); }}
               disabled={approve.isPending || reject.isPending}
             >
@@ -382,7 +382,7 @@ function CompactRec({ rec }: { rec: AiRecommendation }) {
             <Button variant="outline" onClick={() => setShowReject(false)}>Cancel</Button>
             <Button
               variant="outline"
-              className="text-red-600 border-red-300 hover:bg-red-50"
+              className="text-red-400 border-red-500/30 hover:bg-red-500/10"
               onClick={handleReject}
               disabled={reject.isPending}
             >
@@ -397,7 +397,7 @@ function CompactRec({ rec }: { rec: AiRecommendation }) {
 
 /* ─── RecommendationsCard ───────────────────────────────────────────── */
 export function RecommendationsCard() {
-  const { data: recommendations, isLoading } = useTreasuryRecommendations();
+  const { data: recommendations, isLoading, isError, refetch } = useTreasuryRecommendations();
   const { data: pendingOps } = usePendingApprovals();
   const [selectedOp, setSelectedOp] = useState<ScheduledOperation | null>(null);
 
@@ -410,11 +410,27 @@ export function RecommendationsCard() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BrainCircuit className="h-5 w-5" />
-            AI Approvals
+            AI Insights
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <CardSpinner />
+          <CardSkeleton rows={4} />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BrainCircuit className="h-5 w-5" />
+            AI Insights
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CardError message="Failed to load AI recommendations." onRetry={() => refetch()} />
         </CardContent>
       </Card>
     );
@@ -428,12 +444,12 @@ export function RecommendationsCard() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BrainCircuit className="h-5 w-5" />
-            AI Approvals
+            AI Insights
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-48 flex items-center justify-center text-gray-400 text-sm">
-            No AI approvals yet. Configure treasury rules to get started.
+          <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">
+            No AI insights yet. <a href="/treasury?tab=rules" className="text-primary hover:underline">Configure treasury rules →</a>
           </div>
         </CardContent>
       </Card>
@@ -451,7 +467,7 @@ export function RecommendationsCard() {
           <CardTitle className="flex items-center justify-between">
             <span className="flex items-center gap-2">
               <BrainCircuit className="h-5 w-5" />
-              AI Approvals
+              AI Insights
             </span>
             {pendingCount > 0 && (
               <Badge variant="warning" className="tabular-nums">

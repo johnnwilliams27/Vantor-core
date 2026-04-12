@@ -2,7 +2,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { useTreasuryOverview } from '@/hooks/useTreasury';
 import { useYieldPositions } from '@/hooks/useYield';
-import { CardSpinner } from '@/components/ui/spinner';
+import { CardSkeleton, CardError } from '@/components/ui/spinner';
 import {
   ShieldCheck,
   AlertTriangle,
@@ -19,14 +19,8 @@ import {
 import { cn } from '@/lib/utils';
 import { getHoldingCardPlacement } from '@/lib/treasury/holdings-category';
 import type { YieldProtocolId } from '@/lib/yield/interface';
-
-function formatUsd(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(value);
-}
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency';
+import { useFxRates } from '@/hooks/useFxRates';
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -40,10 +34,15 @@ function timeAgo(dateStr: string): string {
 }
 
 export function TreasuryHealthCard() {
-  const { data: overview, isLoading } = useTreasuryOverview();
+  const { data: overview, isLoading, isError, refetch } = useTreasuryOverview();
   const { data: yieldPositions } = useYieldPositions();
+  const { currency: dc } = useDisplayCurrency();
+  const { data: fxData } = useFxRates();
+  const fxRate = fxData?.rates?.[dc] ?? 1;
+  const fmt = (v: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: dc, maximumFractionDigits: 0 }).format(v * fxRate);
 
-  if (isLoading) return <CardSpinner />;
+  if (isLoading) return <Card><CardContent className="pt-5"><CardSkeleton rows={4} /></CardContent></Card>;
+  if (isError) return <Card><CardContent className="pt-5"><CardError message="Failed to load treasury health." onRetry={() => refetch()} /></CardContent></Card>;
   if (!overview) return null;
 
   // Roll yield positions into Cash (tokenized MMFs) and DeFi using the
@@ -75,52 +74,35 @@ export function TreasuryHealthCard() {
   const totalAum = cashUsd + stablecoinUsd + defiUsd;
 
   const statusConfig = {
-    healthy: {
-      icon: ShieldCheck,
-      label: 'Healthy',
-      color: 'text-green-500',
-      bg: 'bg-green-500/10',
-      border: 'border-green-500/20',
-    },
-    warning: {
-      icon: AlertTriangle,
-      label: 'Attention',
-      color: 'text-yellow-500',
-      bg: 'bg-yellow-500/10',
-      border: 'border-yellow-500/20',
-    },
-    critical: {
-      icon: AlertOctagon,
-      label: 'Action Required',
-      color: 'text-red-500',
-      bg: 'bg-red-500/10',
-      border: 'border-red-500/20',
-    },
+    healthy: { icon: ShieldCheck, label: 'Healthy', dot: 'bg-green-500' },
+    warning: { icon: AlertTriangle, label: 'Attention', dot: 'bg-amber-500' },
+    critical: { icon: AlertOctagon, label: 'Action Required', dot: 'bg-red-500' },
   };
 
   const cfg = health ? statusConfig[health.status] : statusConfig.healthy;
-  const StatusIcon = cfg.icon;
 
   return (
-    <Card className={cn('border', health ? cfg.border : '')}>
+    <Card>
       <CardContent className="pt-5 pb-4">
-        {/* Status header */}
+        {/* Header — total + status */}
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2.5">
-            <div className={cn('p-1.5 rounded-lg', cfg.bg)}>
-              <StatusIcon className={cn('h-4 w-4', cfg.color)} />
-            </div>
+          <div className="flex items-center gap-3">
             <div>
-              <p className={cn('text-sm font-semibold', cfg.color)}>{cfg.label}</p>
+              <p className="text-sm font-medium text-muted-foreground">Total Treasury</p>
+              <p className="text-3xl font-bold tabular-nums tracking-tight mt-0.5 whitespace-nowrap">≈{fmt(totalAum)} <span className="text-lg font-semibold text-muted-foreground">{dc} equiv.</span></p>
+            </div>
+            <div className="flex items-center gap-1.5 pl-3 border-l border-border">
+              <span className={`h-2 w-2 rounded-full ${cfg.dot}`} />
+              <p className="text-sm font-medium text-foreground">{cfg.label}</p>
               {health && health.signal !== 'balanced' && (
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-xs text-muted-foreground">
                   {health.signal === 'surplus'
-                    ? `${formatUsd(health.surplusUsd)} above safety buffer`
-                    : `${formatUsd(Math.abs(health.surplusUsd))} below safety buffer`}
+                    ? `${fmt(health.surplusUsd)} above safety buffer`
+                    : `${fmt(Math.abs(health.surplusUsd))} below safety buffer`}
                 </p>
               )}
               {health && health.signal === 'balanced' && (
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-xs text-muted-foreground">
                   Within safety buffer target
                 </p>
               )}
@@ -135,39 +117,34 @@ export function TreasuryHealthCard() {
         </div>
 
         {/* Metrics grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <MetricCell
             icon={Landmark}
-            label="Cash"
-            value={formatUsd(cashUsd)}
-          />
-          <MetricCell
-            icon={Wallet}
-            label="Stablecoin"
-            value={formatUsd(stablecoinUsd)}
+            label="Cash & Stablecoins"
+            value={fmt(cashUsd + stablecoinUsd)}
           />
           <MetricCell
             icon={TrendingUp}
-            label="DeFi"
-            value={formatUsd(defiUsd)}
+            label="Yield Positions"
+            value={fmt(defiUsd)}
           />
           {health ? (
             <>
               <MetricCell
                 icon={Receipt}
                 label={`Obligations (${health.lookaheadDays}d)`}
-                value={formatUsd(health.totalObligationsUsd)}
+                value={fmt(health.totalObligationsUsd)}
                 subtitle={health.obligationCount > 0 ? `${health.obligationCount} due` : undefined}
               />
               <MetricCell
                 icon={Target}
                 label="Safety Buffer"
-                value={formatUsd(health.safetyBufferTargetUsd)}
+                value={fmt(health.safetyBufferTargetUsd)}
                 subtitle={
                   health.surplusUsd > 0
-                    ? `+${formatUsd(health.surplusUsd)}`
+                    ? `+${fmt(health.surplusUsd)}`
                     : health.surplusUsd < 0
-                      ? formatUsd(health.surplusUsd)
+                      ? fmt(health.surplusUsd)
                       : undefined
                 }
                 subtitleColor={
@@ -189,10 +166,10 @@ export function TreasuryHealthCard() {
         {/* Pending actions banner */}
         {overview.pendingRecommendations.length > 0 && (
           <div className="mt-3 pt-3 border-t border-border flex items-center gap-2 text-xs">
-            <div className="h-2 w-2 rounded-full bg-yellow-500 animate-pulse" />
+            <div className="h-2 w-2 rounded-full bg-amber-500" />
             <span className="text-muted-foreground">
               {overview.pendingRecommendations.length} pending{' '}
-              {overview.pendingRecommendations.length === 1 ? 'recommendation' : 'recommendations'}{' '}
+              {overview.pendingRecommendations.length === 1 ? 'action' : 'actions'}{' '}
               awaiting approval
             </span>
           </div>
@@ -221,7 +198,7 @@ function MetricCell({
         <Icon className="h-3 w-3" />
         {label}
       </div>
-      <p className="text-sm font-semibold">{value}</p>
+      <p className="text-sm font-semibold tabular-nums">{value}</p>
       {subtitle && (
         <p className={cn('text-xs', subtitleColor ?? 'text-muted-foreground')}>{subtitle}</p>
       )}

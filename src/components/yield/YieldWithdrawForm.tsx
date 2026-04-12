@@ -196,7 +196,7 @@ export function YieldWithdrawForm({ position, onBack }: Props) {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Yield Earned</span>
-              <span className="font-medium text-green-600">
+              <span className="font-medium text-green-400">
                 ${parseFloat(position.accrued_yield_usd).toLocaleString()}
               </span>
             </div>

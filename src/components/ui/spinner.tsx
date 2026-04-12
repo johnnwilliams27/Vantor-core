@@ -45,8 +45,78 @@ export function Spinner({ className, size = 'md' }: SpinnerProps) {
 /** Centered spinner for use inside Card content areas */
 export function CardSpinner({ className }: { className?: string }) {
   return (
-    <div className={cn('flex items-center justify-center py-12', className)}>
+    <div className={cn('flex items-center justify-center py-12', className)} role="status" aria-label="Loading">
       <Spinner size="md" />
+    </div>
+  );
+}
+
+/** Error state for Card content areas — shows message + retry button */
+export function CardError({
+  message = 'Failed to load data.',
+  onRetry,
+  className,
+}: {
+  message?: string;
+  onRetry?: () => void;
+  className?: string;
+}) {
+  return (
+    <div className={cn('flex flex-col items-center justify-center gap-3 py-10 text-center', className)} role="alert">
+      <p className="text-sm text-muted-foreground">{message}</p>
+      {onRetry && (
+        <button
+          onClick={onRetry}
+          className="text-xs font-medium text-teal-500 hover:text-teal-400 transition-colors"
+        >
+          Try again
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** Skeleton bar for content-shaped loading placeholders */
+export function Skeleton({ className, style }: { className?: string; style?: React.CSSProperties }) {
+  return (
+    <div
+      className={cn('animate-pulse rounded-md bg-muted/60 dark:bg-white/[0.06]', className)}
+      style={style}
+    />
+  );
+}
+
+/** Content-shaped skeleton for dashboard cards */
+export function CardSkeleton({ rows = 3, className }: { rows?: number; className?: string }) {
+  return (
+    <div className={cn('space-y-4 py-2', className)} role="status" aria-label="Loading">
+      <Skeleton className="h-4 w-1/3" />
+      <Skeleton className="h-8 w-2/3" />
+      <div className="space-y-2.5 pt-2">
+        {Array.from({ length: rows }).map((_, i) => (
+          <div key={i} className="flex items-center justify-between gap-4">
+            <Skeleton className="h-3.5 w-1/4" />
+            <Skeleton className="h-3.5 w-1/5" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Chart-shaped skeleton */
+export function ChartSkeleton({ className }: { className?: string }) {
+  return (
+    <div className={cn('py-2', className)} role="status" aria-label="Loading">
+      <div className="flex items-center justify-between mb-4">
+        <Skeleton className="h-4 w-1/4" />
+        <Skeleton className="h-6 w-1/5" />
+      </div>
+      <div className="flex items-end gap-1 h-[200px]">
+        {[40, 65, 45, 80, 55, 70, 50, 75, 60, 85, 45, 70].map((h, i) => (
+          <Skeleton key={i} className="flex-1 rounded-t-sm" style={{ height: `${h}%` }} />
+        ))}
+      </div>
     </div>
   );
 }

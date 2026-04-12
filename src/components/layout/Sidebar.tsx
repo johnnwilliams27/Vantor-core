@@ -58,16 +58,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
       { label: 'Treasury AI', href: '/treasury', icon: BrainCircuit, minRole: 'treasury_manager' },
-      { label: 'Compliance', href: '/compliance', icon: ShieldCheck, minRole: 'auditor' },
       { label: 'Yield', href: '/yield', icon: TrendingUp, minRole: 'treasury_manager' },
-    ],
-  },
-  {
-    heading: 'Linked Accounts',
-    items: [
-      { label: 'Wallets', href: '/wallets', icon: Wallet, minRole: 'accountant' },
-      { label: 'Bank Accounts', href: '/bank-accounts', icon: Building2, minRole: 'accountant' },
-      { label: 'ERP Systems', href: '/settings/erp', icon: Settings, minRole: 'accountant' },
     ],
   },
   {
@@ -81,8 +72,18 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    heading: 'Linked Accounts',
+    items: [
+      { label: 'Wallets', href: '/wallets', icon: Wallet, minRole: 'accountant' },
+      { label: 'Bank Accounts', href: '/bank-accounts', icon: Building2, minRole: 'accountant' },
+      { label: 'ERP Systems', href: '/settings/erp', icon: Settings, minRole: 'accountant' },
+      { label: 'External Integrations', href: '/settings/integrations', icon: Plug, minRole: 'treasury_manager' },
+    ],
+  },
+  {
     heading: 'Records',
     items: [
+      { label: 'Compliance', href: '/compliance', icon: ShieldCheck, minRole: 'auditor' },
       { label: 'Invoices', href: '/invoices', icon: FileText, minRole: 'accountant' },
       { label: 'Transactions', href: '/transactions', icon: History },
       { label: 'Audit', href: '/audit', icon: Shield },
@@ -95,7 +96,6 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'Notifications', href: '/settings/notifications', icon: Bell },
       { label: 'Account Management', href: '/settings/accounts', icon: Users, minRole: 'treasury_manager' },
       { label: 'Billing', href: '/settings/billing', icon: CreditCard, minRole: 'treasury_manager' },
-      { label: 'External Integrations', href: '/settings/integrations', icon: Plug, minRole: 'treasury_manager' },
     ],
   },
 ];
@@ -193,8 +193,8 @@ export function Sidebar() {
           <Building2 className="h-4 w-4 shrink-0 text-teal-400" />
           <span
             className={cn(
-              'text-xs font-medium text-white/70 truncate whitespace-nowrap transition-opacity duration-200',
-              sidebarOpen ? 'opacity-100' : 'opacity-0',
+              'text-xs font-medium text-white/70 truncate whitespace-nowrap overflow-hidden',
+              sidebarOpen ? 'w-auto opacity-100' : 'w-0 opacity-0',
             )}
           >
             {enterpriseName}
@@ -209,8 +209,8 @@ export function Sidebar() {
           <ShieldCheck className="h-4 w-4 shrink-0 text-amber-400" />
           <span
             className={cn(
-              'text-xs font-medium text-amber-400/80 truncate whitespace-nowrap transition-opacity duration-200',
-              sidebarOpen ? 'opacity-100' : 'opacity-0',
+              'text-xs font-medium text-amber-400/80 truncate whitespace-nowrap overflow-hidden',
+              sidebarOpen ? 'w-auto opacity-100' : 'w-0 opacity-0',
             )}
           >
             App Admin
@@ -219,7 +219,7 @@ export function Sidebar() {
       )}
 
       {/* Nav */}
-      <nav className="flex-1 py-4 px-2 space-y-4 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <nav aria-label="Main navigation" className="flex-1 py-4 px-2 space-y-4 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {navGroups.map((group, gi) => {
           const visibleItems = isAppAdmin
             ? group.items
@@ -230,8 +230,8 @@ export function Sidebar() {
               {group.heading && (
                 <p
                   className={cn(
-                    'px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-white/40 whitespace-nowrap transition-opacity duration-200',
-                    sidebarOpen ? 'opacity-100' : 'opacity-0',
+                    'px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-white/40 whitespace-nowrap transition-all duration-200',
+                    sidebarOpen ? 'opacity-100 h-auto' : 'opacity-0 h-0 overflow-hidden mb-0',
                   )}
                   aria-hidden={!sidebarOpen}
                 >
@@ -246,18 +246,18 @@ export function Sidebar() {
                       key={item.href}
                       href={item.href}
                       className={cn(
-                        'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+                        'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50',
                         active
-                          ? 'bg-white/15 text-white'
-                          : 'text-white/70 hover:bg-white/10 hover:text-white'
+                          ? 'bg-white/[0.12] text-white border-l-2 border-teal-400'
+                          : 'text-white/60 hover:bg-white/[0.08] hover:text-white/90 border-l-2 border-transparent'
                       )}
                       title={!sidebarOpen ? item.label : undefined}
                     >
                       <item.icon className="h-5 w-5 shrink-0" />
                       <span
                         className={cn(
-                          'whitespace-nowrap transition-opacity duration-200',
-                          sidebarOpen ? 'opacity-100' : 'opacity-0',
+                          'whitespace-nowrap overflow-hidden',
+                          sidebarOpen ? 'w-auto opacity-100' : 'w-0 opacity-0',
                         )}
                       >
                         {item.label}
@@ -273,18 +273,20 @@ export function Sidebar() {
 
       {/* Upgrade CTA for Lite users — fades with sidebar state */}
       {session?.user?.subscription_tier === 'lite' && (
-        <Link
-          href="/settings/billing"
-          aria-hidden={!sidebarOpen}
-          tabIndex={sidebarOpen ? 0 : -1}
-          className={cn(
-            'group mx-3 mb-3 px-4 py-3 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-400 text-white text-sm font-semibold text-center shadow-[0_0_20px_rgba(45,212,191,0.25)] hover:shadow-[0_0_30px_rgba(45,212,191,0.45)] flex items-center justify-center gap-2 whitespace-nowrap transition-[opacity,box-shadow] duration-300',
-            sidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
-          )}
-        >
-          <span>Upgrade to Unlock Live Mode</span>
-          <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
-        </Link>
+        <div className={cn(
+          'mx-3 mb-3 transition-all duration-200',
+          sidebarOpen ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden mb-0 pointer-events-none',
+        )}>
+          <Link
+            href="/settings/billing"
+            aria-hidden={!sidebarOpen}
+            tabIndex={sidebarOpen ? 0 : -1}
+            className="group block px-4 py-3 rounded-lg border border-teal-400/30 bg-teal-500/10 hover:bg-teal-500/15 transition-colors"
+          >
+            <p className="text-xs font-semibold text-teal-300 mb-0.5">Upgrade Plan</p>
+            <p className="text-[11px] text-white/50">Unlock live mode and full features</p>
+          </Link>
+        </div>
       )}
 
       {/* Toggle — mobile closes overlay, desktop collapses sidebar. Chevron rotates 180°. */}

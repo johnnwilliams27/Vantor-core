@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { capitalize, formatDateTime } from '@/lib/utils';
 import { useYieldTransactions } from '@/hooks/useYield';
-import { CardSpinner } from '@/components/ui/spinner';
+import { CardSkeleton, CardError } from '@/components/ui/spinner';
 import { getVenueDisplayName } from '@/lib/yield/venues';
 
 const STATUS_VARIANT: Record<string, 'default' | 'success' | 'destructive' | 'warning' | 'secondary'> = {
@@ -24,10 +24,14 @@ function formatUsd(value: string | null): string {
 }
 
 export function YieldTransactionTable() {
-  const { data: transactions, isLoading } = useYieldTransactions();
+  const { data: transactions, isLoading, isError, refetch } = useYieldTransactions();
 
   if (isLoading) {
-    return <CardSpinner />;
+    return <Card><CardHeader><CardTitle>Transaction History</CardTitle></CardHeader><CardContent><CardSkeleton rows={4} /></CardContent></Card>;
+  }
+
+  if (isError) {
+    return <Card><CardHeader><CardTitle>Transaction History</CardTitle></CardHeader><CardContent><CardError message="Failed to load transactions." onRetry={() => refetch()} /></CardContent></Card>;
   }
 
   if (!transactions?.length) {
@@ -68,7 +72,7 @@ export function YieldTransactionTable() {
                     </Badge>
                   </td>
                   <td className="px-3 py-2">{getVenueDisplayName(tx.protocol)}</td>
-                  <td className="text-right px-3 py-2 font-medium">{formatUsd(tx.amount)}</td>
+                  <td className="text-right px-3 py-2 font-medium tabular-nums">{formatUsd(tx.amount)}</td>
                   <td className="px-3 py-2"><Badge variant="outline">{tx.underlying_token}</Badge></td>
                   <td className="px-3 py-2">
                     <Badge variant={STATUS_VARIANT[tx.status] ?? 'secondary'}>

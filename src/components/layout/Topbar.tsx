@@ -1,8 +1,7 @@
 'use client';
 import { signOut, useSession } from 'next-auth/react';
 import { usePathname } from 'next/navigation';
-import { Bot, LogOut, Menu } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Bot, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/appStore';
 import { SettingsMenu } from './SettingsMenu';
@@ -34,10 +33,10 @@ const PAGE_TITLES: Record<string, string> = {
 };
 
 const ROLE_COLORS: Record<string, string> = {
-  app_admin: 'bg-amber-500/10 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
-  treasury_manager: 'bg-[#19595b]/10 text-[#134849] dark:bg-teal-500/15 dark:text-teal-300',
-  accountant: 'bg-[#19595b]/10 text-[#19595b] dark:bg-teal-500/15 dark:text-teal-300',
-  auditor: 'bg-black/5 text-muted-foreground dark:bg-white/10 dark:text-muted-foreground',
+  app_admin: 'bg-amber-500/8 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400',
+  treasury_manager: 'bg-muted text-muted-foreground',
+  accountant: 'bg-muted text-muted-foreground',
+  auditor: 'bg-muted text-muted-foreground',
 };
 
 export function Topbar() {
@@ -61,7 +60,7 @@ export function Topbar() {
         >
           <Menu className="h-5 w-5 text-muted-foreground" />
         </button>
-        {title && <h1 className="text-lg font-semibold text-foreground">{title}</h1>}
+        {title && <h1 className="text-xl font-bold text-foreground tracking-tight">{title}</h1>}
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4">
@@ -69,16 +68,12 @@ export function Topbar() {
           {!isAppAdmin && <TestModeToggle />}
         </span>
 
-        <span className={cn('hidden sm:inline-flex text-xs font-medium px-2.5 py-1 rounded-full', ROLE_COLORS[role] ?? ROLE_COLORS.auditor)}>
-          {role.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
-        </span>
-
         <button
           onClick={toggleAgentPanel}
           className={cn(
             'relative p-2 rounded-lg transition-colors',
             agentPanelOpen
-              ? 'bg-[#19595b]/10 text-[#19595b] dark:bg-teal-500/20 dark:text-teal-300'
+              ? 'bg-primary/10 text-primary dark:bg-teal-500/20 dark:text-teal-300'
               : 'hover:bg-black/5 dark:hover:bg-white/10 text-muted-foreground'
           )}
           title="Toggle Vantor AI"
@@ -89,27 +84,13 @@ export function Topbar() {
 
         <NotificationsPanel />
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center justify-center h-8 w-8 rounded-full bg-[#19595b] text-white text-xs font-semibold">
-            {session?.user?.name?.charAt(0).toUpperCase() ?? 'U'}
-          </div>
-          {session?.user?.email && (
-            <span className="hidden sm:block text-sm text-muted-foreground">
-              {session.user.email}
-            </span>
-          )}
-        </div>
-
-        <SettingsMenu />
-
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => signOut({ callbackUrl: '/' })}
-          title="Sign out"
-        >
-          <LogOut className="h-5 w-5 text-muted-foreground" />
-        </Button>
+        <SettingsMenu
+          userInitial={session?.user?.name?.charAt(0).toUpperCase() ?? 'U'}
+          userName={session?.user?.name ?? undefined}
+          userEmail={session?.user?.email ?? undefined}
+          userRole={role}
+          onSignOut={() => signOut({ callbackUrl: '/' })}
+        />
       </div>
     </header>
     </div>
