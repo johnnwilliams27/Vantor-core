@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { DateRangePicker } from '@/components/ui/date-picker';
 import { useAnalyticsViews } from '@/hooks/useAnalyticsViews';
 import { useAnalyticsPins } from '@/hooks/useAnalyticsPins';
 import { useViewQuery } from '@/hooks/useViewQuery';
@@ -97,35 +98,15 @@ export function AnalyticsPageClient() {
             {standardViews.length + 1} standard views{customViews.length > 0 ? ` + ${customViews.length} custom` : ''}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <div className="flex items-center gap-2 rounded-lg border border-white/[0.08] px-3 py-2 focus-within:border-teal-400/50 focus-within:ring-2 focus-within:ring-teal-400/20">
-            <input
-              type="date"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-              className="bg-transparent text-xs text-muted-foreground outline-none"
-              aria-label="From date"
-            />
-            <span className="text-xs text-muted-foreground/40">→</span>
-            <input
-              type="date"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              className="bg-transparent text-xs text-muted-foreground outline-none"
-              aria-label="To date"
-            />
-          </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <DateRangePicker from={from} to={to} onFromChange={setFrom} onToChange={setTo} />
           <Button
             size="sm"
             onClick={() => { setForkSource(standardViews[0] ?? null); setForkOpen(true); }}
           >
             + New View
           </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleGenerateReport}
-          >
+          <Button size="sm" variant="outline" onClick={handleGenerateReport}>
             <FileDown className="mr-1.5 h-3.5 w-3.5" />
             Generate Report
           </Button>
