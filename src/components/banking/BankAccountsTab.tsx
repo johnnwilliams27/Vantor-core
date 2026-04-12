@@ -11,6 +11,7 @@ import { BankLinkButton } from './BankLinkButton';
 import { formatDate } from '@/lib/utils';
 import { useTreasuryOverview } from '@/hooks/useTreasury';
 import { Trash2, CheckCircle, Building2, Pencil, Check, X } from 'lucide-react';
+import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { useToast } from '@/components/ui/toast';
 import type { BankAccount } from '@/types/database';
 import { CardSpinner } from '@/components/ui/spinner';
@@ -25,6 +26,21 @@ async function fetchBankAccounts(): Promise<BankAccount[]> {
 function formatCurrencyAmount(n: number, currency = 'USD') {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 2 }).format(n);
 }
+
+const PROVIDER_ATTRIBUTION: Record<BankAccount['banking_provider'], string> = {
+  stripe_fc: 'via Stripe',
+  belvo: 'via Belvo',
+  manual: 'Manual entry',
+};
+
+const PROVIDER_TOOLTIP: Record<BankAccount['banking_provider'], string> = {
+  stripe_fc:
+    'Linked through Stripe Financial Connections. Balances and transactions sync automatically.',
+  belvo:
+    'Linked through Belvo (Latin America open banking). Balances and transactions sync automatically.',
+  manual:
+    'Entered manually. Reference only — Vantor cannot sync balances or transactions for manual accounts.',
+};
 
 export function BankAccountsTab({ bankingProvider = 'stripe_fc' }: { bankingProvider?: 'stripe_fc' | 'belvo' | null }) {
   const { toast } = useToast();
@@ -169,6 +185,13 @@ export function BankAccountsTab({ bankingProvider = 'stripe_fc' }: { bankingProv
                               <span className="text-muted-foreground ml-1 font-mono">****{account.last4}</span>
                             )}
                           </div>
+                          <div className="flex items-center gap-1 text-[11px] text-muted-foreground mt-0.5">
+                            <span>{PROVIDER_ATTRIBUTION[account.banking_provider]}</span>
+                            <InfoTooltip
+                              ariaLabel={`${PROVIDER_ATTRIBUTION[account.banking_provider]} — more info`}
+                              content={PROVIDER_TOOLTIP[account.banking_provider]}
+                            />
+                          </div>
                         </TableCell>
                         <TableCell className="text-sm capitalize">{account.account_type}</TableCell>
                         <TableCell>
@@ -178,12 +201,22 @@ export function BankAccountsTab({ bankingProvider = 'stripe_fc' }: { bankingProv
                         </TableCell>
                         <TableCell>
                           {account.verified_at ? (
-                            <Badge variant="success" className="text-xs">
-                              <CheckCircle className="mr-1 h-3 w-3" />
-                              Verified
-                            </Badge>
+                            <InfoTooltip
+                              ariaLabel="Verified bank account"
+                              content={`Verified — ownership confirmed via the banking provider on ${formatDate(account.verified_at)}. Balance sync active.`}
+                            >
+                              <Badge variant="success" className="text-xs">
+                                <CheckCircle className="mr-1 h-3 w-3" />
+                                Verified
+                              </Badge>
+                            </InfoTooltip>
                           ) : (
-                            <Badge variant="warning" className="text-xs">Manual</Badge>
+                            <InfoTooltip
+                              ariaLabel="Manual bank account"
+                              content="Manual — entered by you for reference. Vantor cannot sync balances or initiate transfers on manual accounts."
+                            >
+                              <Badge variant="warning" className="text-xs">Manual</Badge>
+                            </InfoTooltip>
                           )}
                         </TableCell>
                         <TableCell className="text-right">

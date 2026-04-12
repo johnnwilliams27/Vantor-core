@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { formatDate, truncateAddress } from '@/lib/utils';
 import { TruncatedAddress } from '@/components/ui/truncated-address';
+import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { Trash2, CheckCircle, Clock, Pencil, Check, X } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
 import { CardSpinner } from '@/components/ui/spinner';
@@ -157,9 +158,19 @@ function CryptoWalletsTab() {
                         </TableCell>
                         <TableCell>
                           {wallet.verified_at ? (
-                            <CheckCircle className="h-4 w-4 text-green-500" />
+                            <InfoTooltip
+                              ariaLabel="Verified wallet"
+                              content={`Verified — ownership confirmed via on-chain signature on ${formatDate(wallet.verified_at)}.`}
+                            >
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                            </InfoTooltip>
                           ) : (
-                            <Clock className="h-4 w-4 text-yellow-500" />
+                            <InfoTooltip
+                              ariaLabel="Pending verification"
+                              content="Pending — we're waiting for an on-chain signature to confirm you control this wallet. This usually takes 1–2 minutes after linking."
+                            >
+                              <Clock className="h-4 w-4 text-yellow-500" />
+                            </InfoTooltip>
                           )}
                         </TableCell>
                         <TableCell className="text-right">

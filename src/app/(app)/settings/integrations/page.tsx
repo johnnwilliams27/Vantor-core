@@ -10,7 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, CheckCircle, XCircle, Plug, ExternalLink, Copy, Check } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, ExternalLink, Copy, Check } from 'lucide-react';
+import { SlackLogo } from '@/components/ui/icons/slack-logo';
 
 const schema = z.object({
   botToken: z.string().min(1, 'Bot token required').max(500),
@@ -126,7 +127,9 @@ export default function IntegrationsPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Plug className="h-5 w-5 text-muted-foreground" />
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
+                  <SlackLogo size={22} />
+                </span>
                 <div>
                   <CardTitle>Slack</CardTitle>
                   <CardDescription>
@@ -267,8 +270,19 @@ export default function IntegrationsPage() {
                     <Input placeholder="My Company" {...register('workspaceName')} />
                   </div>
 
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Connecting…</> : 'Connect Slack'}
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="bg-[#4A154B] hover:bg-[#3a1139] text-white border-0"
+                  >
+                    {isSubmitting ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Connecting…</>
+                    ) : (
+                      <>
+                        <SlackLogo size={16} className="mr-2" />
+                        Connect Slack
+                      </>
+                    )}
                   </Button>
                 </form>
               </div>

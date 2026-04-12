@@ -10,6 +10,7 @@ import { Select } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useERPStore } from '@/store/erpStore';
@@ -411,38 +412,48 @@ export default function ERPSettingsPage() {
         onConfirm={handleDelete}
       />
 
-      {showErpAddonConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-md mx-4 p-6 space-y-4">
-            <h2 className="text-lg font-semibold">Additional ERP Add-On</h2>
-            <p className="text-sm text-muted-foreground">
-              Adding an additional ERP integration costs <span className="text-foreground font-medium">$1,500/month</span>. This will be added to your next bill, pro-rated for the remaining days this month.
-            </p>
-            <div className="flex justify-end gap-3 pt-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowErpAddonConfirm(false);
+      <Dialog
+        open={showErpAddonConfirm}
+        onOpenChange={(o) => {
+          if (!o) {
+            setShowErpAddonConfirm(false);
+            setPendingErpData(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Additional ERP Add-On</DialogTitle>
+            <DialogDescription>
+              Adding an additional ERP integration costs{' '}
+              <span className="text-foreground font-medium">$1,500/month</span>. This will be added
+              to your next bill, pro-rated for the remaining days this month.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowErpAddonConfirm(false);
+                setPendingErpData(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                setShowErpAddonConfirm(false);
+                if (pendingErpData) {
+                  await doCreateErp(pendingErpData);
                   setPendingErpData(null);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={async () => {
-                  setShowErpAddonConfirm(false);
-                  if (pendingErpData) {
-                    await doCreateErp(pendingErpData);
-                    setPendingErpData(null);
-                  }
-                }}
-              >
-                Agree &amp; Add
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+                }
+              }}
+            >
+              Agree &amp; Add
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
