@@ -7,6 +7,7 @@ import {
   useSystemHealth,
   useEnterprises,
   useCreateEnterprise,
+  type EnterpriseRow,
 } from '@/hooks/useAdmin';
 import {
   Building2,
@@ -18,6 +19,9 @@ import {
 } from 'lucide-react';
 import { CardSpinner } from '@/components/ui/spinner';
 import { InviteUserForm } from '@/components/admin/InviteUserForm';
+import { FilterBar } from '@/components/ui/filter-bar';
+import { TablePagination } from '@/components/ui/table-pagination';
+import { useTableFilter } from '@/hooks/useTableFilter';
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
@@ -101,6 +105,102 @@ function CreateEnterpriseForm({ onClose }: { onClose: () => void }) {
   );
 }
 
+const ENTERPRISE_FILTER_CONFIG = {
+  searchFields: ['name' as const, 'id' as const],
+  dropdowns: [
+    { key: 'status', accessor: (item: EnterpriseRow) => item.status },
+    { key: 'kyc_status', accessor: (item: EnterpriseRow) => item.kyc_status },
+  ],
+  dateField: (item: EnterpriseRow) => item.created_at,
+  sortColumns: [
+    { key: 'name', accessor: (item: EnterpriseRow) => item.name, type: 'string' as const },
+    { key: 'users', accessor: (item: EnterpriseRow) => item.user_count, type: 'number' as const },
+    { key: 'created', accessor: (item: EnterpriseRow) => item.created_at, type: 'date' as const },
+  ],
+};
+
+function EnterprisesTable({ data }: { data: EnterpriseRow[] }) {
+  const filter = useTableFilter(data, ENTERPRISE_FILTER_CONFIG);
+
+  return (
+    <div className="space-y-4">
+      <FilterBar
+        search={filter.search}
+        onSearchChange={filter.setSearch}
+        searchPlaceholder="Search by name or ID..."
+        dropdowns={[
+          { key: 'status', label: 'Status', options: filter.dropdownOptions.status ?? [] },
+          { key: 'kyc_status', label: 'KYC', options: filter.dropdownOptions.kyc_status ?? [] },
+        ]}
+        filters={filter.filters}
+        onFilterChange={filter.setFilter}
+        showDateRange
+        dateFrom={filter.dateFrom}
+        dateTo={filter.dateTo}
+        onDateFromChange={filter.setDateFrom}
+        onDateToChange={filter.setDateTo}
+        resultCount={filter.filteredCount}
+        totalCount={filter.totalCount}
+        activeFilterCount={filter.activeFilterCount}
+        onClear={filter.clearAll}
+      />
+
+      {filter.pagedData.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-4">No enterprises match these filters.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border text-left text-muted-foreground">
+                <th className="pb-3 pr-4 font-medium">Name</th>
+                <th className="pb-3 pr-4 font-medium">Status</th>
+                <th className="pb-3 pr-4 font-medium">KYC</th>
+                <th className="pb-3 pr-4 font-medium">Users</th>
+                <th className="pb-3 pr-4 font-medium">Created</th>
+                <th className="pb-3 font-medium"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {filter.pagedData.map((ent) => (
+                <tr key={ent.id} className="hover:bg-muted/50 transition-colors">
+                  <td className="py-3 pr-4 font-medium">{ent.name}</td>
+                  <td className="py-3 pr-4">
+                    <StatusBadge status={ent.status} />
+                  </td>
+                  <td className="py-3 pr-4">
+                    <KycBadge status={ent.kyc_status} />
+                  </td>
+                  <td className="py-3 pr-4">{ent.user_count}</td>
+                  <td className="py-3 pr-4 text-muted-foreground">
+                    {new Date(ent.created_at).toLocaleDateString()}
+                  </td>
+                  <td className="py-3">
+                    <Link
+                      href={`/admin/enterprises/${ent.id}`}
+                      className="text-teal-400 hover:text-teal-300 text-sm font-medium"
+                    >
+                      View
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <TablePagination
+        page={filter.page}
+        totalPages={filter.totalPages}
+        pageSize={filter.pageSize}
+        filteredCount={filter.filteredCount}
+        onPageChange={filter.setPage}
+        onPageSizeChange={filter.setPageSize}
+      />
+    </div>
+  );
+}
+
 export default function AdminDashboardPage() {
   const health = useSystemHealth();
   const enterprises = useEnterprises();
@@ -118,7 +218,7 @@ export default function AdminDashboardPage() {
               <div>
                 <p className="text-sm text-muted-foreground">Total Enterprises</p>
                 <p className="text-2xl font-bold">
-                  {health.isLoading ? '...' : health.data?.totalEnterprises ?? 0}
+                  {health.isLoading ? '...' : health.data?.total_enterprises ?? 0}
                 </p>
               </div>
             </CardContent>
@@ -131,7 +231,7 @@ export default function AdminDashboardPage() {
               <div>
                 <p className="text-sm text-muted-foreground">Total Users</p>
                 <p className="text-2xl font-bold">
-                  {health.isLoading ? '...' : health.data?.totalUsers ?? 0}
+                  {health.isLoading ? '...' : health.data?.total_users ?? 0}
                 </p>
               </div>
             </CardContent>
@@ -144,7 +244,7 @@ export default function AdminDashboardPage() {
               <div>
                 <p className="text-sm text-muted-foreground">Total Transactions</p>
                 <p className="text-2xl font-bold">
-                  {health.isLoading ? '...' : health.data?.totalTransactions ?? 0}
+                  {health.isLoading ? '...' : health.data?.total_transactions ?? 0}
                 </p>
               </div>
             </CardContent>
@@ -189,45 +289,7 @@ export default function AdminDashboardPage() {
             ) : !enterprises.data?.length ? (
               <p className="text-sm text-muted-foreground py-4">No enterprises yet.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border text-left text-muted-foreground">
-                      <th className="pb-3 pr-4 font-medium">Name</th>
-                      <th className="pb-3 pr-4 font-medium">Status</th>
-                      <th className="pb-3 pr-4 font-medium">KYC</th>
-                      <th className="pb-3 pr-4 font-medium">Users</th>
-                      <th className="pb-3 pr-4 font-medium">Created</th>
-                      <th className="pb-3 font-medium"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {enterprises.data.map((ent) => (
-                      <tr key={ent.id} className="hover:bg-muted/50 transition-colors">
-                        <td className="py-3 pr-4 font-medium">{ent.name}</td>
-                        <td className="py-3 pr-4">
-                          <StatusBadge status={ent.status} />
-                        </td>
-                        <td className="py-3 pr-4">
-                          <KycBadge status={ent.kyc_status} />
-                        </td>
-                        <td className="py-3 pr-4">{ent.user_count}</td>
-                        <td className="py-3 pr-4 text-muted-foreground">
-                          {new Date(ent.created_at).toLocaleDateString()}
-                        </td>
-                        <td className="py-3">
-                          <Link
-                            href={`/admin/enterprises/${ent.id}`}
-                            className="text-teal-400 hover:text-teal-300 text-sm font-medium"
-                          >
-                            View
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <EnterprisesTable data={enterprises.data} />
             )}
           </CardContent>
         </Card>
