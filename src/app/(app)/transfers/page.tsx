@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { ChainBadge } from '@/components/ui/icons/chain-logos';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { TablePagination } from '@/components/ui/table-pagination';

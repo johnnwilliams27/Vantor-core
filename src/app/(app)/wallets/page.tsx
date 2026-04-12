@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { EthWalletConnect } from '@/components/wallets/EthWalletConnect';
 import { SolWalletConnect } from '@/components/wallets/SolWalletConnect';
-import { EthereumLogo, SolanaLogo } from '@/components/ui/icons/chain-logos';
+import { EthereumLogo, SolanaLogo, ChainBadge } from '@/components/ui/icons/chain-logos';
 import { useWallets, useUnlinkWallet } from '@/hooks/useWallets';
 import { useTreasuryOverview } from '@/hooks/useTreasury';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -184,9 +184,7 @@ function CryptoWalletsTab() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={wallet.chain === 'ethereum' ? 'ethereum' : 'solana'}>
-                            {wallet.chain === 'ethereum' ? 'Ethereum' : 'Solana'}
-                          </Badge>
+                          <ChainBadge chain={wallet.chain} />
                         </TableCell>
                         <TableCell>
                           <TruncatedAddress address={wallet.address} chars={8} />

@@ -2,6 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { ChainBadge } from '@/components/ui/icons/chain-logos';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { TablePagination } from '@/components/ui/table-pagination';
@@ -121,7 +122,7 @@ export function TransfersTab() {
                     <span className="font-semibold">{formatCurrency(p.amount)}</span>{' '}
                     <Badge variant="outline">{p.token}</Badge>
                   </TableCell>
-                  <TableCell><Badge variant={p.chain === 'ethereum' ? 'ethereum' : 'solana'}>{capitalize(p.chain)}</Badge></TableCell>
+                  <TableCell><ChainBadge chain={p.chain} /></TableCell>
                   <TableCell>
                     <Badge variant={
                       p.status === 'completed' ? 'success' as any :

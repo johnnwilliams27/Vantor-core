@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { ChainBadge } from '@/components/ui/icons/chain-logos';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
@@ -389,13 +390,13 @@ export function AllTab() {
                         <div className="flex items-center gap-1">
                           {row.chain.split(' → ').map((c, i, arr) => (
                             <span key={i} className="flex items-center gap-1">
-                              <Badge variant={c.toLowerCase() === 'ethereum' ? 'ethereum' : 'solana'}>{c}</Badge>
+                              <ChainBadge chain={c.toLowerCase()} />
                               {i < arr.length - 1 && <span className="text-muted-foreground text-xs">→</span>}
                             </span>
                           ))}
                         </div>
                       ) : (
-                        <Badge variant={row.chain === 'ethereum' ? 'ethereum' : 'solana'}>{capitalize(row.chain)}</Badge>
+                        <ChainBadge chain={row.chain} />
                       )
                     ) : (
                       <span className="text-muted-foreground">—</span>

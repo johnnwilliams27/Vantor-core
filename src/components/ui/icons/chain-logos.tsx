@@ -1,4 +1,6 @@
 import * as React from 'react';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 interface ChainLogoProps extends React.SVGAttributes<SVGSVGElement> {
   size?: number;
@@ -55,5 +57,43 @@ export function SolanaLogo({ size = 24, ...rest }: ChainLogoProps) {
       <path fill={`url(#sol-b-${gradId})`} d="M64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8z" />
       <path fill={`url(#sol-c-${gradId})`} d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.6z" />
     </svg>
+  );
+}
+
+/**
+ * Shared chain badge — icon + label + chain-specific tint. Centralizes the
+ * "what chain is this row on?" visual treatment across wallets, transfer
+ * tables, balance cards, etc. so the user learns one shape.
+ */
+interface ChainBadgeProps {
+  chain: string | null | undefined;
+  /** Short ("ETH") vs full ("Ethereum") label. Default full. */
+  short?: boolean;
+  className?: string;
+}
+
+export function ChainBadge({ chain, short = false, className }: ChainBadgeProps) {
+  const isEthereum = chain === 'ethereum';
+  const isSolana = chain === 'solana';
+
+  if (!isEthereum && !isSolana) {
+    return (
+      <Badge variant="secondary" className={cn(className)}>
+        {chain ?? '—'}
+      </Badge>
+    );
+  }
+
+  const label = isEthereum ? (short ? 'ETH' : 'Ethereum') : short ? 'SOL' : 'Solana';
+
+  return (
+    <Badge variant={isEthereum ? 'ethereum' : 'solana'} className={cn('gap-1', className)}>
+      {isEthereum ? (
+        <EthereumLogo size={10} className="shrink-0" />
+      ) : (
+        <SolanaLogo size={10} className="shrink-0" />
+      )}
+      {label}
+    </Badge>
   );
 }
