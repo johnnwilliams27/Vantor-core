@@ -3,14 +3,30 @@
 import { Card } from '@/components/ui/card';
 import type { ViewResult } from '@/lib/analytics/types';
 
-// Compact labels for the KPI banner (shorter than full MEASURES labels for header density)
+// Compact labels for the KPI banner (shorter than full MEASURES labels
+// for header density). Uses Vantor canonical taxonomy (Phase C-1.5a).
 const LABELS: Record<string, string> = {
-  total_balance_usd: 'Total Balance',
-  fiat_balance_usd: 'Fiat',
-  stablecoin_balance_usd: 'Stablecoin',
-  defi_balance_usd: 'DeFi',
+  total_balance_usd: 'Total',
+  // L1 rollups
+  cash_and_equivalents_usd: 'Cash & Equivalents',
+  yield_positions_usd: 'Yield Positions',
+  // L2 detail
+  bank_balance_usd: 'Bank',
+  stablecoin_idle_balance_usd: 'Stablecoins',
+  mmf_balance_usd: 'MMFs',
+  defi_protocols_usd: 'DeFi',
+  // L3 leaf detail
+  defi_vault_balance_usd: 'DeFi Vaults',
+  defi_lending_balance_usd: 'DeFi Lending',
+  other_balance_usd: 'Other',
+  // Misc
   idle_cash_usd: 'Idle Cash',
   coverage_ratio: 'Coverage',
+  obligation_total_usd: 'Obligations',
+  // Deprecated aliases (kept while consumers migrate in Phase C-1.5b)
+  fiat_balance_usd: 'Bank',
+  stablecoin_balance_usd: 'Stablecoins',
+  defi_balance_usd: 'DeFi',
 };
 
 function formatValue(key: string, value: number): string {
