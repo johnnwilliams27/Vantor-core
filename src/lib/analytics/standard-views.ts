@@ -13,11 +13,12 @@ export const STANDARD_VIEWS: AnalyticsView[] = [
     kind: 'standard',
     chartType: 'kpi',
     config: {
+      // Phase C-1.5a taxonomy: show the two L1 rollups (Cash & Equivalents,
+      // Yield Positions) plus total + coverage. Drill-in exposes the leaves.
       measures: [
         'total_balance_usd',
-        'fiat_balance_usd',
-        'stablecoin_balance_usd',
-        'defi_balance_usd',
+        'cash_and_equivalents_usd',
+        'yield_positions_usd',
         'idle_cash_usd',
         'coverage_ratio',
       ],
@@ -31,11 +32,18 @@ export const STANDARD_VIEWS: AnalyticsView[] = [
     enterpriseId: null,
     slug: 'balance-history',
     label: 'Balance History',
-    description: 'Treasury balance trends over time by asset type',
+    description: 'Treasury balance trends over time by taxonomy leaf',
     kind: 'standard',
     chartType: 'line',
     config: {
-      measures: ['fiat_balance_usd', 'stablecoin_balance_usd', 'defi_balance_usd'],
+      // 4 lines: Cash & Equivalents rollup + 3 yield leaves. Cleaner than
+      // 6 lines; users who want DeFi vault vs lending can fork this view.
+      measures: [
+        'cash_and_equivalents_usd',
+        'mmf_balance_usd',
+        'defi_protocols_usd',
+        'other_balance_usd',
+      ],
       primaryDimension: 'time',
       granularity: 'day',
     },
@@ -48,11 +56,13 @@ export const STANDARD_VIEWS: AnalyticsView[] = [
     enterpriseId: null,
     slug: 'obligation-coverage',
     label: 'Obligation Coverage',
-    description: 'Weekly view of obligations vs fiat balance and coverage ratio',
+    description: 'Weekly view of obligations vs Cash & Equivalents, with coverage ratio',
     kind: 'standard',
     chartType: 'bar',
     config: {
-      measures: ['obligation_total_usd', 'fiat_balance_usd', 'coverage_ratio'],
+      // Coverage uses Cash & Equivalents (what can actually settle), not
+      // just bank balance — MMFs and idle stablecoins both count.
+      measures: ['obligation_total_usd', 'cash_and_equivalents_usd', 'coverage_ratio'],
       primaryDimension: 'time',
       granularity: 'week',
     },
@@ -198,11 +208,11 @@ export const STANDARD_VIEWS: AnalyticsView[] = [
     enterpriseId: null,
     slug: 'idle-cash',
     label: 'Idle Cash',
-    description: 'Idle cash vs stablecoin balance over time',
+    description: 'Idle cash vs Cash & Equivalents over time',
     kind: 'standard',
     chartType: 'line',
     config: {
-      measures: ['idle_cash_usd', 'stablecoin_balance_usd'],
+      measures: ['idle_cash_usd', 'cash_and_equivalents_usd'],
       primaryDimension: 'time',
       granularity: 'day',
     },
