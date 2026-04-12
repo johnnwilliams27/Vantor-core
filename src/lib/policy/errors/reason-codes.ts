@@ -67,6 +67,10 @@ export const REASON_CODES = {
   idempotency_key_conflict:          'idempotency_key_conflict',
   adapter_execution_failed:          'adapter_execution_failed',
   gate_internal_error:               'gate_internal_error',
+  policy_blocked:                    'policy_blocked',
+  policy_engine_unavailable:         'policy_engine_unavailable',
+  approval_creation_failed:          'approval_creation_failed',
+  enterprise_mismatch:               'enterprise_mismatch',
 } as const;
 
 export type ReasonCode = typeof REASON_CODES[keyof typeof REASON_CODES];
