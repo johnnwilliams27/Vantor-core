@@ -104,6 +104,7 @@ const ROLE_RANK: Record<UserRole, number> = {
   auditor: 0,
   accountant: 1,
   treasury_manager: 2,
+  enterprise_admin: 3,
 };
 
 function hasAccess(userRole: string, minRole?: UserRole): boolean {
