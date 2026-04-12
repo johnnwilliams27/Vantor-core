@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Inbox } from 'lucide-react';
+import { getMeasureLabel } from '@/lib/analytics/measures';
 import type { ViewResult } from '@/lib/analytics/types';
 
 interface ViewTableProps {
@@ -38,7 +39,7 @@ export function ViewTable({ result, pageSize = 25 }: ViewTableProps) {
             <tr className="border-b border-white/[0.08]">
               {columns.map((col) => (
                 <th key={col} className="px-3 py-2 text-left font-medium text-muted-foreground">
-                  {col}
+                  {getMeasureLabel(col)}
                 </th>
               ))}
             </tr>

@@ -9,10 +9,12 @@ describe('viewResultToCsvColumns (kpi)', () => {
     scalar: { total_balance_usd: 2400000, fiat_balance_usd: 1200000, idle_cash_usd: 320000 },
   };
 
-  it('produces one column per scalar key', () => {
+  it('produces one column per scalar key with human-readable headers', () => {
     const cols = viewResultToCsvColumns(kpiResult);
     expect(cols).toHaveLength(3);
-    expect(cols[0].header).toBe('total_balance_usd');
+    expect(cols[0].header).toBe('Total Balance');
+    expect(cols[1].header).toBe('Fiat Balance');
+    expect(cols[2].header).toBe('Idle Cash');
   });
 
   it('produces a single row with the scalar values', () => {
@@ -38,11 +40,11 @@ describe('viewResultToCsvColumns (line)', () => {
     },
   };
 
-  it('produces date + one column per series', () => {
+  it('produces date + one column per series with human-readable headers', () => {
     const cols = viewResultToCsvColumns(lineResult);
     expect(cols[0].header).toBe('Date');
-    expect(cols[1].header).toBe('fiat_balance_usd');
-    expect(cols[2].header).toBe('stablecoin_balance_usd');
+    expect(cols[1].header).toBe('Fiat Balance');
+    expect(cols[2].header).toBe('Stablecoin Balance');
   });
 
   it('produces one row per date', () => {
@@ -69,10 +71,11 @@ describe('viewResultToCsvColumns (bar)', () => {
     },
   };
 
-  it('produces group + one column per grouped measure', () => {
+  it('produces group + one column per grouped measure with human-readable headers', () => {
     const cols = viewResultToCsvColumns(barResult);
     expect(cols[0].header).toBe('Group');
-    expect(cols[1].header).toBe('ramp_volume_usd');
+    expect(cols[1].header).toBe('Ramp Volume');
+    expect(cols[2].header).toBe('Ramp Count');
   });
 
   it('produces one row per group', () => {
@@ -96,10 +99,14 @@ describe('viewResultToCsvColumns (table)', () => {
     pageSize: 50,
   };
 
-  it('produces one column per row key', () => {
+  it('produces one column per row key with human-readable headers', () => {
     const cols = viewResultToCsvColumns(tableResult);
-    expect(cols.map((c) => c.header)).toContain('id');
-    expect(cols.map((c) => c.header)).toContain('amount_usd');
+    // Unknown slugs (not in MEASURES) fall back to Title-cased form
+    const headers = cols.map((c) => c.header);
+    expect(headers).toContain('Id');
+    expect(headers).toContain('Amount');
+    expect(headers).toContain('Status');
+    expect(headers).toContain('Chain');
   });
 
   it('returns the rows as-is', () => {

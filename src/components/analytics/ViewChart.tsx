@@ -12,6 +12,8 @@ import {
   Tooltip,
   Legend,
 } from 'recharts';
+import { LineChart as LineChartIcon } from 'lucide-react';
+import { getMeasureLabel } from '@/lib/analytics/measures';
 import type { ViewResult } from '@/lib/analytics/types';
 
 const COLORS = [
@@ -27,14 +29,41 @@ interface ViewChartProps {
   height?: number;
 }
 
+function hasAnyValues(record: Record<string, { value: number }[]> | undefined): boolean {
+  if (!record) return false;
+  for (const key of Object.keys(record)) {
+    for (const p of record[key]) {
+      if (p.value !== 0) return true;
+    }
+  }
+  return false;
+}
+
+function ChartEmptyState({ height }: { height: number }) {
+  return (
+    <div
+      className="flex flex-col items-center justify-center gap-2 text-center"
+      style={{ height }}
+    >
+      <LineChartIcon className="h-8 w-8 text-muted-foreground/40" aria-hidden="true" />
+      <p className="text-sm font-medium text-muted-foreground">No data for this period</p>
+      <p className="text-xs text-muted-foreground/60">
+        Try widening the date range, or pick a different view.
+      </p>
+    </div>
+  );
+}
+
 export function ViewChart({ result, height = 300 }: ViewChartProps) {
   const { chartType } = result.view;
 
   if (chartType === 'line' && result.series) {
+    if (!hasAnyValues(result.series)) return <ChartEmptyState height={height} />;
     return <LineChartView result={result} height={height} />;
   }
 
   if (chartType === 'bar' && result.groups) {
+    if (!hasAnyValues(result.groups)) return <ChartEmptyState height={height} />;
     return <BarChartView result={result} height={height} />;
   }
 
@@ -72,6 +101,7 @@ function LineChartView({ result, height }: { result: ViewResult; height: number 
             key={key}
             type="monotone"
             dataKey={key}
+            name={getMeasureLabel(key)}
             stroke={COLORS[i % COLORS.length]}
             strokeWidth={2}
             dot={false}
@@ -110,7 +140,13 @@ function BarChartView({ result, height }: { result: ViewResult; height: number }
         />
         <Legend />
         {groupKeys.map((key, i) => (
-          <Bar key={key} dataKey={key} fill={COLORS[i % COLORS.length]} radius={[4, 4, 0, 0]} />
+          <Bar
+            key={key}
+            dataKey={key}
+            name={getMeasureLabel(key)}
+            fill={COLORS[i % COLORS.length]}
+            radius={[4, 4, 0, 0]}
+          />
         ))}
       </BarChart>
     </ResponsiveContainer>

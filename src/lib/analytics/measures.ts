@@ -387,3 +387,20 @@ export function getMeasure(slug: string): MeasureDefinition | undefined {
 export function getMeasures(): MeasureDefinition[] {
   return MEASURES;
 }
+
+/**
+ * Return a human-readable label for a measure slug. Falls back to pretty-
+ * printing the slug (snake_case → Title Case) when the slug isn't a
+ * registered measure — useful for unknown group/row keys that come back
+ * from the resolver.
+ */
+export function getMeasureLabel(slug: string): string {
+  const measure = measureMap.get(slug);
+  if (measure) return measure.label;
+  // Fallback: snake_case or kebab-case → Title Case, strip "_usd" suffix
+  return slug
+    .replace(/_usd$/, '')
+    .split(/[_-]/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}

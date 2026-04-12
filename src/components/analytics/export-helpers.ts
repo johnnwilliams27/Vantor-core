@@ -1,4 +1,5 @@
 import type { ExportColumn } from '@/lib/export';
+import { getMeasureLabel } from '@/lib/analytics/measures';
 import type { ViewResult } from '@/lib/analytics/types';
 
 type Row = Record<string, unknown>;
@@ -15,7 +16,7 @@ export function viewResultToCsvColumns(result: ViewResult): ExportColumn<Row>[] 
 
   if (chartType === 'kpi' && result.scalar) {
     return Object.keys(result.scalar).map((key) => ({
-      header: key,
+      header: getMeasureLabel(key),
       accessor: (row: Row) => String(row[key] ?? ''),
     }));
   }
@@ -25,7 +26,7 @@ export function viewResultToCsvColumns(result: ViewResult): ExportColumn<Row>[] 
     return [
       { header: 'Date', accessor: (row: Row) => String(row.date ?? '') },
       ...seriesKeys.map((key) => ({
-        header: key,
+        header: getMeasureLabel(key),
         accessor: (row: Row) => String(row[key] ?? ''),
       })),
     ];
@@ -36,7 +37,7 @@ export function viewResultToCsvColumns(result: ViewResult): ExportColumn<Row>[] 
     return [
       { header: 'Group', accessor: (row: Row) => String(row.group ?? '') },
       ...groupKeys.map((key) => ({
-        header: key,
+        header: getMeasureLabel(key),
         accessor: (row: Row) => String(row[key] ?? ''),
       })),
     ];
@@ -45,7 +46,7 @@ export function viewResultToCsvColumns(result: ViewResult): ExportColumn<Row>[] 
   if (chartType === 'table' && result.rows && result.rows.length > 0) {
     const keys = Object.keys(result.rows[0]);
     return keys.map((key) => ({
-      header: key,
+      header: getMeasureLabel(key),
       accessor: (row: Row) => String(row[key] ?? ''),
     }));
   }

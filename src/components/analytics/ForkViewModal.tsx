@@ -27,6 +27,12 @@ interface ForkViewModalProps {
 }
 
 const CHART_OPTIONS = ['kpi', 'line', 'bar', 'table'] as const;
+const CHART_LABELS: Record<(typeof CHART_OPTIONS)[number], string> = {
+  kpi: 'KPI',
+  line: 'Line',
+  bar: 'Bar',
+  table: 'Table',
+};
 const GRANULARITY_OPTIONS: TimeGranularity[] = ['day', 'week', 'month'];
 
 function slugify(label: string): string {
@@ -121,8 +127,13 @@ export function ForkViewModal({ open, onOpenChange, sourceView, from, to }: Fork
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          <div className="text-xs text-muted-foreground">
-            Source: {sourceView.label} ({sourceView.kind})
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span>Source: {sourceView.label}</span>
+            {sourceView.kind === 'custom' && (
+              <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-400">
+                custom
+              </span>
+            )}
           </div>
 
           {/* Name */}
@@ -149,14 +160,14 @@ export function ForkViewModal({ open, onOpenChange, sourceView, from, to }: Fork
                 <button
                   key={ct}
                   onClick={() => setChartType(ct)}
-                  className={`min-h-[36px] rounded-lg border px-3 py-1.5 text-xs capitalize transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                  className={`min-h-[36px] rounded-lg border px-3 py-1.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                     chartType === ct
                       ? 'border-primary bg-primary/10 text-primary'
                       : 'border-white/[0.08] text-muted-foreground hover:border-white/[0.15]'
                   }`}
                   aria-pressed={chartType === ct}
                 >
-                  {ct}
+                  {CHART_LABELS[ct]}
                 </button>
               ))}
             </div>
