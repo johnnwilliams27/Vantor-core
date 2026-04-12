@@ -76,7 +76,7 @@ export function SolWalletConnect() {
   return (
     <div className="space-y-4">
       {!connected && !linked && (
-        <Button size="sm" onClick={() => setVisible(true)}>
+        <Button onClick={() => setVisible(true)} className="btn-gradient w-full">
           Link Wallet
         </Button>
       )}
@@ -95,6 +95,7 @@ export function SolWalletConnect() {
               size="icon"
               className="h-6 w-6"
               onClick={() => disconnect()}
+              aria-label="Disconnect wallet"
             >
               <X className="h-3.5 w-3.5 text-muted-foreground" />
             </Button>
@@ -109,7 +110,7 @@ export function SolWalletConnect() {
               placeholder="e.g. Solana Treasury"
             />
           </div>
-          <Button onClick={handleLink} disabled={linking} size="sm">
+          <Button onClick={handleLink} disabled={linking} className="btn-gradient w-full">
             {linking ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -543,10 +543,10 @@ export default function ERPSettingsPage() {
                               }}
                               disabled={savingNickname}
                             />
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSaveNickname(cfg.id)} disabled={savingNickname || !editValue.trim()}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSaveNickname(cfg.id)} disabled={savingNickname || !editValue.trim()} aria-label="Save nickname">
                               <Check className="h-3.5 w-3.5 text-green-600" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingId(null)} disabled={savingNickname}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingId(null)} disabled={savingNickname} aria-label="Cancel edit">
                               <X className="h-3.5 w-3.5 text-muted-foreground" />
                             </Button>
                           </div>
@@ -558,6 +558,7 @@ export default function ERPSettingsPage() {
                               size="icon"
                               className="h-6 w-6"
                               onClick={() => { setEditingId(cfg.id); setEditValue(cfg.label); }}
+                              aria-label="Edit ERP nickname"
                             >
                               <Pencil className="h-3 w-3 text-muted-foreground" />
                             </Button>
@@ -598,6 +599,7 @@ export default function ERPSettingsPage() {
                             className="h-8 w-8"
                             onClick={() => setDeleteTarget({ id: cfg.id, label: cfg.label })}
                             disabled={actionPending}
+                            aria-label={`Delete ${cfg.label} configuration`}
                           >
                             <Trash2 className="h-4 w-4 text-red-400" />
                           </Button>

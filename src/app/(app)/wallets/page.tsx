@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { EthWalletConnect } from '@/components/wallets/EthWalletConnect';
 import { SolWalletConnect } from '@/components/wallets/SolWalletConnect';
+import { EthereumLogo, SolanaLogo } from '@/components/ui/icons/chain-logos';
 import { useWallets, useUnlinkWallet } from '@/hooks/useWallets';
 import { useTreasuryOverview } from '@/hooks/useTreasury';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -67,19 +68,51 @@ function CryptoWalletsTab() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
+        <Card className="border-t-2 border-t-slate-400/40">
           <CardHeader>
-            <CardTitle>Link Ethereum Wallet</CardTitle>
+            <div className="flex items-start gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
+                <EthereumLogo size={22} />
+              </span>
+              <div className="flex-1 min-w-0">
+                <CardTitle>Link Ethereum Wallet</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1 leading-snug">
+                  Connect a self-custody wallet to sign and sync USDC / USDT balances on Ethereum.
+                </p>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span>Supports</span>
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0">USDC</Badge>
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0">USDT</Badge>
+            </div>
+            <div className="h-px bg-white/[0.06]" />
             <EthWalletConnect />
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-t-2 border-t-purple-400/40">
           <CardHeader>
-            <CardTitle>Link Solana Wallet</CardTitle>
+            <div className="flex items-start gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
+                <SolanaLogo size={22} />
+              </span>
+              <div className="flex-1 min-w-0">
+                <CardTitle>Link Solana Wallet</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1 leading-snug">
+                  Connect a self-custody wallet to sign and sync USDC / USDT balances on Solana.
+                </p>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span>Supports</span>
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0">USDC</Badge>
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0">USDT</Badge>
+            </div>
+            <div className="h-px bg-white/[0.06]" />
             <SolWalletConnect />
           </CardContent>
         </Card>
@@ -128,10 +161,10 @@ function CryptoWalletsTab() {
                                 }}
                                 disabled={saving}
                               />
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSaveNickname(wallet.id)} disabled={saving}>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSaveNickname(wallet.id)} disabled={saving} aria-label="Save nickname">
                                 <Check className="h-3.5 w-3.5 text-green-600" />
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingId(null)} disabled={saving}>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingId(null)} disabled={saving} aria-label="Cancel edit">
                                 <X className="h-3.5 w-3.5 text-muted-foreground" />
                               </Button>
                             </div>
@@ -143,6 +176,7 @@ function CryptoWalletsTab() {
                                 size="icon"
                                 className="h-6 w-6"
                                 onClick={() => { setEditingId(wallet.id); setEditValue(wallet.label ?? ''); }}
+                                aria-label={wallet.label ? 'Edit wallet nickname' : 'Add wallet nickname'}
                               >
                                 <Pencil className="h-3 w-3 text-muted-foreground" />
                               </Button>
@@ -198,6 +232,7 @@ function CryptoWalletsTab() {
                                 : truncateAddress(wallet.address, 8),
                             })}
                             disabled={isPending}
+                            aria-label={`Unlink ${wallet.label || 'wallet'}`}
                           >
                             <Trash2 className="h-4 w-4 text-red-400" />
                           </Button>

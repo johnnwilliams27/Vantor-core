@@ -158,10 +158,10 @@ export function BankAccountsTab({ bankingProvider = 'stripe_fc' }: { bankingProv
                                 }}
                                 disabled={saving}
                               />
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSaveNickname(account.id)} disabled={saving}>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSaveNickname(account.id)} disabled={saving} aria-label="Save nickname">
                                 <Check className="h-3.5 w-3.5 text-green-600" />
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingId(null)} disabled={saving}>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingId(null)} disabled={saving} aria-label="Cancel edit">
                                 <X className="h-3.5 w-3.5 text-muted-foreground" />
                               </Button>
                             </div>
@@ -173,6 +173,7 @@ export function BankAccountsTab({ bankingProvider = 'stripe_fc' }: { bankingProv
                                 size="icon"
                                 className="h-6 w-6"
                                 onClick={() => { setEditingId(account.id); setEditValue(account.nickname ?? ''); }}
+                                aria-label={account.nickname ? 'Edit bank account nickname' : 'Add bank account nickname'}
                               >
                                 <Pencil className="h-3 w-3 text-muted-foreground" />
                               </Button>
@@ -242,6 +243,7 @@ export function BankAccountsTab({ bankingProvider = 'stripe_fc' }: { bankingProv
                               label: `${account.institution_name}${account.last4 ? ` ****${account.last4}` : ''}`,
                             })}
                             disabled={isDeleting}
+                            aria-label={`Remove ${account.institution_name} account`}
                           >
                             <Trash2 className="h-4 w-4 text-red-400" />
                           </Button>
