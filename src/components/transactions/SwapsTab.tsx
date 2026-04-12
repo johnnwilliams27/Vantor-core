@@ -8,7 +8,7 @@ import { TablePagination } from '@/components/ui/table-pagination';
 import { useTableFilter } from '@/hooks/useTableFilter';
 import { formatCurrency, formatDateTime, capitalize } from '@/lib/utils';
 import type { Swap } from '@/types/database';
-import { CardSpinner } from '@/components/ui/spinner';
+import { TableRowsSkeleton } from '@/components/ui/operations-skeletons';
 
 const SWAPS_TAB_FILTER_CONFIG = {
   searchFields: [
@@ -73,11 +73,7 @@ export function SwapsTab() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={5}>
-                  <CardSpinner />
-                </TableCell>
-              </TableRow>
+              <TableRowsSkeleton columns={5} rows={5} />
             ) : filter.pagedData.length ? (
               filter.pagedData.map((s) => (
                 <TableRow key={s.id}>

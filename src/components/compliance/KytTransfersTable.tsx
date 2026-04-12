@@ -3,7 +3,7 @@ import { useKytTransfers } from '@/hooks/useCompliance';
 import { Badge } from '@/components/ui/badge';
 import { capitalize } from '@/lib/utils';
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
-import { CardSpinner } from '@/components/ui/spinner';
+import { TableRowsSkeleton } from '@/components/ui/operations-skeletons';
 
 function riskColor(score: number | null): string {
   if (score === null) return 'text-muted-foreground';
@@ -20,26 +20,30 @@ export function KytTransfersTable() {
       <div className="p-4 border-b">
         <h3 className="text-sm font-semibold">Monitored Transfers</h3>
       </div>
-      {isLoading ? (
-        <CardSpinner />
-      ) : !transfers?.length ? (
-        <div className="p-8 text-center text-sm text-muted-foreground">No KYT transfers recorded yet</div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left text-muted-foreground">
-                <th className="px-4 py-2 font-medium">Direction</th>
-                <th className="px-4 py-2 font-medium">Amount (USD)</th>
-                <th className="px-4 py-2 font-medium">Chain</th>
-                <th className="px-4 py-2 font-medium">Risk Score</th>
-                <th className="px-4 py-2 font-medium">Cluster</th>
-                <th className="px-4 py-2 font-medium">Tx Hash</th>
-                <th className="px-4 py-2 font-medium">Registered</th>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b text-left text-muted-foreground">
+              <th className="px-4 py-2 font-medium">Direction</th>
+              <th className="px-4 py-2 font-medium">Amount (USD)</th>
+              <th className="px-4 py-2 font-medium">Chain</th>
+              <th className="px-4 py-2 font-medium">Risk Score</th>
+              <th className="px-4 py-2 font-medium">Cluster</th>
+              <th className="px-4 py-2 font-medium">Tx Hash</th>
+              <th className="px-4 py-2 font-medium">Registered</th>
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading ? (
+              <TableRowsSkeleton columns={7} rows={4} />
+            ) : !transfers?.length ? (
+              <tr>
+                <td colSpan={7} className="p-8 text-center text-sm text-muted-foreground">
+                  No KYT transfers recorded yet
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {transfers.map((t) => {
+            ) : (
+              transfers.map((t) => {
                 const score = t.risk_score !== null ? parseFloat(t.risk_score) : null;
                 return (
                   <tr key={t.id} className="border-b last:border-0 hover:bg-muted/30">
@@ -78,11 +82,11 @@ export function KytTransfersTable() {
                     </td>
                   </tr>
                 );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

@@ -8,7 +8,7 @@ import { TablePagination } from '@/components/ui/table-pagination';
 import { useTableFilter } from '@/hooks/useTableFilter';
 import { formatCurrency, formatDateTime, capitalize } from '@/lib/utils';
 import type { YieldTransaction } from '@/types/database';
-import { CardSpinner } from '@/components/ui/spinner';
+import { TableRowsSkeleton } from '@/components/ui/operations-skeletons';
 import { getVenueDisplayName } from '@/lib/yield/venues';
 
 const YIELD_FILTER_CONFIG = {
@@ -80,11 +80,7 @@ export function YieldTab() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={7}>
-                  <CardSpinner />
-                </TableCell>
-              </TableRow>
+              <TableRowsSkeleton columns={7} rows={5} />
             ) : filter.pagedData.length ? (
               filter.pagedData.map((tx) => (
                 <TableRow key={tx.id}>

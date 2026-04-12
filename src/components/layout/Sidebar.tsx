@@ -74,7 +74,7 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    heading: 'Linked Accounts',
+    heading: 'Connections',
     items: [
       { label: 'Wallets', href: '/wallets', icon: Wallet, minRole: 'accountant' },
       { label: 'Bank Accounts', href: '/bank-accounts', icon: Building2, minRole: 'accountant' },

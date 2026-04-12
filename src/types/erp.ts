@@ -1,11 +1,31 @@
 import type { ErpVendor, Invoice, ChainType, TokenSymbol } from './database';
 
 export interface ERPCredentials {
-  apiUrl: string;
-  clientId: string;
-  clientSecret: string;
+  /** Base URL — used by SAP and Oracle. */
+  apiUrl?: string;
+
+  /** OAuth / client credentials — SAP, Oracle, Xero, QuickBooks. */
+  clientId?: string;
+  clientSecret?: string;
+
+  /** SAP-specific. */
   companyCode?: string;
+  /** SAP landscape: 'dev' | 'qa' | 'prod'. */
+  landscape?: string;
+
+  /** Oracle, Xero — tenant / instance identifier. */
   tenantId?: string;
+
+  /** NetSuite — account ID + token-based auth credentials. */
+  accountId?: string;
+  consumerKey?: string;
+  consumerSecret?: string;
+  tokenId?: string;
+  tokenSecret?: string;
+
+  /** QuickBooks Online — company realm ID. */
+  realmId?: string;
+
   [key: string]: string | undefined;
 }
 

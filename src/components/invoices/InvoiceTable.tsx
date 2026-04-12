@@ -19,7 +19,8 @@ import { formatCurrency, formatDateTime, capitalize } from '@/lib/utils';
 import { exportCsv, exportPdf } from '@/lib/export';
 import type { ExportColumn } from '@/lib/export';
 import { RefreshCw, Loader2, CreditCard, Plus } from 'lucide-react';
-import { CardSpinner } from '@/components/ui/spinner';
+import { TruncatedAddress } from '@/components/ui/truncated-address';
+import { TableRowsSkeleton } from '@/components/ui/operations-skeletons';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
@@ -213,11 +214,7 @@ export function InvoiceTable() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={9}>
-                  <CardSpinner />
-                </TableCell>
-              </TableRow>
+              <TableRowsSkeleton columns={9} rows={5} />
             ) : filter.pagedData.length ? (
               filter.pagedData.map((inv) => (
                 <TableRow
@@ -380,11 +377,12 @@ export function InvoiceTable() {
             {/* Destination */}
             {(selectedInvoice.destination_address || selectedInvoice.vendor?.wallet_address) && (
               <div className="bg-muted/40 rounded-md p-3 space-y-2">
-                <div className="flex justify-between text-sm">
+                <div className="flex justify-between items-center text-sm">
                   <span className="text-muted-foreground">Destination</span>
-                  <span className="font-mono text-xs text-right max-w-[200px] break-all">
-                    {selectedInvoice.destination_address || selectedInvoice.vendor?.wallet_address}
-                  </span>
+                  <TruncatedAddress
+                    address={(selectedInvoice.destination_address || selectedInvoice.vendor?.wallet_address)!}
+                    chars={8}
+                  />
                 </div>
               </div>
             )}

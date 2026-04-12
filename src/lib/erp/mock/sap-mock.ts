@@ -21,7 +21,7 @@ export class SAPMockAdapter implements IERPAdapter {
     if (!this.credentials.apiUrl || !this.credentials.clientId) {
       return { success: false, message: 'Missing required SAP credentials' };
     }
-    return { success: true, message: 'SAP Digital Currency Hub connection successful (mock)' };
+    return { success: true, message: 'SAP connection successful (mock)' };
   }
 
   async fetchVendors(): Promise<ERPVendorRaw[]> {

@@ -5,11 +5,13 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { ChainBadge } from '@/components/ui/icons/chain-logos';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { useTableFilter } from '@/hooks/useTableFilter';
-import { formatCurrency, formatDateTime, formatRelativeOrDate, truncateAddress, capitalize } from '@/lib/utils';
+import { formatCurrency, formatDateTime, formatRelativeOrDate, capitalize, truncateAddress } from '@/lib/utils';
+import { TruncatedAddress } from '@/components/ui/truncated-address';
 import { exportCsv, exportPdf } from '@/lib/export';
 import type { ExportColumn } from '@/lib/export';
 import type { Transfer } from '@/types/database';
@@ -184,9 +186,15 @@ function TransferList() {
               filter.pagedData.map((p) => (
                 <TableRow key={p.id} className="hover:bg-white/[0.02]">
                   <TableCell className="text-sm">
-                    {p.from_wallet?.label || (p.from_wallet?.address ? `${p.from_wallet.address.slice(0, 6)}…${p.from_wallet.address.slice(-4)}` : '—')}
+                    {p.from_wallet?.label
+                      ? p.from_wallet.label
+                      : p.from_wallet?.address
+                        ? <TruncatedAddress address={p.from_wallet.address} />
+                        : '—'}
                   </TableCell>
-                  <TableCell className="font-mono text-sm">{truncateAddress(p.to_address, 6)}</TableCell>
+                  <TableCell>
+                    {p.to_address ? <TruncatedAddress address={p.to_address} /> : '—'}
+                  </TableCell>
                   <TableCell className="text-sm">
                     <span className="font-semibold">{formatCurrency(p.amount)}</span>
                   </TableCell>

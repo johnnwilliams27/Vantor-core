@@ -9,29 +9,161 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { InfoTooltip } from '@/components/ui/info-tooltip';
+import { PasswordField } from '@/components/ui/password-field';
+import { NicknameEdit } from '@/components/ui/nickname-edit';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useERPStore } from '@/store/erpStore';
 import { useAppStore } from '@/store/appStore';
 import type { ErpConfiguration } from '@/types/database';
-import { Loader2, CheckCircle, XCircle, Settings2, Trash2, Pencil, Check, X } from 'lucide-react';
-import { CardSpinner } from '@/components/ui/spinner';
+import { Loader2, CheckCircle, XCircle, Settings2, Trash2, Pencil, Check, X, Download } from 'lucide-react';
+import { exportCsv, type ExportColumn } from '@/lib/export';
+import { TableCardSkeleton } from '@/components/ui/operations-skeletons';
 
-// Xero is the only ERP we support for new connections today. SAP, Oracle,
-// and NetSuite are coming soon — their providers still exist in the DB
-// enum and the Linked list still renders legacy rows of those types, but
-// the new-connection form only lets users create Xero configurations.
-const schema = z.object({
-  provider: z.literal('xero'),
-  label: z.string().min(1, 'Nickname required'),
-  apiUrl: z.string().url('Enter a valid URL'),
-  clientId: z.string().min(1, 'Client ID required'),
-  clientSecret: z.string().min(1, 'Client secret required'),
-  tenantId: z.string().optional(),
-});
+/**
+ * ERP credentials are provider-specific. The base schema keeps every field
+ * optional so the form can swap inputs without re-rendering the resolver;
+ * the .superRefine() below enforces which fields are required per provider.
+ */
+const schema = z
+  .object({
+    provider: z.enum(['sap', 'oracle', 'xero', 'netsuite', 'quickbooks']),
+    label: z.string().min(1, 'Nickname required'),
+    apiUrl: z.string().url('Enter a valid URL').optional().or(z.literal('')),
+    clientId: z.string().optional(),
+    clientSecret: z.string().optional(),
+    companyCode: z.string().optional(),
+    tenantId: z.string().optional(),
+    accountId: z.string().optional(),
+    landscape: z.enum(['dev', 'qa', 'prod']).optional(),
+    consumerKey: z.string().optional(),
+    consumerSecret: z.string().optional(),
+    tokenId: z.string().optional(),
+    tokenSecret: z.string().optional(),
+    realmId: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    const required: Array<{ key: keyof typeof data; label: string }> = [];
+    switch (data.provider) {
+      case 'sap':
+        required.push(
+          { key: 'apiUrl', label: 'API URL' },
+          { key: 'clientId', label: 'Client ID' },
+          { key: 'clientSecret', label: 'Client Secret' },
+          { key: 'companyCode', label: 'Company Code' },
+        );
+        break;
+      case 'oracle':
+        required.push(
+          { key: 'apiUrl', label: 'API URL' },
+          { key: 'clientId', label: 'Client ID' },
+          { key: 'clientSecret', label: 'Client Secret' },
+          { key: 'tenantId', label: 'Tenant / Instance ID' },
+        );
+        break;
+      case 'netsuite':
+        required.push(
+          { key: 'accountId', label: 'Account ID' },
+          { key: 'consumerKey', label: 'Consumer Key' },
+          { key: 'consumerSecret', label: 'Consumer Secret' },
+          { key: 'tokenId', label: 'Token ID' },
+          { key: 'tokenSecret', label: 'Token Secret' },
+        );
+        break;
+      case 'xero':
+        required.push(
+          { key: 'clientId', label: 'Client ID' },
+          { key: 'clientSecret', label: 'Client Secret' },
+          { key: 'tenantId', label: 'Tenant ID' },
+        );
+        break;
+      case 'quickbooks':
+        required.push(
+          { key: 'clientId', label: 'Client ID' },
+          { key: 'clientSecret', label: 'Client Secret' },
+          { key: 'realmId', label: 'Realm ID' },
+        );
+        break;
+    }
+    for (const { key, label } of required) {
+      const value = data[key];
+      if (!value || (typeof value === 'string' && value.trim() === '')) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [key],
+          message: `${label} required`,
+        });
+      }
+    }
+  });
 
 type FormData = z.infer<typeof schema>;
+
+type ProviderId = FormData['provider'];
+
+const PROVIDER_DOCS: Record<ProviderId, string> = {
+  sap: 'https://help.sap.com/docs/SAP_S4HANA_CLOUD',
+  oracle: 'https://docs.oracle.com/en/cloud/saas/financials/',
+  netsuite: 'https://docs.oracle.com/en/cloud/saas/netsuite/',
+  xero: 'https://developer.xero.com/documentation/',
+  quickbooks: 'https://developer.intuit.com/app/developer/qbo/docs/get-started',
+};
+
+const USES_OAUTH: Record<ProviderId, boolean> = {
+  sap: false,
+  oracle: false,
+  netsuite: false,
+  xero: true,
+  quickbooks: true,
+};
+
+interface ErpExportRow {
+  nickname: string;
+  provider: string;
+  lastSynced: string;
+  status: string;
+}
+
+const ERP_EXPORT_COLUMNS: ExportColumn<ErpExportRow>[] = [
+  { header: 'Nickname', accessor: (r) => r.nickname },
+  { header: 'Provider', accessor: (r) => r.provider },
+  { header: 'Last Synced', accessor: (r) => r.lastSynced },
+  { header: 'Status', accessor: (r) => r.status },
+];
+
+const PROVIDER_DISPLAY: Record<ProviderId, string> = {
+  sap: 'SAP',
+  oracle: 'Oracle',
+  netsuite: 'NetSuite',
+  xero: 'Xero',
+  quickbooks: 'QuickBooks',
+};
+
+/**
+ * Returns a [variant, relative label] pair for a last-synced timestamp.
+ * Green ≤1h (fresh), amber ≤24h (stale), red >24h (very stale).
+ * Null/undefined timestamp → warning "Never".
+ */
+function syncFreshness(ts: string | null | undefined): {
+  variant: 'success' | 'warning' | 'destructive';
+  label: string;
+} {
+  if (!ts) return { variant: 'destructive', label: 'Never' };
+  const ms = Date.now() - new Date(ts).getTime();
+  const hours = ms / 3_600_000;
+  if (hours < 1) {
+    const mins = Math.max(1, Math.round(ms / 60_000));
+    return { variant: 'success', label: `${mins}m ago` };
+  }
+  if (hours < 24) return { variant: 'success', label: `${Math.round(hours)}h ago` };
+  const days = Math.round(hours / 24);
+  if (days < 7) return { variant: 'warning', label: `${days}d ago` };
+  return { variant: 'destructive', label: `${days}d ago` };
+}
 
 export default function ERPSettingsPage() {
   const { toast } = useToast();
@@ -41,11 +173,8 @@ export default function ERPSettingsPage() {
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [testing, setTesting] = useState(false);
   const [deactivateTarget, setDeactivateTarget] = useState<{ id: string; label: string } | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string; active: boolean } | null>(null);
   const [actionPending, setActionPending] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState('');
-  const [savingNickname, setSavingNickname] = useState(false);
   const [showErpAddonConfirm, setShowErpAddonConfirm] = useState(false);
   const [pendingErpData, setPendingErpData] = useState<any>(null);
 
@@ -65,11 +194,17 @@ export default function ERPSettingsPage() {
     register,
     handleSubmit,
     getValues,
-    formState: { errors, isSubmitting },
+    watch,
+    formState: { errors, isSubmitting, isValid },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { provider: 'xero' },
+    defaultValues: { provider: 'sap', landscape: 'prod' },
+    mode: 'onChange',
   });
+
+  const selectedProvider = watch('provider');
+  const docsUrl = PROVIDER_DOCS[selectedProvider];
+  const isOAuth = USES_OAUTH[selectedProvider];
 
   const handleSetActive = async (id: string, is_active: boolean) => {
     setActionPending(true);
@@ -114,24 +249,36 @@ export default function ERPSettingsPage() {
     }
   };
 
-  const handleSaveNickname = async (id: string) => {
-    setSavingNickname(true);
-    try {
-      const res = await fetch('/api/erp/connect', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, label: editValue.trim() }),
-      });
-      if (!res.ok) throw new Error('Failed to save');
-      queryClient.invalidateQueries({ queryKey: ['erp-configs'] });
-      toast({ title: 'Nickname saved', variant: 'success' });
-    } catch (err) {
-      toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
-    } finally {
-      setSavingNickname(false);
-      setEditingId(null);
+  const handleSaveNickname = async (id: string, newLabel: string) => {
+    const res = await fetch('/api/erp/connect', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, label: newLabel }),
+    });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      const err = new Error(json.error || 'Failed to save');
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+      throw err;
     }
+    queryClient.invalidateQueries({ queryKey: ['erp-configs'] });
+    toast({ title: 'Nickname saved', variant: 'success' });
   };
+
+  const buildCredentials = (data: FormData) => ({
+    apiUrl: data.apiUrl,
+    clientId: data.clientId,
+    clientSecret: data.clientSecret,
+    companyCode: data.companyCode,
+    tenantId: data.tenantId,
+    accountId: data.accountId,
+    landscape: data.landscape,
+    consumerKey: data.consumerKey,
+    consumerSecret: data.consumerSecret,
+    tokenId: data.tokenId,
+    tokenSecret: data.tokenSecret,
+    realmId: data.realmId,
+  });
 
   const handleTest = async () => {
     const data = getValues();
@@ -144,12 +291,7 @@ export default function ERPSettingsPage() {
         body: JSON.stringify({
           provider: data.provider,
           label: data.label || 'Test',
-          credentials: {
-            apiUrl: data.apiUrl,
-            clientId: data.clientId,
-            clientSecret: data.clientSecret,
-            tenantId: data.tenantId,
-          },
+          credentials: buildCredentials(data),
           testOnly: true,
         }),
       });
@@ -170,12 +312,7 @@ export default function ERPSettingsPage() {
         body: JSON.stringify({
           provider: data.provider,
           label: data.label,
-          credentials: {
-            apiUrl: data.apiUrl,
-            clientId: data.clientId,
-            clientSecret: data.clientSecret,
-            tenantId: data.tenantId,
-          },
+          credentials: buildCredentials(data),
         }),
       });
       const json = await res.json();
@@ -205,7 +342,7 @@ export default function ERPSettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Link ERP System</CardTitle>
-            <CardDescription>Connect Xero to sync invoices, vendors, and obligations</CardDescription>
+            <CardDescription>Connect SAP, Oracle, NetSuite, Xero, or QuickBooks to sync invoices and vendors</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -213,62 +350,264 @@ export default function ERPSettingsPage() {
                 <div className="space-y-2">
                   <Label>ERP Provider</Label>
                   <Select {...register('provider')}>
+                    <option value="sap">SAP</option>
+                    <option value="oracle">Oracle</option>
+                    <option value="netsuite">NetSuite</option>
                     <option value="xero">Xero</option>
+                    <option value="quickbooks">QuickBooks</option>
                   </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Oracle, NetSuite, SAP, and Quickbooks coming soon.
-                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label>Nickname</Label>
-                  <Input placeholder="e.g. Production Xero" {...register('label')} />
+                  <Input placeholder="e.g. Production SAP" {...register('label')} />
                   {errors.label && <p className="text-sm text-red-500">{errors.label.message}</p>}
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>API URL</Label>
-                <Input placeholder="https://api.xero.com" {...register('apiUrl')} />
-                {errors.apiUrl && <p className="text-sm text-red-500">{errors.apiUrl.message}</p>}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Client ID</Label>
-                  <Input placeholder="client-id" {...register('clientId')} />
-                  {errors.clientId && <p className="text-sm text-red-500">{errors.clientId.message}</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label>Client Secret</Label>
-                  <Input type="password" placeholder="••••••••" {...register('clientSecret')} />
-                  {errors.clientSecret && <p className="text-sm text-red-500">{errors.clientSecret.message}</p>}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Tenant ID <span className="text-gray-400">(Xero)</span></Label>
-                <Input placeholder="tenant-id" {...register('tenantId')} />
-              </div>
-
-              {testResult && (
-                <div className={`flex items-center gap-2 p-3 rounded-lg text-sm ${
-                  testResult.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
-                }`}>
-                  {testResult.success ? (
-                    <CheckCircle className="h-4 w-4" />
-                  ) : (
-                    <XCircle className="h-4 w-4" />
-                  )}
-                  {testResult.message}
+              {isOAuth && (
+                <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-300/90 leading-relaxed">
+                  {selectedProvider === 'xero'
+                    ? 'Xero uses OAuth 2.0 — hosted Connect-with-Xero flow is coming soon. In the meantime, enter the Client ID / Secret and Tenant ID from your app registration below.'
+                    : 'QuickBooks uses OAuth 2.0 — hosted Connect-with-Intuit flow is coming soon. In the meantime, enter the Client ID / Secret and Realm ID from your Intuit developer app below.'}
                 </div>
               )}
 
-              <div className="flex gap-3">
-                <Button type="button" variant="outline" onClick={handleTest} disabled={testing}>
+              {/* SAP fields */}
+              {selectedProvider === 'sap' && (
+                <>
+                  <div className="space-y-2">
+                    <Label>API URL</Label>
+                    <Input placeholder="https://my123456.s4hana.ondemand.com" {...register('apiUrl')} />
+                    {errors.apiUrl && <p className="text-sm text-red-500">{errors.apiUrl.message}</p>}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Client ID</Label>
+                      <Input placeholder="client-id" {...register('clientId')} autoComplete="off" />
+                      {errors.clientId && <p className="text-sm text-red-500">{errors.clientId.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Client Secret</Label>
+                      <PasswordField placeholder="••••••••" {...register('clientSecret')} />
+                      {errors.clientSecret && <p className="text-sm text-red-500">{errors.clientSecret.message}</p>}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-1.5">
+                        Company Code
+                        <InfoTooltip content="The client/company ID in your SAP environment. Find it under System Information or ask your SAP admin." />
+                      </Label>
+                      <Input placeholder="1000" {...register('companyCode')} />
+                      {errors.companyCode && <p className="text-sm text-red-500">{errors.companyCode.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-1.5">
+                        Landscape
+                        <InfoTooltip content="Which SAP landscape to hit. Production is live data. Use QA or Development for testing without touching real transactions." />
+                      </Label>
+                      <Select {...register('landscape')}>
+                        <option value="prod">Production</option>
+                        <option value="qa">QA</option>
+                        <option value="dev">Development</option>
+                      </Select>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Oracle fields */}
+              {selectedProvider === 'oracle' && (
+                <>
+                  <div className="space-y-2">
+                    <Label>API URL</Label>
+                    <Input placeholder="https://your-tenant.fa.us6.oraclecloud.com" {...register('apiUrl')} />
+                    {errors.apiUrl && <p className="text-sm text-red-500">{errors.apiUrl.message}</p>}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Client ID</Label>
+                      <Input placeholder="client-id" {...register('clientId')} autoComplete="off" />
+                      {errors.clientId && <p className="text-sm text-red-500">{errors.clientId.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Client Secret</Label>
+                      <PasswordField placeholder="••••••••" {...register('clientSecret')} />
+                      {errors.clientSecret && <p className="text-sm text-red-500">{errors.clientSecret.message}</p>}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1.5">
+                      Tenant / Instance ID
+                      <InfoTooltip content="Your Oracle Fusion tenant identifier. Find it in the Cloud console URL or under Setup & Maintenance → Tenant." />
+                    </Label>
+                    <Input placeholder="tenant-id" {...register('tenantId')} />
+                    {errors.tenantId && <p className="text-sm text-red-500">{errors.tenantId.message}</p>}
+                  </div>
+                </>
+              )}
+
+              {/* NetSuite fields — token-based auth (TBA) */}
+              {selectedProvider === 'netsuite' && (
+                <>
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1.5">
+                      Account ID
+                      <InfoTooltip content="Your NetSuite account ID (e.g. TSTDRV123456). Visible under Setup → Company → Company Information." />
+                    </Label>
+                    <Input placeholder="TSTDRV123456" {...register('accountId')} />
+                    {errors.accountId && <p className="text-sm text-red-500">{errors.accountId.message}</p>}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Consumer Key</Label>
+                      <Input placeholder="consumer-key" {...register('consumerKey')} autoComplete="off" />
+                      {errors.consumerKey && <p className="text-sm text-red-500">{errors.consumerKey.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Consumer Secret</Label>
+                      <PasswordField placeholder="••••••••" {...register('consumerSecret')} />
+                      {errors.consumerSecret && <p className="text-sm text-red-500">{errors.consumerSecret.message}</p>}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Token ID</Label>
+                      <Input placeholder="token-id" {...register('tokenId')} autoComplete="off" />
+                      {errors.tokenId && <p className="text-sm text-red-500">{errors.tokenId.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Token Secret</Label>
+                      <PasswordField placeholder="••••••••" {...register('tokenSecret')} />
+                      {errors.tokenSecret && <p className="text-sm text-red-500">{errors.tokenSecret.message}</p>}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Xero fields */}
+              {selectedProvider === 'xero' && (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Client ID</Label>
+                      <Input placeholder="client-id" {...register('clientId')} autoComplete="off" />
+                      {errors.clientId && <p className="text-sm text-red-500">{errors.clientId.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Client Secret</Label>
+                      <PasswordField placeholder="••••••••" {...register('clientSecret')} />
+                      {errors.clientSecret && <p className="text-sm text-red-500">{errors.clientSecret.message}</p>}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1.5">
+                      Tenant ID
+                      <InfoTooltip content="Returned by the Xero OAuth flow after you install the app. Visible in the Xero developer app connection list." />
+                    </Label>
+                    <Input placeholder="tenant-id" {...register('tenantId')} />
+                    {errors.tenantId && <p className="text-sm text-red-500">{errors.tenantId.message}</p>}
+                  </div>
+                </>
+              )}
+
+              {/* QuickBooks fields */}
+              {selectedProvider === 'quickbooks' && (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Client ID</Label>
+                      <Input placeholder="client-id" {...register('clientId')} autoComplete="off" />
+                      {errors.clientId && <p className="text-sm text-red-500">{errors.clientId.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Client Secret</Label>
+                      <PasswordField placeholder="••••••••" {...register('clientSecret')} />
+                      {errors.clientSecret && <p className="text-sm text-red-500">{errors.clientSecret.message}</p>}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1.5">
+                      Realm ID
+                      <InfoTooltip content="Your QuickBooks Online company ID. Returned by the Intuit OAuth callback, also visible at qbo.intuit.com under Settings → Billing & Subscription." />
+                    </Label>
+                    <Input placeholder="1234567890123456" {...register('realmId')} />
+                    {errors.realmId && <p className="text-sm text-red-500">{errors.realmId.message}</p>}
+                  </div>
+                </>
+              )}
+
+              <a
+                href={docsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
+              >
+                Where do I find these? →
+              </a>
+
+              {testResult && (
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className={`rounded-lg p-3 text-sm border ${
+                    testResult.success
+                      ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                      : 'bg-red-500/5 border-red-500/20 text-red-700 dark:text-red-300'
+                  }`}
+                >
+                  <div className="flex items-start gap-2">
+                    {testResult.success ? (
+                      <CheckCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                    ) : (
+                      <XCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                    )}
+                    <div className="flex-1 space-y-2">
+                      <div>
+                        <div className="font-medium">
+                          {testResult.success ? 'Connection successful' : 'Connection failed'}
+                        </div>
+                        <div className="text-xs mt-0.5 opacity-90 leading-relaxed">
+                          {testResult.message}
+                        </div>
+                      </div>
+                      {!testResult.success && (
+                        <div className="flex items-center gap-3 pt-1">
+                          <button
+                            type="button"
+                            onClick={handleTest}
+                            disabled={testing || !isValid}
+                            className="text-xs font-medium underline-offset-2 hover:underline disabled:opacity-50 disabled:no-underline"
+                          >
+                            {testing ? 'Retrying…' : 'Retry'}
+                          </button>
+                          <a
+                            href={docsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-medium underline-offset-2 hover:underline"
+                          >
+                            View {PROVIDER_DISPLAY[selectedProvider]} docs →
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleTest}
+                  disabled={testing || !isValid}
+                  title={!isValid ? 'Fill required fields to enable' : undefined}
+                >
                   {testing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Testing…</> : 'Test Connection'}
                 </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving…</> : 'Save & Connect'}
+                <Button type="submit" disabled={isSubmitting || !isValid}>
+                  {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Connecting…</> : 'Save & Connect'}
                 </Button>
               </div>
             </form>
@@ -276,106 +615,126 @@ export default function ERPSettingsPage() {
         </Card>
 
         {/* Existing configs */}
-          <Card>
-            <CardHeader><CardTitle>Linked ERP Systems</CardTitle></CardHeader>
-            <CardContent>
         {isLoading ? (
-              <CardSpinner />
-        ) : !configs?.length ? (
-              <div className="text-sm text-muted-foreground text-center py-6">
-                No ERP systems linked yet. Connect one above.
-              </div>
+          <TableCardSkeleton columns={5} rows={2} />
         ) : (
-              <div className="space-y-3">
-                {configs.map((cfg) => {
-                  const isEditing = editingId === cfg.id;
-                  return (
-                  <div key={cfg.id} className="flex items-center justify-between p-3 rounded-lg border">
-                    <div className="flex items-center gap-3">
-                      <Settings2 className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        {isEditing ? (
-                          <div className="flex items-center gap-1">
-                            <Input
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              placeholder="Enter nickname…"
-                              className="h-7 text-sm w-44"
-                              autoFocus
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' && editValue.trim()) handleSaveNickname(cfg.id);
-                                if (e.key === 'Escape') setEditingId(null);
-                              }}
-                              disabled={savingNickname}
-                            />
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSaveNickname(cfg.id)} disabled={savingNickname || !editValue.trim()}>
-                              <Check className="h-3.5 w-3.5 text-green-600" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingId(null)} disabled={savingNickname}>
-                              <X className="h-3.5 w-3.5 text-muted-foreground" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-medium">{cfg.label}</span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => { setEditingId(cfg.id); setEditValue(cfg.label); }}
-                            >
-                              <Pencil className="h-3 w-3 text-muted-foreground" />
-                            </Button>
-                          </div>
-                        )}
-                        <div className="text-sm text-muted-foreground">
-                          {cfg.provider.toUpperCase()} · Last synced: {cfg.last_synced ? new Date(cfg.last_synced).toLocaleDateString() : 'Never'}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {cfg.is_active ? (
-                        <>
-                          <Badge variant="success">Active</Badge>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setDeactivateTarget({ id: cfg.id, label: cfg.label })}
-                            disabled={actionPending}
-                          >
-                            Deactivate
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <Badge variant="secondary">Inactive</Badge>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleSetActive(cfg.id, true)}
-                            disabled={actionPending}
-                          >
-                            Reactivate
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setDeleteTarget({ id: cfg.id, label: cfg.label })}
-                            disabled={actionPending}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-400" />
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  );
-                })}
-              </div>
-        )}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <CardTitle>Linked ERP Systems</CardTitle>
+              {configs && configs.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const rows: ErpExportRow[] = configs.map((c) => ({
+                      nickname: c.label,
+                      provider: PROVIDER_DISPLAY[c.provider as ProviderId] ?? c.provider,
+                      lastSynced: c.last_synced ? new Date(c.last_synced).toISOString() : 'Never',
+                      status: c.is_active ? 'Active' : 'Inactive',
+                    }));
+                    exportCsv('linked-erp-systems', ERP_EXPORT_COLUMNS, rows);
+                  }}
+                >
+                  <Download className="mr-2 h-3.5 w-3.5" />
+                  Export CSV
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent>
+              {!configs?.length ? (
+                <div className="py-10 text-center space-y-3">
+                  <Settings2 className="h-10 w-10 text-muted-foreground/40 mx-auto" />
+                  <p className="text-sm text-muted-foreground">No ERP systems linked yet.</p>
+                  <p className="text-xs text-muted-foreground">Pick a provider above to connect invoices and vendors.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead scope="col">Nickname</TableHead>
+                        <TableHead scope="col">Provider</TableHead>
+                        <TableHead scope="col">Last Synced</TableHead>
+                        <TableHead scope="col">Status</TableHead>
+                        <TableHead scope="col" className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {configs.map((cfg) => {
+                        const provider = cfg.provider as ProviderId;
+                        return (
+                          <TableRow key={cfg.id}>
+                            <TableCell>
+                              <NicknameEdit
+                                value={cfg.label}
+                                onSave={(v) => handleSaveNickname(cfg.id, v ?? '')}
+                                editAriaLabel="Edit ERP nickname"
+                                prefixIcon={<Settings2 className="h-4 w-4 text-muted-foreground shrink-0" />}
+                              />
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              <Badge variant="outline">{PROVIDER_DISPLAY[provider] ?? cfg.provider}</Badge>
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap">
+                              {(() => {
+                                const f = syncFreshness(cfg.last_synced);
+                                return (
+                                  <Badge variant={f.variant as any} className="text-xs" title={cfg.last_synced ? new Date(cfg.last_synced).toLocaleString() : 'Never synced'}>
+                                    {f.label}
+                                  </Badge>
+                                );
+                              })()}
+                            </TableCell>
+                            <TableCell>
+                              {cfg.is_active ? (
+                                <Badge variant="success">Active</Badge>
+                              ) : (
+                                <Badge variant="secondary">Inactive</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center justify-end gap-2">
+                                {cfg.is_active ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setDeactivateTarget({ id: cfg.id, label: cfg.label })}
+                                    disabled={actionPending}
+                                  >
+                                    Deactivate
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleSetActive(cfg.id, true)}
+                                    disabled={actionPending}
+                                  >
+                                    Reactivate
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => setDeleteTarget({ id: cfg.id, label: cfg.label, active: cfg.is_active })}
+                                  disabled={actionPending}
+                                  aria-label={`Delete ${cfg.label} configuration`}
+                                >
+                                  <Trash2 className="h-4 w-4 text-red-400" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
+        )}
       </div>
 
       <ConfirmDialog
@@ -392,44 +751,64 @@ export default function ERPSettingsPage() {
         open={!!deleteTarget}
         onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
         title="Delete ERP system?"
-        description={`Are you sure you want to permanently delete "${deleteTarget?.label ?? ''}"? This will remove all configuration data and cannot be undone.`}
+        description={
+          deleteTarget?.active
+            ? `"${deleteTarget.label}" is currently active and syncing invoices and vendors. Deleting it will stop sync immediately and remove all configuration data.`
+            : `Are you sure you want to permanently delete "${deleteTarget?.label ?? ''}"? This will remove all configuration data and cannot be undone.`
+        }
         confirmLabel="Delete"
         isPending={actionPending}
         onConfirm={handleDelete}
+        requireText={deleteTarget?.active ? 'DELETE' : undefined}
+        requireHelper={
+          deleteTarget?.active
+            ? 'This integration is still active. To permanently remove it, type DELETE in the field below.'
+            : undefined
+        }
       />
 
-      {showErpAddonConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-md mx-4 p-6 space-y-4">
-            <h2 className="text-lg font-semibold">Additional ERP Add-On</h2>
-            <p className="text-sm text-muted-foreground">
-              Adding an additional ERP integration costs <span className="text-foreground font-medium">$1,500/month</span>. This will be added to your next bill, pro-rated for the remaining days this month.
-            </p>
-            <div className="flex justify-end gap-3 pt-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowErpAddonConfirm(false);
+      <Dialog
+        open={showErpAddonConfirm}
+        onOpenChange={(o) => {
+          if (!o) {
+            setShowErpAddonConfirm(false);
+            setPendingErpData(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Additional ERP Add-On</DialogTitle>
+            <DialogDescription>
+              Adding an additional ERP integration costs{' '}
+              <span className="text-foreground font-medium">$1,500/month</span>. This will be added
+              to your next bill, pro-rated for the remaining days this month.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowErpAddonConfirm(false);
+                setPendingErpData(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                setShowErpAddonConfirm(false);
+                if (pendingErpData) {
+                  await doCreateErp(pendingErpData);
                   setPendingErpData(null);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={async () => {
-                  setShowErpAddonConfirm(false);
-                  if (pendingErpData) {
-                    await doCreateErp(pendingErpData);
-                    setPendingErpData(null);
-                  }
-                }}
-              >
-                Agree &amp; Add
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+                }
+              }}
+            >
+              Agree &amp; Add
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CardSpinner } from '@/components/ui/spinner';
+import { ListSkeleton } from '@/components/ui/operations-skeletons';
+import { Skeleton } from '@/components/ui/spinner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -118,9 +119,14 @@ export function ObligationsPanel() {
     <>
       <Card className="h-full">
         {isLoading ? (
-          <CardContent className="py-12">
-            <CardSpinner />
-          </CardContent>
+          <>
+            <CardHeader className="pb-2">
+              <Skeleton className="h-5 w-40" />
+            </CardHeader>
+            <CardContent>
+              <ListSkeleton rows={4} />
+            </CardContent>
+          </>
         ) : (
         <>
         <CardHeader className="pb-2">

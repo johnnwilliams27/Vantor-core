@@ -7,9 +7,17 @@ import { cn } from '@/lib/utils';
 interface InfoTooltipProps {
   content: string;
   className?: string;
+  /**
+   * When provided, the trigger renders these children in place of the
+   * default Info icon. Useful for attaching a tooltip to a status icon,
+   * badge, or any visual element that already communicates state.
+   */
+  children?: React.ReactNode;
+  /** Accessible label for the trigger button. Defaults to "More info". */
+  ariaLabel?: string;
 }
 
-export function InfoTooltip({ content, className }: InfoTooltipProps) {
+export function InfoTooltip({ content, className, children, ariaLabel }: InfoTooltipProps) {
   const [open, setOpen] = useState(false);
   const [positioned, setPositioned] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0, arrowLeft: 128 });
@@ -93,10 +101,15 @@ export function InfoTooltip({ content, className }: InfoTooltipProps) {
         onClick={() => setOpen(!open)}
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
-        className="text-muted-foreground hover:text-foreground transition-colors"
-        aria-label="More info"
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        className={cn(
+          'transition-colors inline-flex items-center',
+          !children && 'text-muted-foreground hover:text-foreground',
+        )}
+        aria-label={ariaLabel ?? 'More info'}
       >
-        <Info className="h-3.5 w-3.5" />
+        {children ?? <Info className="h-3.5 w-3.5" />}
       </button>
 
       {typeof window !== 'undefined' && createPortal(

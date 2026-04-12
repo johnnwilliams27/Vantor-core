@@ -1,13 +1,19 @@
 'use client';
 import { useComplianceOverview } from '@/hooks/useCompliance';
-import { CardSpinner } from '@/components/ui/spinner';
+import { StatGridSkeleton } from '@/components/ui/operations-skeletons';
+import { Skeleton } from '@/components/ui/spinner';
 import { ShieldCheck, ShieldAlert, Eye } from 'lucide-react';
 
 export function ComplianceOverviewCard() {
   const { data, isLoading } = useComplianceOverview();
 
   if (isLoading) {
-    return <CardSpinner />;
+    return (
+      <div className="rounded-lg border bg-card p-6">
+        <Skeleton className="h-5 w-40 mb-4" />
+        <StatGridSkeleton count={3} />
+      </div>
+    );
   }
 
   if (!data) return null;

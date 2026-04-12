@@ -20,6 +20,20 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
       else if (ref) (ref as React.MutableRefObject<HTMLSelectElement | null>).current = el;
     }, [ref]);
 
+    // Flatten React children into a plain string. Using `String(children)`
+    // directly is wrong when children is an array — `Array.prototype.toString`
+    // joins with commas, turning `<option>{label} · {time}</option>` into
+    // "label, · ,time" in our custom dropdown trigger.
+    const childrenToText = (node: React.ReactNode): string => {
+      if (node == null || node === false || node === true) return '';
+      if (typeof node === 'string' || typeof node === 'number') return String(node);
+      if (Array.isArray(node)) return node.map(childrenToText).join('');
+      if (React.isValidElement(node)) {
+        return childrenToText((node.props as { children?: React.ReactNode }).children);
+      }
+      return '';
+    };
+
     // Parse option children
     const options = React.useMemo(() => {
       const result: { value: string; label: string }[] = [];
@@ -27,9 +41,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         if (!React.isValidElement(child)) return;
         const childProps = child.props as Record<string, unknown>;
         const val = String(childProps.value ?? '');
-        const label = typeof childProps.children === 'string'
-          ? childProps.children
-          : String(childProps.children ?? val);
+        const label = childrenToText(childProps.children as React.ReactNode) || val;
         result.push({ value: val, label });
       });
       return result;

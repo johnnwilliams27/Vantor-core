@@ -22,7 +22,7 @@ export type ChainType = 'ethereum' | 'solana';
 export type TokenSymbol = 'USDC' | 'USDT';
 export type TransferStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
 export type InvoiceStatus = 'unpaid' | 'paid' | 'partially_paid' | 'overdue' | 'cancelled';
-export type ErpProvider = 'sap' | 'oracle' | 'xero' | 'netsuite';
+export type ErpProvider = 'sap' | 'oracle' | 'xero' | 'netsuite' | 'quickbooks';
 export type AuditAction =
   | 'login' | 'logout'
   | 'transfer_create' | 'transfer_execute' | 'transfer_cancel' | 'transfer_schedule'

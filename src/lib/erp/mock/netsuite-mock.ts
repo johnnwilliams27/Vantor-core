@@ -17,8 +17,17 @@ export class NetsuiteMockAdapter implements IERPAdapter {
 
   async testConnection(): Promise<{ success: boolean; message: string }> {
     await delay(300);
-    if (!this.credentials.clientId) {
-      return { success: false, message: 'Missing NetSuite Account ID or Client ID' };
+    // NetSuite uses token-based auth: account ID + consumer key/secret + token ID/secret.
+    const required: Array<keyof ERPCredentials> = [
+      'accountId',
+      'consumerKey',
+      'consumerSecret',
+      'tokenId',
+      'tokenSecret',
+    ];
+    const missing = required.filter((k) => !this.credentials[k]);
+    if (missing.length) {
+      return { success: false, message: `Missing NetSuite credentials: ${missing.join(', ')}` };
     }
     return { success: true, message: 'NetSuite connection successful (mock)' };
   }

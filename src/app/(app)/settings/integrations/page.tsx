@@ -10,7 +10,74 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, CheckCircle, XCircle, Plug, ExternalLink, Copy, Check } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, ExternalLink, Copy, Check } from 'lucide-react';
+import { SlackLogo } from '@/components/ui/icons/slack-logo';
+import { PasswordField } from '@/components/ui/password-field';
+import {
+  MsTeamsLogo,
+  EmailLogo,
+  WebhookLogo,
+  ZapierLogo,
+  PagerDutyLogo,
+} from '@/components/ui/icons/integration-logos';
+
+interface ComingSoonIntegration {
+  name: string;
+  description: string;
+  Logo: React.ComponentType<{ size?: number; className?: string }>;
+}
+
+const COMING_SOON_INTEGRATIONS: ComingSoonIntegration[] = [
+  {
+    name: 'Microsoft Teams',
+    description: 'Post recommendations to a Teams channel and approve inline, same flow as Slack.',
+    Logo: MsTeamsLogo,
+  },
+  {
+    name: 'Email (SMTP / Resend)',
+    description: 'Send daily digests and critical alerts to a distribution list or shared inbox.',
+    Logo: EmailLogo,
+  },
+  {
+    name: 'Webhooks',
+    description: 'POST treasury events to a custom HTTPS endpoint for SIEM, Datadog, or homegrown tools.',
+    Logo: WebhookLogo,
+  },
+  {
+    name: 'Zapier',
+    description: 'Connect Vantor to 7,000+ apps without writing custom integration code.',
+    Logo: ZapierLogo,
+  },
+  {
+    name: 'PagerDuty',
+    description: 'Escalate severe compliance or execution alerts to an on-call rotation.',
+    Logo: PagerDutyLogo,
+  },
+];
+
+function ComingSoonCard({ integration }: { integration: ComingSoonIntegration }) {
+  const { Logo } = integration;
+  return (
+    <Card className="opacity-75">
+      <CardHeader>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
+              <Logo size={22} />
+            </span>
+            <div className="min-w-0">
+              <CardTitle className="text-base">{integration.name}</CardTitle>
+              <CardDescription className="mt-1 text-xs leading-relaxed">
+                {integration.description}
+              </CardDescription>
+            </div>
+          </div>
+          <Badge variant="secondary" className="shrink-0 text-[10px]">Coming soon</Badge>
+        </div>
+      </CardHeader>
+    </Card>
+  );
+}
 
 const schema = z.object({
   botToken: z.string().min(1, 'Bot token required').max(500),
@@ -120,13 +187,15 @@ export default function IntegrationsPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6 max-w-4xl">
         {/* Slack Integration Card */}
-        <Card>
+        <Card className="max-w-2xl">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Plug className="h-5 w-5 text-muted-foreground" />
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
+                  <SlackLogo size={22} />
+                </span>
                 <div>
                   <CardTitle>Slack</CardTitle>
                   <CardDescription>
@@ -195,32 +264,47 @@ export default function IntegrationsPage() {
             {/* Setup Instructions */}
             {!isConnected && (
               <div className="space-y-4">
+                {/* Quick link to Slack app directory — saves users from having to
+                    find step 1 inside the ordered list. */}
+                <a
+                  href="https://api.slack.com/apps"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Open api.slack.com/apps <ExternalLink className="h-3 w-3" />
+                </a>
+
                 <div className="rounded-lg border p-4 space-y-3 text-sm">
                   <p className="font-medium">Setup Instructions</p>
                   <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
-                    <li>
-                      <a
-                        href="https://api.slack.com/apps"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-500 hover:underline inline-flex items-center gap-1"
-                      >
-                        Create a Slack app <ExternalLink className="h-3 w-3" />
-                      </a>
-                      {' '}at api.slack.com/apps
-                    </li>
+                    <li>Create a Slack app at api.slack.com/apps (link above)</li>
                     <li>Under <strong>OAuth &amp; Permissions</strong>, add bot scopes: <code className="bg-muted px-1 rounded">chat:write</code>, <code className="bg-muted px-1 rounded">chat:write.public</code></li>
                     <li>Install the app to your workspace and copy the <strong>Bot User OAuth Token</strong></li>
                     <li>Under <strong>Basic Information</strong>, copy the <strong>Signing Secret</strong></li>
                     <li>
-                      Under <strong>Interactivity &amp; Shortcuts</strong>, enable interactivity and paste this callback URL:
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <code className="bg-muted px-2 py-1 rounded text-xs flex-1 break-all">{callbackUrl}</code>
-                        <Button type="button" variant="outline" size="sm" onClick={handleCopy} className="shrink-0">
-                          {copied ? <><Check className="h-3 w-3 mr-1" />Copied</> : <><Copy className="h-3 w-3 mr-1" />Copy</>}
-                        </Button>
+                      <div className="inline">
+                        Under <strong>Interactivity &amp; Shortcuts</strong>, enable interactivity and paste this callback URL:
                       </div>
-                      <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                      {/* Field-shaped read-only URL with inline copy button */}
+                      <div className="relative mt-2">
+                        <code className="block bg-muted/50 border border-input rounded-md pl-3 pr-20 py-2 font-mono text-xs break-all text-foreground">
+                          {callbackUrl}
+                        </code>
+                        <button
+                          type="button"
+                          onClick={handleCopy}
+                          className="absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors text-muted-foreground hover:text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40"
+                          aria-label="Copy callback URL to clipboard"
+                        >
+                          {copied ? (
+                            <><Check className="h-3 w-3 text-emerald-500" />Copied</>
+                          ) : (
+                            <><Copy className="h-3 w-3" />Copy</>
+                          )}
+                        </button>
+                      </div>
+                      <p className="text-xs text-amber-600 dark:text-amber-400 mt-1.5">
                         ⚠️ This URL must be publicly reachable. Use your production URL or an ngrok tunnel in dev.
                       </p>
                     </li>
@@ -231,21 +315,13 @@ export default function IntegrationsPage() {
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                   <div className="space-y-2">
                     <Label>Bot User OAuth Token</Label>
-                    <Input
-                      type="password"
-                      placeholder="xoxb-…"
-                      {...register('botToken')}
-                    />
+                    <PasswordField placeholder="xoxb-…" {...register('botToken')} />
                     {errors.botToken && <p className="text-sm text-red-500">{errors.botToken.message}</p>}
                   </div>
 
                   <div className="space-y-2">
                     <Label>Signing Secret</Label>
-                    <Input
-                      type="password"
-                      placeholder="••••••••••••"
-                      {...register('signingSecret')}
-                    />
+                    <PasswordField placeholder="••••••••••••" {...register('signingSecret')} />
                     {errors.signingSecret && <p className="text-sm text-red-500">{errors.signingSecret.message}</p>}
                   </div>
 
@@ -267,14 +343,42 @@ export default function IntegrationsPage() {
                     <Input placeholder="My Company" {...register('workspaceName')} />
                   </div>
 
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Connecting…</> : 'Connect Slack'}
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="bg-[#4A154B] hover:bg-[#3a1139] text-white border-0"
+                  >
+                    {isSubmitting ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Connecting…</>
+                    ) : (
+                      <>
+                        <SlackLogo size={16} className="mr-2" />
+                        Connect Slack
+                      </>
+                    )}
                   </Button>
                 </form>
               </div>
             )}
           </CardContent>
         </Card>
+
+        {/* Coming soon */}
+        <div className="space-y-3 pt-2">
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              Coming soon
+            </h2>
+            <span className="text-xs text-muted-foreground">
+              Want one sooner? <a href="mailto:support@vantor.xyz" className="text-teal-500 hover:underline">Let us know</a>
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {COMING_SOON_INTEGRATIONS.map((integration) => (
+              <ComingSoonCard key={integration.name} integration={integration} />
+            ))}
+          </div>
+        </div>
       </div>
   );
 }

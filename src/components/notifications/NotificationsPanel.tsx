@@ -2,7 +2,7 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Bell, CheckCheck, Trash2 } from 'lucide-react';
-import { CardSpinner } from '@/components/ui/spinner';
+import { ListSkeleton } from '@/components/ui/operations-skeletons';
 import { cn } from '@/lib/utils';
 import { useNotifications, useMarkNotificationsRead, useClearNotifications } from '@/hooks/useNotifications';
 import { useRouter } from 'next/navigation';
@@ -119,7 +119,9 @@ export function NotificationsPanel() {
 
           <div className="max-h-96 overflow-y-auto divide-y divide-border/40">
             {isLoading ? (
-              <CardSpinner />
+              <div className="p-3">
+                <ListSkeleton rows={3} />
+              </div>
             ) : notifications.length === 0 ? (
               <p className="py-10 text-center text-sm text-muted-foreground">No notifications yet.</p>
             ) : (

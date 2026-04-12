@@ -1,5 +1,6 @@
 import { Skeleton } from '@/components/ui/spinner';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { TableRow, TableCell } from '@/components/ui/table';
 
 /** Skeleton for a form card (wallet selector, token, amount, button) */
 export function FormCardSkeleton({ fields = 5 }: { fields?: number }) {
@@ -63,6 +64,78 @@ export function TableCardSkeleton({ columns = 8, rows = 5 }: { columns?: number;
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * Row-only skeleton for use inside an existing `<TableBody>` — renders N
+ * fake rows whose cells match the column count. Drop this in place of a
+ * single spinner cell when the header / card chrome is already painted
+ * and only the rows are loading.
+ */
+export function TableRowsSkeleton({ columns = 6, rows = 5 }: { columns?: number; rows?: number }) {
+  return (
+    <>
+      {Array.from({ length: rows }).map((_, rowIdx) => (
+        <TableRow key={rowIdx} aria-hidden="true">
+          {Array.from({ length: columns }).map((_, colIdx) => (
+            <TableCell key={colIdx}>
+              <Skeleton
+                className="h-3.5"
+                style={{
+                  width: colIdx === 0 ? '60%' : colIdx === columns - 1 ? '40px' : '80%',
+                }}
+              />
+            </TableCell>
+          ))}
+        </TableRow>
+      ))}
+    </>
+  );
+}
+
+/**
+ * Grid of stat-card skeletons — for dashboards that render a row of
+ * big-number cards (e.g. compliance overview, balance summary).
+ */
+export function StatGridSkeleton({ count = 3, columns = 3 }: { count?: number; columns?: number }) {
+  return (
+    <div
+      className={`grid grid-cols-2 md:grid-cols-${columns} gap-4`}
+      role="status"
+      aria-label="Loading"
+    >
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="rounded-lg border bg-muted/30 p-4 flex items-start gap-3">
+          <Skeleton className="h-5 w-5 rounded mt-0.5" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-6 w-1/2" />
+            <Skeleton className="h-3 w-3/4" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Vertical list-item skeleton for notification drawers, obligation lists,
+ * alert feeds, etc. Each row shows a small avatar/icon block + two text
+ * lines so the shape reads as "a list is coming."
+ */
+export function ListSkeleton({ rows = 4 }: { rows?: number }) {
+  return (
+    <div className="space-y-3" role="status" aria-label="Loading">
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="flex items-start gap-3 p-3 rounded-lg border border-border/50">
+          <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-3.5 w-3/4" />
+            <Skeleton className="h-3 w-1/2" />
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 

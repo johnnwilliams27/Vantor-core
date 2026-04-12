@@ -2,6 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { ChainBadge } from '@/components/ui/icons/chain-logos';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { TablePagination } from '@/components/ui/table-pagination';
@@ -9,7 +10,7 @@ import { useTableFilter } from '@/hooks/useTableFilter';
 import { formatCurrency, formatDateTime, truncateAddress, capitalize } from '@/lib/utils';
 import type { Transfer } from '@/types/database';
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
-import { CardSpinner } from '@/components/ui/spinner';
+import { TableRowsSkeleton } from '@/components/ui/operations-skeletons';
 
 function DirectionCell({ transfer }: { transfer: Transfer }) {
   if (transfer.direction === 'received') {
@@ -111,11 +112,7 @@ export function TransfersTab() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={6}>
-                  <CardSpinner />
-                </TableCell>
-              </TableRow>
+              <TableRowsSkeleton columns={6} rows={5} />
             ) : filter.pagedData.length ? (
               filter.pagedData.map((p) => (
                 <TableRow key={p.id}>
@@ -125,7 +122,7 @@ export function TransfersTab() {
                     <span className="font-semibold">{formatCurrency(p.amount)}</span>{' '}
                     <Badge variant="outline">{p.token}</Badge>
                   </TableCell>
-                  <TableCell><Badge variant={p.chain === 'ethereum' ? 'ethereum' : 'solana'}>{capitalize(p.chain)}</Badge></TableCell>
+                  <TableCell><ChainBadge chain={p.chain} /></TableCell>
                   <TableCell>
                     <Badge variant={
                       p.status === 'completed' ? 'success' as any :
