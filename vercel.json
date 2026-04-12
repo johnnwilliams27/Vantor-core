@@ -36,6 +36,10 @@
     {
       "path": "/api/cron/insights-engine",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/sweep-policy-approvals",
+      "schedule": "*/15 * * * *"
     }
   ]
 }
