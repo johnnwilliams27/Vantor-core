@@ -60,11 +60,13 @@ const APP_ADMIN_BLOCKED_PATHS = [
   '/api/balances',
 ];
 
+// TODO (Task 3 of RBAC plan): import from @/lib/auth/roles and delete this local map.
 const ROLE_RANK: Record<UserRole, number> = {
   auditor: 0,
   accountant: 1,
   treasury_manager: 2,
-  enterprise_admin: 3,
+  executive: 3,
+  enterprise_admin: 4,
 };
 
 export function hasRole(userRole: UserRole, requiredRole: UserRole): boolean {

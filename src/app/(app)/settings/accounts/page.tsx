@@ -24,10 +24,14 @@ interface TeamMember {
 }
 
 
-const ROLES: UserRole[] = ['enterprise_admin', 'treasury_manager', 'accountant', 'auditor'];
+const ROLES: UserRole[] = ['enterprise_admin', 'executive', 'treasury_manager', 'accountant', 'auditor'];
 
+// TODO (Task 12 of RBAC plan): UX pass on all role-facing copy when the
+// Permission Map card is built. Labels/descriptions/badges below for
+// `executive` are placeholders just to keep tsc green in Task 1.
 const ROLE_LABELS: Record<UserRole, string> = {
   enterprise_admin: 'Admin',
+  executive:        'Executive',
   auditor:          'Auditor',
   accountant:       'Accountant',
   treasury_manager: 'Treasury Manager',
@@ -35,6 +39,7 @@ const ROLE_LABELS: Record<UserRole, string> = {
 
 const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
   enterprise_admin: 'Full access including team management and billing',
+  executive:        'Senior approver for high-threshold transfers',
   auditor:          'View-only access to all records and reports',
   accountant:       'Manage invoices, wallets, and ERP connections',
   treasury_manager: 'Full access including payments, swaps, and AI',
@@ -42,37 +47,42 @@ const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
 
 const ROLE_BADGE: Record<UserRole, string> = {
   enterprise_admin: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
+  executive:        'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300',
   treasury_manager: 'bg-[#19595b]/10 text-[#134849] dark:bg-teal-500/20 dark:text-teal-300',
   accountant:       'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
   auditor:          'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
 };
 
-const CAPABILITIES: { label: string; enterprise_admin: boolean; auditor: boolean; accountant: boolean; treasury_manager: boolean }[] = [
-  { label: 'View dashboard & analytics',      enterprise_admin: true, auditor: true,  accountant: true,  treasury_manager: true  },
-  { label: 'View transactions & audit trail', enterprise_admin: true, auditor: true,  accountant: true,  treasury_manager: true  },
-  { label: 'View invoices & vendors',         enterprise_admin: true, auditor: true,  accountant: true,  treasury_manager: true  },
-  { label: 'View compliance',                 enterprise_admin: true, auditor: true,  accountant: true,  treasury_manager: true  },
-  { label: 'View reporting',                  enterprise_admin: true, auditor: false, accountant: true,  treasury_manager: true  },
-  { label: 'View payments history',           enterprise_admin: true, auditor: false, accountant: true,  treasury_manager: true  },
-  { label: 'View transfers history',          enterprise_admin: true, auditor: false, accountant: true,  treasury_manager: true  },
-  { label: 'View swaps history',              enterprise_admin: true, auditor: false, accountant: true,  treasury_manager: true  },
-  { label: 'View ramps history',              enterprise_admin: true, auditor: false, accountant: true,  treasury_manager: true  },
-  { label: 'View bridges history',            enterprise_admin: true, auditor: false, accountant: true,  treasury_manager: true  },
-  { label: 'View yield positions',            enterprise_admin: true, auditor: false, accountant: true,  treasury_manager: true  },
-  { label: 'View AI recommendations',         enterprise_admin: true, auditor: false, accountant: true,  treasury_manager: true  },
-  { label: 'Manage invoices & vendors',       enterprise_admin: true, auditor: false, accountant: true,  treasury_manager: true  },
-  { label: 'Link wallets & bank accounts',    enterprise_admin: true, auditor: false, accountant: true,  treasury_manager: true  },
-  { label: 'Link ERP systems',               enterprise_admin: true, auditor: false, accountant: true,  treasury_manager: true  },
-  { label: 'Execute payments',               enterprise_admin: true, auditor: false, accountant: false, treasury_manager: true  },
-  { label: 'Execute transfers',              enterprise_admin: true, auditor: false, accountant: false, treasury_manager: true  },
-  { label: 'Execute swaps',                  enterprise_admin: true, auditor: false, accountant: false, treasury_manager: true  },
-  { label: 'Execute ramps',                  enterprise_admin: true, auditor: false, accountant: false, treasury_manager: true  },
-  { label: 'Execute bridges',               enterprise_admin: true, auditor: false, accountant: false, treasury_manager: true  },
-  { label: 'Execute yield deposit/withdrawal', enterprise_admin: true, auditor: false, accountant: false, treasury_manager: true  },
-  { label: 'Generate treasury rules',        enterprise_admin: true, auditor: false, accountant: false, treasury_manager: true  },
-  { label: 'Treasury AI & recommendations',  enterprise_admin: true, auditor: false, accountant: false, treasury_manager: true  },
-  { label: 'Manage integrations & billing',  enterprise_admin: true, auditor: false, accountant: false, treasury_manager: true  },
-  { label: 'Manage users & permissions',     enterprise_admin: true, auditor: false, accountant: false, treasury_manager: true  },
+// TODO (Task 12 of RBAC plan): UX pass — `executive` capabilities are
+// mirrored from `treasury_manager` as a placeholder. True differentiation
+// (no-author, yes-high-threshold-approve) lands with the Permission Map
+// card rebuild.
+const CAPABILITIES: { label: string; enterprise_admin: boolean; executive: boolean; auditor: boolean; accountant: boolean; treasury_manager: boolean }[] = [
+  { label: 'View dashboard & analytics',      enterprise_admin: true, executive: true,  auditor: true,  accountant: true,  treasury_manager: true  },
+  { label: 'View transactions & audit trail', enterprise_admin: true, executive: true,  auditor: true,  accountant: true,  treasury_manager: true  },
+  { label: 'View invoices & vendors',         enterprise_admin: true, executive: true,  auditor: true,  accountant: true,  treasury_manager: true  },
+  { label: 'View compliance',                 enterprise_admin: true, executive: true,  auditor: true,  accountant: true,  treasury_manager: true  },
+  { label: 'View reporting',                  enterprise_admin: true, executive: true,  auditor: false, accountant: true,  treasury_manager: true  },
+  { label: 'View payments history',           enterprise_admin: true, executive: true,  auditor: false, accountant: true,  treasury_manager: true  },
+  { label: 'View transfers history',          enterprise_admin: true, executive: true,  auditor: false, accountant: true,  treasury_manager: true  },
+  { label: 'View swaps history',              enterprise_admin: true, executive: true,  auditor: false, accountant: true,  treasury_manager: true  },
+  { label: 'View ramps history',              enterprise_admin: true, executive: true,  auditor: false, accountant: true,  treasury_manager: true  },
+  { label: 'View bridges history',            enterprise_admin: true, executive: true,  auditor: false, accountant: true,  treasury_manager: true  },
+  { label: 'View yield positions',            enterprise_admin: true, executive: true,  auditor: false, accountant: true,  treasury_manager: true  },
+  { label: 'View AI recommendations',         enterprise_admin: true, executive: true,  auditor: false, accountant: true,  treasury_manager: true  },
+  { label: 'Manage invoices & vendors',       enterprise_admin: true, executive: true,  auditor: false, accountant: true,  treasury_manager: true  },
+  { label: 'Link wallets & bank accounts',    enterprise_admin: true, executive: true,  auditor: false, accountant: true,  treasury_manager: true  },
+  { label: 'Link ERP systems',               enterprise_admin: true, executive: true,  auditor: false, accountant: true,  treasury_manager: true  },
+  { label: 'Execute payments',               enterprise_admin: true, executive: true,  auditor: false, accountant: false, treasury_manager: true  },
+  { label: 'Execute transfers',              enterprise_admin: true, executive: true,  auditor: false, accountant: false, treasury_manager: true  },
+  { label: 'Execute swaps',                  enterprise_admin: true, executive: true,  auditor: false, accountant: false, treasury_manager: true  },
+  { label: 'Execute ramps',                  enterprise_admin: true, executive: true,  auditor: false, accountant: false, treasury_manager: true  },
+  { label: 'Execute bridges',               enterprise_admin: true, executive: true,  auditor: false, accountant: false, treasury_manager: true  },
+  { label: 'Execute yield deposit/withdrawal', enterprise_admin: true, executive: true,  auditor: false, accountant: false, treasury_manager: true  },
+  { label: 'Generate treasury rules',        enterprise_admin: true, executive: true,  auditor: false, accountant: false, treasury_manager: true  },
+  { label: 'Treasury AI & recommendations',  enterprise_admin: true, executive: true,  auditor: false, accountant: false, treasury_manager: true  },
+  { label: 'Manage integrations & billing',  enterprise_admin: true, executive: false, auditor: false, accountant: false, treasury_manager: true  },
+  { label: 'Manage users & permissions',     enterprise_admin: true, executive: false, auditor: false, accountant: false, treasury_manager: true  },
 ];
 
 // ── Role Picker ────────────────────────────────────────────────────────────────
