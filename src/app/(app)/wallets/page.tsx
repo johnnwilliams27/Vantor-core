@@ -15,7 +15,7 @@ import { TruncatedAddress } from '@/components/ui/truncated-address';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { Trash2, CheckCircle, Clock, Pencil, Check, X } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
-import { CardSpinner } from '@/components/ui/spinner';
+import { TableCardSkeleton } from '@/components/ui/operations-skeletons';
 import { useQueryClient } from '@tanstack/react-query';
 
 function formatUsd(n: number) {
@@ -85,14 +85,15 @@ function CryptoWalletsTab() {
         </Card>
       </div>
 
+      {isLoading ? (
+        <TableCardSkeleton columns={6} rows={3} />
+      ) : (
       <Card>
         <CardHeader>
           <CardTitle>Linked Wallets</CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <CardSpinner />
-          ) : wallets?.length ? (
+          {wallets?.length ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -214,6 +215,7 @@ function CryptoWalletsTab() {
           )}
         </CardContent>
       </Card>
+      )}
 
       <ConfirmDialog
         open={!!deleteTarget}

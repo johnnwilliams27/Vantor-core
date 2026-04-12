@@ -14,7 +14,7 @@ import { Trash2, CheckCircle, Building2, Pencil, Check, X } from 'lucide-react';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { useToast } from '@/components/ui/toast';
 import type { BankAccount } from '@/types/database';
-import { CardSpinner } from '@/components/ui/spinner';
+import { TableCardSkeleton } from '@/components/ui/operations-skeletons';
 
 async function fetchBankAccounts(): Promise<BankAccount[]> {
   const res = await fetch('/api/bank-accounts');
@@ -108,6 +108,9 @@ export function BankAccountsTab({ bankingProvider = 'stripe_fc' }: { bankingProv
       <BankLinkButton onSuccess={handleRefresh} bankingProvider={bankingProvider} />
 
       {/* Linked bank accounts */}
+      {isLoading ? (
+        <TableCardSkeleton columns={7} rows={3} />
+      ) : (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -116,9 +119,7 @@ export function BankAccountsTab({ bankingProvider = 'stripe_fc' }: { bankingProv
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <CardSpinner />
-          ) : !accounts?.length ? (
+          {!accounts?.length ? (
             <div className="text-sm text-gray-400 text-center py-8">
               No bank accounts connected yet. Add one above.
             </div>
@@ -254,6 +255,7 @@ export function BankAccountsTab({ bankingProvider = 'stripe_fc' }: { bankingProv
           )}
         </CardContent>
       </Card>
+      )}
 
       <ConfirmDialog
         open={!!deleteTarget}

@@ -16,7 +16,7 @@ import { useTableFilter } from '@/hooks/useTableFilter';
 import { formatCurrency, formatDateTime, capitalize } from '@/lib/utils';
 import { exportCsv, exportPdf } from '@/lib/export';
 import type { ExportColumn } from '@/lib/export';
-import { CardSpinner } from '@/components/ui/spinner';
+import { TableCardSkeleton } from '@/components/ui/operations-skeletons';
 import { TruncatedAddress } from '@/components/ui/truncated-address';
 import type { Transfer, Swap, FiatTransaction, YieldTransaction, BridgeTransfer, Wallet } from '@/types/database';
 import type { FiatPayment } from '@/types/fiat-payments';
@@ -312,6 +312,10 @@ export function AllTab() {
 
   const filter = useTableFilter(data, ALL_FILTER_CONFIG);
 
+  if (isLoading) {
+    return <TableCardSkeleton columns={8} rows={5} />;
+  }
+
   return (
     <>
     <Card>
@@ -355,13 +359,7 @@ export function AllTab() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={8}>
-                  <CardSpinner />
-                </TableCell>
-              </TableRow>
-            ) : filter.pagedData.length ? (
+            {filter.pagedData.length ? (
               filter.pagedData.map((row) => (
                 <TableRow
                   key={row.id}

@@ -17,7 +17,7 @@ import { useERPStore } from '@/store/erpStore';
 import { useAppStore } from '@/store/appStore';
 import type { ErpConfiguration } from '@/types/database';
 import { Loader2, CheckCircle, XCircle, Settings2, Trash2, Pencil, Check, X } from 'lucide-react';
-import { CardSpinner } from '@/components/ui/spinner';
+import { TableCardSkeleton } from '@/components/ui/operations-skeletons';
 
 /**
  * ERP credentials are provider-specific. The base schema keeps every field
@@ -510,12 +510,13 @@ export default function ERPSettingsPage() {
         </Card>
 
         {/* Existing configs */}
+        {isLoading ? (
+          <TableCardSkeleton columns={4} rows={2} />
+        ) : (
           <Card>
             <CardHeader><CardTitle>Linked ERP Systems</CardTitle></CardHeader>
             <CardContent>
-        {isLoading ? (
-              <CardSpinner />
-        ) : !configs?.length ? (
+        {!configs?.length ? (
               <div className="text-sm text-muted-foreground text-center py-6">
                 No ERP systems linked yet. Connect one above.
               </div>
@@ -610,6 +611,7 @@ export default function ERPSettingsPage() {
         )}
             </CardContent>
           </Card>
+        )}
       </div>
 
       <ConfirmDialog
