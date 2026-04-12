@@ -100,7 +100,7 @@ export function EthWalletConnect() {
           </div>
           <Button onClick={handleLink} disabled={linking} className="btn-gradient w-full">
             {linking ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Linking…</>
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Connecting…</>
             ) : (
               'Link Wallet'
             )}

@@ -511,7 +511,7 @@ export default function ERPSettingsPage() {
                   {testing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Testing…</> : 'Test Connection'}
                 </Button>
                 <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving…</> : 'Save & Connect'}
+                  {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Connecting…</> : 'Save & Connect'}
                 </Button>
               </div>
             </form>
