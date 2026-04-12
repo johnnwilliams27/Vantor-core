@@ -17,6 +17,18 @@ export interface ValidateSoDParams {
   approverRole: string;
   /** Map from rule_id to the user_id who created/last-edited that rule */
   ruleAuthors: Map<string, string>;
+  /**
+   * Per-enterprise RBAC toggle. When true (default), the approver
+   * cannot also be the author of any rule that triggered this request
+   * (sod_rule_editor_conflict). When false, the check is skipped —
+   * allows small orgs where authoring and approving overlap by
+   * necessity to opt out. Sourced from
+   * `enterprise_rbac_settings.author_approver_separation_enabled`.
+   *
+   * Default true = strict. Callers omitting this field get the strict
+   * behavior which was the pre-configurable default.
+   */
+  authorApproverSeparationEnabled?: boolean;
 }
 
 export type SoDResult =
@@ -38,7 +50,13 @@ export type SoDResult =
  * single source of truth for the role hierarchy.
  */
 export function validateSoD(params: ValidateSoDParams): SoDResult {
-  const { request, approverId, approverRole, ruleAuthors } = params;
+  const {
+    request,
+    approverId,
+    approverRole,
+    ruleAuthors,
+    authorApproverSeparationEnabled = true,
+  } = params;
 
   // Precondition (fail-safe): an empty/missing approverId can never approve.
   // Without this guard, an empty-string `created_by` in the DB would silently
@@ -59,11 +77,15 @@ export function validateSoD(params: ValidateSoDParams): SoDResult {
     return { ok: false, reason_code: REASON_CODES.sod_initiator_conflict };
   }
 
-  // 2. Rule editor conflict
-  for (const ruleId of request.triggered_rule_ids) {
-    const authorId = ruleAuthors.get(ruleId);
-    if (authorId && authorId === approverId) {
-      return { ok: false, reason_code: REASON_CODES.sod_rule_editor_conflict };
+  // 2. Rule editor conflict — skipped when the enterprise has opted out
+  //    of strict author-approver separation. Initiator conflict above
+  //    and already-filled below remain in force regardless.
+  if (authorApproverSeparationEnabled) {
+    for (const ruleId of request.triggered_rule_ids) {
+      const authorId = ruleAuthors.get(ruleId);
+      if (authorId && authorId === approverId) {
+        return { ok: false, reason_code: REASON_CODES.sod_rule_editor_conflict };
+      }
     }
   }
 

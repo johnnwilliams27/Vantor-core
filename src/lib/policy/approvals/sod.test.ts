@@ -49,6 +49,66 @@ function makeRequest(overrides?: Partial<ApprovalRequest>): ApprovalRequest {
 
 const EMPTY_RULE_AUTHORS = new Map<string, string>();
 
+describe('validateSoD — configurable author-approver separation', () => {
+  it('rejects rule-editor approver when separation is enabled (default)', () => {
+    const request = makeRequest({
+      triggered_rule_ids: ['rule-A'],
+    });
+    const result = validateSoD({
+      request,
+      approverId: 'user-editor',
+      approverRole: 'treasury_manager',
+      ruleAuthors: new Map([['rule-A', 'user-editor']]),
+      authorApproverSeparationEnabled: true,
+    });
+    expect(result).toEqual({ ok: false, reason_code: 'sod_rule_editor_conflict' });
+  });
+
+  it('allows rule-editor approver when separation is disabled', () => {
+    // Same setup as the strict-enabled case — only the flag changes.
+    const request = makeRequest({
+      triggered_rule_ids: ['rule-A'],
+    });
+    const result = validateSoD({
+      request,
+      approverId: 'user-editor',
+      approverRole: 'treasury_manager',
+      ruleAuthors: new Map([['rule-A', 'user-editor']]),
+      authorApproverSeparationEnabled: false,
+    });
+    // Should fall through to finding a matching slot (slot 0 is treasury_manager min).
+    expect(result).toEqual({ ok: true, slot_index: 0 });
+  });
+
+  it('initiator-conflict still fires even when separation is disabled', () => {
+    // Disabling separation must NOT disable the initiator check — that
+    // would let a user approve their own movement.
+    const request = makeRequest({ created_by: 'user-self' });
+    const result = validateSoD({
+      request,
+      approverId: 'user-self',
+      approverRole: 'treasury_manager',
+      ruleAuthors: EMPTY_RULE_AUTHORS,
+      authorApproverSeparationEnabled: false,
+    });
+    expect(result).toEqual({ ok: false, reason_code: 'sod_initiator_conflict' });
+  });
+
+  it('defaults to strict when the flag is omitted (backward compat)', () => {
+    const request = makeRequest({
+      triggered_rule_ids: ['rule-A'],
+    });
+    const result = validateSoD({
+      request,
+      approverId: 'user-editor',
+      approverRole: 'treasury_manager',
+      ruleAuthors: new Map([['rule-A', 'user-editor']]),
+      // no authorApproverSeparationEnabled — should default to true
+    });
+    expect(result).toEqual({ ok: false, reason_code: 'sod_rule_editor_conflict' });
+  });
+});
+
 describe('validateSoD — enterprise_admin strict exclusion', () => {
   it('rejects enterprise_admin approver with enterprise_admin_cannot_approve', () => {
     const request = makeRequest({

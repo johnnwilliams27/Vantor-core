@@ -16,12 +16,18 @@ function mockSupabase(
     policy_approval_requests?: Row[];
     policy_rules?: Row[];
     user_profiles?: Row[];
+    enterprise_rbac_settings?: Row[];
   },
 ) {
   const tableData: Record<string, Row[]> = {
     policy_approval_requests: fixtures.policy_approval_requests ?? [],
     policy_rules: fixtures.policy_rules ?? [],
     user_profiles: fixtures.user_profiles ?? [],
+    // Lazy-created on first access. An empty array means
+    // `resolveRbacSettings` will upsert its defaults on the first call
+    // and then read them back — which is the production path. Tests that
+    // want a specific flag value can pre-populate this.
+    enterprise_rbac_settings: fixtures.enterprise_rbac_settings ?? [],
   };
 
   function makeQB(table: string, rows: Row[]) {
