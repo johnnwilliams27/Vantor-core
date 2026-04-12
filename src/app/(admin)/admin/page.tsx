@@ -218,7 +218,16 @@ export default function AdminDashboardPage() {
               <div>
                 <p className="text-sm text-muted-foreground">Total Enterprises</p>
                 <p className="text-2xl font-bold">
-                  {health.isLoading ? '...' : health.data?.total_enterprises ?? 0}
+                  {health.isLoading ? (
+                    '...'
+                  ) : (
+                    <>
+                      {health.data?.total_enterprises ?? 0}
+                      <span className="ml-2 text-sm font-normal text-muted-foreground">
+                        ({health.data?.real_enterprises ?? 0} real)
+                      </span>
+                    </>
+                  )}
                 </p>
               </div>
             </CardContent>

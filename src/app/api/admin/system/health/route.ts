@@ -11,12 +11,23 @@ export async function GET(_req: NextRequest) {
   const supabase = createAdminClient();
 
   try {
-    // Count enterprises
-    const { count: totalEnterprises, error: entError } = await supabase
-      .from('enterprises')
-      .select('id', { count: 'exact', head: true });
+    // Count enterprises — total and "real" (paid tiers, i.e. not lite).
+    // subscription_tier is a denormalized enum on enterprises:
+    //   lite = seed / self-serve test enterprise
+    //   starter | growth | scale | enterprise = paid
+    const [totalEntRes, realEntRes] = await Promise.all([
+      supabase.from('enterprises').select('id', { count: 'exact', head: true }),
+      supabase
+        .from('enterprises')
+        .select('id', { count: 'exact', head: true })
+        .neq('subscription_tier', 'lite'),
+    ]);
 
-    if (entError) return NextResponse.json({ error: entError.message }, { status: 500 });
+    if (totalEntRes.error) return NextResponse.json({ error: totalEntRes.error.message }, { status: 500 });
+    if (realEntRes.error) return NextResponse.json({ error: realEntRes.error.message }, { status: 500 });
+
+    const totalEnterprises = totalEntRes.count ?? 0;
+    const realEnterprises = realEntRes.count ?? 0;
 
     // Count users
     const { count: totalUsers, error: userError } = await supabase
@@ -52,7 +63,8 @@ export async function GET(_req: NextRequest) {
 
     return NextResponse.json({
       data: {
-        total_enterprises: totalEnterprises ?? 0,
+        total_enterprises: totalEnterprises,
+        real_enterprises: realEnterprises,
         total_users: totalUsers ?? 0,
         total_transactions: totalTransactions ?? 0,
         frozen_enterprises: frozenEnterprises ?? 0,
