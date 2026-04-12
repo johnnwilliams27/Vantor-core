@@ -18,6 +18,29 @@ import type { DetectedInsight } from '../types';
 import type { YieldUniverseView } from '../yield-universe';
 import type { RiskProfile } from '../risk-profiles';
 import type { AumTier, CustomerKycTier } from '../types';
+import type { Obligation } from '@/lib/obligations/types';
+
+/**
+ * Pre-computed forecast bundle produced by the cron orchestrator and
+ * injected into DetectorContext. Detectors that depend on forward-looking
+ * liquidity data read from here; detectors that don't simply ignore it.
+ *
+ * `safetyBufferUsd` is totalObligations × profile.safetyBufferMultiplier,
+ * computed once by the orchestrator so each detector doesn't have to
+ * re-derive it.
+ */
+export interface ForecastBundle {
+  projectedMinBalance: { amount: number; date: string };
+  coverage: {
+    covered: boolean;
+    shortfallAmount?: number;
+    firstShortfallDate?: string;
+    shortfallAsset?: string;
+  };
+  obligationsInWindow: Obligation[];
+  safetyBufferUsd: number;
+  windowDays: number;
+}
 
 /**
  * The world-state every detector sees. Built once per cron cycle per
@@ -44,6 +67,12 @@ export interface DetectorContext {
   yieldUniverse: YieldUniverseView;
   /** Wall clock at the start of the cycle. Use this instead of new Date() for deterministic testing. */
   now: Date;
+  /**
+   * Pre-computed forecast bundle. Present when the cron orchestrator
+   * successfully ran the forecast module; undefined if forecasting failed
+   * or is not yet enabled. Detectors MUST degrade gracefully when absent.
+   */
+  forecast?: ForecastBundle;
 }
 
 /**
