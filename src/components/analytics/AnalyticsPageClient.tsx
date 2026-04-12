@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { FileDown } from 'lucide-react';
+import { Download, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DateRangePicker } from '@/components/ui/date-picker';
 import { useAnalyticsViews } from '@/hooks/useAnalyticsViews';
@@ -56,19 +56,18 @@ export function AnalyticsPageClient() {
     setForkOpen(true);
   };
 
-  const handleGenerateReport = async () => {
-    // Download page-level report of pinned views
+  const handleGenerateReport = async (format: 'csv' | 'pdf') => {
     const res = await fetch('/api/analytics/export/report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from, to }),
+      body: JSON.stringify({ from, to, format }),
     });
     if (!res.ok) return;
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `vantor-analytics-report-${from}-to-${to}.csv`;
+    a.download = `vantor-analytics-report-${from}-to-${to}.${format}`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -107,9 +106,13 @@ export function AnalyticsPageClient() {
           >
             + New View
           </Button>
-          <Button size="sm" variant="outline" onClick={handleGenerateReport}>
-            <FileDown className="mr-1.5 h-3.5 w-3.5" />
-            Generate Report
+          <Button size="sm" variant="outline" onClick={() => handleGenerateReport('csv')}>
+            <Download className="mr-1.5 h-3.5 w-3.5" />
+            Report CSV
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => handleGenerateReport('pdf')}>
+            <FileText className="mr-1.5 h-3.5 w-3.5" />
+            Report PDF
           </Button>
         </div>
       </div>
