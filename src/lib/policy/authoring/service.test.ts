@@ -947,10 +947,11 @@ describe('Task 12 — activateVersion', () => {
 
   it('calls the RPC with correct args on success', async () => {
     const rpcCalls: Array<{ fn: string; params: Record<string, unknown> }> = [];
+    const activatableRule = { ...SAMPLE_RULE, id: 'rule-act', version_id: 'ver-activatable', priority: 1, verdict: 'block', verdict_chain_id: null };
     const db = mockSupabase(
       {
         policy_versions: [ACTIVATABLE_DRAFT],
-        policy_rules: [],
+        policy_rules: [activatableRule],
         policy_hard_limits: [],
         policy_approval_chains: [],
         user_profiles: [POLICY_ADMIN_PROFILE, ENTERPRISE_USER],
@@ -971,10 +972,11 @@ describe('Task 12 — activateVersion', () => {
   });
 
   it('maps P0001 RPC error to activation_reason_too_short', async () => {
+    const rpcRule = { ...SAMPLE_RULE, id: 'rule-rpc1', version_id: 'ver-activatable', priority: 1, verdict: 'block', verdict_chain_id: null };
     const db = mockSupabase(
       {
         policy_versions: [ACTIVATABLE_DRAFT],
-        policy_rules: [],
+        policy_rules: [rpcRule],
         policy_hard_limits: [],
         policy_approval_chains: [],
         user_profiles: [POLICY_ADMIN_PROFILE, ENTERPRISE_USER],
@@ -990,10 +992,11 @@ describe('Task 12 — activateVersion', () => {
   });
 
   it('maps P0002 RPC error to version_not_draft', async () => {
+    const rpcRule2 = { ...SAMPLE_RULE, id: 'rule-rpc2', version_id: 'ver-activatable', priority: 1, verdict: 'block', verdict_chain_id: null };
     const db = mockSupabase(
       {
         policy_versions: [ACTIVATABLE_DRAFT],
-        policy_rules: [],
+        policy_rules: [rpcRule2],
         policy_hard_limits: [],
         policy_approval_chains: [],
         user_profiles: [POLICY_ADMIN_PROFILE, ENTERPRISE_USER],

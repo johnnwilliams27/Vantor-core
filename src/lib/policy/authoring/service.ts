@@ -864,7 +864,17 @@ export class PolicyAuthoringService {
       });
     }
 
-    // 4. Re-run validateVersionCoherent (wrap errors in activation_blocked_by_validation)
+    // 4a. Empty-draft guard — a policy with 0 rules is almost certainly a mistake
+    if (draft.rules.length === 0) {
+      throw new AuthoringError({
+        reason_code: REASON_CODES.activation_blocked_by_validation,
+        human_readable: 'Cannot activate a policy with zero rules. Add at least one rule before activating.',
+        user_action: 'Add rules to the draft before activating.',
+        details: { version_id: versionId, rule_count: 0 },
+      });
+    }
+
+    // 4b. Re-run validateVersionCoherent (wrap errors in activation_blocked_by_validation)
     try {
       validateVersionCoherent(draft);
     } catch (err) {
