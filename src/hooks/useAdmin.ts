@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 export interface SystemHealth {
   total_enterprises: number;
+  real_enterprises: number;
   total_users: number;
   total_transactions: number;
   frozen_enterprises: number;
