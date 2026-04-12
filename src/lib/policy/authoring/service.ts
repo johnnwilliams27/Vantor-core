@@ -4,10 +4,13 @@ import { REASON_CODES } from '../errors/reason-codes';
 import { AuthoringError } from './errors';
 import {
   AuthoringActor,
+  ActivateRequest,
   CreateDraftRequest,
   UpsertRuleRequest,
   UpsertHardLimitRequest,
   UpsertApprovalChainRequest,
+  VersionDiff,
+  SatisfiabilityResult,
 } from './types';
 import {
   canCreateDraft,
@@ -21,10 +24,15 @@ import {
   validateApprovalChainInput,
   validateVersionCoherent,
 } from './validation';
+import { computeVersionDiff } from './diff';
+import { checkChainSatisfiability, SatisfiabilityUserRow } from './satisfiability';
 
 // ─── Minimal SupabaseLike type ──────────────────────────────────────────────
 
-export type SupabaseLike = { from: (table: string) => unknown };
+export type SupabaseLike = {
+  from: (table: string) => unknown;
+  rpc?: (fn: string, params: Record<string, unknown>) => Promise<{ data: unknown; error: { code?: string; message?: string } | null }>;
+};
 
 // ─── Row shapes from DB ─────────────────────────────────────────────────────
 
@@ -79,6 +87,14 @@ interface ApprovalChainRow {
   expiration_hours: number;
   created_by: string;
   created_at: string;
+}
+
+interface UserProfileRow {
+  id: string;
+  enterprise_id: string;
+  role: string;
+  is_policy_admin?: boolean;
+  is_app_admin?: boolean;
 }
 
 // ─── Query builder helpers ──────────────────────────────────────────────────
@@ -781,5 +797,198 @@ export class PolicyAuthoringService {
       });
     }
     return updated;
+  }
+
+  // ── Task 12: Private helper — fetch enterprise users ────────────────────
+
+  private async fetchEnterpriseUsers(enterpriseId: string): Promise<SatisfiabilityUserRow[]> {
+    const q = tableFrom<UserProfileRow>(this.supabase, 'user_profiles');
+    const result = await (
+      q.eq('enterprise_id', enterpriseId) as unknown as Promise<{
+        data: UserProfileRow[] | null;
+        error: unknown;
+      }>
+    );
+    if (result.error) {
+      throw new AuthoringError({
+        reason_code: REASON_CODES.gate_internal_error,
+        human_readable: 'Failed to load enterprise users for satisfiability check.',
+        user_action: 'Try again or contact support.',
+        details: { enterprise_id: enterpriseId, error: result.error },
+      });
+    }
+    const rows = result.data ?? [];
+    return rows.map((r) => ({ user_id: r.id, role: r.role as SatisfiabilityUserRow['role'] }));
+  }
+
+  // ── Task 12: activateVersion ─────────────────────────────────────────────
+
+  async activateVersion(
+    actor: AuthoringActor,
+    versionId: string,
+    req: ActivateRequest,
+  ): Promise<PolicyVersionSnapshot> {
+    // 1. Require policy admin
+    await requirePolicyAdmin(
+      this.supabase as Parameters<typeof requirePolicyAdmin>[0],
+      actor.user_id,
+    );
+
+    // 2. Check reason length
+    if (req.reason.trim().length < 20) {
+      throw new AuthoringError({
+        reason_code: REASON_CODES.activation_reason_too_short,
+        human_readable:
+          'Activation reason must be at least 20 characters. Provide a meaningful explanation for the activation.',
+        user_action: 'Enter a longer activation reason (minimum 20 characters).',
+        details: { length: req.reason.trim().length },
+      });
+    }
+
+    // 3. Load draft fresh, verify status='draft'
+    const draft = await this.loadVersionWithChildren(actor.enterprise_id, versionId);
+    if (!draft) {
+      throw new AuthoringError({
+        reason_code: REASON_CODES.version_not_draft,
+        human_readable: `Policy version '${versionId}' not found.`,
+        user_action: 'Check the version ID and try again.',
+        details: { version_id: versionId },
+      });
+    }
+    if (draft.status !== 'draft') {
+      throw new AuthoringError({
+        reason_code: REASON_CODES.version_not_draft,
+        human_readable: `Policy version '${versionId}' has status '${draft.status}' and cannot be activated. Only draft versions may be activated.`,
+        user_action: 'Create a new draft to make changes.',
+        details: { version_id: versionId, status: draft.status },
+      });
+    }
+
+    // 4. Re-run validateVersionCoherent (wrap errors in activation_blocked_by_validation)
+    try {
+      validateVersionCoherent(draft);
+    } catch (err) {
+      if (err instanceof AuthoringError) {
+        throw new AuthoringError({
+          reason_code: REASON_CODES.activation_blocked_by_validation,
+          human_readable: `Activation blocked: the draft failed coherence validation. ${err.human_readable}`,
+          user_action: err.user_action,
+          details: { original_reason_code: err.reason_code, ...err.details },
+        });
+      }
+      throw err;
+    }
+
+    // 5. Check chain satisfiability against live user base
+    const users = await this.fetchEnterpriseUsers(actor.enterprise_id);
+    for (const chain of draft.approval_chains) {
+      const result = checkChainSatisfiability(chain, users);
+      if (!result.satisfiable) {
+        throw new AuthoringError({
+          reason_code: REASON_CODES.chain_unsatisfiable_at_activation,
+          human_readable: `Approval chain '${chain.name}' cannot be satisfied by current enterprise users. Assign users with sufficient roles before activating.`,
+          user_action: 'Add users with the required roles or adjust the chain slots.',
+          details: {
+            chain_id: chain.id,
+            chain_name: chain.name,
+            unsatisfied_slots: result.unsatisfied_slots,
+          },
+        });
+      }
+    }
+
+    // 6. Call the atomic PG RPC
+    const rpc = (this.supabase as { rpc: NonNullable<SupabaseLike['rpc']> }).rpc;
+    if (!rpc) {
+      throw new AuthoringError({
+        reason_code: REASON_CODES.gate_internal_error,
+        human_readable: 'Activation RPC is not available in this context.',
+        user_action: 'Contact support.',
+        details: {},
+      });
+    }
+
+    const { error: rpcError } = await rpc('policy_activate_draft', {
+      p_version_id: versionId,
+      p_enterprise_id: actor.enterprise_id,
+      p_activated_by: actor.user_id,
+      p_reason: req.reason,
+    });
+
+    // 7. Map RPC errors
+    if (rpcError) {
+      const code = (rpcError as { code?: string }).code;
+      if (code === 'P0001') {
+        throw new AuthoringError({
+          reason_code: REASON_CODES.activation_reason_too_short,
+          human_readable: 'Activation reason rejected by the database: too short.',
+          user_action: 'Provide a longer activation reason.',
+          details: { rpc_error: rpcError },
+        });
+      }
+      if (code === 'P0002') {
+        throw new AuthoringError({
+          reason_code: REASON_CODES.version_not_draft,
+          human_readable: 'The version is no longer in draft status.',
+          user_action: 'Reload the version and try again.',
+          details: { rpc_error: rpcError },
+        });
+      }
+      throw new AuthoringError({
+        reason_code: REASON_CODES.activation_race_conflict,
+        human_readable: 'Activation failed — the policy may have been modified concurrently.',
+        user_action: 'Reload the version and retry activation.',
+        details: { rpc_error: rpcError },
+      });
+    }
+
+    // 8. Return reloaded version
+    const activated = await this.loadVersionWithChildren(actor.enterprise_id, versionId);
+    if (!activated) {
+      throw new AuthoringError({
+        reason_code: REASON_CODES.gate_internal_error,
+        human_readable: 'Version disappeared after activation.',
+        user_action: 'Contact support.',
+        details: { version_id: versionId },
+      });
+    }
+    return activated;
+  }
+
+  // ── Task 13: diffVersions wrapper ────────────────────────────────────────
+
+  async diffVersions(
+    actor: AuthoringActor,
+    fromVersionId: string,
+    toVersionId: string,
+  ): Promise<VersionDiff> {
+    const [from, to] = await Promise.all([
+      this.getVersionById(actor, fromVersionId),
+      this.getVersionById(actor, toVersionId),
+    ]);
+    return computeVersionDiff(from, to);
+  }
+
+  // ── Task 13: checkSatisfiability wrapper ─────────────────────────────────
+
+  async checkSatisfiability(
+    actor: AuthoringActor,
+    versionId: string,
+  ): Promise<SatisfiabilityResult> {
+    const version = await this.getVersionById(actor, versionId);
+    const users = await this.fetchEnterpriseUsers(actor.enterprise_id);
+    const chainResults = version.approval_chains.map((chain) =>
+      checkChainSatisfiability(chain, users),
+    );
+    return {
+      version_id: versionId,
+      all_satisfiable: chainResults.every((r) => r.satisfiable),
+      chain_results: chainResults.map((r) => ({
+        chain_id: r.chain_id,
+        chain_name: r.chain_name,
+        satisfiable: r.satisfiable,
+        unsatisfied_slots: r.unsatisfied_slots as SatisfiabilityResult['chain_results'][number]['unsatisfied_slots'],
+      })),
+    };
   }
 }
