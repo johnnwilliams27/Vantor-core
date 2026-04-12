@@ -6,21 +6,29 @@ describe('viewResultToCsvColumns (kpi)', () => {
   const kpiResult: ViewResult = {
     view: { slug: 'treasury-summary', label: 'Treasury Summary', chartType: 'kpi' },
     query: { from: '2026-04-01', to: '2026-04-30' },
-    scalar: { total_balance_usd: 2400000, fiat_balance_usd: 1200000, idle_cash_usd: 320000 },
+    scalar: {
+      total_balance_usd: 2_400_000,
+      cash_and_equivalents_usd: 1_500_000,
+      mmf_balance_usd: 600_000,
+      idle_cash_usd: 320_000,
+    },
   };
 
   it('produces one column per scalar key with human-readable headers', () => {
     const cols = viewResultToCsvColumns(kpiResult);
-    expect(cols).toHaveLength(3);
+    expect(cols).toHaveLength(4);
     expect(cols[0].header).toBe('Total Balance');
-    expect(cols[1].header).toBe('Fiat Balance');
-    expect(cols[2].header).toBe('Idle Cash');
+    expect(cols[1].header).toBe('Cash & Equivalents');
+    expect(cols[2].header).toBe('Tokenized MMFs');
+    expect(cols[3].header).toBe('Idle Cash');
   });
 
   it('produces a single row with the scalar values', () => {
     const rows = viewResultToCsvRows(kpiResult);
     expect(rows).toHaveLength(1);
-    expect(rows[0].total_balance_usd).toBe(2400000);
+    expect(rows[0].total_balance_usd).toBe(2_400_000);
+    expect(rows[0].cash_and_equivalents_usd).toBe(1_500_000);
+    expect(rows[0].mmf_balance_usd).toBe(600_000);
   });
 });
 
