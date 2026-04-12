@@ -263,6 +263,75 @@ describe('validateSoD', () => {
     expect(result).toEqual({ ok: true, slot_index: 0 });
   });
 
+  it('rejects empty-string approverId (fail-safe precondition)', () => {
+    // Defense: empty approverId could otherwise bypass initiator/rule-editor
+    // checks if `request.created_by` or a rule author were also empty strings.
+    const result = validateSoD({
+      request: makeRequest({ created_by: '' }),
+      approverId: '',
+      approverRole: 'treasury_manager',
+      ruleAuthors: EMPTY_RULE_AUTHORS,
+    });
+
+    expect(result).toEqual({ ok: false, reason_code: 'no_matching_slot' });
+  });
+
+  it('rejects whitespace-only approverId', () => {
+    const result = validateSoD({
+      request: makeRequest(),
+      approverId: '   ',
+      approverRole: 'treasury_manager',
+      ruleAuthors: EMPTY_RULE_AUTHORS,
+    });
+
+    expect(result).toEqual({ ok: false, reason_code: 'no_matching_slot' });
+  });
+
+  it('ignores rule authors with empty-string user_id (defensive)', () => {
+    // Corrupted DB row: rule.created_by is '' — we cannot attribute it, so
+    // the rule-editor check is skipped for that rule, and the normal
+    // checks continue.
+    const ruleAuthors = new Map([
+      ['rule-1', ''],
+      ['rule-2', 'user-unrelated'],
+    ]);
+
+    const result = validateSoD({
+      request: makeRequest(),
+      approverId: 'user-approver',
+      approverRole: 'treasury_manager',
+      ruleAuthors,
+    });
+
+    expect(result).toEqual({ ok: true, slot_index: 0 });
+  });
+
+  it('rule not in ruleAuthors map is treated as unknown author (safe pass-through)', () => {
+    // Map has rule-1 but not rule-2 -- .get('rule-2') returns undefined
+    // and the `if (authorId && ...)` guard skips it safely.
+    const ruleAuthors = new Map([['rule-1', 'user-other']]);
+
+    const result = validateSoD({
+      request: makeRequest(),
+      approverId: 'user-approver',
+      approverRole: 'treasury_manager',
+      ruleAuthors,
+    });
+
+    expect(result).toEqual({ ok: true, slot_index: 0 });
+  });
+
+  it('role string is case-sensitive (typo does not grant bypass)', () => {
+    const result = validateSoD({
+      request: makeRequest(),
+      approverId: 'user-approver',
+      approverRole: 'Treasury_Manager', // uppercase typo
+      ruleAuthors: EMPTY_RULE_AUTHORS,
+    });
+
+    expect(result).toEqual({ ok: false, reason_code: 'no_matching_slot' });
+  });
+
   it('handles unknown role gracefully (no match)', () => {
     const request = makeRequest({
       slot_assignments: [makeSlot(0, 'treasury_manager')],

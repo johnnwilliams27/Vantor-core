@@ -54,6 +54,13 @@ export type SoDResult =
 export function validateSoD(params: ValidateSoDParams): SoDResult {
   const { request, approverId, approverRole, ruleAuthors } = params;
 
+  // Precondition (fail-safe): an empty/missing approverId can never approve.
+  // Without this guard, an empty-string `created_by` in the DB would silently
+  // disable the initiator check (because `'' && x === ''` short-circuits).
+  if (!approverId || approverId.trim() === '') {
+    return { ok: false, reason_code: REASON_CODES.no_matching_slot };
+  }
+
   // 1. Initiator conflict
   if (request.created_by && approverId === request.created_by) {
     return { ok: false, reason_code: REASON_CODES.sod_initiator_conflict };
