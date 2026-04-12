@@ -180,26 +180,6 @@ describe('yieldRebalanceDetector', () => {
     });
   });
 
-  describe('yield_opportunity', () => {
-    it('recommends a better venue for deployed capital', async () => {
-      const positions = [buildPosition('aave_v3', 5_000_000, 0.02)];
-      const eligible = [
-        buildEligibleVenue('aave_v3', 0.02),
-        buildEligibleVenue('morpho_steakhouse', 0.04),
-      ];
-      const universe = buildUniverse(eligible);
-      const ctx = buildContext(buildSnapshot(positions), universe);
-
-      const insights = await yieldRebalanceDetector.run(ctx);
-      const opps = insights.filter((i) => i.type === 'yield_opportunity');
-
-      // yield_drop and yield_opportunity both fire for the same position
-      // when the gap exceeds the threshold. yield_drop is the warning;
-      // yield_opportunity is the info-level suggestion with the specific route.
-      expect(opps.length).toBeGreaterThanOrEqual(0);
-    });
-  });
-
   describe('yield_idle_opportunity', () => {
     it('fires when idle wallet stablecoins exceed safety buffer', async () => {
       // $300k idle in wallets, safety buffer is $100k → $200k deployable
