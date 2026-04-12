@@ -392,3 +392,101 @@ set. Custom views stored in `analytics_views` with `kind='custom'` and
 
 - `analytics_pin_preferences` table (user + enterprise scoped)
 - `forked_from UUID` column on `analytics_views`
+
+## Phase C-1.5a — Treasury Segmentation Alignment (2026-04-12)
+
+Aligns the snapshot schema + analytics resolver with Vantor's canonical
+treasury taxonomy. Dual-write + additive migration; consumer migration
+deferred to Phase C-1.5b.
+
+### The canonical taxonomy
+
+```
+Total Treasury
+├── Cash & Equivalents                (L1 — rollup)
+│   ├── Cash                          (L2 — leaf, multi-currency bank)
+│   └── Stablecoins                   (L2 — leaf, idle USDC/USDT wallets)
+└── Yield Positions                   (L1 — rollup)
+    ├── Tokenized MMFs                (L2 — leaf, Spiko/BUIDL/USYC/Ondo)
+    └── DeFi Protocols                (L2 — rollup)
+        ├── DeFi Vaults               (L3 — leaf, Kamino/Morpho)
+        └── DeFi Lending              (L3 — leaf, Aave/Compound)
+(Other — ETH/SOL/misc wallet tokens + unknown venues)
+```
+
+### Schema (migration 0049)
+
+Six L3-leaf columns added to `treasury_state_snapshots`:
+
+| Column | Classification source |
+|---|---|
+| `total_bank_base_usd` | bank account balances |
+| `total_stablecoin_idle_base_usd` | wallet balances with token ∈ {USDC, USDT} |
+| `total_mmf_base_usd` | yield positions with `venue.category = 'tokenized_mmf'` |
+| `total_defi_vault_base_usd` | yield positions with `venue.category = 'defi_vault'` |
+| `total_defi_lending_base_usd` | yield positions with `venue.category = 'defi_lending_market'` |
+| `total_other_base_usd` | non-stable wallet tokens + unknown venues |
+
+Rollups (Cash & Equivalents, DeFi Protocols, Yield Positions) are never
+stored — the analytics resolver computes them from leaves. Single source
+of truth, zero leaf/rollup drift.
+
+### `getHoldingTaxonomy(holding)`
+
+New canonical classifier in `src/lib/treasury/holdings-category.ts` —
+returns one of six leaves. The legacy `getHoldingCardPlacement(holding)`
+collapses mmf → cash and defi_vault/defi_lending → defi_positions,
+preserving back-compat for the 10 unmigrated consumers.
+
+### Snapshot writer (dual-write)
+
+`TreasuryStateService.computeSnapshot()` now routes every holding
+through `getHoldingTaxonomy()` via the pure helper
+`computeSegmentationBuckets()` in `state/segmentation.ts`. Writes both
+the six new columns AND the three legacy columns
+(`total_fiat_base_usd`, etc.) so consumers still reading the legacy
+shape don't break. Dev-only invariant check logs a warning if
+new-leaf sum diverges from legacy sum — catches an unregistered
+venue category immediately.
+
+### Analytics resolver
+
+The resolver in `src/lib/analytics/resolvers/treasury.ts` was querying
+columns that didn't exist (`snapshot_date`, `fiat_balance_usd`) — which
+is why `/analytics` rendered $0 for everything. Rewrote to use the real
+columns from migration 0042 + the new ones from 0049. Emits all six
+leaves + three rollups + legacy slugs so standard views can pick
+whichever granularity they want.
+
+Cash & Equivalents falls back to `total_fiat_base_usd` when the new
+leaves are NULL (pre-migration snapshots). Coverage ratio is computed
+against Cash & Equivalents — MMFs count, not just bank.
+
+### Standard views
+
+- **Treasury Summary (KPI):** Total / Cash & Equivalents / Yield Positions / Idle Cash / Coverage
+- **Balance History (line):** 4 lines — Cash & Equivalents + MMFs + DeFi Protocols + Other
+- **Obligation Coverage (bar):** obligations vs Cash & Equivalents (not just bank)
+- **Idle Cash (line):** paired with Cash & Equivalents
+
+Drill-in and fork let users choose finer granularity (e.g. DeFi Vaults
+vs DeFi Lending separately).
+
+### What's still on legacy columns (Phase C-1.5b)
+
+10 consumers untouched by this phase still read the old `total_fiat_base_usd`
+/ `total_stablecoin_base_usd` / `total_defi_base_usd` columns:
+
+- `src/lib/treasury/claude.ts`
+- `src/lib/treasury/rules-engine.ts`
+- `src/lib/treasury/interface.ts`
+- `src/lib/forecast/service.ts`
+- `src/lib/insights/detectors/liquidity.ts`
+- `src/lib/agent/context.ts`
+- `src/lib/agent/tools.ts`
+- `src/hooks/useTreasury.ts`
+- `src/app/api/balance-history/route.ts`
+- `src/components/treasury/*` (Treasury AI overview, Report Builder)
+
+Phase C-1.5b will migrate these one-by-one, then migration 0050 drops
+the legacy columns and the dual-write code.
