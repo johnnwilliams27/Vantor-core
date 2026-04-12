@@ -13,18 +13,19 @@ const LABELS: Record<string, string> = {
   coverage_ratio: 'Coverage',
 };
 
-function formatValue(key: string, value: number, hasData: boolean): string {
-  if (!hasData) return '—';
+function formatValue(key: string, value: number): string {
   if (key === 'coverage_ratio') return `${value.toFixed(1)}x`;
   if (Math.abs(value) >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
   if (Math.abs(value) >= 1_000) return `$${(value / 1_000).toFixed(0)}K`;
   return `$${value.toFixed(0)}`;
 }
 
-function valueColor(key: string, value: number, hasData: boolean): string {
-  if (!hasData) return 'text-muted-foreground/40';
+function valueColor(key: string, value: number, hasObligations: boolean): string {
   if (key === 'idle_cash_usd') return 'text-teal-400';
   if (key === 'coverage_ratio') {
+    // When there are no obligations at all, coverage_ratio is undefined in the
+    // domain sense — no liabilities to cover. Treat as neutral instead of red.
+    if (!hasObligations) return 'text-muted-foreground';
     return value >= 1.5 ? 'text-green-400' : value >= 1 ? 'text-yellow-400' : 'text-red-400';
   }
   return 'text-foreground';
@@ -37,15 +38,18 @@ interface KpiBannerProps {
 export function KpiBanner({ result }: KpiBannerProps) {
   const scalar = result.scalar ?? {};
   const keys = Object.keys(scalar);
+  const hasObligations = (scalar.obligation_total_usd ?? 0) > 0;
 
-  // Detect "no data" state: balance metrics all zero. When true, render every
-  // metric as "—" in muted grey instead of "$0" / "0.0x" with severity colors —
-  // otherwise zero-data enterprises look like they're failing coverage.
-  const allBalancesZero =
-    (scalar.total_balance_usd ?? 0) === 0 &&
-    (scalar.fiat_balance_usd ?? 0) === 0 &&
-    (scalar.stablecoin_balance_usd ?? 0) === 0 &&
-    (scalar.defi_balance_usd ?? 0) === 0;
+  // No scalar returned at all → the view has no data. Show empty state so the
+  // user doesn't stare at "$0 / 0.0x" and think the coverage is failing.
+  if (keys.length === 0) {
+    return (
+      <Card className="p-4 sm:p-6">
+        <div className="mb-2 text-sm text-muted-foreground">Treasury Summary</div>
+        <p className="text-sm text-muted-foreground/60">No snapshot for this period.</p>
+      </Card>
+    );
+  }
 
   return (
     <Card className="p-4 sm:p-6">
@@ -53,12 +57,11 @@ export function KpiBanner({ result }: KpiBannerProps) {
       <div className="flex flex-wrap gap-x-8 gap-y-3">
         {keys.map((key) => {
           const value = scalar[key];
-          const hasData = !allBalancesZero;
           return (
             <div key={key}>
               <div className="text-xs text-muted-foreground">{LABELS[key] ?? key}</div>
-              <div className={`text-lg font-semibold ${valueColor(key, value, hasData)}`}>
-                {formatValue(key, value, hasData)}
+              <div className={`text-lg font-semibold ${valueColor(key, value, hasObligations)}`}>
+                {formatValue(key, value)}
               </div>
             </div>
           );

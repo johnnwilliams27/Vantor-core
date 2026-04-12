@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { Pin, Download } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { HoverTooltip } from '@/components/ui/hover-tooltip';
 import { ViewChart } from './ViewChart';
 import { ViewTable } from './ViewTable';
 import { KpiBanner } from './KpiBanner';
@@ -43,22 +44,24 @@ export function PinnedViewCard({ result, onUnpin }: PinnedViewCardProps) {
       <div className="mb-3 flex items-center justify-between">
         <span className="text-sm text-muted-foreground">{label}</span>
         <div className="flex items-center gap-1">
-          <button
-            onClick={(e) => { e.stopPropagation(); onUnpin(); }}
-            className="rounded p-2 text-teal-400 hover:bg-white/5 hover:text-teal-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50"
-            aria-label={`Unpin ${label}`}
-            title="Unpin"
-          >
-            <Pin className="h-4 w-4" fill="currentColor" />
-          </button>
-          <button
-            onClick={handleCsvExport}
-            className="rounded p-2 text-muted-foreground/60 hover:bg-white/5 hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50"
-            aria-label={`Export ${label} as CSV`}
-            title="Export CSV"
-          >
-            <Download className="h-4 w-4" />
-          </button>
+          <HoverTooltip label="Unpin">
+            <button
+              onClick={(e) => { e.stopPropagation(); onUnpin(); }}
+              className="rounded p-2 text-teal-400 hover:bg-white/5 hover:text-teal-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50"
+              aria-label={`Unpin ${label}`}
+            >
+              <Pin className="h-4 w-4" fill="currentColor" />
+            </button>
+          </HoverTooltip>
+          <HoverTooltip label="Export CSV">
+            <button
+              onClick={handleCsvExport}
+              className="rounded p-2 text-muted-foreground/60 hover:bg-white/5 hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50"
+              aria-label={`Export ${label} as CSV`}
+            >
+              <Download className="h-4 w-4" />
+            </button>
+          </HoverTooltip>
         </div>
       </div>
       {chartType === 'kpi' && <KpiBanner result={result} />}

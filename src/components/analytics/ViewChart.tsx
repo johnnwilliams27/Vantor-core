@@ -29,14 +29,18 @@ interface ViewChartProps {
   height?: number;
 }
 
-function hasAnyValues(record: Record<string, { value: number }[]> | undefined): boolean {
+/**
+ * Decide whether to show the empty state. A chart is "empty" only when the
+ * resolver returned zero keys or every series is zero-length — NOT when the
+ * values happen to all be zero. A flat line at \$0 is still meaningful data
+ * (the treasurer learns their balance was zero for the period), whereas an
+ * all-missing dataset should surface as empty-state help text.
+ */
+function hasAnyPoints(record: Record<string, { value: number }[]> | undefined): boolean {
   if (!record) return false;
-  for (const key of Object.keys(record)) {
-    for (const p of record[key]) {
-      if (p.value !== 0) return true;
-    }
-  }
-  return false;
+  const keys = Object.keys(record);
+  if (keys.length === 0) return false;
+  return keys.some((k) => record[k] && record[k].length > 0);
 }
 
 function ChartEmptyState({ height }: { height: number }) {
@@ -58,12 +62,12 @@ export function ViewChart({ result, height = 300 }: ViewChartProps) {
   const { chartType } = result.view;
 
   if (chartType === 'line' && result.series) {
-    if (!hasAnyValues(result.series)) return <ChartEmptyState height={height} />;
+    if (!hasAnyPoints(result.series)) return <ChartEmptyState height={height} />;
     return <LineChartView result={result} height={height} />;
   }
 
   if (chartType === 'bar' && result.groups) {
-    if (!hasAnyValues(result.groups)) return <ChartEmptyState height={height} />;
+    if (!hasAnyPoints(result.groups)) return <ChartEmptyState height={height} />;
     return <BarChartView result={result} height={height} />;
   }
 

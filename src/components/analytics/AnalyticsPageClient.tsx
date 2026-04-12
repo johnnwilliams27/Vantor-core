@@ -102,6 +102,7 @@ export function AnalyticsPageClient() {
           <DateRangePicker from={from} to={to} onFromChange={setFrom} onToChange={setTo} />
           <Button
             size="sm"
+            className="btn-gradient"
             onClick={() => { setForkSource(standardViews[0] ?? null); setForkOpen(true); }}
           >
             + New View

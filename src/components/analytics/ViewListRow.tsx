@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { Pin, GitFork, Pencil, Download, ChevronRight } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { HoverTooltip } from '@/components/ui/hover-tooltip';
 import { exportCsv } from '@/lib/export/csv';
 import { viewResultToCsvColumns, viewResultToCsvRows } from './export-helpers';
 import { useViewQuery } from '@/hooks/useViewQuery';
@@ -80,42 +81,46 @@ export function ViewListRow({ view, from, to, isPinned, onTogglePin, onFork, onE
         )}
       </div>
       <div className="flex items-center gap-1">
-        <button
-          onClick={(e) => { e.stopPropagation(); onTogglePin(); }}
-          className={`${iconBtn} ${isPinned ? 'text-teal-400 hover:text-teal-300' : 'text-muted-foreground/40 hover:text-muted-foreground'}`}
-          aria-label={isPinned ? `Unpin ${view.label}` : `Pin ${view.label}`}
-          aria-pressed={isPinned}
-          title={isPinned ? 'Unpin' : 'Pin'}
-        >
-          <Pin className="h-4 w-4" fill={isPinned ? 'currentColor' : 'none'} />
-        </button>
+        <HoverTooltip label={isPinned ? 'Unpin' : 'Pin'}>
+          <button
+            onClick={(e) => { e.stopPropagation(); onTogglePin(); }}
+            className={`${iconBtn} ${isPinned ? 'text-teal-400 hover:text-teal-300' : 'text-muted-foreground/40 hover:text-muted-foreground'}`}
+            aria-label={isPinned ? `Unpin ${view.label}` : `Pin ${view.label}`}
+            aria-pressed={isPinned}
+          >
+            <Pin className="h-4 w-4" fill={isPinned ? 'currentColor' : 'none'} />
+          </button>
+        </HoverTooltip>
         {isCustom && onEdit ? (
-          <button
-            onClick={(e) => { e.stopPropagation(); onEdit(); }}
-            className={iconBtn}
-            aria-label={`Edit ${view.label}`}
-            title="Edit"
-          >
-            <Pencil className="h-4 w-4" />
-          </button>
+          <HoverTooltip label="Edit">
+            <button
+              onClick={(e) => { e.stopPropagation(); onEdit(); }}
+              className={iconBtn}
+              aria-label={`Edit ${view.label}`}
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+          </HoverTooltip>
         ) : (
-          <button
-            onClick={(e) => { e.stopPropagation(); onFork(); }}
-            className={iconBtn}
-            aria-label={`Fork ${view.label}`}
-            title="Fork"
-          >
-            <GitFork className="h-4 w-4" />
-          </button>
+          <HoverTooltip label="Fork">
+            <button
+              onClick={(e) => { e.stopPropagation(); onFork(); }}
+              className={iconBtn}
+              aria-label={`Fork ${view.label}`}
+            >
+              <GitFork className="h-4 w-4" />
+            </button>
+          </HoverTooltip>
         )}
-        <button
-          onClick={handleCsvExport}
-          className={iconBtn}
-          aria-label={`Export ${view.label} as CSV`}
-          title="CSV"
-        >
-          <Download className="h-4 w-4" />
-        </button>
+        <HoverTooltip label="Export CSV">
+          <button
+            onClick={handleCsvExport}
+            className={iconBtn}
+            aria-label={`Export ${view.label} as CSV`}
+          >
+            <Download className="h-4 w-4" />
+          </button>
+        </HoverTooltip>
         <ChevronRight className="ml-1 h-4 w-4 shrink-0 text-muted-foreground/30" aria-hidden="true" />
       </div>
     </Card>

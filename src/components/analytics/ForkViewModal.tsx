@@ -222,6 +222,7 @@ export function ForkViewModal({ open, onOpenChange, sourceView, from, to }: Fork
             Cancel
           </Button>
           <Button
+            className="btn-gradient"
             onClick={handleSubmit}
             disabled={!label.trim() || isSubmitting}
           >
