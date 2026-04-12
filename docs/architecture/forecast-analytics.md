@@ -243,9 +243,103 @@ warn-only — overruns log a console warning but don't fail the suite.
 A hard ceiling of 1000 ms is enforced as an assertion so genuine
 O(n²) regressions get caught.
 
-## Phase B / C roadmap
+## Phase B — Analytics Engine
 
-Phase A deliberately left these for later:
+Phase B adds a measures/dimensions analytics engine with 12 standard
+views and rewires the Report Builder to consume it.
+
+### Architecture
+
+```
+  MEASURES registry      DIMENSIONS registry
+  (26 measures,           (9 dimensions,
+   code-defined)           code-defined)
+       │                       │
+       └──────────┬────────────┘
+                  │
+          STANDARD VIEWS (12)
+          (code + DB rows in
+           analytics_views)
+                  │
+                  ▼
+          RESOLVER REGISTRY
+          (view slug → resolver fn)
+                  │
+                  ▼
+          ANALYTICS ENGINE
+          (executeView dispatcher)
+                  │
+          ┌───────┴───────┬──────────────┐
+          ▼               ▼              ▼
+    Report Builder   API endpoints   Phase C:
+    (useReportData    (/api/analytics)  custom views,
+     rewired)                          alerting
+```
+
+### Measures
+
+26 measures defined in `src/lib/analytics/measures.ts`. Each has a
+slug, label, unit, and either a declarative source (table + column +
+aggregation) or `computed: true` for measures that need custom logic.
+
+Computed measures: `idle_cash_usd`, `coverage_ratio`,
+`forecast_projected_usd`. Their resolvers live alongside the standard
+resolvers.
+
+### Dimensions
+
+9 dimensions in `src/lib/analytics/dimensions.ts`: time, direction,
+status, chain, confidence, action, protocol, severity, age_bucket.
+
+### Standard views
+
+12 views seeded in migration 0047 and defined in code in
+`src/lib/analytics/standard-views.ts`. Each has a resolver in
+`src/lib/analytics/resolvers/`.
+
+| View | Chart type | Key measures |
+|------|-----------|-------------|
+| Treasury Summary | kpi | balance breakdown + idle cash + coverage |
+| Balance History | line | fiat/stablecoin/DeFi over time |
+| Obligation Coverage | bar | obligations vs balance by week |
+| Forecast vs Actuals | line | projected vs actual balance |
+| Ramp Activity | bar | volume by direction |
+| Transfer Volume | table | detail rows |
+| Swap Activity | table | detail rows |
+| Invoice Aging | bar | outstanding by age bucket |
+| AI Actions | table | recommendation detail rows |
+| Compliance Summary | kpi | screening + KYT counts |
+| Yield Performance | table | transaction detail rows |
+| Idle Cash Trend | line | idle stablecoin over time |
+
+### Report Builder adapter
+
+`src/hooks/useReportData.ts` was rewritten to call
+`POST /api/analytics/query` per section instead of fetching from
+scattered API endpoints. Each section maps to a standard view via
+`SECTION_VIEW_MAP`. The old `buildReportData()` in
+`src/lib/treasury/report.ts` is deprecated.
+
+### Forecast vs Actuals
+
+The `forecast-vs-actuals` view subsumes the legacy `simulation_runs`
+table. It compares the daily projected balance from the most recent
+base-scenario forecast snapshot against actual treasury state
+snapshots. The simulation_runs table and `runHistoricalSimulation()`
+function remain for backwards compatibility but are no longer the
+primary tool for forecast validation.
+
+## Phase C roadmap
+
+Phase B deliberately left these for later:
+
+- **Custom view builder** (CRUD on `analytics_views` with `kind='custom'`)
+- **Fork standard views into custom**
+- **Threshold alerting per view**
+- **Scheduled delivery (email/Slack)**
+- **CSV/PDF export from any view**
+
+## Phase A leftovers (still open)
 
 - **Invoice sync.** Invoices don't yet flow into the `obligations`
   table via `source='erp_sync'`. Until they do, the rules engine
