@@ -19,6 +19,7 @@ import { formatCurrency, formatDateTime, capitalize } from '@/lib/utils';
 import { exportCsv, exportPdf } from '@/lib/export';
 import type { ExportColumn } from '@/lib/export';
 import { RefreshCw, Loader2, CreditCard, Plus } from 'lucide-react';
+import { TruncatedAddress } from '@/components/ui/truncated-address';
 import { CardSpinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -380,11 +381,12 @@ export function InvoiceTable() {
             {/* Destination */}
             {(selectedInvoice.destination_address || selectedInvoice.vendor?.wallet_address) && (
               <div className="bg-muted/40 rounded-md p-3 space-y-2">
-                <div className="flex justify-between text-sm">
+                <div className="flex justify-between items-center text-sm">
                   <span className="text-muted-foreground">Destination</span>
-                  <span className="font-mono text-xs text-right max-w-[200px] break-all">
-                    {selectedInvoice.destination_address || selectedInvoice.vendor?.wallet_address}
-                  </span>
+                  <TruncatedAddress
+                    address={(selectedInvoice.destination_address || selectedInvoice.vendor?.wallet_address)!}
+                    chars={8}
+                  />
                 </div>
               </div>
             )}

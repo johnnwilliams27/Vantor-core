@@ -17,6 +17,7 @@ import { formatCurrency, formatDateTime, capitalize } from '@/lib/utils';
 import { exportCsv, exportPdf } from '@/lib/export';
 import type { ExportColumn } from '@/lib/export';
 import { CardSpinner } from '@/components/ui/spinner';
+import { TruncatedAddress } from '@/components/ui/truncated-address';
 import type { Transfer, Swap, FiatTransaction, YieldTransaction, BridgeTransfer, Wallet } from '@/types/database';
 import type { FiatPayment } from '@/types/fiat-payments';
 import { useWallets } from '@/hooks/useWallets';
@@ -29,8 +30,16 @@ interface UnifiedRow {
   currency: string;
   chain: string | null;
   status: string;
+  /**
+   * Text representation of the from/to party for search + CSV export.
+   * If the party is a raw address (no label), `fromAddress` / `toAddress`
+   * carries the full address so the table cell can render a TruncatedAddress
+   * with copy + expand instead of a plain truncated string.
+   */
   from: string;
   to: string;
+  fromAddress?: string;
+  toAddress?: string;
   fee: string | null;
   rate: string | null;
   memo: string | null;
@@ -42,13 +51,23 @@ function walletLabel(wallet?: { label?: string | null; address: string } | null)
   return wallet.label || `${wallet.address.slice(0, 6)}…${wallet.address.slice(-4)}`;
 }
 
+/** Returns the raw address iff the wallet has no label (so the render site
+ *  can substitute a TruncatedAddress). Returns undefined when the wallet
+ *  will display as a label, or when the wallet is missing entirely. */
+function walletRawAddress(wallet?: { label?: string | null; address: string } | null): string | undefined {
+  if (!wallet) return undefined;
+  return wallet.label ? undefined : wallet.address;
+}
+
 function mapTransfers(transfers: Transfer[]): UnifiedRow[] {
   return transfers.map((p) => {
     const isSent = p.direction === 'sent';
     const walletName = walletLabel(p.from_wallet);
-    const externalAddr = isSent
-      ? (p.to_address ? `${p.to_address.slice(0, 6)}…${p.to_address.slice(-4)}` : '—')
-      : (p.from_address ? `${p.from_address.slice(0, 6)}…${p.from_address.slice(-4)}` : '—');
+    const walletRaw = walletRawAddress(p.from_wallet);
+    const externalRaw = isSent ? p.to_address : p.from_address;
+    const externalDisplay = externalRaw
+      ? `${externalRaw.slice(0, 6)}…${externalRaw.slice(-4)}`
+      : '—';
 
     return {
     id: `transfer-${p.id}`,
@@ -58,8 +77,10 @@ function mapTransfers(transfers: Transfer[]): UnifiedRow[] {
     currency: p.token,
     chain: p.chain,
     status: p.status,
-    from: isSent ? walletName : externalAddr,
-    to: isSent ? externalAddr : walletName,
+    from: isSent ? walletName : externalDisplay,
+    to: isSent ? externalDisplay : walletName,
+    fromAddress: isSent ? walletRaw : (externalRaw ?? undefined),
+    toAddress: isSent ? (externalRaw ?? undefined) : walletRaw,
     fee: null,
     rate: null,
     memo: p.memo ?? null,
@@ -84,6 +105,8 @@ function mapSwaps(swaps: Swap[]): UnifiedRow[] {
     status: s.status,
     from: walletLabel(s.wallet),
     to: walletLabel(s.wallet),
+    fromAddress: walletRawAddress(s.wallet),
+    toAddress: walletRawAddress(s.wallet),
     fee: null,
     rate: s.rate ?? null,
     memo: (s as any).memo ?? null,
@@ -107,6 +130,8 @@ function mapBridges(bridges: BridgeTransfer[]): UnifiedRow[] {
     status: b.status,
     from: walletLabel(b.from_wallet),
     to: walletLabel(b.to_wallet),
+    fromAddress: walletRawAddress(b.from_wallet),
+    toAddress: walletRawAddress(b.to_wallet),
     fee: b.bridge_fee && parseFloat(b.bridge_fee) > 0 ? `${parseFloat(b.bridge_fee).toFixed(4)} ${b.token}` : null,
     rate: null,
     memo: (b as any).memo ?? null,
@@ -348,8 +373,12 @@ export function AllTab() {
                       {capitalize(row.type)}
                     </span>
                   </TableCell>
-                  <TableCell className="text-sm">{row.from}</TableCell>
-                  <TableCell className="text-sm">{row.to}</TableCell>
+                  <TableCell className="text-sm">
+                    {row.fromAddress ? <TruncatedAddress address={row.fromAddress} /> : row.from}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {row.toAddress ? <TruncatedAddress address={row.toAddress} /> : row.to}
+                  </TableCell>
                   <TableCell className="text-sm">
                     <span className="font-semibold">{formatCurrency(row.amount)}</span>
                   </TableCell>

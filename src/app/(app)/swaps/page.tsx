@@ -18,6 +18,7 @@ import type { ExportColumn } from '@/lib/export';
 import type { Swap } from '@/types/database';
 import { useScheduledOperations, useCancelScheduledOperation } from '@/hooks/useScheduledOperations';
 import type { ScheduledOperation, SwapParams } from '@/types/scheduled-operations';
+import { TruncatedAddress } from '@/components/ui/truncated-address';
 import { Check, Clock, XCircle, ArrowLeftRight } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import { useSession } from 'next-auth/react';
@@ -62,6 +63,7 @@ interface UnifiedSwapRow {
   isScheduled: boolean;
   scheduledOpId?: string;
   walletLabel: string;
+  walletAddress?: string;
   rate: string | null;
 }
 
@@ -98,6 +100,7 @@ function SwapHistory() {
       scheduled_for: null,
       isScheduled: false,
       walletLabel: walletDisplayName(s.wallet),
+      walletAddress: s.wallet?.label ? undefined : s.wallet?.address,
       rate: s.rate ?? null,
     })),
     ...(scheduledOps ?? [])
@@ -117,6 +120,7 @@ function SwapHistory() {
           isScheduled: true,
           scheduledOpId: op.id,
           walletLabel: p.walletAddress ? `${p.walletAddress.slice(0, 6)}…${p.walletAddress.slice(-4)}` : '—',
+          walletAddress: p.walletAddress ?? undefined,
           rate: null,
         };
       }),
@@ -232,7 +236,9 @@ function SwapHistory() {
                   <TableCell className="text-sm text-muted-foreground">
                     {s.rate ? parseFloat(s.rate).toFixed(4) : '—'}
                   </TableCell>
-                  <TableCell className="text-sm">{s.walletLabel}</TableCell>
+                  <TableCell className="text-sm">
+                    {s.walletAddress ? <TruncatedAddress address={s.walletAddress} /> : s.walletLabel}
+                  </TableCell>
                   <TableCell><Badge variant={s.chain === 'ethereum' ? 'ethereum' : 'solana'}>{capitalize(s.chain)}</Badge></TableCell>
                   <TableCell>
                     <Badge variant={

@@ -15,6 +15,7 @@ import { exportCsv, exportPdf } from '@/lib/export';
 import type { ExportColumn } from '@/lib/export';
 import type { BridgeTransfer } from '@/types/database';
 import { TableCardSkeleton } from '@/components/ui/operations-skeletons';
+import { TruncatedAddress } from '@/components/ui/truncated-address';
 import { ArrowRight, Check, Clock, XCircle } from 'lucide-react';
 import { useScheduledOperations, useCancelScheduledOperation } from '@/hooks/useScheduledOperations';
 import type { BridgeParams } from '@/types/scheduled-operations';
@@ -44,6 +45,8 @@ interface UnifiedBridgeRow {
   to_chain: string;
   fromWalletLabel: string;
   toWalletLabel: string;
+  fromWalletAddress?: string;
+  toWalletAddress?: string;
   bridge_fee: string | null;
   status: string;
   created_at: string;
@@ -97,6 +100,8 @@ export function BridgeHistory() {
       to_chain: b.to_chain,
       fromWalletLabel: walletDisplayName(b.from_wallet),
       toWalletLabel: walletDisplayName(b.to_wallet),
+      fromWalletAddress: b.from_wallet?.label ? undefined : b.from_wallet?.address,
+      toWalletAddress: b.to_wallet?.label ? undefined : b.to_wallet?.address,
       bridge_fee: b.bridge_fee ?? null,
       status: b.status,
       created_at: b.created_at,
@@ -119,6 +124,8 @@ export function BridgeHistory() {
           to_chain: p.toChain,
           fromWalletLabel: truncated,
           toWalletLabel: truncated,
+          fromWalletAddress: p.walletAddress ?? undefined,
+          toWalletAddress: p.walletAddress ?? undefined,
           bridge_fee: null,
           status: formatScheduledStatus(op.status),
           created_at: op.created_at,
@@ -230,8 +237,12 @@ export function BridgeHistory() {
                   <TableRow key={b.id} className="hover:bg-white/[0.02]">
                     <TableCell><Badge variant="outline">{b.token}</Badge></TableCell>
                     <TableCell className="text-sm font-semibold">{formatCurrency(b.amount)}</TableCell>
-                    <TableCell className="text-sm text-foreground">{b.fromWalletLabel}</TableCell>
-                    <TableCell className="text-sm text-foreground">{b.toWalletLabel}</TableCell>
+                    <TableCell className="text-sm text-foreground">
+                      {b.fromWalletAddress ? <TruncatedAddress address={b.fromWalletAddress} /> : b.fromWalletLabel}
+                    </TableCell>
+                    <TableCell className="text-sm text-foreground">
+                      {b.toWalletAddress ? <TruncatedAddress address={b.toWalletAddress} /> : b.toWalletLabel}
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1.5 text-xs">
                         <span className={`w-2 h-2 rounded-full ${b.from_chain === 'ethereum' ? 'bg-blue-400' : 'bg-purple-400'}`} />
