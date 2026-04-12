@@ -86,3 +86,4 @@ export type { HardLimitInput, HardLimitParsed } from './schemas/hard-limit.schem
 
 export * from './authoring';
 export * from './approvals';
+export * from './gate';

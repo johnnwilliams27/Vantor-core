@@ -63,14 +63,60 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ data: transfer });
   }
 
+  // ─── Lazy materialization of approval outcome onto transfer row ──
+  // When the transfer went through the policy gate and required approval,
+  // the workflow service wrote only to policy_approval_requests — not to
+  // transfers. Reflect the outcome here before gating on status.
+  if (transfer.status === 'awaiting_approval') {
+    const { data: approval } = await supabase
+      .from('policy_approval_requests')
+      .select('status, denial_reason')
+      .eq('movement_id', transfer.id)
+      .eq('enterprise_id', enterpriseId)
+      .maybeSingle();
+
+    if (approval?.status === 'executed') {
+      // Conditional on status='awaiting_approval' so a concurrent flip
+      // from another reader (e.g. GET /[id]) is idempotent.
+      await supabase
+        .from('transfers')
+        .update({ status: 'pending' })
+        .eq('id', transfer.id)
+        .eq('enterprise_id', enterpriseId)
+        .eq('status', 'awaiting_approval');
+      transfer.status = 'pending';
+    } else if (approval?.status === 'denied' || approval?.status === 'cancelled') {
+      const nextDenialReason = approval.denial_reason ?? approval.status;
+      await supabase
+        .from('transfers')
+        .update({ status: 'denied', denial_reason: nextDenialReason })
+        .eq('id', transfer.id)
+        .eq('enterprise_id', enterpriseId)
+        .eq('status', 'awaiting_approval');
+      transfer.status = 'denied';
+      (transfer as Record<string, unknown>).denial_reason = nextDenialReason;
+    }
+    // else: approval still pending — transfer stays awaiting_approval below.
+  }
+
   if (transfer.status !== 'pending' && transfer.status !== 'processing') {
     return NextResponse.json(
-      { error: `Cannot confirm transfer in state: ${transfer.status}` },
-      { status: 400 },
+      {
+        error: `Cannot confirm transfer in state: ${transfer.status}`,
+        status: transfer.status,
+        ...((transfer as Record<string, unknown>).denial_reason
+          ? { denial_reason: (transfer as Record<string, unknown>).denial_reason }
+          : {}),
+      },
+      { status: 409 },
     );
   }
 
-  // Mark as completed
+  // Mark as completed. CRITICAL race guard: the update is conditional on
+  // status='pending' so two concurrent /confirm calls cannot both win.
+  // If zero rows match, a parallel writer already flipped the status —
+  // return the current row idempotently rather than double-executing
+  // side effects (balance updates, usage fees, KYT registration).
   const { data: updated, error: updErr } = await supabase
     .from('transfers')
     .update({
@@ -80,11 +126,32 @@ export async function POST(req: NextRequest) {
       updated_at: new Date().toISOString(),
     })
     .eq('id', transfer.id)
+    .eq('enterprise_id', enterpriseId)
+    .eq('status', 'pending')
     .select()
-    .single();
+    .maybeSingle();
 
   if (updErr) {
     return NextResponse.json({ error: updErr.message }, { status: 500 });
+  }
+
+  if (!updated) {
+    // Either the row moved out of 'pending' between our read and write
+    // (concurrent /confirm, cancel, or denial) or the row is gone.
+    // Re-read and return idempotently — do NOT run the remaining
+    // side effects (transfer_attempts insert, balance update, usage fee,
+    // KYT registration, notifications). These must run at most once per
+    // transfer.
+    const { data: current } = await supabase
+      .from('transfers')
+      .select('*')
+      .eq('id', transfer.id)
+      .eq('enterprise_id', enterpriseId)
+      .maybeSingle();
+    return NextResponse.json(
+      { data: current, note: 'transfer was already finalized by a concurrent writer' },
+      { status: 200 },
+    );
   }
 
   // Record the attempt (audit trail for on-chain submissions)
