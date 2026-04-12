@@ -118,10 +118,34 @@ async function cleanUserData(userId: string) {
   // (renumbered from 0039). treasury_insights is the insights engine
   // feed from migration 0037 (feature/proactive-ai).
   for (const t of ['simulation_runs', 'forecast_snapshots', 'treasury_state_snapshots',
-    'ai_recommendations', 'obligations', 'treasury_rules', 'fiat_transactions', 'gl_postings',
+    'ai_recommendations', 'obligations', 'treasury_rules', 'yield_transactions', 'yield_positions',
+    'fiat_transactions', 'gl_postings',
     'kyt_alerts', 'kyt_transfers', 'sanctions_screenings', 'travel_rule_transfers',
     'notifications', 'treasury_insights']) {
     await sb.from(t).delete().eq('user_id', userId);
+  }
+
+  // Policy engine: child triggers check parent version exists + is draft,
+  // so children must be deleted before versions, and versions before policies.
+  // Look up enterprise from user to find the right test enterprise.
+  const { data: userEnt } = await sb.from('user_profiles').select('enterprise_id').eq('id', userId).single();
+  if (userEnt?.enterprise_id) {
+    const { data: ent } = await sb.from('enterprises').select('test_enterprise_id').eq('id', userEnt.enterprise_id).single();
+    const policyEntId = ent?.test_enterprise_id ?? userEnt.enterprise_id;
+    const { data: draftVersions } = await sb
+      .from('policy_versions').select('id')
+      .eq('enterprise_id', policyEntId).eq('status', 'draft');
+    if (draftVersions?.length) {
+      const vIds = draftVersions.map(v => v.id);
+      // Order matters: rules FK→chains, so rules first; policies FK→versions via active_version_id
+      await sb.from('policy_rules').delete().in('version_id', vIds);
+      await sb.from('policy_hard_limits').delete().in('version_id', vIds);
+      await sb.from('policy_approval_chains').delete().in('version_id', vIds);
+      // Null out active_version_id before deleting versions (FK constraint)
+      await sb.from('policy_policies').update({ active_version_id: null }).eq('enterprise_id', policyEntId);
+      await sb.from('policy_versions').delete().in('id', vIds);
+    }
+    await sb.from('policy_policies').delete().eq('enterprise_id', policyEntId);
   }
 
   // payments cascade → payment_attempts
@@ -883,6 +907,77 @@ async function main() {
 
   await sb.from('fiat_transactions').insert(fiatRows);
   console.log(`✓ ${fiatRows.length} fiat transactions`);
+
+  // ════════════════════════════════════════════════════════
+  // 10b. YIELD POSITIONS (DeFi + Tokenized MMF)
+  // ════════════════════════════════════════════════════════
+  console.log('\n📈 Seeding yield positions (DeFi + tokenized MMFs)...');
+
+  const ethWallets = wallets.filter(w => w.chain === 'ethereum');
+  const solWallets = wallets.filter(w => w.chain === 'solana');
+
+  const yieldDefs = [
+    // DeFi positions
+    { protocol: 'aave_v3',          chain: 'ethereum', token: 'USDC', yieldToken: 'aUSDC',            deposited: 250_000, apy: 4.8,  daysActive: randInt(60, 120), wList: ethWallets },
+    { protocol: 'morpho_reservoir', chain: 'ethereum', token: 'USDC', yieldToken: 'bbqUSDCreservoir', deposited: 150_000, apy: 7.0,  daysActive: randInt(30, 90),  wList: ethWallets },
+    { protocol: 'kamino',           chain: 'solana',   token: 'USDC', yieldToken: 'kUSDC',            deposited: 100_000, apy: 6.1,  daysActive: randInt(30, 100), wList: solWallets },
+    { protocol: 'ondo_usdy',        chain: 'ethereum', token: 'USDC', yieldToken: 'USDY',             deposited: 500_000, apy: 4.5,  daysActive: randInt(40, 110), wList: ethWallets },
+    // Tokenized MMF positions
+    { protocol: 'spiko_usd',        chain: 'ethereum', token: 'USDC', yieldToken: 'USTBL',            deposited: 250_000, apy: 4.05, daysActive: 45, wList: ethWallets },
+    { protocol: 'usyc',             chain: 'ethereum', token: 'USDC', yieldToken: 'USYC',             deposited: 400_000, apy: 3.18, daysActive: 28, wList: ethWallets },
+    { protocol: 'ousg',             chain: 'ethereum', token: 'USDC', yieldToken: 'OUSG',             deposited: 750_000, apy: 3.37, daysActive: 14, wList: ethWallets },
+  ];
+
+  let yieldPosCount = 0;
+  let yieldTxCount = 0;
+
+  for (const yp of yieldDefs) {
+    if (!yp.wList.length) continue;
+    const wallet = pick(yp.wList);
+    const accrued = fmt2(yp.deposited * (yp.apy / 100) * (yp.daysActive / 365));
+    const currentValue = fmt2(yp.deposited + accrued);
+    const isEth = yp.chain === 'ethereum';
+
+    const { data: pos } = await sb.from('yield_positions').insert({
+      user_id: userId, ...eid, wallet_id: wallet.id,
+      protocol: yp.protocol, chain: yp.chain, underlying_token: yp.token,
+      yield_token: yp.yieldToken, deposited_amount: yp.deposited.toFixed(2),
+      current_value_usd: currentValue, accrued_yield_usd: accrued,
+      apy_snapshot: yp.apy, last_refreshed_at: ts(new Date()),
+      is_active: true, metadata: { mock: true }, created_at: ts(daysAgo(yp.daysActive)),
+    }).select('id').single();
+
+    if (!pos) continue;
+    yieldPosCount++;
+
+    // Deposit transaction
+    await sb.from('yield_transactions').insert({
+      user_id: userId, ...eid, position_id: pos.id,
+      protocol: yp.protocol, chain: yp.chain, tx_type: 'deposit',
+      underlying_token: yp.token, amount: yp.deposited.toFixed(2),
+      amount_usd: yp.deposited.toFixed(2), tx_hash: isEth ? ethHash() : solHash(),
+      status: 'completed', executed_at: ts(daysAgo(yp.daysActive)), created_at: ts(daysAgo(yp.daysActive)),
+    });
+    yieldTxCount++;
+
+    // DeFi positions get a random partial withdrawal (MMFs don't)
+    const isMMF = ['spiko_usd', 'usyc', 'ousg'].includes(yp.protocol);
+    if (!isMMF && Math.random() > 0.5) {
+      const withdrawAmt = fmt2(rand(10_000, yp.deposited * 0.3));
+      const withdrawDay = randInt(5, yp.daysActive - 5);
+      await sb.from('yield_transactions').insert({
+        user_id: userId, ...eid, position_id: pos.id,
+        protocol: yp.protocol, chain: yp.chain, tx_type: 'withdraw',
+        underlying_token: yp.token, amount: withdrawAmt, amount_usd: withdrawAmt,
+        tx_hash: isEth ? ethHash() : solHash(), status: 'completed',
+        executed_at: ts(daysAgo(withdrawDay)), created_at: ts(daysAgo(withdrawDay)),
+      });
+      yieldTxCount++;
+    }
+  }
+
+  console.log(`✓ ${yieldPosCount} yield positions (4 DeFi + 3 tokenized MMFs)`);
+  console.log(`✓ ${yieldTxCount} yield transactions`);
 
   // ════════════════════════════════════════════════════════
   // 11. TREASURY RULE
@@ -1661,11 +1756,7 @@ async function main() {
   if (enterpriseId) {
     console.log('\n🛡️  Seeding policy engine (config tables)...');
 
-    // Cascade delete through policy_policies (CASCADE FK on policy_versions,
-    // which in turn cascades to rules/hard_limits/approval_chains).
-    // Triggers allow these DELETEs because the version is draft.
-    await sb.from('policy_policies').delete().eq('enterprise_id', enterpriseId);
-
+    // Policy data is cleaned in cleanUserData() above.
     const { data: policyRow, error: policyErr } = await sb
       .from('policy_policies')
       .insert({
@@ -2270,6 +2361,8 @@ async function main() {
   console.log('  Payments         :', payments?.length ?? 0);
   console.log('  Balance snapshots:', snapshotRows.length, '(daily × all wallets)');
   console.log('  Fiat ramps       :', fiatRows.length, '(onramp/offramp history)');
+  console.log('  Yield positions  :', yieldPosCount, '(4 DeFi + 3 tokenized MMFs)');
+  console.log('  Yield txns       :', yieldTxCount);
   console.log('  Obligations      :', obligationRows.length, '(next 90 days)');
   console.log('  AI recommendations:', aiRows.length, `(${aiRows.filter(r => r.status === 'pending_approval').length} pending approval)`);
   console.log('  Treasury insights :', insightRows.length, `(${insightRows.filter(i => i.state === 'new' && i.severity === 'critical').length} critical new)`);
