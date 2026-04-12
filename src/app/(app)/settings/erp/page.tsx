@@ -136,7 +136,7 @@ export default function ERPSettingsPage() {
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [testing, setTesting] = useState(false);
   const [deactivateTarget, setDeactivateTarget] = useState<{ id: string; label: string } | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string; active: boolean } | null>(null);
   const [actionPending, setActionPending] = useState(false);
   const [showErpAddonConfirm, setShowErpAddonConfirm] = useState(false);
   const [pendingErpData, setPendingErpData] = useState<any>(null);
@@ -640,27 +640,25 @@ export default function ERPSettingsPage() {
                                     Deactivate
                                   </Button>
                                 ) : (
-                                  <>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleSetActive(cfg.id, true)}
-                                      disabled={actionPending}
-                                    >
-                                      Reactivate
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8"
-                                      onClick={() => setDeleteTarget({ id: cfg.id, label: cfg.label })}
-                                      disabled={actionPending}
-                                      aria-label={`Delete ${cfg.label} configuration`}
-                                    >
-                                      <Trash2 className="h-4 w-4 text-red-400" />
-                                    </Button>
-                                  </>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleSetActive(cfg.id, true)}
+                                    disabled={actionPending}
+                                  >
+                                    Reactivate
+                                  </Button>
                                 )}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => setDeleteTarget({ id: cfg.id, label: cfg.label, active: cfg.is_active })}
+                                  disabled={actionPending}
+                                  aria-label={`Delete ${cfg.label} configuration`}
+                                >
+                                  <Trash2 className="h-4 w-4 text-red-400" />
+                                </Button>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -689,10 +687,20 @@ export default function ERPSettingsPage() {
         open={!!deleteTarget}
         onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
         title="Delete ERP system?"
-        description={`Are you sure you want to permanently delete "${deleteTarget?.label ?? ''}"? This will remove all configuration data and cannot be undone.`}
+        description={
+          deleteTarget?.active
+            ? `"${deleteTarget.label}" is currently active and syncing invoices and vendors. Deleting it will stop sync immediately and remove all configuration data.`
+            : `Are you sure you want to permanently delete "${deleteTarget?.label ?? ''}"? This will remove all configuration data and cannot be undone.`
+        }
         confirmLabel="Delete"
         isPending={actionPending}
         onConfirm={handleDelete}
+        requireText={deleteTarget?.active ? 'DELETE' : undefined}
+        requireHelper={
+          deleteTarget?.active
+            ? 'This integration is still active. To permanently remove it, type DELETE in the field below.'
+            : undefined
+        }
       />
 
       <Dialog
