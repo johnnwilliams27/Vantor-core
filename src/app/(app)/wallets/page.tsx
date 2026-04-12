@@ -14,7 +14,8 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { formatDate, truncateAddress } from '@/lib/utils';
 import { TruncatedAddress } from '@/components/ui/truncated-address';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
-import { Trash2, CheckCircle, Clock, Pencil, Check, X, Wallet } from 'lucide-react';
+import { Trash2, CheckCircle, Clock, Wallet } from 'lucide-react';
+import { NicknameEdit } from '@/components/ui/nickname-edit';
 import { useToast } from '@/components/ui/toast';
 import { TableCardSkeleton } from '@/components/ui/operations-skeletons';
 import { useQueryClient } from '@tanstack/react-query';
@@ -30,9 +31,6 @@ function CryptoWalletsTab() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string } | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState('');
-  const [saving, setSaving] = useState(false);
 
   const handleUnlink = async () => {
     if (!deleteTarget) return;
@@ -46,23 +44,20 @@ function CryptoWalletsTab() {
     }
   };
 
-  const handleSaveNickname = async (id: string) => {
-    setSaving(true);
-    try {
-      const res = await fetch(`/api/wallets/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ label: editValue.trim() || null }),
-      });
-      if (!res.ok) throw new Error('Failed to save');
-      queryClient.invalidateQueries({ queryKey: ['wallets'] });
-      toast({ title: 'Nickname saved', variant: 'success' });
-    } catch (err) {
-      toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
-    } finally {
-      setSaving(false);
-      setEditingId(null);
+  const handleSaveNickname = async (id: string, newLabel: string | null) => {
+    const res = await fetch(`/api/wallets/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ label: newLabel }),
+    });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      const err = new Error(json.error || 'Failed to save');
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+      throw err;
     }
+    queryClient.invalidateQueries({ queryKey: ['wallets'] });
+    toast({ title: 'Nickname saved', variant: 'success' });
   };
 
   return (
@@ -143,45 +138,15 @@ function CryptoWalletsTab() {
                   {wallets.map((wallet) => {
                     const positions = overview?.cryptoPositions.filter((p) => p.walletId === wallet.id) ?? [];
                     const totalUsd = positions.reduce((sum, p) => sum + p.usdValue, 0);
-                    const isEditing = editingId === wallet.id;
                     return (
                       <TableRow key={wallet.id}>
                         <TableCell>
-                          {isEditing ? (
-                            <div className="flex items-center gap-1">
-                              <Input
-                                value={editValue}
-                                onChange={(e) => setEditValue(e.target.value)}
-                                placeholder="Enter nickname…"
-                                className="h-7 text-sm w-36"
-                                autoFocus
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') handleSaveNickname(wallet.id);
-                                  if (e.key === 'Escape') setEditingId(null);
-                                }}
-                                disabled={saving}
-                              />
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSaveNickname(wallet.id)} disabled={saving} aria-label="Save nickname">
-                                <Check className="h-3.5 w-3.5 text-green-600" />
-                              </Button>
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingId(null)} disabled={saving} aria-label="Cancel edit">
-                                <X className="h-3.5 w-3.5 text-muted-foreground" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-sm">{wallet.label || <span className="text-muted-foreground italic">No nickname</span>}</span>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={() => { setEditingId(wallet.id); setEditValue(wallet.label ?? ''); }}
-                                aria-label={wallet.label ? 'Edit wallet nickname' : 'Add wallet nickname'}
-                              >
-                                <Pencil className="h-3 w-3 text-muted-foreground" />
-                              </Button>
-                            </div>
-                          )}
+                          <NicknameEdit
+                            value={wallet.label}
+                            onSave={(v) => handleSaveNickname(wallet.id, v)}
+                            editAriaLabel={wallet.label ? 'Edit wallet nickname' : 'Add wallet nickname'}
+                            requireNonEmpty={false}
+                          />
                         </TableCell>
                         <TableCell>
                           <ChainBadge chain={wallet.chain} />

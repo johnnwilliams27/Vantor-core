@@ -10,8 +10,9 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { BankLinkButton } from './BankLinkButton';
 import { formatDate } from '@/lib/utils';
 import { useTreasuryOverview } from '@/hooks/useTreasury';
-import { Trash2, CheckCircle, Building2, Pencil, Check, X } from 'lucide-react';
+import { Trash2, CheckCircle, Building2 } from 'lucide-react';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
+import { NicknameEdit } from '@/components/ui/nickname-edit';
 import { useToast } from '@/components/ui/toast';
 import type { BankAccount } from '@/types/database';
 import { TableCardSkeleton } from '@/components/ui/operations-skeletons';
@@ -47,9 +48,6 @@ export function BankAccountsTab({ bankingProvider = 'stripe_fc' }: { bankingProv
   const queryClient = useQueryClient();
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState('');
-  const [saving, setSaving] = useState(false);
 
   const { data: accounts, isLoading } = useQuery({
     queryKey: ['bank-accounts'],
@@ -80,26 +78,20 @@ export function BankAccountsTab({ bankingProvider = 'stripe_fc' }: { bankingProv
     }
   };
 
-  const handleSaveNickname = async (id: string) => {
-    setSaving(true);
-    try {
-      const res = await fetch(`/api/bank-accounts/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nickname: editValue.trim() || null }),
-      });
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Failed to save');
-      }
-      queryClient.invalidateQueries({ queryKey: ['bank-accounts'] });
-      toast({ title: 'Nickname saved', variant: 'success' });
-    } catch (err) {
-      toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
-    } finally {
-      setSaving(false);
-      setEditingId(null);
+  const handleSaveNickname = async (id: string, newNickname: string | null) => {
+    const res = await fetch(`/api/bank-accounts/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nickname: newNickname }),
+    });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      const err = new Error(json.error || 'Failed to save');
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+      throw err;
     }
+    queryClient.invalidateQueries({ queryKey: ['bank-accounts'] });
+    toast({ title: 'Nickname saved', variant: 'success' });
   };
 
   return (
@@ -144,45 +136,15 @@ export function BankAccountsTab({ bankingProvider = 'stripe_fc' }: { bankingProv
                 <TableBody>
                   {accounts.map((account) => {
                     const balanceInfo = overview?.bankAccounts.find((b) => b.id === account.id);
-                    const isEditing = editingId === account.id;
                     return (
                       <TableRow key={account.id}>
                         <TableCell>
-                          {isEditing ? (
-                            <div className="flex items-center gap-1">
-                              <Input
-                                value={editValue}
-                                onChange={(e) => setEditValue(e.target.value)}
-                                placeholder="Enter nickname…"
-                                className="h-7 text-sm w-36"
-                                autoFocus
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') handleSaveNickname(account.id);
-                                  if (e.key === 'Escape') setEditingId(null);
-                                }}
-                                disabled={saving}
-                              />
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSaveNickname(account.id)} disabled={saving} aria-label="Save nickname">
-                                <Check className="h-3.5 w-3.5 text-green-600" />
-                              </Button>
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingId(null)} disabled={saving} aria-label="Cancel edit">
-                                <X className="h-3.5 w-3.5 text-muted-foreground" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-sm">{account.nickname || <span className="text-muted-foreground italic">No nickname</span>}</span>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={() => { setEditingId(account.id); setEditValue(account.nickname ?? ''); }}
-                                aria-label={account.nickname ? 'Edit bank account nickname' : 'Add bank account nickname'}
-                              >
-                                <Pencil className="h-3 w-3 text-muted-foreground" />
-                              </Button>
-                            </div>
-                          )}
+                          <NicknameEdit
+                            value={account.nickname}
+                            onSave={(v) => handleSaveNickname(account.id, v)}
+                            editAriaLabel={account.nickname ? 'Edit bank account nickname' : 'Add bank account nickname'}
+                            requireNonEmpty={false}
+                          />
                         </TableCell>
                         <TableCell>
                           <div className="font-medium text-sm">

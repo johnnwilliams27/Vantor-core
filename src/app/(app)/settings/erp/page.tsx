@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { PasswordField } from '@/components/ui/password-field';
+import { NicknameEdit } from '@/components/ui/nickname-edit';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
@@ -137,9 +138,6 @@ export default function ERPSettingsPage() {
   const [deactivateTarget, setDeactivateTarget] = useState<{ id: string; label: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string } | null>(null);
   const [actionPending, setActionPending] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState('');
-  const [savingNickname, setSavingNickname] = useState(false);
   const [showErpAddonConfirm, setShowErpAddonConfirm] = useState(false);
   const [pendingErpData, setPendingErpData] = useState<any>(null);
 
@@ -214,23 +212,20 @@ export default function ERPSettingsPage() {
     }
   };
 
-  const handleSaveNickname = async (id: string) => {
-    setSavingNickname(true);
-    try {
-      const res = await fetch('/api/erp/connect', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, label: editValue.trim() }),
-      });
-      if (!res.ok) throw new Error('Failed to save');
-      queryClient.invalidateQueries({ queryKey: ['erp-configs'] });
-      toast({ title: 'Nickname saved', variant: 'success' });
-    } catch (err) {
-      toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
-    } finally {
-      setSavingNickname(false);
-      setEditingId(null);
+  const handleSaveNickname = async (id: string, newLabel: string) => {
+    const res = await fetch('/api/erp/connect', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, label: newLabel }),
+    });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      const err = new Error(json.error || 'Failed to save');
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+      throw err;
     }
+    queryClient.invalidateQueries({ queryKey: ['erp-configs'] });
+    toast({ title: 'Nickname saved', variant: 'success' });
   };
 
   const buildCredentials = (data: FormData) => ({
@@ -572,47 +567,16 @@ export default function ERPSettingsPage() {
                     </TableHeader>
                     <TableBody>
                       {configs.map((cfg) => {
-                        const isEditing = editingId === cfg.id;
                         const provider = cfg.provider as ProviderId;
                         return (
                           <TableRow key={cfg.id}>
                             <TableCell>
-                              {isEditing ? (
-                                <div className="flex items-center gap-1">
-                                  <Input
-                                    value={editValue}
-                                    onChange={(e) => setEditValue(e.target.value)}
-                                    placeholder="Enter nickname…"
-                                    className="h-7 text-sm w-44"
-                                    autoFocus
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter' && editValue.trim()) handleSaveNickname(cfg.id);
-                                      if (e.key === 'Escape') setEditingId(null);
-                                    }}
-                                    disabled={savingNickname}
-                                  />
-                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSaveNickname(cfg.id)} disabled={savingNickname || !editValue.trim()} aria-label="Save nickname">
-                                    <Check className="h-3.5 w-3.5 text-green-600" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingId(null)} disabled={savingNickname} aria-label="Cancel edit">
-                                    <X className="h-3.5 w-3.5 text-muted-foreground" />
-                                  </Button>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-1.5">
-                                  <Settings2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                                  <span className="text-sm font-medium">{cfg.label}</span>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6"
-                                    onClick={() => { setEditingId(cfg.id); setEditValue(cfg.label); }}
-                                    aria-label="Edit ERP nickname"
-                                  >
-                                    <Pencil className="h-3 w-3 text-muted-foreground" />
-                                  </Button>
-                                </div>
-                              )}
+                              <NicknameEdit
+                                value={cfg.label}
+                                onSave={(v) => handleSaveNickname(cfg.id, v ?? '')}
+                                editAriaLabel="Edit ERP nickname"
+                                prefixIcon={<Settings2 className="h-4 w-4 text-muted-foreground shrink-0" />}
+                              />
                             </TableCell>
                             <TableCell className="text-sm">
                               <Badge variant="outline">{PROVIDER_DISPLAY[provider] ?? cfg.provider}</Badge>
