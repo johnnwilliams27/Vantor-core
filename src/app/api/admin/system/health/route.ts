@@ -25,12 +25,22 @@ export async function GET(_req: NextRequest) {
 
     if (userError) return NextResponse.json({ error: userError.message }, { status: 500 });
 
-    // Count transactions (count only — NO amounts)
-    const { count: totalTransactions, error: txError } = await supabase
-      .from('transactions')
-      .select('id', { count: 'exact', head: true });
+    // Count transactions across all three tx tables (count only — NO amounts):
+    //   transactions       — on-chain stablecoin transfers
+    //   fiat_transactions  — bank ramps (on/off-ramp history)
+    //   yield_transactions — yield protocol deposits/withdrawals
+    const [stablecoinRes, fiatRes, yieldRes] = await Promise.all([
+      supabase.from('transactions').select('id', { count: 'exact', head: true }),
+      supabase.from('fiat_transactions').select('id', { count: 'exact', head: true }),
+      supabase.from('yield_transactions').select('id', { count: 'exact', head: true }),
+    ]);
 
-    if (txError) return NextResponse.json({ error: txError.message }, { status: 500 });
+    if (stablecoinRes.error) return NextResponse.json({ error: stablecoinRes.error.message }, { status: 500 });
+    if (fiatRes.error) return NextResponse.json({ error: fiatRes.error.message }, { status: 500 });
+    if (yieldRes.error) return NextResponse.json({ error: yieldRes.error.message }, { status: 500 });
+
+    const totalTransactions =
+      (stablecoinRes.count ?? 0) + (fiatRes.count ?? 0) + (yieldRes.count ?? 0);
 
     // Count frozen enterprises
     const { count: frozenEnterprises, error: frzError } = await supabase

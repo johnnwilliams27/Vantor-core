@@ -34,13 +34,40 @@ export async function GET(
 
     if (ucError) return NextResponse.json({ error: ucError.message }, { status: 500 });
 
-    // Count transactions (count only, NO amounts)
-    const { count: transactionCount, error: txError } = await supabase
-      .from('transactions')
-      .select('id', { count: 'exact', head: true })
+    // Count transactions across all three tx tables (count only, NO amounts).
+    // fiat_transactions has no enterprise_id — scope via this enterprise's users.
+    const { data: userIdRows, error: uidErr } = await supabase
+      .from('user_profiles')
+      .select('id')
       .eq('enterprise_id', id);
 
-    if (txError) return NextResponse.json({ error: txError.message }, { status: 500 });
+    if (uidErr) return NextResponse.json({ error: uidErr.message }, { status: 500 });
+
+    const userIds = (userIdRows ?? []).map((r) => r.id);
+
+    const [stablecoinRes, fiatRes, yieldRes] = await Promise.all([
+      supabase
+        .from('transactions')
+        .select('id', { count: 'exact', head: true })
+        .eq('enterprise_id', id),
+      userIds.length
+        ? supabase
+            .from('fiat_transactions')
+            .select('id', { count: 'exact', head: true })
+            .in('user_id', userIds)
+        : Promise.resolve({ count: 0, error: null as { message: string } | null }),
+      supabase
+        .from('yield_transactions')
+        .select('id', { count: 'exact', head: true })
+        .eq('enterprise_id', id),
+    ]);
+
+    if (stablecoinRes.error) return NextResponse.json({ error: stablecoinRes.error.message }, { status: 500 });
+    if (fiatRes.error) return NextResponse.json({ error: fiatRes.error.message }, { status: 500 });
+    if (yieldRes.error) return NextResponse.json({ error: yieldRes.error.message }, { status: 500 });
+
+    const transactionCount =
+      (stablecoinRes.count ?? 0) + (fiatRes.count ?? 0) + (yieldRes.count ?? 0);
 
     return NextResponse.json({
       data: {
