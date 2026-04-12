@@ -11,7 +11,7 @@ import { exportCsv, exportPdf } from '@/lib/export';
 import type { ExportColumn } from '@/lib/export';
 import type { AuditLog } from '@/types/database';
 import { Shield } from 'lucide-react';
-import { CardSpinner } from '@/components/ui/spinner';
+import { TableRowsSkeleton } from '@/components/ui/operations-skeletons';
 
 const AUDIT_EXPORT_COLUMNS: ExportColumn<AuditLog>[] = [
   { header: 'Timestamp', accessor: (r) => formatDateTime(r.created_at), pdfWidth: '18%' },
@@ -95,11 +95,7 @@ export function AuditTable() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={5}>
-                    <CardSpinner />
-                  </TableCell>
-                </TableRow>
+                <TableRowsSkeleton columns={5} rows={5} />
               ) : filter.pagedData.length ? (
                 filter.pagedData.map((log) => (
                   <TableRow key={log.id}>

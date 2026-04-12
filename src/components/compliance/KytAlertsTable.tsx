@@ -8,7 +8,7 @@ import { useToast } from '@/components/ui/toast';
 import type { KytAlertStatus, KytAlertSeverity } from '@/types/database';
 import { capitalize } from '@/lib/utils';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { CardSpinner } from '@/components/ui/spinner';
+import { TableRowsSkeleton } from '@/components/ui/operations-skeletons';
 
 const SEVERITY_COLORS: Record<string, string> = {
   low: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
@@ -94,25 +94,29 @@ export function KytAlertsTable() {
       </div>
 
       <div className="rounded-lg border bg-card">
-        {isLoading ? (
-          <CardSpinner />
-        ) : !alerts?.length ? (
-          <div className="p-8 text-center text-sm text-muted-foreground">No alerts found</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-left text-muted-foreground">
-                  <th className="px-4 py-2 font-medium">Severity</th>
-                  <th className="px-4 py-2 font-medium">Category</th>
-                  <th className="px-4 py-2 font-medium">Description</th>
-                  <th className="px-4 py-2 font-medium">Status</th>
-                  <th className="px-4 py-2 font-medium">Created</th>
-                  <th className="px-4 py-2 font-medium">Actions</th>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left text-muted-foreground">
+                <th className="px-4 py-2 font-medium">Severity</th>
+                <th className="px-4 py-2 font-medium">Category</th>
+                <th className="px-4 py-2 font-medium">Description</th>
+                <th className="px-4 py-2 font-medium">Status</th>
+                <th className="px-4 py-2 font-medium">Created</th>
+                <th className="px-4 py-2 font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <TableRowsSkeleton columns={6} rows={4} />
+              ) : !alerts?.length ? (
+                <tr>
+                  <td colSpan={6} className="p-8 text-center text-sm text-muted-foreground">
+                    No alerts found
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {alerts.map((alert) => (
+              ) : (
+                alerts.map((alert) => (
                   <tr key={alert.id} className="border-b last:border-0 hover:bg-muted/30">
                     <td className="px-4 py-2">
                       <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${SEVERITY_COLORS[alert.severity]}`}>
@@ -174,11 +178,11 @@ export function KytAlertsTable() {
                       )}
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {config && (

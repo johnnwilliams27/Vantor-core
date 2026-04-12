@@ -7,7 +7,7 @@ import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { capitalize } from '@/lib/utils';
 import { Search, ShieldCheck, ShieldAlert, AlertTriangle } from 'lucide-react';
-import { CardSpinner } from '@/components/ui/spinner';
+import { TableRowsSkeleton } from '@/components/ui/operations-skeletons';
 
 const RESULT_BADGE: Record<string, { label: string; className: string; icon: React.ComponentType<{ className?: string }> }> = {
   clear: { label: 'Clear', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400', icon: ShieldCheck },
@@ -77,23 +77,27 @@ export function SanctionsScreeningPanel() {
         <div className="p-4 border-b">
           <h3 className="text-sm font-semibold">Recent Screenings</h3>
         </div>
-        {isLoading ? (
-          <CardSpinner />
-        ) : !screenings?.length ? (
-          <div className="p-8 text-center text-sm text-muted-foreground">No screenings yet</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-left text-muted-foreground">
-                  <th className="px-4 py-2 font-medium">Address</th>
-                  <th className="px-4 py-2 font-medium">Chain</th>
-                  <th className="px-4 py-2 font-medium">Result</th>
-                  <th className="px-4 py-2 font-medium">Screened</th>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left text-muted-foreground">
+                <th className="px-4 py-2 font-medium">Address</th>
+                <th className="px-4 py-2 font-medium">Chain</th>
+                <th className="px-4 py-2 font-medium">Result</th>
+                <th className="px-4 py-2 font-medium">Screened</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <TableRowsSkeleton columns={4} rows={3} />
+              ) : !screenings?.length ? (
+                <tr>
+                  <td colSpan={4} className="p-8 text-center text-sm text-muted-foreground">
+                    No screenings yet
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {screenings.map((s) => {
+              ) : (
+                screenings.map((s) => {
                   const badge = RESULT_BADGE[s.result] ?? RESULT_BADGE.error;
                   const Icon = badge.icon;
                   return (
@@ -117,11 +121,11 @@ export function SanctionsScreeningPanel() {
                       </td>
                     </tr>
                   );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

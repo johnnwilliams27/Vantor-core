@@ -20,7 +20,7 @@ import { exportCsv, exportPdf } from '@/lib/export';
 import type { ExportColumn } from '@/lib/export';
 import { RefreshCw, Loader2, CreditCard, Plus } from 'lucide-react';
 import { TruncatedAddress } from '@/components/ui/truncated-address';
-import { CardSpinner } from '@/components/ui/spinner';
+import { TableRowsSkeleton } from '@/components/ui/operations-skeletons';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
@@ -214,11 +214,7 @@ export function InvoiceTable() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={9}>
-                  <CardSpinner />
-                </TableCell>
-              </TableRow>
+              <TableRowsSkeleton columns={9} rows={5} />
             ) : filter.pagedData.length ? (
               filter.pagedData.map((inv) => (
                 <TableRow

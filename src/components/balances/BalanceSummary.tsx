@@ -6,7 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatCurrency, truncateAddress } from '@/lib/utils';
 import { RefreshCw } from 'lucide-react';
-import { CardSpinner } from '@/components/ui/spinner';
+import { StatGridSkeleton } from '@/components/ui/operations-skeletons';
+import { Skeleton } from '@/components/ui/spinner';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 
@@ -27,7 +28,15 @@ export function BalanceSummary() {
   };
 
   if (isLoading) {
-    return <CardSpinner />;
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-6 w-36" />
+          <Skeleton className="h-9 w-24 rounded-md" />
+        </div>
+        <StatGridSkeleton count={3} />
+      </div>
+    );
   }
 
   // Group by token

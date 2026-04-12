@@ -9,7 +9,7 @@ import { useTableFilter } from '@/hooks/useTableFilter';
 import { formatCurrency, formatDateTime, truncateAddress, capitalize } from '@/lib/utils';
 import type { Transfer } from '@/types/database';
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
-import { CardSpinner } from '@/components/ui/spinner';
+import { TableRowsSkeleton } from '@/components/ui/operations-skeletons';
 
 function DirectionCell({ transfer }: { transfer: Transfer }) {
   if (transfer.direction === 'received') {
@@ -111,11 +111,7 @@ export function TransfersTab() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={6}>
-                  <CardSpinner />
-                </TableCell>
-              </TableRow>
+              <TableRowsSkeleton columns={6} rows={5} />
             ) : filter.pagedData.length ? (
               filter.pagedData.map((p) => (
                 <TableRow key={p.id}>

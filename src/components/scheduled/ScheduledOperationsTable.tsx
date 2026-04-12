@@ -12,7 +12,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
-import { CardSpinner } from '@/components/ui/spinner';
+import { TableRowsSkeleton } from '@/components/ui/operations-skeletons';
 import { Calendar } from 'lucide-react';
 import { useScheduledOperations, useCancelScheduledOperation } from '@/hooks/useScheduledOperations';
 import { formatDateTime, capitalize } from '@/lib/utils';
@@ -111,22 +111,22 @@ export function ScheduledOperationsTable({ type, title }: Props) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <CardSpinner />
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Operation</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Scheduled For</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {ops.map((op) => (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Operation</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Scheduled For</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRowsSkeleton columns={5} rows={3} />
+                ) : (
+                  ops.map((op) => (
                     <TableRow key={op.id}>
                       <TableCell className="text-sm font-medium">
                         {operationSummary(op)}
@@ -158,11 +158,11 @@ export function ScheduledOperationsTable({ type, title }: Props) {
                         )}
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
