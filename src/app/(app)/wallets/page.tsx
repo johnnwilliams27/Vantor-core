@@ -12,6 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { formatDate, truncateAddress } from '@/lib/utils';
+import { exportCsv, type ExportColumn } from '@/lib/export';
+import { Download } from 'lucide-react';
 import { TruncatedAddress } from '@/components/ui/truncated-address';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { Trash2, CheckCircle, Clock, Wallet } from 'lucide-react';
@@ -23,6 +25,22 @@ import { useQueryClient } from '@tanstack/react-query';
 function formatUsd(n: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(n);
 }
+
+interface WalletExportRow {
+  nickname: string;
+  chain: string;
+  address: string;
+  status: string;
+  balanceUsd: string;
+}
+
+const WALLET_EXPORT_COLUMNS: ExportColumn<WalletExportRow>[] = [
+  { header: 'Nickname', accessor: (r) => r.nickname },
+  { header: 'Chain', accessor: (r) => r.chain },
+  { header: 'Address', accessor: (r) => r.address },
+  { header: 'Status', accessor: (r) => r.status },
+  { header: 'Balance (USD)', accessor: (r) => r.balanceUsd },
+];
 
 function CryptoWalletsTab() {
   const { data: wallets, isLoading } = useWallets();
@@ -132,8 +150,31 @@ function CryptoWalletsTab() {
         <TableCardSkeleton columns={6} rows={3} />
       ) : (
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle>Linked Wallets</CardTitle>
+          {wallets && wallets.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const rows: WalletExportRow[] = wallets.map((w) => {
+                  const positions = overview?.cryptoPositions.filter((p) => p.walletId === w.id) ?? [];
+                  const totalUsd = positions.reduce((sum, p) => sum + p.usdValue, 0);
+                  return {
+                    nickname: w.label ?? '',
+                    chain: w.chain === 'ethereum' ? 'Ethereum' : 'Solana',
+                    address: w.address,
+                    status: w.verified_at ? `Verified ${formatDate(w.verified_at)}` : 'Pending',
+                    balanceUsd: totalUsd > 0 ? totalUsd.toFixed(2) : '',
+                  };
+                });
+                exportCsv('linked-wallets', WALLET_EXPORT_COLUMNS, rows);
+              }}
+            >
+              <Download className="mr-2 h-3.5 w-3.5" />
+              Export CSV
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           {wallets?.length ? (

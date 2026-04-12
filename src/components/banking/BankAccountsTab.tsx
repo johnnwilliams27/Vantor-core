@@ -10,9 +10,10 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { BankLinkButton } from './BankLinkButton';
 import { formatDate } from '@/lib/utils';
 import { useTreasuryOverview } from '@/hooks/useTreasury';
-import { Trash2, CheckCircle, Building2 } from 'lucide-react';
+import { Trash2, CheckCircle, Building2, Download } from 'lucide-react';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { NicknameEdit } from '@/components/ui/nickname-edit';
+import { exportCsv, type ExportColumn } from '@/lib/export';
 import { useToast } from '@/components/ui/toast';
 import type { BankAccount } from '@/types/database';
 import { TableCardSkeleton } from '@/components/ui/operations-skeletons';
@@ -33,6 +34,26 @@ const PROVIDER_ATTRIBUTION: Record<BankAccount['banking_provider'], string> = {
   belvo: 'via Belvo',
   manual: 'Manual entry',
 };
+
+interface BankExportRow {
+  nickname: string;
+  institution: string;
+  accountType: string;
+  currency: string;
+  status: string;
+  provider: string;
+  balance: string;
+}
+
+const BANK_EXPORT_COLUMNS: ExportColumn<BankExportRow>[] = [
+  { header: 'Nickname', accessor: (r) => r.nickname },
+  { header: 'Institution', accessor: (r) => r.institution },
+  { header: 'Type', accessor: (r) => r.accountType },
+  { header: 'Currency', accessor: (r) => r.currency },
+  { header: 'Status', accessor: (r) => r.status },
+  { header: 'Linked via', accessor: (r) => r.provider },
+  { header: 'Balance', accessor: (r) => r.balance },
+];
 
 const PROVIDER_TOOLTIP: Record<BankAccount['banking_provider'], string> = {
   stripe_fc:
@@ -104,11 +125,42 @@ export function BankAccountsTab({ bankingProvider = 'stripe_fc' }: { bankingProv
         <TableCardSkeleton columns={7} rows={3} />
       ) : (
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
             Linked Bank Accounts
           </CardTitle>
+          {accounts && accounts.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const rows: BankExportRow[] = accounts.map((a) => {
+                  const balanceInfo = overview?.bankAccounts.find((b) => b.id === a.id);
+                  const cur = a.currency ?? a.balance_currency ?? 'USD';
+                  const balance =
+                    balanceInfo != null
+                      ? formatCurrencyAmount(balanceInfo.currentBalanceUsd, cur)
+                      : a.current_balance
+                        ? formatCurrencyAmount(parseFloat(a.current_balance), cur)
+                        : '';
+                  return {
+                    nickname: a.nickname ?? '',
+                    institution: `${a.institution_name}${a.last4 ? ` ****${a.last4}` : ''}`,
+                    accountType: a.account_type ?? '',
+                    currency: a.currency ?? '',
+                    status: a.verified_at ? `Verified ${formatDate(a.verified_at)}` : 'Manual',
+                    provider: PROVIDER_ATTRIBUTION[a.banking_provider],
+                    balance,
+                  };
+                });
+                exportCsv('linked-bank-accounts', BANK_EXPORT_COLUMNS, rows);
+              }}
+            >
+              <Download className="mr-2 h-3.5 w-3.5" />
+              Export CSV
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           {!accounts?.length ? (

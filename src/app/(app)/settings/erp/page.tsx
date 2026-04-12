@@ -20,7 +20,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useERPStore } from '@/store/erpStore';
 import { useAppStore } from '@/store/appStore';
 import type { ErpConfiguration } from '@/types/database';
-import { Loader2, CheckCircle, XCircle, Settings2, Trash2, Pencil, Check, X } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, Settings2, Trash2, Pencil, Check, X, Download } from 'lucide-react';
+import { exportCsv, type ExportColumn } from '@/lib/export';
 import { TableCardSkeleton } from '@/components/ui/operations-skeletons';
 
 /**
@@ -119,6 +120,20 @@ const USES_OAUTH: Record<ProviderId, boolean> = {
   xero: true,
   quickbooks: true,
 };
+
+interface ErpExportRow {
+  nickname: string;
+  provider: string;
+  lastSynced: string;
+  status: string;
+}
+
+const ERP_EXPORT_COLUMNS: ExportColumn<ErpExportRow>[] = [
+  { header: 'Nickname', accessor: (r) => r.nickname },
+  { header: 'Provider', accessor: (r) => r.provider },
+  { header: 'Last Synced', accessor: (r) => r.lastSynced },
+  { header: 'Status', accessor: (r) => r.status },
+];
 
 const PROVIDER_DISPLAY: Record<ProviderId, string> = {
   sap: 'SAP',
@@ -604,7 +619,27 @@ export default function ERPSettingsPage() {
           <TableCardSkeleton columns={5} rows={2} />
         ) : (
           <Card>
-            <CardHeader><CardTitle>Linked ERP Systems</CardTitle></CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <CardTitle>Linked ERP Systems</CardTitle>
+              {configs && configs.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const rows: ErpExportRow[] = configs.map((c) => ({
+                      nickname: c.label,
+                      provider: PROVIDER_DISPLAY[c.provider as ProviderId] ?? c.provider,
+                      lastSynced: c.last_synced ? new Date(c.last_synced).toISOString() : 'Never',
+                      status: c.is_active ? 'Active' : 'Inactive',
+                    }));
+                    exportCsv('linked-erp-systems', ERP_EXPORT_COLUMNS, rows);
+                  }}
+                >
+                  <Download className="mr-2 h-3.5 w-3.5" />
+                  Export CSV
+                </Button>
+              )}
+            </CardHeader>
             <CardContent>
               {!configs?.length ? (
                 <div className="py-10 text-center space-y-3">
