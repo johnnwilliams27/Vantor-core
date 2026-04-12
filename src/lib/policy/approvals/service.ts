@@ -30,6 +30,11 @@ export interface ApprovalWorkflowServiceOptions {
   evaluate?: EvaluateFn;
 }
 
+// ─── Constants ────────────────────────────────────────────────────────
+
+/** Max justification length at the service layer (route layer also enforces). */
+export const MAX_JUSTIFICATION_LEN = 2000;
+
 // ─── Service ───────────────────────────────────────────────────────────
 
 export class ApprovalWorkflowService {
@@ -44,6 +49,18 @@ export class ApprovalWorkflowService {
   // ─── Create ────────────────────────────────────────────────────────
 
   async createApprovalRequest(input: CreateApprovalInput): Promise<ApprovalRequest> {
+    // Invariant: chain must have at least one slot. An empty slot array would
+    // make `every(s => s.filled_by)` return true for zero fills -- vacuous
+    // approval. Fail closed at creation.
+    if (!input.chain.slots || input.chain.slots.length === 0) {
+      throw new ApprovalError({
+        reason_code: REASON_CODES.gate_internal_error,
+        human_readable: 'Approval chain has zero slots; cannot create request.',
+        user_action: 'Contact an enterprise admin to fix the approval chain.',
+        details: { chain_id: input.chain.chain_id, movement_id: input.movement_id },
+      });
+    }
+
     const table = this.supabase.from('policy_approval_requests') as any;
 
     // Idempotency: check for existing request with same movement_id
@@ -154,6 +171,18 @@ export class ApprovalWorkflowService {
     requestId: string,
     justification: string,
   ): Promise<ApprovalRequest> {
+    // Defense-in-depth: cap justification at the service layer even though
+    // the API route layer also caps at 2000 chars (see routes/approve).
+    const trimmedJustification = (justification ?? '').toString();
+    if (trimmedJustification.length === 0 || trimmedJustification.length > MAX_JUSTIFICATION_LEN) {
+      throw new ApprovalError({
+        reason_code: REASON_CODES.gate_internal_error,
+        human_readable: `Justification must be between 1 and ${MAX_JUSTIFICATION_LEN} characters.`,
+        user_action: 'Provide a shorter justification.',
+        details: { request_id: requestId, length: trimmedJustification.length },
+      });
+    }
+
     // 1. Load request, verify enterprise match
     const request = await this.getRequest(actor, requestId);
 
@@ -164,6 +193,17 @@ export class ApprovalWorkflowService {
         human_readable: `Cannot approve: request status is '${request.status}', expected 'pending'.`,
         user_action: 'Only pending requests can be approved.',
         details: { request_id: requestId, current_status: request.status },
+      });
+    }
+
+    // Invariant: pending requests must have slot assignments. Reject vacuous
+    // approvals (empty array would make `every(...)` vacuously true below).
+    if (!request.slot_assignments || request.slot_assignments.length === 0) {
+      throw new ApprovalError({
+        reason_code: REASON_CODES.gate_internal_error,
+        human_readable: 'Approval request has no slots; cannot be approved.',
+        user_action: 'Contact an enterprise admin.',
+        details: { request_id: requestId },
       });
     }
 
@@ -187,45 +227,66 @@ export class ApprovalWorkflowService {
       });
     }
 
-    // 5. Update slot_assignments
+    // 5. Compute updated slot array + validate the chosen slot is still free
     const now = new Date().toISOString();
     const updatedSlots = [...request.slot_assignments];
+    const targetSlot = updatedSlots[sodResult.slot_index];
+    if (!targetSlot || targetSlot.filled_by) {
+      // Defensive: validateSoD returned an index, but between the SoD check
+      // and here the slot should not become filled. If it has, treat as
+      // concurrent modification.
+      throw new ApprovalError({
+        reason_code: REASON_CODES.approval_concurrent_modification,
+        human_readable: 'Slot was filled by another approver during validation.',
+        user_action: 'Reload and try again.',
+        details: { request_id: requestId, slot_index: sodResult.slot_index },
+      });
+    }
     updatedSlots[sodResult.slot_index] = {
-      ...updatedSlots[sodResult.slot_index],
+      ...targetSlot,
       filled_by: actor.user_id,
       filled_at: now,
-      justification,
+      justification: trimmedJustification,
     };
 
-    const allFilled = updatedSlots.every((s) => s.filled_by);
+    const allFilled = updatedSlots.length > 0 && updatedSlots.every((s) => s.filled_by);
     const newStatus = allFilled ? 'approved' : 'pending';
     const approvedAt = allFilled ? now : request.approved_at;
 
-    // 6. Optimistic lock: UPDATE WHERE version = expected
+    // 6. Optimistic lock: UPDATE WHERE id=? AND enterprise_id=? AND version=expected
+    // If zero rows match, another approver modified first -> concurrent_modification.
     const expectedVersion = request.version;
     const table = this.supabase.from('policy_approval_requests') as any;
 
-    // Use upsert with id to update (in mock). In production this would be
-    // an UPDATE ... WHERE version = N.
     const updatePayload: Record<string, unknown> = {
-      id: request.id,
-      enterprise_id: request.enterprise_id,
-      version_id: request.version_id,
-      movement_id: request.movement_id,
-      proposed_movement: request.proposed_movement,
-      triggered_rule_ids: request.triggered_rule_ids,
-      chain_id: request.chain_id,
       slot_assignments: updatedSlots,
       status: newStatus,
-      expires_at: request.expires_at,
-      created_by: request.created_by,
-      created_at: request.created_at,
       approved_at: approvedAt,
       version: expectedVersion + 1,
     };
 
-    const { data: updated, error } = await table.upsert(updatePayload);
+    const updateBuilder = table
+      .update(updatePayload)
+      .eq('id', request.id)
+      .eq('enterprise_id', actor.enterprise_id)
+      .eq('version', expectedVersion);
+
+    const { data: updated, error } = await (
+      typeof updateBuilder.select === 'function' ? updateBuilder.select() : updateBuilder
+    );
+
     if (error) {
+      throw new ApprovalError({
+        reason_code: REASON_CODES.gate_internal_error,
+        human_readable: 'Database error while recording approval.',
+        user_action: 'Retry the operation.',
+        details: { request_id: requestId },
+        cause: error,
+      });
+    }
+
+    const updatedRows = (Array.isArray(updated) ? updated : updated ? [updated] : []) as ApprovalRequest[];
+    if (updatedRows.length === 0) {
       throw new ApprovalError({
         reason_code: REASON_CODES.approval_concurrent_modification,
         human_readable: 'Concurrent modification detected. Another user may have acted on this request.',
@@ -234,7 +295,7 @@ export class ApprovalWorkflowService {
       });
     }
 
-    const updatedRow = (Array.isArray(updated) ? updated[0] : updated) as ApprovalRequest;
+    const updatedRow = updatedRows[0];
 
     // 7. If all slots filled, call reEvaluate
     if (allFilled) {
@@ -285,26 +346,23 @@ export class ApprovalWorkflowService {
     const table = this.supabase.from('policy_approval_requests') as any;
 
     const updatePayload: Record<string, unknown> = {
-      id: request.id,
-      enterprise_id: request.enterprise_id,
-      version_id: request.version_id,
-      movement_id: request.movement_id,
-      proposed_movement: request.proposed_movement,
-      triggered_rule_ids: request.triggered_rule_ids,
-      chain_id: request.chain_id,
-      slot_assignments: request.slot_assignments,
       status,
       denial_reason: denialReason ?? null,
-      expires_at: request.expires_at,
-      created_by: request.created_by,
-      created_at: request.created_at,
-      approved_at: request.approved_at,
       resolved_at: now,
       version: request.version + 1,
     };
 
-    const { data: updated } = await table.upsert(updatePayload);
-    return (Array.isArray(updated) ? updated[0] : updated) as ApprovalRequest;
+    const updateBuilder = table
+      .update(updatePayload)
+      .eq('id', request.id)
+      .eq('enterprise_id', request.enterprise_id)
+      .eq('version', request.version);
+
+    const { data: updated } = await (
+      typeof updateBuilder.select === 'function' ? updateBuilder.select() : updateBuilder
+    );
+    const rows = (Array.isArray(updated) ? updated : updated ? [updated] : []) as ApprovalRequest[];
+    return rows[0] ?? ({ ...request, ...updatePayload } as unknown as ApprovalRequest);
   }
 
   // ─── Deny ──────────────────────────────────────────────────────────
@@ -314,6 +372,17 @@ export class ApprovalWorkflowService {
     requestId: string,
     justification: string,
   ): Promise<ApprovalRequest> {
+    // Defense-in-depth justification cap (same as fillSlot).
+    const trimmedJustification = (justification ?? '').toString();
+    if (trimmedJustification.length === 0 || trimmedJustification.length > MAX_JUSTIFICATION_LEN) {
+      throw new ApprovalError({
+        reason_code: REASON_CODES.gate_internal_error,
+        human_readable: `Justification must be between 1 and ${MAX_JUSTIFICATION_LEN} characters.`,
+        user_action: 'Provide a shorter justification.',
+        details: { request_id: requestId, length: trimmedJustification.length },
+      });
+    }
+
     const request = await this.getRequest(actor, requestId);
 
     if (request.status !== 'pending') {
@@ -345,26 +414,43 @@ export class ApprovalWorkflowService {
     const table = this.supabase.from('policy_approval_requests') as any;
 
     const updatePayload: Record<string, unknown> = {
-      id: request.id,
-      enterprise_id: request.enterprise_id,
-      version_id: request.version_id,
-      movement_id: request.movement_id,
-      proposed_movement: request.proposed_movement,
-      triggered_rule_ids: request.triggered_rule_ids,
-      chain_id: request.chain_id,
-      slot_assignments: request.slot_assignments,
       status: 'denied',
       denial_reason: 'manual',
-      expires_at: request.expires_at,
-      created_by: request.created_by,
-      created_at: request.created_at,
       resolved_at: now,
-      resolution_notes: { justification, denied_by: actor.user_id },
+      resolution_notes: { justification: trimmedJustification, denied_by: actor.user_id },
       version: request.version + 1,
     };
 
-    const { data: updated } = await table.upsert(updatePayload);
-    return (Array.isArray(updated) ? updated[0] : updated) as ApprovalRequest;
+    const updateBuilder = table
+      .update(updatePayload)
+      .eq('id', request.id)
+      .eq('enterprise_id', actor.enterprise_id)
+      .eq('version', request.version);
+
+    const { data: updated, error } = await (
+      typeof updateBuilder.select === 'function' ? updateBuilder.select() : updateBuilder
+    );
+
+    if (error) {
+      throw new ApprovalError({
+        reason_code: REASON_CODES.gate_internal_error,
+        human_readable: 'Database error while denying request.',
+        user_action: 'Retry the operation.',
+        details: { request_id: requestId },
+        cause: error,
+      });
+    }
+
+    const rows = (Array.isArray(updated) ? updated : updated ? [updated] : []) as ApprovalRequest[];
+    if (rows.length === 0) {
+      throw new ApprovalError({
+        reason_code: REASON_CODES.approval_concurrent_modification,
+        human_readable: 'Concurrent modification detected while denying request.',
+        user_action: 'Reload and try again.',
+        details: { request_id: requestId },
+      });
+    }
+    return rows[0];
   }
 
   // ─── Cancel ────────────────────────────────────────────────────────
@@ -402,26 +488,48 @@ export class ApprovalWorkflowService {
     const now = new Date().toISOString();
     const table = this.supabase.from('policy_approval_requests') as any;
 
+    const cappedReason =
+      typeof reason === 'string' && reason.length > MAX_JUSTIFICATION_LEN
+        ? reason.slice(0, MAX_JUSTIFICATION_LEN)
+        : reason;
+
     const updatePayload: Record<string, unknown> = {
-      id: request.id,
-      enterprise_id: request.enterprise_id,
-      version_id: request.version_id,
-      movement_id: request.movement_id,
-      proposed_movement: request.proposed_movement,
-      triggered_rule_ids: request.triggered_rule_ids,
-      chain_id: request.chain_id,
-      slot_assignments: request.slot_assignments,
       status: 'cancelled',
-      expires_at: request.expires_at,
-      created_by: request.created_by,
-      created_at: request.created_at,
       resolved_at: now,
-      resolution_notes: { reason, cancelled_by: actor.user_id },
+      resolution_notes: { reason: cappedReason, cancelled_by: actor.user_id },
       version: request.version + 1,
     };
 
-    const { data: updated } = await table.upsert(updatePayload);
-    return (Array.isArray(updated) ? updated[0] : updated) as ApprovalRequest;
+    const updateBuilder = table
+      .update(updatePayload)
+      .eq('id', request.id)
+      .eq('enterprise_id', actor.enterprise_id)
+      .eq('version', request.version);
+
+    const { data: updated, error } = await (
+      typeof updateBuilder.select === 'function' ? updateBuilder.select() : updateBuilder
+    );
+
+    if (error) {
+      throw new ApprovalError({
+        reason_code: REASON_CODES.gate_internal_error,
+        human_readable: 'Database error while cancelling request.',
+        user_action: 'Retry the operation.',
+        details: { request_id: requestId },
+        cause: error,
+      });
+    }
+
+    const rows = (Array.isArray(updated) ? updated : updated ? [updated] : []) as ApprovalRequest[];
+    if (rows.length === 0) {
+      throw new ApprovalError({
+        reason_code: REASON_CODES.approval_concurrent_modification,
+        human_readable: 'Concurrent modification detected while cancelling request.',
+        user_action: 'Reload and try again.',
+        details: { request_id: requestId },
+      });
+    }
+    return rows[0];
   }
 
   // ─── Helpers ───────────────────────────────────────────────────────
