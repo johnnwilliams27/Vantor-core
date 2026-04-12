@@ -9,13 +9,17 @@ import {
 } from './types';
 import { PolicyVersionSnapshot } from '../types/policy-version';
 import { AssetCode } from '../types/assets';
+import { APPROVER_ROLES } from '@/lib/auth/roles';
 
 const RATE_SUPPORTED_ASSETS: ReadonlySet<AssetCode> = new Set<AssetCode>(['USD', 'USDC', 'USDT']);
 
-/** Roles accepted in approval chain slots. */
-const VALID_SLOT_ROLES: ReadonlySet<string> = new Set([
-  'auditor', 'accountant', 'treasury_manager', 'approver', 'executive',
-]);
+/**
+ * Roles accepted in approval chain slots. Sourced from the single
+ * source of truth so this stays in lockstep with the TS union and
+ * rank map. The legacy 'approver' literal was dropped here during
+ * the RBAC hierarchy consolidation.
+ */
+const VALID_SLOT_ROLES: ReadonlySet<string> = new Set(APPROVER_ROLES);
 
 export interface ValidateRuleOptions {
   /** @default true */
