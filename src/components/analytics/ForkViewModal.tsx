@@ -10,6 +10,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { ViewChart } from './ViewChart';
 import { ViewTable } from './ViewTable';
 import { KpiBanner } from './KpiBanner';
@@ -126,13 +127,14 @@ export function ForkViewModal({ open, onOpenChange, sourceView, from, to }: Fork
 
           {/* Name */}
           <div>
-            <label className="mb-1 block text-sm font-medium">Name</label>
+            <label htmlFor="fork-name" className="mb-1 block text-sm font-medium">Name</label>
             <input
+              id="fork-name"
               type="text"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="e.g. Weekly USDC Coverage"
-              className="w-full rounded-lg border border-white/[0.08] bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+              className="w-full rounded-lg border border-white/[0.08] bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-teal-400/20"
             />
             {slug && (
               <div className="mt-1 text-xs text-muted-foreground/60">Slug: {slug}</div>
@@ -142,16 +144,17 @@ export function ForkViewModal({ open, onOpenChange, sourceView, from, to }: Fork
           {/* Chart type */}
           <div>
             <label className="mb-1 block text-sm font-medium">Chart type</label>
-            <div className="flex gap-2">
+            <div className="flex gap-2" role="group" aria-label="Chart type">
               {CHART_OPTIONS.map((ct) => (
                 <button
                   key={ct}
                   onClick={() => setChartType(ct)}
-                  className={`rounded-lg border px-3 py-1.5 text-xs capitalize transition-colors ${
+                  className={`min-h-[36px] rounded-lg border px-3 py-1.5 text-xs capitalize transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                     chartType === ct
                       ? 'border-primary bg-primary/10 text-primary'
                       : 'border-white/[0.08] text-muted-foreground hover:border-white/[0.15]'
                   }`}
+                  aria-pressed={chartType === ct}
                 >
                   {ct}
                 </button>
@@ -163,16 +166,17 @@ export function ForkViewModal({ open, onOpenChange, sourceView, from, to }: Fork
           {hasTimeDimension && (
             <div>
               <label className="mb-1 block text-sm font-medium">Granularity</label>
-              <div className="flex gap-2">
+              <div className="flex gap-2" role="group" aria-label="Granularity">
                 {GRANULARITY_OPTIONS.map((g) => (
                   <button
                     key={g}
                     onClick={() => setGranularity(g)}
-                    className={`rounded-lg border px-3 py-1.5 text-xs capitalize transition-colors ${
+                    className={`min-h-[36px] rounded-lg border px-3 py-1.5 text-xs capitalize transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                       granularity === g
                         ? 'border-primary bg-primary/10 text-primary'
                         : 'border-white/[0.08] text-muted-foreground hover:border-white/[0.15]'
                     }`}
+                    aria-pressed={granularity === g}
                   >
                     {g}
                   </button>
@@ -203,19 +207,15 @@ export function ForkViewModal({ open, onOpenChange, sourceView, from, to }: Fork
         </div>
 
         <DialogFooter>
-          <button
-            onClick={() => onOpenChange(false)}
-            className="rounded-lg border border-white/[0.08] px-4 py-2 text-sm text-muted-foreground hover:bg-white/5"
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleSubmit}
             disabled={!label.trim() || isSubmitting}
-            className="btn-gradient rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
           >
-            {isSubmitting ? 'Creating...' : 'Create View'}
-          </button>
+            {isSubmitting ? 'Creating…' : 'Create View'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

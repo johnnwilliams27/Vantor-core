@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, GitFork, Download, FileText } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useViewQuery } from '@/hooks/useViewQuery';
 import { useAnalyticsViews } from '@/hooks/useAnalyticsViews';
 import { KpiBanner } from './KpiBanner';
@@ -70,52 +71,47 @@ export function AnalyticsDrillIn() {
       {/* Header */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => router.push('/analytics')}
-            className="rounded-lg p-1.5 text-muted-foreground hover:bg-white/5"
+            aria-label="Back to Analytics"
+            className="h-10 w-10"
           >
             <ArrowLeft className="h-4 w-4" />
-          </button>
+          </Button>
           <div>
-            <h1 className="text-xl font-semibold">{viewDef?.label ?? slug}</h1>
+            <h1 className="text-2xl font-semibold">{viewDef?.label ?? slug}</h1>
             {viewDef?.description && (
               <p className="text-sm text-muted-foreground">{viewDef.description}</p>
             )}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setForkOpen(true)}
-            className="flex items-center gap-1.5 rounded-lg border border-white/[0.08] px-3 py-1.5 text-xs text-muted-foreground hover:bg-white/5"
-          >
-            <GitFork className="h-3.5 w-3.5" />
+          <Button variant="outline" size="sm" onClick={() => setForkOpen(true)}>
+            <GitFork className="mr-1.5 h-3.5 w-3.5" />
             Fork
-          </button>
-          <button
-            onClick={handleCsvExport}
-            className="flex items-center gap-1.5 rounded-lg border border-white/[0.08] px-3 py-1.5 text-xs text-muted-foreground hover:bg-white/5"
-          >
-            <Download className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleCsvExport}>
+            <Download className="mr-1.5 h-3.5 w-3.5" />
             CSV
-          </button>
-          <button
-            onClick={handlePdfExport}
-            className="flex items-center gap-1.5 rounded-lg border border-white/[0.08] px-3 py-1.5 text-xs text-muted-foreground hover:bg-white/5"
-          >
-            <FileText className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="outline" size="sm" onClick={handlePdfExport}>
+            <FileText className="mr-1.5 h-3.5 w-3.5" />
             PDF
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Controls bar */}
       <div className="mb-6 flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2 rounded-lg border border-white/[0.08] px-3 py-1.5">
+        <div className="flex items-center gap-2 rounded-lg border border-white/[0.08] px-3 py-2 focus-within:border-teal-400/50 focus-within:ring-2 focus-within:ring-teal-400/20">
           <input
             type="date"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
             className="bg-transparent text-xs text-muted-foreground outline-none"
+            aria-label="From date"
           />
           <span className="text-xs text-muted-foreground/40">→</span>
           <input
@@ -123,19 +119,21 @@ export function AnalyticsDrillIn() {
             value={to}
             onChange={(e) => setTo(e.target.value)}
             className="bg-transparent text-xs text-muted-foreground outline-none"
+            aria-label="To date"
           />
         </div>
         {hasTimeDimension && (
-          <div className="flex gap-1">
+          <div className="flex gap-1" role="group" aria-label="Granularity">
             {GRANULARITY_OPTIONS.map((g) => (
               <button
                 key={g}
                 onClick={() => setGranularity(g)}
-                className={`rounded-lg border px-2.5 py-1 text-xs capitalize transition-colors ${
+                className={`min-h-[36px] rounded-lg border px-3 py-1.5 text-xs capitalize transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                   granularity === g
                     ? 'border-primary bg-primary/10 text-primary'
                     : 'border-white/[0.08] text-muted-foreground hover:border-white/[0.15]'
                 }`}
+                aria-pressed={granularity === g}
               >
                 {g}
               </button>
