@@ -190,3 +190,81 @@ describe('ApprovalWorkflowService.createApprovalRequest', () => {
     expect(result.id).toBe('req-existing');
   });
 });
+
+// ─── getRequest ────────────────────────────────────────────────────────
+
+describe('ApprovalWorkflowService.getRequest', () => {
+  const REQ_ROW = {
+    id: 'req-001',
+    enterprise_id: ENTERPRISE_ID,
+    version_id: 'ver-001',
+    movement_id: 'mov-001',
+    proposed_movement: MOVEMENT,
+    triggered_rule_ids: ['rule-1'],
+    chain_id: 'chain-001',
+    slot_assignments: [{ slot_index: 0, minimum_role: 'treasury_manager' }],
+    status: 'pending',
+    expires_at: '2026-04-13T00:00:00Z',
+    created_by: USER_ID,
+    created_at: '2026-04-12T00:00:00Z',
+    version: 0,
+  };
+
+  it('returns the request when it exists in the enterprise', async () => {
+    const sb = mockSupabase({
+      policy_approval_requests: [REQ_ROW],
+    });
+    const svc = new ApprovalWorkflowService(sb);
+
+    const result = await svc.getRequest(managerActor, 'req-001');
+    expect(result.id).toBe('req-001');
+  });
+
+  it('throws when request is in a different enterprise', async () => {
+    const sb = mockSupabase({
+      policy_approval_requests: [{ ...REQ_ROW, enterprise_id: 'ent-other' }],
+    });
+    const svc = new ApprovalWorkflowService(sb);
+
+    await expect(
+      svc.getRequest(managerActor, 'req-001'),
+    ).rejects.toThrow(ApprovalError);
+  });
+});
+
+// ─── listRequests ──────────────────────────────────────────────────────
+
+describe('ApprovalWorkflowService.listRequests', () => {
+  const REQ_PENDING = {
+    id: 'req-001',
+    enterprise_id: ENTERPRISE_ID,
+    status: 'pending',
+    created_at: '2026-04-12T00:00:00Z',
+  };
+  const REQ_DENIED = {
+    id: 'req-002',
+    enterprise_id: ENTERPRISE_ID,
+    status: 'denied',
+    created_at: '2026-04-11T00:00:00Z',
+  };
+
+  it('returns all requests for the enterprise', async () => {
+    const sb = mockSupabase({
+      policy_approval_requests: [REQ_PENDING, REQ_DENIED],
+    });
+    const svc = new ApprovalWorkflowService(sb);
+
+    const results = await svc.listRequests(managerActor);
+    expect(results).toHaveLength(2);
+  });
+
+  it('filters by status when provided', async () => {
+    const sb = mockSupabase({
+      policy_approval_requests: [REQ_PENDING, REQ_DENIED],
+    });
+    const svc = new ApprovalWorkflowService(sb);
+
+    const results = await svc.listRequests(managerActor, { status: 'pending' });
+    expect(results.every((r) => r.status === 'pending')).toBe(true);
+  });
+});
