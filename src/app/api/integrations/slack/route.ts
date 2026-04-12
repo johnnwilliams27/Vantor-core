@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { botToken, signingSecret, channelId, channelName, workspaceName, teamId } = parsed.data;
-  const encrypted = encryptSlackCredentials({ botToken, signingSecret });
+  const encrypted = await encryptSlackCredentials({ botToken, signingSecret });
 
   const supabase = createAdminClient();
   const { data, error } = await supabase

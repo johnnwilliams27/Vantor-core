@@ -166,14 +166,14 @@ export async function GET(req: NextRequest) {
       const slackFn = async () => {
         const { data: slackIntegration } = await supabase
           .from('slack_integrations')
-          .select('channel_id, credentials')
+          .select('id, channel_id, credentials')
           .eq('enterprise_id', enterpriseId)
           .eq('is_active', true)
           .maybeSingle();
 
         if (!slackIntegration) return;
 
-        const creds = decryptSlackCredentials(slackIntegration.credentials);
+        const creds = await decryptSlackCredentials(slackIntegration.credentials, `slack_integrations/id=${slackIntegration.id}`);
         await postRecommendationToSlack(
           creds.botToken,
           slackIntegration.channel_id,

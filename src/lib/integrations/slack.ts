@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { encryptJson, decryptJson } from '@/lib/crypto/envelope';
 
 // ---- Types ----
 
@@ -19,19 +20,14 @@ export interface SlackIntegrationConfig {
   createdAt: string;
 }
 
-// ---- Encryption (same base64 passthrough pattern as ERP credentials) ----
+// ---- Encryption (delegates to src/lib/crypto/envelope) ----
 
-export function encryptSlackCredentials(creds: SlackCredentials): string {
-  // In production: AES-256-GCM encrypt using CREDENTIALS_ENCRYPTION_KEY
-  return Buffer.from(JSON.stringify(creds)).toString('base64');
+export async function encryptSlackCredentials(creds: SlackCredentials): Promise<string> {
+  return encryptJson(creds);
 }
 
-export function decryptSlackCredentials(encrypted: string): SlackCredentials {
-  try {
-    return JSON.parse(Buffer.from(encrypted, 'base64').toString('utf-8')) as SlackCredentials;
-  } catch {
-    throw new Error('Failed to decrypt Slack credentials');
-  }
+export async function decryptSlackCredentials(encrypted: string, row_locator?: string): Promise<SlackCredentials> {
+  return decryptJson<SlackCredentials>(encrypted, { row_locator });
 }
 
 // ---- Signature Verification ----

@@ -282,7 +282,7 @@ const syncErpInvoices: AgentTool = {
       .single();
     if (error || !config) throw new Error('ERP configuration not found');
 
-    const creds = decryptCredentials(config.credentials_enc as string);
+    const creds = await decryptCredentials(config.credentials_enc as string, `erp_configurations/id=${config.id}`);
     const adapter = getERPAdapter(config.provider, creds);
     const invoices = await adapter.fetchInvoices();
 

@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
   // Verify signature
   let creds;
   try {
-    creds = decryptSlackCredentials(integration.credentials);
+    creds = await decryptSlackCredentials(integration.credentials, `slack_integrations/id=${integration.id}`);
   } catch (err) {
     console.error('[Slack callback] Credential decrypt failed:', (err as Error).message);
     return NextResponse.json({ error: 'Credential error' }, { status: 500 });

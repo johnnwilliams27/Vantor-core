@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: testResult.message }, { status: 400 });
   }
 
-  const encrypted = encryptCredentials(credentials);
+  const encrypted = await encryptCredentials(credentials);
   const supabase = createAdminClient();
 
   const { data, error } = await supabase

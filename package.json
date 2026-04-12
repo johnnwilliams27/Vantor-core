@@ -14,7 +14,8 @@
     "test:coverage": "vitest run --coverage",
     "cron": "tsx --env-file=.env.local scripts/cron-runner.ts",
     "migrate": "tsx --env-file=.env.local scripts/migrate.ts",
-    "seed": "tsx --env-file=.env.local scripts/seed.ts"
+    "seed": "tsx --env-file=.env.local scripts/seed.ts",
+    "crypto:gen": "tsx scripts/gen-encryption-key.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
