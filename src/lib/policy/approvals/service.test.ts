@@ -619,3 +619,139 @@ describe('ApprovalWorkflowService.fillSlot', () => {
     expect(sb.from('policy_approval_requests').select().eq('id', 'req-fill')).toBeDefined();
   });
 });
+
+// ─── reEvaluate (via fillSlot with injected evaluate) ──────────────────
+
+describe('ApprovalWorkflowService reEvaluate', () => {
+  function makeSingleSlotPending(overrides?: Partial<Row>): Row {
+    return {
+      id: 'req-reeval',
+      enterprise_id: ENTERPRISE_ID,
+      version_id: 'ver-001',
+      movement_id: 'mov-reeval',
+      proposed_movement: MOVEMENT,
+      triggered_rule_ids: ['rule-1'],
+      chain_id: 'chain-001',
+      slot_assignments: [
+        { slot_index: 0, minimum_role: 'treasury_manager' },
+      ],
+      status: 'pending',
+      expires_at: '2026-04-13T00:00:00Z',
+      created_by: USER_ID,
+      created_at: '2026-04-12T00:00:00Z',
+      version: 0,
+      ...overrides,
+    };
+  }
+
+  it('require_approval with same chain_id => executed', async () => {
+    const sb = mockSupabase({
+      policy_approval_requests: [makeSingleSlotPending()],
+      policy_rules: [{ id: 'rule-1', created_by: 'user-other' }],
+    });
+    const svc = new ApprovalWorkflowService(sb, {
+      evaluate: async () => ({
+        verdict: 'require_approval',
+        trace: {} as any,
+        reason_codes: [],
+        required_chain: {
+          chain_id: 'chain-001', // same chain
+          chain_name: 'Dual Approval',
+          slots: [],
+          expiration_hours: 24,
+        },
+      }),
+    });
+
+    const result = await svc.fillSlot(managerActor, 'req-reeval', 'ok');
+    expect(result.status).toBe('executed');
+  });
+
+  it('require_approval with different chain_id => denied(stale_reeval)', async () => {
+    const sb = mockSupabase({
+      policy_approval_requests: [makeSingleSlotPending()],
+      policy_rules: [{ id: 'rule-1', created_by: 'user-other' }],
+    });
+    const svc = new ApprovalWorkflowService(sb, {
+      evaluate: async () => ({
+        verdict: 'require_approval',
+        trace: {} as any,
+        reason_codes: [],
+        required_chain: {
+          chain_id: 'chain-different', // different chain
+          chain_name: 'New Chain',
+          slots: [],
+          expiration_hours: 48,
+        },
+      }),
+    });
+
+    const result = await svc.fillSlot(managerActor, 'req-reeval', 'ok');
+    expect(result.status).toBe('denied');
+    expect(result.denial_reason).toBe('stale_reeval');
+  });
+
+  it('block verdict => denied(stale_reeval)', async () => {
+    const sb = mockSupabase({
+      policy_approval_requests: [makeSingleSlotPending()],
+      policy_rules: [{ id: 'rule-1', created_by: 'user-other' }],
+    });
+    const svc = new ApprovalWorkflowService(sb, {
+      evaluate: async () => ({
+        verdict: 'block',
+        trace: {} as any,
+        reason_codes: [],
+      }),
+    });
+
+    const result = await svc.fillSlot(managerActor, 'req-reeval', 'ok');
+    expect(result.status).toBe('denied');
+    expect(result.denial_reason).toBe('stale_reeval');
+  });
+
+  it('block_hard_limit verdict => denied(stale_reeval)', async () => {
+    const sb = mockSupabase({
+      policy_approval_requests: [makeSingleSlotPending()],
+      policy_rules: [{ id: 'rule-1', created_by: 'user-other' }],
+    });
+    const svc = new ApprovalWorkflowService(sb, {
+      evaluate: async () => ({
+        verdict: 'block_hard_limit',
+        trace: {} as any,
+        reason_codes: ['hard_limit_breached'],
+      }),
+    });
+
+    const result = await svc.fillSlot(managerActor, 'req-reeval', 'ok');
+    expect(result.status).toBe('denied');
+    expect(result.denial_reason).toBe('stale_reeval');
+  });
+
+  it('allow_auto verdict => executed (policy relaxed)', async () => {
+    const sb = mockSupabase({
+      policy_approval_requests: [makeSingleSlotPending()],
+      policy_rules: [{ id: 'rule-1', created_by: 'user-other' }],
+    });
+    const svc = new ApprovalWorkflowService(sb, {
+      evaluate: async () => ({
+        verdict: 'allow_auto',
+        trace: {} as any,
+        reason_codes: [],
+      }),
+    });
+
+    const result = await svc.fillSlot(managerActor, 'req-reeval', 'ok');
+    expect(result.status).toBe('executed');
+  });
+
+  it('no evaluate fn => executed (stub behavior)', async () => {
+    const sb = mockSupabase({
+      policy_approval_requests: [makeSingleSlotPending()],
+      policy_rules: [{ id: 'rule-1', created_by: 'user-other' }],
+    });
+    const svc = new ApprovalWorkflowService(sb); // no evaluate fn
+
+    const result = await svc.fillSlot(managerActor, 'req-reeval', 'ok');
+    expect(result.status).toBe('executed');
+  });
+});
