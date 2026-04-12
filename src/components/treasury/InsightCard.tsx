@@ -145,6 +145,13 @@ export function InsightCard({ insight }: { insight: TreasuryInsightRow }) {
         {/* Summary — full width */}
         <p className="text-sm text-muted-foreground">{insight.summary}</p>
 
+        {/* AI reasoning — shown when Claude has generated analysis */}
+        {insight.ai_reasoning && (
+          <div className="text-sm text-muted-foreground/80 whitespace-pre-line border-l-2 border-border/50 pl-3">
+            {insight.ai_reasoning}
+          </div>
+        )}
+
         {/* Impact metrics — quiet grid */}
         {hasImpact && (
           <div className="grid grid-cols-3 gap-3 rounded-lg border border-border/50 p-3">

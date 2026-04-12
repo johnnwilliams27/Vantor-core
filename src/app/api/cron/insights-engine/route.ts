@@ -35,6 +35,7 @@ import { expireStaleInsights } from '@/lib/insights/store';
 import { evaluateInsightActionOrNull } from '@/lib/insights/policy-gate';
 import { NotificationService } from '@/lib/notifications/service';
 import { createForecastService } from '@/lib/forecast/service';
+import { generateInsightReasoning } from '@/lib/insights/claude';
 import type { DetectorContext, ForecastBundle } from '@/lib/insights/detectors/types';
 import type { RiskProfileId, AumTier } from '@/lib/insights/types';
 import { getProfile } from '@/lib/insights/risk-profiles';
@@ -199,6 +200,22 @@ export async function GET(req: NextRequest) {
               detected.recommendedAction,
             );
 
+            // Generate AI reasoning for critical/warning insights (non-blocking on failure)
+            let aiReasoning: string | undefined;
+            let aiModel: string | undefined;
+            if (detected.severity === 'critical' || detected.severity === 'warning') {
+              try {
+                const r = await generateInsightReasoning(detected);
+                aiReasoning = r.reasoning;
+                aiModel = r.model;
+              } catch (err) {
+                console.warn(
+                  `[cron/insights-engine] reasoning generation failed:`,
+                  (err as Error).message,
+                );
+              }
+            }
+
             const stored = await createInsight(
               {
                 enterpriseId,
@@ -207,8 +224,8 @@ export async function GET(req: NextRequest) {
                 detected,
                 policyVerdict: policyResult?.verdict ?? null,
                 policyReason: policyResult?.reason ?? null,
-                // Claude reasoning is deferred — critical insights get it
-                // in a later phase. For now, template summary only.
+                aiReasoning,
+                aiModel,
               },
               supabase,
             );

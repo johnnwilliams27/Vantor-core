@@ -24,6 +24,7 @@ import { NotificationService } from '@/lib/notifications/service';
 import { getProfile } from '@/lib/insights/risk-profiles';
 import { createForecastService } from '@/lib/forecast/service';
 import { writeAuditLog } from '@/lib/audit/logger';
+import { generateInsightReasoning } from '@/lib/insights/claude';
 import type { DetectorContext, ForecastBundle } from '@/lib/insights/detectors/types';
 import type { RiskProfileId, AumTier } from '@/lib/insights/types';
 import type { NotificationEventType } from '@/types/notifications';
@@ -142,6 +143,19 @@ export async function fireInlineInsights(
         try {
           const policyResult = await evaluateInsightActionOrNull(detected.recommendedAction);
 
+          // Generate AI reasoning for critical/warning insights
+          let aiReasoning: string | undefined;
+          let aiModel: string | undefined;
+          if (detected.severity === 'critical' || detected.severity === 'warning') {
+            try {
+              const r = await generateInsightReasoning(detected);
+              aiReasoning = r.reasoning;
+              aiModel = r.model;
+            } catch {
+              // Non-fatal — insight still created with template summary
+            }
+          }
+
           const stored = await createInsight(
             {
               enterpriseId,
@@ -150,6 +164,8 @@ export async function fireInlineInsights(
               detected,
               policyVerdict: policyResult?.verdict ?? null,
               policyReason: policyResult?.reason ?? null,
+              aiReasoning,
+              aiModel,
             },
             supabase,
           );
