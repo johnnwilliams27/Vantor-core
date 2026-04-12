@@ -128,6 +128,28 @@ const PROVIDER_DISPLAY: Record<ProviderId, string> = {
   quickbooks: 'QuickBooks',
 };
 
+/**
+ * Returns a [variant, relative label] pair for a last-synced timestamp.
+ * Green ≤1h (fresh), amber ≤24h (stale), red >24h (very stale).
+ * Null/undefined timestamp → warning "Never".
+ */
+function syncFreshness(ts: string | null | undefined): {
+  variant: 'success' | 'warning' | 'destructive';
+  label: string;
+} {
+  if (!ts) return { variant: 'destructive', label: 'Never' };
+  const ms = Date.now() - new Date(ts).getTime();
+  const hours = ms / 3_600_000;
+  if (hours < 1) {
+    const mins = Math.max(1, Math.round(ms / 60_000));
+    return { variant: 'success', label: `${mins}m ago` };
+  }
+  if (hours < 24) return { variant: 'success', label: `${Math.round(hours)}h ago` };
+  const days = Math.round(hours / 24);
+  if (days < 7) return { variant: 'warning', label: `${days}d ago` };
+  return { variant: 'destructive', label: `${days}d ago` };
+}
+
 export default function ERPSettingsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -618,8 +640,15 @@ export default function ERPSettingsPage() {
                             <TableCell className="text-sm">
                               <Badge variant="outline">{PROVIDER_DISPLAY[provider] ?? cfg.provider}</Badge>
                             </TableCell>
-                            <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                              {cfg.last_synced ? new Date(cfg.last_synced).toLocaleDateString() : 'Never'}
+                            <TableCell className="whitespace-nowrap">
+                              {(() => {
+                                const f = syncFreshness(cfg.last_synced);
+                                return (
+                                  <Badge variant={f.variant as any} className="text-xs" title={cfg.last_synced ? new Date(cfg.last_synced).toLocaleString() : 'Never synced'}>
+                                    {f.label}
+                                  </Badge>
+                                );
+                              })()}
                             </TableCell>
                             <TableCell>
                               {cfg.is_active ? (

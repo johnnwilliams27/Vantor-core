@@ -62,9 +62,18 @@ function CryptoWalletsTab() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="border-t-2 border-t-slate-400/40">
-          <CardHeader>
+      {/* flex-wrap + min-width lets this grid absorb a third or fourth chain
+          card (Base, Polygon, etc.) without a layout rewrite. */}
+      <div className="flex flex-wrap gap-6">
+        <Card className="border-t-2 border-t-slate-400/40 relative overflow-hidden flex-1 min-w-[280px]">
+          {/* Subtle brand watermark */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-6 -bottom-6 opacity-[0.04]"
+          >
+            <EthereumLogo size={140} />
+          </div>
+          <CardHeader className="relative">
             <div className="flex items-start gap-3">
               <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
                 <EthereumLogo size={22} />
@@ -77,7 +86,7 @@ function CryptoWalletsTab() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 relative">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <span>Supports</span>
               <Badge variant="outline" className="text-[10px] px-1.5 py-0">USDC</Badge>
@@ -87,8 +96,14 @@ function CryptoWalletsTab() {
             <EthWalletConnect />
           </CardContent>
         </Card>
-        <Card className="border-t-2 border-t-purple-400/40">
-          <CardHeader>
+        <Card className="border-t-2 border-t-purple-400/40 relative overflow-hidden flex-1 min-w-[280px]">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-6 -bottom-6 opacity-[0.05]"
+          >
+            <SolanaLogo size={140} />
+          </div>
+          <CardHeader className="relative">
             <div className="flex items-start gap-3">
               <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
                 <SolanaLogo size={22} />
@@ -101,7 +116,7 @@ function CryptoWalletsTab() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 relative">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <span>Supports</span>
               <Badge variant="outline" className="text-[10px] px-1.5 py-0">USDC</Badge>
