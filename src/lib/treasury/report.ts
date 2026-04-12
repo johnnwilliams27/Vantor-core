@@ -33,6 +33,10 @@ function isoWeek(dateStr: string): string {
   return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
 }
 
+/**
+ * @deprecated Use the analytics engine via POST /api/analytics/query instead.
+ * Kept temporarily for legacy callers. Will be removed in Phase C.
+ */
 export async function buildReportData(
   supabase: SupabaseClient,
   userId: string,

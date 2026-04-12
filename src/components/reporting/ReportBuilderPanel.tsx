@@ -7,6 +7,9 @@ import { SectionSelector } from './SectionSelector';
 import { DEFAULT_SECTIONS, SECTION_REGISTRY, type SectionId } from './section-config';
 import { useReportData } from '@/hooks/useReportData';
 import { FileBarChart, Loader2, Download, FileText } from 'lucide-react';
+import type { ViewResult } from '@/lib/analytics/types';
+import type { ReportData } from '@/lib/treasury/report';
+import type { AiRecommendation, FiatTransaction, Transfer, Swap, Invoice, YieldTransaction } from '@/types/database';
 
 // Section components
 import { TreasuryOverviewSection } from './sections/TreasuryOverviewSection';
@@ -18,6 +21,48 @@ import { SwapsSection } from './sections/SwapsSection';
 import { InvoicesSection } from './sections/InvoicesSection';
 import { ComplianceSection } from './sections/ComplianceSection';
 import { YieldSection } from './sections/YieldSection';
+
+// ---------------------------------------------------------------------------
+// Adapters: extract typed data from ViewResult for each section component
+// ---------------------------------------------------------------------------
+
+function toTreasuryOverview(result: ViewResult, from: string, to: string): ReportData {
+  const s = result.scalar ?? {};
+  return {
+    period: { from, to },
+    summary: {
+      avgBankBalanceUsd: s.fiat_balance_usd ?? 0,
+      avgCryptoBalanceUsd: s.stablecoin_balance_usd ?? 0,
+      totalOnrampUsd: s.total_onramp_usd ?? 0,
+      totalOfframpUsd: s.total_offramp_usd ?? 0,
+      netRampUsd: (s.total_onramp_usd ?? 0) - (s.total_offramp_usd ?? 0),
+      totalFeesUsd: s.total_fees_usd ?? 0,
+      recommendationCount: s.recommendation_count ?? 0,
+      executedCount: s.executed_count ?? 0,
+      avgObligationCoverageRatio: s.coverage_ratio ?? 0,
+    },
+    balanceHistory: [],
+    recommendationOutcomes: [],
+    obligationCoverageByWeek: [],
+    rampSummary: [],
+  };
+}
+
+type ObligationCoverageRow = {
+  week: string;
+  obligationsUsd: number;
+  avgBankBalanceUsd: number;
+  coverageRatio: number;
+};
+
+function toObligationCoverageRows(result: ViewResult): ObligationCoverageRow[] {
+  return (result.rows ?? []).map((r) => ({
+    week: String(r.week ?? r.date ?? ''),
+    obligationsUsd: Number(r.obligations_usd ?? r.obligationsUsd ?? 0),
+    avgBankBalanceUsd: Number(r.avg_bank_balance_usd ?? r.avgBankBalanceUsd ?? 0),
+    coverageRatio: Number(r.coverage_ratio ?? r.coverageRatio ?? 0),
+  }));
+}
 
 function getDefaultDates() {
   const to = new Date();
@@ -56,7 +101,6 @@ export function ReportBuilderPanel() {
   };
 
   const isGenerated = !!activeFrom && !!activeTo && !!activeSections;
-  const treasuryData = report.treasury.data;
 
   const buildExportUrl = (format: 'csv' | 'pdf') => {
     const params = new URLSearchParams({ format, from: activeFrom ?? from, to: activeTo ?? to });
@@ -162,42 +206,50 @@ export function ReportBuilderPanel() {
 
           {!report.isLoading && (
             <>
-              {activeSections.has('treasury-overview') && treasuryData && (
-                <TreasuryOverviewSection data={treasuryData} />
+              {activeSections.has('treasury-overview') && report.treasury.data && (
+                <TreasuryOverviewSection
+                  data={toTreasuryOverview(report.treasury.data, activeFrom, activeTo)}
+                />
               )}
 
-              {activeSections.has('obligation-coverage') && treasuryData && (
-                <ObligationCoverageSection data={treasuryData.obligationCoverageByWeek} />
+              {activeSections.has('obligation-coverage') && report.obligationCoverage.data && (
+                <ObligationCoverageSection
+                  data={toObligationCoverageRows(report.obligationCoverage.data)}
+                />
               )}
 
-              {activeSections.has('recommendations') && treasuryData &&
-                treasuryData.recommendationOutcomes.length > 0 && (
-                <RecommendationsSection data={treasuryData.recommendationOutcomes} />
+              {activeSections.has('recommendations') && report.recommendations.data &&
+                (report.recommendations.data.rows ?? []).length > 0 && (
+                <RecommendationsSection
+                  data={report.recommendations.data.rows as unknown as AiRecommendation[]}
+                />
               )}
 
-              {activeSections.has('ramp-history') && treasuryData &&
-                treasuryData.rampSummary.length > 0 && (
-                <RampHistorySection data={treasuryData.rampSummary} />
+              {activeSections.has('ramp-history') && report.rampHistory.data &&
+                (report.rampHistory.data.rows ?? []).length > 0 && (
+                <RampHistorySection
+                  data={report.rampHistory.data.rows as unknown as FiatTransaction[]}
+                />
               )}
 
               {activeSections.has('transfers') && report.transfers.data && (
-                <TransfersSection data={report.transfers.data} />
+                <TransfersSection data={report.transfers.data.rows as unknown as Transfer[]} />
               )}
 
               {activeSections.has('swaps') && report.swaps.data && (
-                <SwapsSection data={report.swaps.data} />
+                <SwapsSection data={report.swaps.data.rows as unknown as Swap[]} />
               )}
 
               {activeSections.has('invoices') && report.invoices.data && (
-                <InvoicesSection data={report.invoices.data} />
+                <InvoicesSection data={report.invoices.data.rows as unknown as Invoice[]} />
               )}
 
               {activeSections.has('compliance') && report.compliance.data && (
-                <ComplianceSection data={report.compliance.data as Record<string, unknown>} />
+                <ComplianceSection data={(report.compliance.data.scalar ?? {}) as Record<string, unknown>} />
               )}
 
               {activeSections.has('yield') && report.yieldTxs.data && (
-                <YieldSection data={report.yieldTxs.data} />
+                <YieldSection data={report.yieldTxs.data.rows as unknown as YieldTransaction[]} />
               )}
             </>
           )}
