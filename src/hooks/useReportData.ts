@@ -1,89 +1,72 @@
 import { useQuery } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
-import { useTreasuryReport } from './useTreasury';
 import type { SectionId } from '@/components/reporting/section-config';
-import type { Transfer, Swap, Invoice, YieldTransaction } from '@/types/database';
+import type { ViewResult } from '@/lib/analytics/types';
 
-function filterByDate<T>(items: T[], dateAccessor: (item: T) => string, from?: string, to?: string): T[] {
-  if (!from && !to) return items;
-  return items.filter((item) => {
-    const d = dateAccessor(item).slice(0, 10);
-    if (from && d < from) return false;
-    if (to && d > to) return false;
-    return true;
+const SECTION_VIEW_MAP: Record<SectionId, string> = {
+  'treasury-overview': 'treasury-summary',
+  'obligation-coverage': 'obligation-coverage',
+  'recommendations': 'ai-actions',
+  'ramp-history': 'ramp-activity',
+  'transfers': 'transfer-volume',
+  'swaps': 'swap-activity',
+  'invoices': 'invoice-aging',
+  'compliance': 'compliance-summary',
+  'yield': 'yield-performance',
+};
+
+async function queryAnalyticsView(
+  viewSlug: string,
+  from: string,
+  to: string,
+): Promise<ViewResult> {
+  const res = await fetch('/api/analytics/query', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ viewSlug, from, to }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Query failed' }));
+    throw new Error(err.error ?? `Analytics query failed (${res.status})`);
+  }
+  const { data } = await res.json();
+  return data as ViewResult;
+}
+
+function useViewQuery(
+  sectionId: SectionId,
+  from: string | undefined,
+  to: string | undefined,
+  enabled: boolean,
+) {
+  const viewSlug = SECTION_VIEW_MAP[sectionId];
+  return useQuery<ViewResult>({
+    queryKey: ['analytics', viewSlug, from, to],
+    queryFn: () => queryAnalyticsView(viewSlug, from!, to!),
+    enabled,
+    staleTime: 60_000,
   });
 }
 
 export function useReportData(from?: string, to?: string, sections?: Set<SectionId>) {
   const { data: session } = useSession();
-  const hasSection = (id: SectionId) => !!from && !!to && !!sections?.has(id);
+  const hasSection = (id: SectionId) => !!from && !!to && !!session && !!sections?.has(id);
 
-  // Existing treasury report (covers overview, coverage, recommendations, ramps)
-  const needsTreasury = hasSection('treasury-overview') || hasSection('obligation-coverage') ||
-    hasSection('recommendations') || hasSection('ramp-history');
-  const treasury = useTreasuryReport(needsTreasury ? from : undefined, needsTreasury ? to : undefined);
+  const treasury = useViewQuery('treasury-overview', from, to, hasSection('treasury-overview'));
+  const obligationCoverage = useViewQuery('obligation-coverage', from, to, hasSection('obligation-coverage'));
+  const recommendations = useViewQuery('recommendations', from, to, hasSection('recommendations'));
+  const rampHistory = useViewQuery('ramp-history', from, to, hasSection('ramp-history'));
+  const transfers = useViewQuery('transfers', from, to, hasSection('transfers'));
+  const swaps = useViewQuery('swaps', from, to, hasSection('swaps'));
+  const invoices = useViewQuery('invoices', from, to, hasSection('invoices'));
+  const compliance = useViewQuery('compliance', from, to, hasSection('compliance'));
+  const yieldTxs = useViewQuery('yield', from, to, hasSection('yield'));
 
-  const transfers = useQuery<Transfer[]>({
-    queryKey: ['report-transfers', from, to],
-    queryFn: async () => {
-      const res = await fetch('/api/transfers');
-      if (!res.ok) return [];
-      const { data } = await res.json();
-      return filterByDate(data ?? [], (p) => p.created_at, from, to);
-    },
-    enabled: hasSection('transfers'),
-    staleTime: 60_000,
-  });
-
-  const swaps = useQuery<Swap[]>({
-    queryKey: ['report-swaps', from, to],
-    queryFn: async () => {
-      const res = await fetch('/api/swaps');
-      if (!res.ok) return [];
-      const { data } = await res.json();
-      return filterByDate(data ?? [], (s) => s.created_at, from, to);
-    },
-    enabled: hasSection('swaps'),
-    staleTime: 60_000,
-  });
-
-  const invoices = useQuery<Invoice[]>({
-    queryKey: ['report-invoices', from, to],
-    queryFn: async () => {
-      const res = await fetch('/api/invoices');
-      if (!res.ok) return [];
-      const { data } = await res.json();
-      return filterByDate(data ?? [], (i) => i.created_at, from, to);
-    },
-    enabled: hasSection('invoices'),
-    staleTime: 60_000,
-  });
-
-  const compliance = useQuery<Record<string, unknown>>({
-    queryKey: ['report-compliance'],
-    queryFn: async () => {
-      const res = await fetch('/api/compliance/overview');
-      if (!res.ok) return {};
-      const { data } = await res.json();
-      return data ?? {};
-    },
-    enabled: hasSection('compliance'),
-    staleTime: 60_000,
-  });
-
-  const yieldTxs = useQuery<YieldTransaction[]>({
-    queryKey: ['report-yield', from, to],
-    queryFn: async () => {
-      const res = await fetch('/api/yield/transactions');
-      if (!res.ok) return [];
-      const { data } = await res.json();
-      return filterByDate(data ?? [], (y) => y.executed_at ?? y.created_at, from, to);
-    },
-    enabled: hasSection('yield'),
-    staleTime: 60_000,
-  });
-
-  const isLoading = (needsTreasury && treasury.isLoading) ||
+  const isLoading =
+    (hasSection('treasury-overview') && treasury.isLoading) ||
+    (hasSection('obligation-coverage') && obligationCoverage.isLoading) ||
+    (hasSection('recommendations') && recommendations.isLoading) ||
+    (hasSection('ramp-history') && rampHistory.isLoading) ||
     (hasSection('transfers') && transfers.isLoading) ||
     (hasSection('swaps') && swaps.isLoading) ||
     (hasSection('invoices') && invoices.isLoading) ||
@@ -92,6 +75,9 @@ export function useReportData(from?: string, to?: string, sections?: Set<Section
 
   return {
     treasury,
+    obligationCoverage,
+    recommendations,
+    rampHistory,
     transfers,
     swaps,
     invoices,
