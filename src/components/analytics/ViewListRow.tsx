@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { Pin, GitFork, Pencil, Download, ChevronRight } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 import { exportCsv } from '@/lib/export/csv';
 import { viewResultToCsvColumns, viewResultToCsvRows } from './export-helpers';
 import { useViewQuery } from '@/hooks/useViewQuery';
@@ -48,12 +49,24 @@ export function ViewListRow({ view, from, to, isPinned, onTogglePin, onFork, onE
 
   const isCustom = view.kind === 'custom';
 
+  const iconBtn =
+    'rounded-md p-2 min-h-[36px] min-w-[36px] flex items-center justify-center text-muted-foreground/60 hover:bg-white/5 hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50';
+
   return (
-    <div
-      className={`flex cursor-pointer items-center justify-between rounded-lg border px-4 py-3 transition-colors hover:border-white/[0.15] ${
-        isCustom ? 'border-amber-500/20 bg-card' : 'border-white/[0.08] bg-card'
+    <Card
+      role="button"
+      tabIndex={0}
+      aria-label={`Open ${view.label}`}
+      className={`flex cursor-pointer items-center justify-between rounded-lg px-4 py-3 transition-colors hover:border-white/[0.15] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+        isCustom ? 'border-amber-500/20' : ''
       }`}
       onClick={() => router.push(`/analytics/${view.slug}`)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          router.push(`/analytics/${view.slug}`);
+        }
+      }}
     >
       <div className="flex items-center gap-3">
         <span className="text-sm font-medium text-foreground">{view.label}</span>
@@ -66,40 +79,45 @@ export function ViewListRow({ view, from, to, isPinned, onTogglePin, onFork, onE
           </span>
         )}
       </div>
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1">
         <button
           onClick={(e) => { e.stopPropagation(); onTogglePin(); }}
-          className={`rounded p-1 hover:bg-white/5 ${isPinned ? 'text-teal-400' : 'text-muted-foreground/40'}`}
+          className={`${iconBtn} ${isPinned ? 'text-teal-400 hover:text-teal-300' : 'text-muted-foreground/40 hover:text-muted-foreground'}`}
+          aria-label={isPinned ? `Unpin ${view.label}` : `Pin ${view.label}`}
+          aria-pressed={isPinned}
           title={isPinned ? 'Unpin' : 'Pin'}
         >
-          <Pin className="h-3.5 w-3.5" fill={isPinned ? 'currentColor' : 'none'} />
+          <Pin className="h-4 w-4" fill={isPinned ? 'currentColor' : 'none'} />
         </button>
         {isCustom && onEdit ? (
           <button
             onClick={(e) => { e.stopPropagation(); onEdit(); }}
-            className="rounded p-1 text-muted-foreground/60 hover:bg-white/5 hover:text-muted-foreground"
+            className={iconBtn}
+            aria-label={`Edit ${view.label}`}
             title="Edit"
           >
-            <Pencil className="h-3.5 w-3.5" />
+            <Pencil className="h-4 w-4" />
           </button>
         ) : (
           <button
             onClick={(e) => { e.stopPropagation(); onFork(); }}
-            className="rounded p-1 text-muted-foreground/60 hover:bg-white/5 hover:text-muted-foreground"
+            className={iconBtn}
+            aria-label={`Fork ${view.label}`}
             title="Fork"
           >
-            <GitFork className="h-3.5 w-3.5" />
+            <GitFork className="h-4 w-4" />
           </button>
         )}
         <button
           onClick={handleCsvExport}
-          className="rounded p-1 text-muted-foreground/60 hover:bg-white/5 hover:text-muted-foreground"
+          className={iconBtn}
+          aria-label={`Export ${view.label} as CSV`}
           title="CSV"
         >
-          <Download className="h-3.5 w-3.5" />
+          <Download className="h-4 w-4" />
         </button>
-        <ChevronRight className="h-4 w-4 text-muted-foreground/30" />
+        <ChevronRight className="ml-1 h-4 w-4 shrink-0 text-muted-foreground/30" aria-hidden="true" />
       </div>
-    </div>
+    </Card>
   );
 }
