@@ -64,6 +64,7 @@ const ROLE_RANK: Record<UserRole, number> = {
   auditor: 0,
   accountant: 1,
   treasury_manager: 2,
+  enterprise_admin: 3,
 };
 
 export function hasRole(userRole: UserRole, requiredRole: UserRole): boolean {

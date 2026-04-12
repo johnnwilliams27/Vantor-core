@@ -1,4 +1,4 @@
-export type UserRole = 'treasury_manager' | 'accountant' | 'auditor';
+export type UserRole = 'enterprise_admin' | 'treasury_manager' | 'accountant' | 'auditor';
 export type EnterpriseStatus = 'active' | 'frozen' | 'suspended' | 'pending_kyc';
 export type KycStatus = 'none' | 'pending' | 'verified' | 'rejected';
 

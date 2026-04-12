@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
       .update({
         full_name: fullName,
         enterprise_id: enterprise.id,
-        role: 'treasury_manager',
+        role: 'enterprise_admin',
         email_verified: false,
         email_verification_token: verificationToken,
         email_verification_expires_at: verificationExpires.toISOString(),
