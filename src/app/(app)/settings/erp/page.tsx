@@ -144,6 +144,14 @@ const PROVIDER_DISPLAY: Record<ProviderId, string> = {
 };
 
 /**
+ * Only Xero has a real adapter wired up today. The other four providers
+ * ship in the dropdown as "coming soon" so users understand what's on
+ * the roadmap, but Test / Save are blocked until the adapter lands.
+ */
+const SUPPORTED_PROVIDERS: ProviderId[] = ['xero'];
+const isSupported = (p: ProviderId) => SUPPORTED_PROVIDERS.includes(p);
+
+/**
  * Returns a [variant, relative label] pair for a last-synced timestamp.
  * Green ≤1h (fresh), amber ≤24h (stale), red >24h (very stale).
  * Null/undefined timestamp → warning "Never".
@@ -198,13 +206,14 @@ export default function ERPSettingsPage() {
     formState: { errors, isSubmitting, isValid },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { provider: 'sap', landscape: 'prod' },
+    defaultValues: { provider: 'xero' },
     mode: 'onChange',
   });
 
   const selectedProvider = watch('provider');
   const docsUrl = PROVIDER_DOCS[selectedProvider];
   const isOAuth = USES_OAUTH[selectedProvider];
+  const providerSupported = isSupported(selectedProvider);
 
   const handleSetActive = async (id: string, is_active: boolean) => {
     setActionPending(true);
@@ -342,7 +351,7 @@ export default function ERPSettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Link ERP System</CardTitle>
-            <CardDescription>Connect SAP, Oracle, NetSuite, Xero, or QuickBooks to sync invoices and vendors</CardDescription>
+            <CardDescription>Connect Xero to sync invoices and vendors. SAP, Oracle, NetSuite, and QuickBooks coming soon.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -350,11 +359,11 @@ export default function ERPSettingsPage() {
                 <div className="space-y-2">
                   <Label>ERP Provider</Label>
                   <Select {...register('provider')}>
-                    <option value="sap">SAP</option>
-                    <option value="oracle">Oracle</option>
-                    <option value="netsuite">NetSuite</option>
                     <option value="xero">Xero</option>
-                    <option value="quickbooks">QuickBooks</option>
+                    <option value="sap">SAP (coming soon)</option>
+                    <option value="oracle">Oracle (coming soon)</option>
+                    <option value="netsuite">NetSuite (coming soon)</option>
+                    <option value="quickbooks">QuickBooks (coming soon)</option>
                   </Select>
                 </div>
                 <div className="space-y-2">
@@ -364,15 +373,24 @@ export default function ERPSettingsPage() {
                 </div>
               </div>
 
-              {isOAuth && (
+              {!providerSupported && (
+                <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4 text-sm text-amber-300/90 leading-relaxed space-y-1">
+                  <p className="font-medium">{PROVIDER_DISPLAY[selectedProvider]} is coming soon</p>
+                  <p className="text-xs opacity-90">
+                    The {PROVIDER_DISPLAY[selectedProvider]} adapter isn&apos;t wired up yet. We&apos;ll let you know when it&apos;s ready. In the meantime you can connect your Xero workspace.
+                  </p>
+                </div>
+              )}
+
+              {providerSupported && isOAuth && (
                 <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-300/90 leading-relaxed">
-                  {selectedProvider === 'xero'
-                    ? 'Xero uses OAuth 2.0 — hosted Connect-with-Xero flow is coming soon. In the meantime, enter the Client ID / Secret and Tenant ID from your app registration below.'
-                    : 'QuickBooks uses OAuth 2.0 — hosted Connect-with-Intuit flow is coming soon. In the meantime, enter the Client ID / Secret and Realm ID from your Intuit developer app below.'}
+                  Xero uses OAuth 2.0 — hosted Connect-with-Xero flow is coming soon. In the meantime, enter the Client ID / Secret and Tenant ID from your app registration below.
                 </div>
               )}
 
               {/* SAP fields */}
+              {providerSupported && (
+              <>
               {selectedProvider === 'sap' && (
                 <>
                   <div className="space-y-2">
@@ -545,8 +563,10 @@ export default function ERPSettingsPage() {
               >
                 Where do I find these? →
               </a>
+              </>
+              )}
 
-              {testResult && (
+              {providerSupported && testResult && (
                 <div
                   role="status"
                   aria-live="polite"
@@ -596,20 +616,22 @@ export default function ERPSettingsPage() {
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleTest}
-                  disabled={testing || !isValid}
-                  title={!isValid ? 'Fill required fields to enable' : undefined}
-                >
-                  {testing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Testing…</> : 'Test Connection'}
-                </Button>
-                <Button type="submit" disabled={isSubmitting || !isValid}>
-                  {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Connecting…</> : 'Save & Connect'}
-                </Button>
-              </div>
+              {providerSupported && (
+                <div className="flex items-center justify-end gap-3 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleTest}
+                    disabled={testing || !isValid}
+                    title={!isValid ? 'Fill required fields to enable' : undefined}
+                  >
+                    {testing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Testing…</> : 'Test Connection'}
+                  </Button>
+                  <Button type="submit" disabled={isSubmitting || !isValid}>
+                    {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Connecting…</> : 'Save & Connect'}
+                  </Button>
+                </div>
+              )}
             </form>
           </CardContent>
         </Card>
