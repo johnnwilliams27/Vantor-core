@@ -76,17 +76,23 @@ export async function POST(req: NextRequest) {
       .maybeSingle();
 
     if (approval?.status === 'executed') {
+      // Conditional on status='awaiting_approval' so a concurrent flip
+      // from another reader (e.g. GET /[id]) is idempotent.
       await supabase
         .from('transfers')
         .update({ status: 'pending' })
-        .eq('id', transfer.id);
+        .eq('id', transfer.id)
+        .eq('enterprise_id', enterpriseId)
+        .eq('status', 'awaiting_approval');
       transfer.status = 'pending';
     } else if (approval?.status === 'denied' || approval?.status === 'cancelled') {
       const nextDenialReason = approval.denial_reason ?? approval.status;
       await supabase
         .from('transfers')
         .update({ status: 'denied', denial_reason: nextDenialReason })
-        .eq('id', transfer.id);
+        .eq('id', transfer.id)
+        .eq('enterprise_id', enterpriseId)
+        .eq('status', 'awaiting_approval');
       transfer.status = 'denied';
       (transfer as Record<string, unknown>).denial_reason = nextDenialReason;
     }
@@ -106,7 +112,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Mark as completed
+  // Mark as completed. CRITICAL race guard: the update is conditional on
+  // status='pending' so two concurrent /confirm calls cannot both win.
+  // If zero rows match, a parallel writer already flipped the status —
+  // return the current row idempotently rather than double-executing
+  // side effects (balance updates, usage fees, KYT registration).
   const { data: updated, error: updErr } = await supabase
     .from('transfers')
     .update({
@@ -116,11 +126,32 @@ export async function POST(req: NextRequest) {
       updated_at: new Date().toISOString(),
     })
     .eq('id', transfer.id)
+    .eq('enterprise_id', enterpriseId)
+    .eq('status', 'pending')
     .select()
-    .single();
+    .maybeSingle();
 
   if (updErr) {
     return NextResponse.json({ error: updErr.message }, { status: 500 });
+  }
+
+  if (!updated) {
+    // Either the row moved out of 'pending' between our read and write
+    // (concurrent /confirm, cancel, or denial) or the row is gone.
+    // Re-read and return idempotently — do NOT run the remaining
+    // side effects (transfer_attempts insert, balance update, usage fee,
+    // KYT registration, notifications). These must run at most once per
+    // transfer.
+    const { data: current } = await supabase
+      .from('transfers')
+      .select('*')
+      .eq('id', transfer.id)
+      .eq('enterprise_id', enterpriseId)
+      .maybeSingle();
+    return NextResponse.json(
+      { data: current, note: 'transfer was already finalized by a concurrent writer' },
+      { status: 200 },
+    );
   }
 
   // Record the attempt (audit trail for on-chain submissions)

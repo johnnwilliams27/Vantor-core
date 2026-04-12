@@ -219,10 +219,23 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     if (err instanceof GateError) {
       // Rollback path: flip transfer to denied with the reason code.
-      await supabase
+      // Defense-in-depth: scope UPDATE to both id AND enterprise_id.
+      const { error: denyErr } = await supabase
         .from('transfers')
         .update({ status: 'denied', denial_reason: err.reason_code })
-        .eq('id', transfer.id);
+        .eq('id', transfer.id)
+        .eq('enterprise_id', enterpriseId as string);
+      if (denyErr) {
+        // Rollback write failed. Log but still return the gate error to
+        // the user — the transfer row is now in an inconsistent state
+        // (awaiting_approval with no approval_request). Surface for
+        // admin cleanup; client still sees the policy block.
+        console.error('[transfers POST] denied-flip failed', {
+          transfer_id: transfer.id,
+          reason_code: err.reason_code,
+          error: denyErr,
+        });
+      }
 
       await writeAuditLog({
         userId: session.user.id,
@@ -231,7 +244,11 @@ export async function POST(req: NextRequest) {
         entityId: transfer.id,
         details: {
           reason_code: err.reason_code,
-          trace: (err.details as Record<string, unknown>)?.trace ?? undefined,
+          // Include the full err.details; GateError.details captures
+          // movement_enterprise_id/actor_enterprise_id on enterprise_mismatch
+          // and trace/reason_codes on policy_blocked. Dropping to just
+          // `trace` previously lost the forensically valuable fields.
+          ...(err.details as Record<string, unknown>),
         },
       });
 
@@ -243,10 +260,40 @@ export async function POST(req: NextRequest) {
   }
 
   if (gateResult.verdict === 'allow_auto') {
-    await supabase
+    // Flip to 'pending' so the client can sign. CRITICAL: if this update
+    // fails, the transfer is stuck at 'awaiting_approval' with no
+    // approval_request — no mechanism to recover since lazy-flip only
+    // materializes from policy_approval_requests. Treat update failure
+    // as a hard 500 so the caller retries (PK conflict on retry is fine;
+    // mapper generates a new UUID).
+    const { error: flipErr } = await supabase
       .from('transfers')
       .update({ status: 'pending' })
-      .eq('id', transfer.id);
+      .eq('id', transfer.id)
+      .eq('enterprise_id', enterpriseId as string);
+    if (flipErr) {
+      console.error('[transfers POST] pending-flip failed', {
+        transfer_id: transfer.id,
+        error: flipErr,
+      });
+      // Best-effort: mark denied so the row has a terminal state and
+      // won't mislead a /confirm attempt.
+      await supabase
+        .from('transfers')
+        .update({ status: 'denied', denial_reason: 'gate_update_failed' })
+        .eq('id', transfer.id)
+        .eq('enterprise_id', enterpriseId as string);
+      return NextResponse.json(
+        {
+          reason_code: 'gate_update_failed',
+          human_readable:
+            'Policy gate cleared the transfer but the status flip failed.',
+          user_action: 'Retry the transfer.',
+          details: { transfer_id: transfer.id },
+        },
+        { status: 500 },
+      );
+    }
 
     await writeAuditLog({
       userId: session.user.id,

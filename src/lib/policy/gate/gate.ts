@@ -63,16 +63,28 @@ export class PolicyGateService {
   }
 
   async gate(movement: ProposedMovement, actor: GateActor): Promise<GateResult> {
-    // 1. Defense-in-depth: enterprise isolation. Route already filters
-    //    by session enterprise, but bugs in the mapper or manual calls
-    //    could lead to a mismatched movement.
+    // 1. Defense-in-depth: enterprise isolation. Callers MUST put the
+    //    enterprise_id in movement.metadata (mapTransferToMovement does
+    //    this). If it's missing entirely, reject — we cannot verify
+    //    the caller isn't trying to sneak a cross-tenant movement.
     const movementEnterpriseId = this.readEnterpriseId(movement);
-    if (movementEnterpriseId && movementEnterpriseId !== actor.enterprise_id) {
+    if (!movementEnterpriseId) {
+      throw new GateError({
+        reason_code: REASON_CODES.enterprise_mismatch,
+        human_readable:
+          'Movement is missing enterprise_id in metadata; cannot verify isolation.',
+        user_action:
+          'Callers must populate movement.metadata.enterprise_id (e.g., via mapTransferToMovement).',
+        details: { movement_id: movement.id, actor_enterprise_id: actor.enterprise_id },
+      });
+    }
+    if (movementEnterpriseId !== actor.enterprise_id) {
       throw new GateError({
         reason_code: REASON_CODES.enterprise_mismatch,
         human_readable: 'Movement enterprise does not match actor enterprise.',
         user_action: 'Contact support — this should not happen.',
         details: {
+          movement_id: movement.id,
           movement_enterprise_id: movementEnterpriseId,
           actor_enterprise_id: actor.enterprise_id,
         },

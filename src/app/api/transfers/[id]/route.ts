@@ -49,17 +49,22 @@ export async function GET(
       .maybeSingle();
 
     if (approval?.status === 'executed') {
+      // Conditional on awaiting_approval so concurrent readers don't thrash.
       await supabase
         .from('transfers')
         .update({ status: 'pending' })
-        .eq('id', transfer.id);
+        .eq('id', transfer.id)
+        .eq('enterprise_id', enterpriseId)
+        .eq('status', 'awaiting_approval');
       transfer.status = 'pending';
     } else if (approval?.status === 'denied' || approval?.status === 'cancelled') {
       const nextDenialReason = approval.denial_reason ?? approval.status;
       await supabase
         .from('transfers')
         .update({ status: 'denied', denial_reason: nextDenialReason })
-        .eq('id', transfer.id);
+        .eq('id', transfer.id)
+        .eq('enterprise_id', enterpriseId)
+        .eq('status', 'awaiting_approval');
       transfer.status = 'denied';
       (transfer as Record<string, unknown>).denial_reason = nextDenialReason;
     }

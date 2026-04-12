@@ -18,6 +18,7 @@ const MOVEMENT: ProposedMovement = {
   amount: { amount: '10000', asset: 'USDC' },
   initiator: { type: 'human', user_id: 'user-1' },
   requested_at: '2026-04-12T00:00:00Z',
+  metadata: { enterprise_id: 'ent-1' },
 };
 
 const ACTOR: GateActor = {
@@ -262,6 +263,29 @@ describe('PolicyGateService', () => {
 
     try {
       await gate.gate(movementWithMismatch, ACTOR);
+      throw new Error('expected gate to throw');
+    } catch (err) {
+      expect(err).toBeInstanceOf(GateError);
+      expect((err as GateError).reason_code).toBe('enterprise_mismatch');
+    }
+    expect(evaluate).not.toHaveBeenCalled();
+  });
+
+  it('throws enterprise_mismatch when movement has no metadata.enterprise_id at all', async () => {
+    // Hardening: direct callers of PolicyGateService that skip the
+    // mapper could construct a movement without enterprise_id, silently
+    // bypassing the isolation check. Reject instead.
+    const { metadata: _dropped, ...movementWithoutMeta } = MOVEMENT;
+    const movementNoMeta: ProposedMovement = movementWithoutMeta;
+
+    const evaluate = vi.fn();
+    const gate = new PolicyGateService(SUPABASE, {
+      evaluate,
+      approvalService: mockApprovalService(),
+    });
+
+    try {
+      await gate.gate(movementNoMeta, ACTOR);
       throw new Error('expected gate to throw');
     } catch (err) {
       expect(err).toBeInstanceOf(GateError);
