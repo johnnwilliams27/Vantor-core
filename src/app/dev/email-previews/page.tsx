@@ -4,8 +4,10 @@ import { cn } from '@/lib/utils';
 import { actionNotificationEmail, alertEmail, infoEmail } from '@/lib/notifications/email-templates';
 import { recommendationEmailHtml } from '@/lib/notifications/recommendation-email';
 import { verifyEmailHtml } from '@/lib/email/templates/verify-email';
+import { passwordResetHtml } from '@/lib/email/templates/password-reset-email';
 import { invitationEmailHtml } from '@/lib/email/templates/invitation';
 import { monthlyBillEmailHtml } from '@/lib/email/templates/monthly-bill';
+import { newSignupAlertHtml } from '@/lib/email/templates/new-signup-alert';
 
 interface PreviewEntry {
   id: string;
@@ -339,15 +341,27 @@ const PREVIEWS: PreviewEntry[] = [
     html: verifyEmailHtml({ fullName: 'John Williams', verifyUrl: 'https://app.vantor.xyz/verify?token=abc123' }),
   },
   {
+    id: 'password-reset',
+    label: 'Password Reset',
+    category: 'Authentication',
+    html: passwordResetHtml({ fullName: 'John Williams', resetUrl: 'https://app.vantor.xyz/reset-password?token=abc123' }),
+  },
+  {
     id: 'invitation',
     label: 'Team Invitation',
     category: 'Authentication',
     html: invitationEmailHtml({ inviterName: 'John Williams', signupUrl: 'https://app.vantor.xyz/register?invite=abc123' }),
   },
   {
+    id: 'new-signup-alert',
+    label: 'New Signup Alert',
+    category: 'Admin',
+    html: newSignupAlertHtml({ fullName: 'Jane Smith', email: 'jane@acme.com', companyName: 'Acme Corp', enterpriseId: 'ent_abc123def456', viaInvite: false }),
+  },
+  {
     id: 'monthly-bill',
     label: 'Monthly Bill',
-    category: 'Billing (Existing)',
+    category: 'Billing',
     html: monthlyBillEmailHtml({ enterpriseName: 'Acme Corp', billingPeriod: 'March 2026', totalAmount: '$1,247.50' }),
   },
 ];

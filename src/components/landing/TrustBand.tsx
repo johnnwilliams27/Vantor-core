@@ -37,28 +37,65 @@ const PILLARS = [
 
 export function TrustBand() {
   return (
-    <section className="relative py-24 lg:py-32 bg-[var(--bg-void)]">
-      <div className="max-w-4xl mx-auto px-6">
+    <section
+      id="security"
+      className="relative py-[70px] lg:py-[102px] bg-[var(--bg-void)] overflow-hidden"
+    >
+      {/* Soft teal bloom at top */}
+      <div
+        className="absolute pointer-events-none left-1/2 -translate-x-1/2"
+        style={{
+          width: '480px',
+          height: '300px',
+          top: '-80px',
+          background: 'radial-gradient(circle, rgba(45,212,191,0.12), transparent 70%)',
+          filter: 'blur(80px)',
+          opacity: 0.4,
+        }}
+        aria-hidden
+      />
+
+      <div className="relative max-w-[var(--container-narrow)] mx-auto px-6">
+        <p
+          className="text-center text-[13px] font-semibold uppercase text-[var(--teal-400)] mb-4"
+          style={{ letterSpacing: '0.12em' }}
+        >
+          Security &amp; Compliance
+        </p>
         <h2
-          className="text-3xl sm:text-4xl font-semibold text-white text-center mb-12 leading-tight"
+          className="text-3xl sm:text-4xl lg:text-[40px] font-semibold text-white text-center mb-4 leading-tight"
           style={{ letterSpacing: '-0.018em' }}
         >
-          Built for institutions
+          Institutional-grade from day one
         </h2>
+        <p
+          className="text-center text-base text-[var(--text-300)] max-w-[540px] mx-auto mb-16 leading-relaxed"
+          style={{ letterSpacing: '-0.005em' }}
+        >
+          Every layer — from wallet onboarding to AI-proposed actions — is designed with compliance, auditability, and security at its core.
+        </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           {PILLARS.map((p) => (
-            <div
-              key={p.title}
-              className="p-6 rounded-xl bg-white/[0.025] border border-white/[0.06] hover:border-white/[0.12] transition-colors duration-300"
-            >
-              <div className="w-10 h-10 rounded-lg bg-[var(--teal-400)]/10 flex items-center justify-center mb-4">
-                <p.icon size={20} className="text-[var(--teal-400)]" />
+            <div key={p.title} className="landing-card px-5 py-[22px]">
+              <div
+                className="w-8 h-8 rounded-[9px] flex items-center justify-center mb-3.5"
+                style={{ background: 'rgba(45,212,191,0.12)' }}
+              >
+                <p.icon size={16} className="text-[var(--teal-400)]" strokeWidth={1.75} />
               </div>
-              <h3 className="text-base font-semibold text-white mb-2" style={{ letterSpacing: '-0.01em' }}>
+              <h3
+                className="text-base font-semibold text-white mb-1.5"
+                style={{ letterSpacing: '-0.01em' }}
+              >
                 {p.title}
               </h3>
-              <p className="text-sm text-[var(--text-300)] leading-relaxed">{p.desc}</p>
+              <p
+                className="text-xs text-[var(--text-300)] leading-relaxed"
+                style={{ letterSpacing: '-0.005em' }}
+              >
+                {p.desc}
+              </p>
             </div>
           ))}
         </div>

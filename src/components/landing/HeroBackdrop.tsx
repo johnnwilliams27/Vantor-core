@@ -5,19 +5,19 @@ import { NetworkCanvas } from './NetworkCanvas';
 import { BlobBackground } from './BlobBackground';
 
 export function HeroBackdrop() {
-  const [density, setDensity] = useState({ particles: 80, blur: 120 });
+  const [particles, setParticles] = useState(25);
 
   useEffect(() => {
     const w = window.innerWidth;
-    if (w < 768) setDensity({ particles: 30, blur: 60 });
-    else if (w < 1280) setDensity({ particles: 60, blur: 100 });
-    else setDensity({ particles: 80, blur: 120 });
+    if (w < 768) setParticles(12);
+    else if (w < 1280) setParticles(20);
+    else setParticles(25);
   }, []);
 
   return (
     <>
-      <BlobBackground blurRadius={density.blur} />
-      <NetworkCanvas particleCount={density.particles} />
+      <BlobBackground />
+      <NetworkCanvas particleCount={particles} />
       <div
         className="absolute inset-0 z-[5] pointer-events-none"
         style={{

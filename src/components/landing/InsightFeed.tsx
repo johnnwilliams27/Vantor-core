@@ -1,22 +1,35 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 
 const INSIGHTS = [
-  '$2.3M idle USDC → Spiko USD · +4.9% APY',
-  '€1.8M payroll due → convert USD to EUR',
-  '$500K vendor payment → withdraw Circle USYC',
-  '$4.5M outbound wire → manager approval required',
-  '$1.2M Spiko USD · 4.9% → Circle USYC · +5.1% APY',
+  { text: '$2.3M idle USDC → ', cyan: 'Spiko USD', mid: ' · ', teal: '+4.9% APY' },
+  { text: '€1.8M payroll due → ', cyan: 'Convert USD to EUR', mid: '', teal: '' },
+  { text: '$500K vendor payment → ', cyan: 'Withdrawal Circle USYC', mid: '', teal: '' },
+  { text: '£750K receivable due Friday → ', cyan: 'Pre-fund GBP account', mid: '', teal: '' },
+  { text: '$4.5M outbound wire → ', cyan: 'Manager approval required', mid: '', teal: '' },
+  { text: '$1.2M Spiko USD · 4.9% → ', cyan: 'Circle USYC', mid: ' · ', teal: '+5.1% APY' },
+  { text: '$2.8M quarterly tax → ', cyan: 'Schedule USD payment', mid: '', teal: '' },
 ];
 
-const ROTATION_MS = 5000;
+const ROTATION_MS = 3500;
+const SLIDE_MS = 700;
+const CARD_H = 54; // card height in px
+const GAP = 8; // gap between cards in px
+const SLOT = CARD_H + GAP;
 
+/**
+ * Wheel-style feed: 3 visible cards with the CENTER card highlighted.
+ * On each tick, all cards slide up by one slot. The top card exits,
+ * a new card enters from below, and the new center inherits the glow.
+ */
 export function InsightFeed() {
-  const [head, setHead] = useState(0);
+  // `center` = the INSIGHTS index currently in the center position
+  const [center, setCenter] = useState(0);
+  const [sliding, setSliding] = useState(false);
   const [paused, setPaused] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -27,51 +40,117 @@ export function InsightFeed() {
     return () => mq.removeEventListener('change', handler);
   }, []);
 
+  const advance = useCallback(() => {
+    // Phase 1: start sliding up
+    setSliding(true);
+    // Phase 2: after slide completes, snap back and update center
+    timerRef.current = setTimeout(() => {
+      setSliding(false);
+      setCenter((c) => (c + 1) % INSIGHTS.length);
+    }, SLIDE_MS);
+  }, []);
+
   useEffect(() => {
     if (paused || reducedMotion) return;
-    const id = window.setInterval(() => {
-      setHead((h) => (h + 1) % INSIGHTS.length);
-    }, ROTATION_MS);
-    return () => window.clearInterval(id);
-  }, [paused, reducedMotion]);
+    const id = setInterval(advance, ROTATION_MS);
+    return () => {
+      clearInterval(id);
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [paused, reducedMotion, advance]);
 
-  // Show 3 cards starting at `head`, wrapping around
-  const visible = [0, 1, 2].map((i) => INSIGHTS[(head + i) % INSIGHTS.length]);
+  // We render 4 cards: [center-1, center, center+1, center+2]
+  // Normally the container shows the first 3 (top, center, bottom).
+  // During slide, the track translates up by one SLOT so card[3] enters
+  // and card[0] exits. After the slide, we increment center and reset.
+  const wrap = (i: number) => ((i % INSIGHTS.length) + INSIGHTS.length) % INSIGHTS.length;
+  const indices = [wrap(center - 1), wrap(center), wrap(center + 1), wrap(center + 2)];
 
   return (
     <div
-      ref={containerRef}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
       aria-live="polite"
       aria-atomic="true"
-      className="w-full max-w-3xl mx-auto"
+      className="w-full max-w-xl mx-auto"
     >
-      <div className="space-y-3">
-        {visible.map((text, i) => {
-          const opacity = i === 0 ? 1 : i === 1 ? 0.85 : 0.6;
-          const visibilityClass =
-            i === 0 ? '' : i === 1 ? 'hidden sm:flex' : 'hidden lg:flex';
-          return (
-            <div
-              key={`${head}-${i}`}
-              style={{ opacity }}
-              className={`${visibilityClass} items-center justify-between gap-4 px-5 py-4 rounded-xl border border-white/[0.08] bg-white/[0.025] transition-opacity duration-500 ${i === 0 ? 'flex' : ''}`}
-            >
-              <span className="text-sm sm:text-base text-[var(--text-100)] flex-1 min-w-0">
-                {text}
-              </span>
-              <button
-                type="button"
-                className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border border-[var(--teal-400)]/40 text-[var(--teal-400)] hover:bg-[var(--teal-400)]/10 transition-colors min-h-[32px]"
+      {/* Clip to 3 visible cards */}
+      <div
+        className="overflow-hidden relative"
+        style={{ height: SLOT * 3 - GAP }}
+      >
+        {/* Sliding track */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: `${GAP}px`,
+            transform: `translateY(${sliding ? -SLOT : 0}px)`,
+            transition: sliding
+              ? `transform ${SLIDE_MS}ms cubic-bezier(0.22, 0.68, 0, 1.04)`
+              : 'none',
+          }}
+        >
+          {indices.map((idx, pos) => {
+            // During steady state: pos 0=top, 1=center, 2=bottom, 3=hidden below
+            // During slide: pos 0=exiting top, 1=becomes top, 2=becomes center, 3=becomes bottom
+            const isCenterCard = sliding ? pos === 2 : pos === 1;
+            const isEdge = sliding ? (pos === 1 || pos === 3) : (pos === 0 || pos === 2);
+            const isExiting = sliding && pos === 0;
+            const isHidden = !sliding && pos === 3;
+
+            let opacity = 1;
+            if (isEdge) opacity = 0.45;
+            if (isExiting) opacity = 0.2;
+            if (isHidden) opacity = 0;
+
+            const scale = isCenterCard ? 1 : 0.97;
+
+            return (
+              <div
+                key={`pos-${pos}`}
+                className={`landing-insight flex items-center justify-between gap-4 px-5 ${
+                  isCenterCard ? 'landing-insight--top' : ''
+                }`}
+                style={{
+                  height: `${CARD_H}px`,
+                  opacity,
+                  transform: `scale(${scale})`,
+                  transition: sliding
+                    ? `opacity ${SLIDE_MS}ms cubic-bezier(0.22, 0.68, 0, 1.04), transform ${SLIDE_MS}ms cubic-bezier(0.22, 0.68, 0, 1.04)`
+                    : 'none',
+                  flexShrink: 0,
+                }}
               >
-                Approve?
-              </button>
-            </div>
-          );
-        })}
+                <span
+                  className="text-sm text-[var(--text-100)] flex-1 min-w-0 truncate"
+                  style={{ letterSpacing: '-0.005em' }}
+                >
+                  {INSIGHTS[idx].text}
+                  <strong className="text-[#67e8f9] font-semibold">{INSIGHTS[idx].cyan}</strong>
+                  {INSIGHTS[idx].mid}
+                  {INSIGHTS[idx].teal && (
+                    <strong className="text-[var(--teal-400)] font-semibold">{INSIGHTS[idx].teal}</strong>
+                  )}
+                </span>
+                <span
+                  aria-hidden="true"
+                  className="shrink-0 rounded-full text-[11px] font-semibold whitespace-nowrap select-none"
+                  style={{
+                    background: 'rgba(45,212,191,0.2)',
+                    border: '1px solid rgba(45,212,191,0.5)',
+                    color: '#2dd4bf',
+                    padding: '5px 14px',
+                  }}
+                >
+                  Approve?
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

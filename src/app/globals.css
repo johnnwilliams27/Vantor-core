@@ -52,12 +52,15 @@
 :root {
   --bg-void: #060d1f;
   --bg-deep-navy: #040a18;
+  --bg-elevated: #0a1628;
   --teal-400: #2dd4bf;
   --cyan-300: #67e8f9;
   --text-100: #e5e7eb;
   --text-200: #d1d5db;
   --text-300: #9ca3af;
   --text-400: #6b7280;
+  --container-wide: 1200px;
+  --container-narrow: 1000px;
 }
 
 @layer base {
@@ -139,23 +142,12 @@
 .landing-page {
   scroll-behavior: smooth;
 }
+/* Ensure smooth scroll on html when landing page is active */
+html:has(.landing-page) {
+  scroll-behavior: smooth;
+}
 
-/* Blob float keyframes — referenced by BlobBackground.tsx inline styles */
-@keyframes blobFloat1 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33%      { transform: translate(60px, 40px) scale(1.08); }
-  66%      { transform: translate(-30px, 70px) scale(0.95); }
-}
-@keyframes blobFloat2 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33%      { transform: translate(-50px, 30px) scale(1.05); }
-  66%      { transform: translate(40px, -50px) scale(0.97); }
-}
-@keyframes blobFloat3 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33%      { transform: translate(30px, -40px) scale(1.06); }
-  66%      { transform: translate(-60px, 20px) scale(0.94); }
-}
+/* blobFloat keyframes removed — BlobBackground now uses static gradient mesh */
 
 /* Fade-in animation for landing page elements */
 .landing-fade-in {
@@ -174,18 +166,19 @@
 /* Login dropdown animation */
 .login-dropdown {
   transform-origin: top right;
-  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .login-dropdown-open {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-  pointer-events: auto;
+  animation: loginDropdownIn 0.35s cubic-bezier(0.32, 0.72, 0, 1) both;
 }
-.login-dropdown-closed {
-  opacity: 0;
-  transform: translateY(-8px) scale(0.96);
-  pointer-events: none;
+@keyframes loginDropdownIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 /* Spinner animations */
@@ -201,10 +194,16 @@
   50%      { transform: scale(1.6); opacity: 1; }
 }
 
-/* v5.6 landing — focus-visible ring (v5.5 a11y pass) */
-.landing-page :focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--bg-void), 0 0 0 4px var(--teal-400);
+/* v5.6 landing — focus-visible ring (v5.5 a11y pass).
+   Scoped to links/buttons/tabindexed custom controls so form inputs
+   keep their own focus:ring-* treatment without fighting a universal
+   box-shadow cascade. */
+.landing-page a:focus-visible,
+.landing-page button:focus-visible,
+.landing-page [role="button"]:focus-visible,
+.landing-page [tabindex]:focus-visible {
+  outline: 2px solid var(--teal-400);
+  outline-offset: 3px;
   border-radius: 4px;
 }
 
@@ -213,18 +212,112 @@
   .landing-page *,
   .landing-page *::before,
   .landing-page *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
+    animation: none !important;
+    transition: none !important;
   }
 }
 
 /* v5.6 AI Flow mobile diagram — orb pulse + beam */
 @keyframes aiFlowOrbPulse {
-  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(45, 212, 191, 0.3); }
-  50%      { transform: scale(1.04); box-shadow: 0 0 0 12px rgba(45, 212, 191, 0); }
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 48px rgba(45, 212, 191, 0.3), inset 0 0 24px rgba(45, 212, 191, 0.15);
+  }
+  50% {
+    transform: scale(1.015);
+    box-shadow: 0 0 64px rgba(45, 212, 191, 0.4), inset 0 0 32px rgba(45, 212, 191, 0.2);
+  }
 }
 @keyframes aiFlowBeam {
   0%, 100% { opacity: 0.2; transform: scaleY(0.6); }
   50%      { opacity: 0.9; transform: scaleY(1); }
+}
+
+/* v5.6 premium card material — gradient top hairline + surface + hover */
+.landing-card {
+  position: relative;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.01));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: border-color 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.landing-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+  pointer-events: none;
+}
+.landing-card:hover {
+  border-color: rgba(45, 212, 191, 0.3);
+}
+
+/* v5.6 insight feed — slide-up entrance for rotating content */
+@keyframes insightSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.insight-content-enter {
+  animation: insightSlideIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* v5.6 insight feed rotation — top card glow, smooth opacity transitions */
+.landing-insight {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01));
+  border: 1px solid rgba(45, 212, 191, 0.28);
+  border-radius: 14px;
+  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.landing-insight::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+  pointer-events: none;
+}
+.landing-insight--top {
+  border-color: rgba(45, 212, 191, 0.5);
+  box-shadow: 0 0 36px rgba(45, 212, 191, 0.16);
+}
+
+/* v5.6 primary gradient button — shared across Hero, Navbar, ContactForm */
+.btn-gradient {
+  background: linear-gradient(90deg, #2dd4bf, #67e8f9);
+  color: var(--bg-void);
+  font-weight: 600;
+  border-radius: 9999px;
+  transition: box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 44px rgba(45, 212, 191, 0.32);
+}
+.btn-gradient:hover {
+  box-shadow: 0 0 56px rgba(45, 212, 191, 0.48);
+  transform: translateY(-1px);
+}
+.btn-gradient:active {
+  transform: scale(0.98);
+}
+
+/* v5.6 AI Flow diagram — orb pulse animation (desktop) */
+.landing-orb {
+  animation: aiFlowOrbPulse 3.2s ease-in-out infinite;
 }

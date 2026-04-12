@@ -7,49 +7,59 @@ const STEPS = [
   {
     n: '01',
     title: 'Analyze',
-    desc: 'AI agents continuously monitor balances, obligations, market conditions, and yield opportunities across all connected accounts.',
+    desc: 'Continuously monitors balances, obligations, and market conditions.',
   },
   {
     n: '02',
     title: 'Propose',
-    desc: 'The orchestration layer generates risk-scored proposed actions with full reasoning and explainability for every queued operation.',
+    desc: 'Generates risk-scored proposals with full reasoning.',
   },
   {
     n: '03',
     title: 'Approve',
-    desc: 'Human reviewers evaluate insights through role-based approval workflows. Multi-signature support for high-value operations.',
+    desc: 'Humans evaluate via role-based workflows. Multi-sig on high value.',
   },
   {
     n: '04',
     title: 'Execute',
-    desc: 'Approved actions are executed atomically with real-time monitoring. Every step is logged to an immutable audit trail.',
+    desc: 'Execute actions with full audit trail on every step.',
   },
 ];
 
 export function AIFlow() {
   return (
-    <section id="agent" className="relative py-24 lg:py-32 overflow-hidden bg-[var(--bg-void)] scroll-mt-20">
-      {/* Teal bloom — single decoration */}
-      <div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] pointer-events-none"
-        style={{
-          background:
-            'radial-gradient(ellipse at center, rgba(45,212,191,0.06) 0%, transparent 60%)',
-          filter: 'blur(60px)',
-        }}
-        aria-hidden
-      />
-
-      <div className="relative max-w-7xl mx-auto px-6">
+    <section
+      id="agent"
+      className="relative py-[70px] lg:py-[102px] overflow-hidden scroll-mt-20"
+      style={{
+        background:
+          'radial-gradient(ellipse 70% 60% at 50% 40%, rgba(45,212,191,0.11), transparent 70%), var(--bg-void)',
+        borderTop: '1px solid rgba(45,212,191,0.14)',
+        borderBottom: '1px solid rgba(45,212,191,0.14)',
+      }}
+    >
+      <div className="relative max-w-[var(--container-wide)] mx-auto px-6">
+        <p
+          className="text-center text-[13px] font-semibold uppercase text-[var(--teal-400)] mb-4"
+          style={{ letterSpacing: '0.12em' }}
+        >
+          Vantor AI
+        </p>
         <h2
-          className="text-3xl sm:text-4xl lg:text-[40px] font-semibold text-white text-center mb-16 leading-tight"
+          className="text-3xl sm:text-4xl lg:text-[40px] font-semibold text-white text-center mb-4 leading-tight"
           style={{ letterSpacing: '-0.018em' }}
         >
           Agentic intelligence, human control
         </h2>
+        <p
+          className="text-center text-base text-[var(--text-300)] max-w-[540px] mx-auto mb-16 leading-relaxed"
+          style={{ letterSpacing: '-0.005em' }}
+        >
+          Vantor&apos;s AI orchestration layer monitors your treasury in real-time and queues actions for your review. You control what executes and when.
+        </p>
 
         {/* Row 1: Diagram */}
-        <div className="mb-24">
+        <div className="mb-16">
           <AIFlowDiagram />
         </div>
 
@@ -59,19 +69,27 @@ export function AIFlow() {
         </div>
 
         {/* Row 3: 4-step narrative */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto">
           {STEPS.map((s) => (
-            <div
-              key={s.n}
-              className="p-6 rounded-xl border border-white/[0.06] bg-white/[0.025] min-h-[160px]"
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <span className="text-xs font-medium text-[var(--teal-400)] tracking-wider">{s.n}</span>
-                <h3 className="text-base font-semibold text-white" style={{ letterSpacing: '-0.012em' }}>
-                  {s.title}
-                </h3>
+            <div key={s.n} className="landing-card p-6">
+              <div
+                className="w-9 h-9 rounded-[10px] flex items-center justify-center mb-4 text-xs font-bold text-[var(--teal-400)]"
+                style={{ background: 'rgba(45,212,191,0.12)' }}
+              >
+                {s.n}
               </div>
-              <p className="text-sm text-[var(--text-300)] leading-relaxed">{s.desc}</p>
+              <h3
+                className="text-lg font-semibold text-white mb-2"
+                style={{ letterSpacing: '-0.01em' }}
+              >
+                {s.title}
+              </h3>
+              <p
+                className="text-xs text-[var(--text-300)] leading-relaxed"
+                style={{ letterSpacing: '-0.005em' }}
+              >
+                {s.desc}
+              </p>
             </div>
           ))}
         </div>

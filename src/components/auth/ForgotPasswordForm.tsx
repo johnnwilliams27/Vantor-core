@@ -5,10 +5,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, Mail } from 'lucide-react';
 
 const schema = z.object({
@@ -39,8 +35,6 @@ export function ForgotPasswordForm() {
         setError('Too many requests. Please try again in a little while.');
         return;
       }
-      // The API always returns generic success; we show a neutral confirmation
-      // regardless of whether the email actually exists.
       setSent(true);
     } catch {
       setError('Something went wrong. Please try again.');
@@ -48,105 +42,110 @@ export function ForgotPasswordForm() {
   };
 
   return (
-    <Card className="w-full max-w-sm shadow-lg border-gray-200">
-      <CardContent className="p-0">
-        <div className="bg-[#19595b] rounded-t-xl px-8 pt-8 pb-5 flex flex-col items-center">
-          <Image
-            src="/logo-dark.png"
-            alt="Vantor"
-            width={200}
-            height={78}
-            className="object-contain"
-            priority
-            unoptimized
-          />
-          <p className="text-white text-sm mt-3 text-center tracking-wide font-semibold">
-            Reset Your Password
-          </p>
-        </div>
+    <div className="w-full max-w-md landing-card p-0 overflow-hidden">
+      {/* Header */}
+      <div className="px-8 pt-8 pb-6 flex flex-col items-center border-b border-white/[0.06]">
+        <Image
+          src="/logo-dark.png"
+          alt="Vantor"
+          width={160}
+          height={52}
+          className="object-contain"
+          priority
+          unoptimized
+        />
+        <p
+          className="text-[var(--text-300)] text-sm mt-3 text-center"
+          style={{ letterSpacing: '-0.005em' }}
+        >
+          Reset your password
+        </p>
+      </div>
 
-        <div className="px-8 py-7">
-          {sent ? (
-            <div className="text-center">
-              <Mail className="w-10 h-10 text-[#19595b] mx-auto mb-3" />
-              <h2 className="text-base font-semibold text-gray-900 mb-2">
-                Check your email
-              </h2>
-              <p className="text-sm text-gray-500 leading-relaxed">
-                If an account exists for{' '}
-                <span className="font-medium text-gray-700">{getValues('email')}</span>,
-                we&rsquo;ve sent a password reset link. It expires in 1 hour.
-              </p>
-              <p className="text-xs text-gray-400 mt-4">
-                Didn&rsquo;t receive it? Check your spam folder, or{' '}
-                <button
-                  type="button"
-                  onClick={() => setSent(false)}
-                  className="text-[#19595b] hover:underline font-medium"
-                >
-                  try a different email
-                </button>
-                .
-              </p>
-              <Link
-                href="/login"
-                className="inline-block mt-5 text-sm text-[#19595b] hover:underline font-medium"
+      {/* Body */}
+      <div className="px-8 py-7">
+        {sent ? (
+          <div className="text-center">
+            <Mail className="w-10 h-10 text-[var(--teal-400)] mx-auto mb-3" />
+            <h2 className="text-base font-semibold text-white mb-2">
+              Check your email
+            </h2>
+            <p className="text-sm text-[var(--text-300)] leading-relaxed">
+              If an account exists for{' '}
+              <span className="font-medium text-white">{getValues('email')}</span>,
+              we&rsquo;ve sent a password reset link. It expires in 1 hour.
+            </p>
+            <p className="text-xs text-[var(--text-400)] mt-4">
+              Didn&rsquo;t receive it? Check your spam folder, or{' '}
+              <button
+                type="button"
+                onClick={() => setSent(false)}
+                className="text-[var(--teal-400)] hover:text-[var(--cyan-300)] font-medium transition-colors"
               >
-                Back to sign in
-              </Link>
-            </div>
-          ) : (
-            <>
-              <p className="text-sm text-gray-500 text-center mb-5">
-                Enter the email linked to your Vantor account and we&rsquo;ll send you a reset link.
-              </p>
+                try a different email
+              </button>
+              .
+            </p>
+            <Link
+              href="/login"
+              className="inline-block mt-5 text-sm text-[var(--teal-400)] hover:text-[var(--cyan-300)] font-medium transition-colors"
+            >
+              ← Back to sign in
+            </Link>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm text-[var(--text-300)] text-center mb-5">
+              Enter the email linked to your Vantor account and we&rsquo;ll send you a reset link.
+            </p>
 
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@company.com"
-                    autoComplete="email"
-                    {...register('email')}
-                  />
-                  {errors.email && (
-                    <p className="text-xs text-red-500">{errors.email.message}</p>
-                  )}
-                </div>
-
-                {error && (
-                  <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">
-                    {error}
-                  </div>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <div className="space-y-1.5">
+                <label htmlFor="forgot-email" className="block text-sm font-medium text-[var(--text-200)]">
+                  Email
+                </label>
+                <input
+                  id="forgot-email"
+                  type="email"
+                  autoComplete="email"
+                  inputMode="email"
+                  placeholder="you@company.com"
+                  {...register('email')}
+                  className="w-full px-4 py-3 min-h-[48px] rounded-xl bg-white/[0.05] border border-white/[0.08] text-white text-sm placeholder-[var(--text-400)] focus:outline-none focus:border-[var(--teal-400)]/50 focus:ring-1 focus:ring-[var(--teal-400)]/25 transition-[border-color,box-shadow] duration-300"
+                />
+                {errors.email && (
+                  <p className="text-xs text-red-400">{errors.email.message}</p>
                 )}
+              </div>
 
-                <Button
-                  type="submit"
-                  className="w-full bg-[#19595b] hover:bg-[#134849] text-white"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending…
-                    </>
-                  ) : (
-                    'Send reset link'
-                  )}
-                </Button>
-              </form>
+              {error && (
+                <div role="alert" className="rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2.5 text-sm text-red-400">
+                  {error}
+                </div>
+              )}
 
-              <p className="mt-5 text-center text-sm text-gray-500">
-                Remembered it?{' '}
-                <Link href="/login" className="text-[#19595b] hover:underline font-medium">
-                  Sign in
-                </Link>
-              </p>
-            </>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full min-h-[48px] py-3 text-sm btn-gradient disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {isSubmitting ? (
+                  <><Loader2 size={14} className="animate-spin" /> Sending…</>
+                ) : (
+                  'Send reset link'
+                )}
+              </button>
+            </form>
+
+            <p className="mt-5 text-center text-sm text-[var(--text-300)]">
+              Remembered it?{' '}
+              <Link href="/login" className="text-[var(--teal-400)] hover:text-[var(--cyan-300)] font-medium transition-colors">
+                Sign in
+              </Link>
+            </p>
+          </>
+        )}
+      </div>
+    </div>
   );
 }

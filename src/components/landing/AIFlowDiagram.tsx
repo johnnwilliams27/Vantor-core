@@ -1,16 +1,16 @@
 'use client';
 
-const INPUTS = ['Upcoming AR/AP', 'Cash · Banks + Wallets', 'Treasury Policy', 'FX Exposure'];
+import Image from 'next/image';
+
+const INPUTS = ['Upcoming AR/AP', 'Banks + Wallets', 'Treasury Policy', 'FX Exposure'];
 const OUTPUTS = ['Spiko USD', 'Circle USYC', 'FX Rebalance', 'Payments'];
 
 export function AIFlowDiagram() {
   return (
     <div className="relative">
-      {/* Desktop layout — visible at lg+ */}
       <div className="hidden lg:block">
         <DesktopDiagram />
       </div>
-      {/* Mobile fallback — visible below lg */}
       <div className="lg:hidden">
         <MobileDiagram />
       </div>
@@ -18,120 +18,172 @@ export function AIFlowDiagram() {
   );
 }
 
+/**
+ * Desktop diagram — v4:
+ *   - Pills at original text-sm size, fixed 200px width, pushed to edges
+ *   - Lines: horizontal out of the pill, then angle cleanly to the orb ring
+ *   - Lines connect to pill's inner edge (right for inputs, left for outputs)
+ *     and terminate at the orb ring — never overlap the pill or cross into the orb
+ */
 function DesktopDiagram() {
-  const W = 900;
-  const H = 480;
-  const orbX = W / 2;
-  const orbY = H / 2;
-  const inputX = 80;
-  const outputX = W - 80;
-  const chipYs = [80, 180, 280, 380];
+  // Layout constants (match CSS flex layout in the 920px container)
+  const orbX = 460;
+  const orbY = 128;
+  const orbR = 80;
+  const chipW = 200;
 
-  // Quadratic curves so particle motion looks like flow, not a straight line.
-  const inputPaths = chipYs.map(
-    (y) => `M ${inputX + 90} ${y} Q ${(inputX + orbX) / 2} ${(y + orbY) / 2 - 20}, ${orbX - 50} ${orbY}`
-  );
-  const outputPaths = chipYs.map(
-    (y) => `M ${orbX + 50} ${orbY} Q ${(orbX + outputX) / 2} ${(orbY + y) / 2 + 20}, ${outputX - 90} ${y}`
-  );
+  // justify-between with px-8 (32px each side): pills at 32px and 688px from left
+  const pad = 32;
+  const inRight = pad + chipW; // 232
+  const outLeft = 920 - pad - chipW; // 688
+
+  // Horizontal run before angling to the orb
+  const inMidX = inRight + 60;
+  const outMidX = outLeft - 60;
+
+  // Vertical centers of each pill (4 pills, 54px each, 10px gap → total ~246px)
+  // viewBox height 256 to accommodate
+  const chipYs = [32, 96, 160, 224];
+
+  // Where each angled line meets the orb ring
+  const ringPoint = (fromX: number, fromY: number) => {
+    const dx = orbX - fromX;
+    const dy = orbY - fromY;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    return {
+      x: Math.round((orbX - (orbR * dx) / len) * 10) / 10,
+      y: Math.round((orbY - (orbR * dy) / len) * 10) / 10,
+    };
+  };
+  const ringPointFrom = (toX: number, toY: number) => {
+    const dx = toX - orbX;
+    const dy = toY - orbY;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    return {
+      x: Math.round((orbX + (orbR * dx) / len) * 10) / 10,
+      y: Math.round((orbY + (orbR * dy) / len) * 10) / 10,
+    };
+  };
+
+  // Input paths: horizontal from pill edge → midpoint, then angle to ring
+  const inputPaths = chipYs.map((y) => {
+    const ring = ringPoint(inMidX, y);
+    return `M ${inRight} ${y} H ${inMidX} L ${ring.x} ${ring.y}`;
+  });
+
+  // Output paths: from ring → angle to midpoint, then horizontal to pill edge
+  const outputPaths = chipYs.map((y) => {
+    const ring = ringPointFrom(outMidX, y);
+    return `M ${ring.x} ${ring.y} L ${outMidX} ${y} H ${outLeft}`;
+  });
 
   return (
-    <div className="relative w-full max-w-[900px] mx-auto" style={{ aspectRatio: `${W} / ${H}` }}>
+    <div className="relative max-w-[920px] mx-auto" style={{ minHeight: '256px' }}>
+      {/* SVG layer: lines + particles — BEHIND chips via z-index */}
       <svg
-        viewBox={`0 0 ${W} ${H}`}
-        className="absolute inset-0 w-full h-full"
+        className="absolute inset-0 w-full h-full pointer-events-none"
+        viewBox="0 0 920 256"
+        preserveAspectRatio="xMidYMid meet"
         aria-hidden="true"
+        style={{ zIndex: 1 }}
       >
-        {/* Paths */}
+        {/* Connector lines — horizontal segment then angled to ring */}
         {inputPaths.map((d, i) => (
-          <path key={`in-${i}`} d={d} fill="none" stroke="rgba(45,212,191,0.15)" strokeWidth="1" />
+          <path
+            key={`in-line-${i}`}
+            d={d}
+            fill="none"
+            stroke="rgba(45,212,191,0.25)"
+            strokeWidth="2.5"
+            strokeLinejoin="round"
+          />
         ))}
         {outputPaths.map((d, i) => (
-          <path key={`out-${i}`} d={d} fill="none" stroke="rgba(45,212,191,0.15)" strokeWidth="1" />
+          <path
+            key={`out-line-${i}`}
+            d={d}
+            fill="none"
+            stroke="rgba(103,232,249,0.25)"
+            strokeWidth="2.5"
+            strokeLinejoin="round"
+          />
         ))}
 
-        {/* Particles — 2 per path, staggered */}
+        {/* Input particles — 1 per path, slow */}
         {inputPaths.map((d, i) => (
-          <g key={`in-particles-${i}`}>
-            <circle r="3" fill="#2dd4bf">
-              <animateMotion dur="2s" repeatCount="indefinite" begin={`${i * 0.3}s`} path={d} />
-            </circle>
-            <circle r="2" fill="#67e8f9" opacity="0.7">
-              <animateMotion dur="2s" repeatCount="indefinite" begin={`${i * 0.3 + 1}s`} path={d} />
-            </circle>
-          </g>
-        ))}
-        {outputPaths.map((d, i) => (
-          <g key={`out-particles-${i}`}>
-            <circle r="3" fill="#2dd4bf">
-              <animateMotion dur="2s" repeatCount="indefinite" begin={`${i * 0.3 + 0.5}s`} path={d} />
-            </circle>
-            <circle r="2" fill="#67e8f9" opacity="0.7">
-              <animateMotion dur="2s" repeatCount="indefinite" begin={`${i * 0.3 + 1.5}s`} path={d} />
-            </circle>
-          </g>
-        ))}
-
-        {/* Central orb */}
-        <g>
-          <circle
-            cx={orbX}
-            cy={orbY}
-            r="50"
-            fill="rgba(45,212,191,0.08)"
-            stroke="rgba(45,212,191,0.4)"
-            strokeWidth="1.5"
-          >
-            <animate attributeName="r" values="48;52;48" dur="2.4s" repeatCount="indefinite" />
-            <animate attributeName="opacity" values="0.6;1;0.6" dur="2.4s" repeatCount="indefinite" />
+          <circle key={`in-p-${i}`} r="3" fill="#67e8f9" opacity="0.75">
+            <animateMotion dur="3.5s" repeatCount="indefinite" begin={`${i * 0.8}s`} path={d} />
           </circle>
-          <circle cx={orbX} cy={orbY} r="30" fill="rgba(45,212,191,0.15)" />
-          <text
-            x={orbX}
-            y={orbY + 5}
-            textAnchor="middle"
-            fontSize="14"
-            fontWeight="600"
-            fill="#e5e7eb"
-            style={{ letterSpacing: '-0.01em' }}
-          >
-            Vantor AI
-          </text>
-        </g>
+        ))}
+
+        {/* Output particles — 1 per path, slow */}
+        {outputPaths.map((d, i) => (
+          <circle key={`out-p-${i}`} r="3" fill="#a5f3fc" opacity="0.75">
+            <animateMotion dur="3.5s" repeatCount="indefinite" begin={`${i * 0.8 + 0.4}s`} path={d} />
+          </circle>
+        ))}
       </svg>
 
-      {/* Input chips */}
-      <div className="absolute inset-0">
-        {INPUTS.map((label, i) => (
-          <div
-            key={label}
-            className="absolute px-4 py-2 rounded-lg border border-white/[0.08] bg-white/[0.03] text-xs text-[var(--text-200)] whitespace-nowrap"
-            style={{
-              left: `${(inputX / W) * 100}%`,
-              top: `${(chipYs[i] / H) * 100}%`,
-              transform: 'translate(0, -50%)',
-            }}
-          >
-            {label}
-          </div>
-        ))}
-      </div>
+      {/* Flex row: chips | orb | chips — ABOVE lines, scooted inward */}
+      <div className="relative flex items-center justify-between px-8" style={{ zIndex: 2 }}>
+        {/* Input chips */}
+        <div className="flex flex-col gap-2.5" style={{ width: `${chipW}px` }}>
+          {INPUTS.map((label) => (
+            <div
+              key={label}
+              className="landing-card px-5 text-sm font-medium text-[var(--text-100)] whitespace-nowrap flex items-center justify-center"
+              style={{ height: '54px', letterSpacing: '-0.005em' }}
+            >
+              {label}
+            </div>
+          ))}
+        </div>
 
-      {/* Output chips */}
-      <div className="absolute inset-0">
-        {OUTPUTS.map((label, i) => (
+        {/* Central orb with logo + text */}
+        <div
+          className="shrink-0 relative"
+          style={{ width: '160px', height: '160px', zIndex: 3 }}
+        >
+          {/* Pulsing ring — scales independently */}
           <div
-            key={label}
-            className="absolute px-4 py-2 rounded-lg border border-white/[0.08] bg-white/[0.03] text-xs text-[var(--text-200)] whitespace-nowrap"
+            className="landing-orb absolute inset-0 rounded-full"
             style={{
-              left: `${(outputX / W) * 100}%`,
-              top: `${(chipYs[i] / H) * 100}%`,
-              transform: 'translate(-100%, -50%)',
+              background:
+                'radial-gradient(circle, rgba(45,212,191,0.35), rgba(45,212,191,0.06) 70%)',
+              border: '1.5px solid rgba(45,212,191,0.45)',
             }}
-          >
-            {label}
+          />
+          {/* Static content — no pulse */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <Image
+              src="/vantor-icon-white.png"
+              alt="Vantor AI"
+              width={48}
+              height={48}
+              className="opacity-80"
+              unoptimized
+            />
+            <span
+              className="text-white font-semibold mt-1.5"
+              style={{ fontSize: '15px', letterSpacing: '-0.01em', opacity: 0.9 }}
+            >
+              Vantor AI
+            </span>
           </div>
-        ))}
+        </div>
+
+        {/* Output chips */}
+        <div className="flex flex-col gap-2.5" style={{ width: `${chipW}px` }}>
+          {OUTPUTS.map((label) => (
+            <div
+              key={label}
+              className="landing-card px-5 text-sm font-medium text-[var(--text-100)] whitespace-nowrap flex items-center justify-center"
+              style={{ height: '54px', letterSpacing: '-0.005em' }}
+            >
+              {label}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -140,61 +192,68 @@ function DesktopDiagram() {
 function MobileDiagram() {
   return (
     <div className="relative max-w-md mx-auto py-4">
-      {/* Inputs 2x2 above */}
-      <div className="grid grid-cols-2 gap-3 mb-6">
+      <div className="grid grid-cols-2 gap-2.5 mb-6">
         {INPUTS.map((label) => (
           <div
             key={label}
-            className="px-3 py-2.5 rounded-lg border border-white/[0.08] bg-white/[0.03] text-xs text-[var(--text-200)] text-center"
+            className="landing-card px-3 py-2.5 text-xs text-[var(--text-100)] text-center"
           >
             {label}
           </div>
         ))}
       </div>
 
-      {/* Beam above the orb */}
       <div className="relative h-12 flex items-center justify-center">
         <div
           className="absolute w-0.5 h-full"
           style={{
-            background:
-              'linear-gradient(to bottom, transparent, var(--teal-400), transparent)',
+            background: 'linear-gradient(to bottom, transparent, var(--teal-400), transparent)',
             animation: 'aiFlowBeam 2.4s ease-in-out infinite',
           }}
         />
       </div>
 
-      {/* Orb */}
       <div className="flex items-center justify-center my-2">
         <div
-          className="w-24 h-24 rounded-full border border-[var(--teal-400)]/40 flex items-center justify-center text-sm font-semibold text-[var(--text-100)]"
+          className="landing-orb w-28 h-28 rounded-full flex flex-col items-center justify-center"
           style={{
-            background: 'rgba(45,212,191,0.08)',
-            animation: 'aiFlowOrbPulse 2.4s ease-in-out infinite',
+            background:
+              'radial-gradient(circle, rgba(45,212,191,0.35), rgba(45,212,191,0.06) 70%)',
+            border: '1.5px solid rgba(45,212,191,0.45)',
           }}
         >
-          Vantor AI
+          <Image
+            src="/vantor-icon-white.png"
+            alt="Vantor AI"
+            width={36}
+            height={36}
+            className="opacity-80"
+            unoptimized
+          />
+          <span
+            className="text-white font-semibold mt-1"
+            style={{ fontSize: '11px', letterSpacing: '-0.01em', opacity: 0.9 }}
+          >
+            Vantor AI
+          </span>
         </div>
       </div>
 
-      {/* Beam below the orb */}
       <div className="relative h-12 flex items-center justify-center">
         <div
           className="absolute w-0.5 h-full"
           style={{
-            background:
-              'linear-gradient(to bottom, transparent, var(--teal-400), transparent)',
+            background: 'linear-gradient(to bottom, transparent, var(--cyan-300), transparent)',
             animation: 'aiFlowBeam 2.4s ease-in-out infinite 1.2s',
           }}
         />
       </div>
 
-      {/* Outputs 2x2 below */}
-      <div className="grid grid-cols-2 gap-3 mt-6">
+      <div className="grid grid-cols-2 gap-2.5 mt-6">
         {OUTPUTS.map((label) => (
           <div
             key={label}
-            className="px-3 py-2.5 rounded-lg border border-white/[0.08] bg-white/[0.03] text-xs text-[var(--text-200)] text-center"
+            className="landing-card px-3 py-2.5 text-xs text-[var(--text-100)] text-center"
           >
             {label}
           </div>

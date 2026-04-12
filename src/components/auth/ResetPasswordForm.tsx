@@ -6,13 +6,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
-import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, Eye, EyeOff } from 'lucide-react';
 
-// Must match server policy (src/app/api/auth/reset-password/route.ts and register).
 const schema = z
   .object({
     password: z
@@ -30,12 +25,17 @@ const schema = z
 
 type FormData = z.infer<typeof schema>;
 
+const inputClass =
+  'w-full px-4 py-3 pr-11 min-h-[48px] rounded-xl bg-white/[0.05] border border-white/[0.08] text-white text-sm placeholder-[var(--text-400)] focus:outline-none focus:border-[var(--teal-400)]/50 focus:ring-1 focus:ring-[var(--teal-400)]/25 transition-[border-color,box-shadow] duration-300';
+
 export function ResetPasswordForm() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token') ?? '';
 
   const [serverError, setServerError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const {
     register,
     handleSubmit,
@@ -68,126 +68,140 @@ export function ResetPasswordForm() {
   const missingToken = !token;
 
   return (
-    <Card className="w-full max-w-sm shadow-lg border-gray-200">
-      <CardContent className="p-0">
-        <div className="bg-[#19595b] rounded-t-xl px-8 pt-8 pb-5 flex flex-col items-center">
-          <Image
-            src="/logo-dark.png"
-            alt="Vantor"
-            width={200}
-            height={78}
-            className="object-contain"
-            priority
-            unoptimized
-          />
-          <p className="text-white text-sm mt-3 text-center tracking-wide font-semibold">
-            Choose a New Password
-          </p>
-        </div>
+    <div className="w-full max-w-md landing-card p-0 overflow-hidden">
+      {/* Header */}
+      <div className="px-8 pt-8 pb-6 flex flex-col items-center border-b border-white/[0.06]">
+        <Image
+          src="/logo-dark.png"
+          alt="Vantor"
+          width={160}
+          height={52}
+          className="object-contain"
+          priority
+          unoptimized
+        />
+        <p
+          className="text-[var(--text-300)] text-sm mt-3 text-center"
+          style={{ letterSpacing: '-0.005em' }}
+        >
+          Choose a new password
+        </p>
+      </div>
 
-        <div className="px-8 py-7">
-          {missingToken ? (
-            <div className="text-center">
-              <XCircle className="w-10 h-10 text-red-500 mx-auto mb-3" />
-              <h2 className="text-base font-semibold text-gray-900 mb-2">
-                Invalid reset link
-              </h2>
-              <p className="text-sm text-gray-500 leading-relaxed">
-                This reset link is missing a token. Please request a new one.
-              </p>
-              <Link
-                href="/forgot-password"
-                className="inline-block mt-5 px-6 py-2.5 rounded-lg bg-[#19595b] hover:bg-[#134849] text-white text-sm font-medium transition-colors"
-              >
-                Request new link
-              </Link>
-            </div>
-          ) : success ? (
-            <div className="text-center">
-              <CheckCircle2 className="w-10 h-10 text-[#19595b] mx-auto mb-3" />
-              <h2 className="text-base font-semibold text-gray-900 mb-2">
-                Password updated
-              </h2>
-              <p className="text-sm text-gray-500 leading-relaxed">
-                Your password has been reset. You can now sign in with your new password.
-              </p>
-              <Link
-                href="/login"
-                className="inline-block mt-5 px-6 py-2.5 rounded-lg bg-[#19595b] hover:bg-[#134849] text-white text-sm font-medium transition-colors"
-              >
-                Sign in
-              </Link>
-            </div>
-          ) : (
-            <>
-              <p className="text-sm text-gray-500 text-center mb-5">
-                Enter a new password for your Vantor account.
-              </p>
+      {/* Body */}
+      <div className="px-8 py-7">
+        {missingToken ? (
+          <div className="text-center">
+            <XCircle className="w-10 h-10 text-red-400 mx-auto mb-3" />
+            <h2 className="text-base font-semibold text-white mb-2">Invalid reset link</h2>
+            <p className="text-sm text-[var(--text-300)] leading-relaxed">
+              This reset link is missing a token. Please request a new one.
+            </p>
+            <Link
+              href="/forgot-password"
+              className="inline-block mt-5 min-h-[44px] px-6 py-2.5 text-sm btn-gradient"
+            >
+              Request new link
+            </Link>
+          </div>
+        ) : success ? (
+          <div className="text-center">
+            <CheckCircle2 className="w-10 h-10 text-[var(--teal-400)] mx-auto mb-3" />
+            <h2 className="text-base font-semibold text-white mb-2">Password updated</h2>
+            <p className="text-sm text-[var(--text-300)] leading-relaxed">
+              Your password has been reset. You can now sign in with your new password.
+            </p>
+            <Link
+              href="/login"
+              className="inline-block mt-5 min-h-[44px] px-6 py-2.5 text-sm btn-gradient"
+            >
+              Sign in
+            </Link>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm text-[var(--text-300)] text-center mb-5">
+              Enter a new password for your Vantor account.
+            </p>
 
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="password">New password</Label>
-                  <Input
-                    id="password"
-                    type="password"
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <div className="space-y-1.5">
+                <label htmlFor="reset-password" className="block text-sm font-medium text-[var(--text-200)]">New password</label>
+                <div className="relative">
+                  <input
+                    id="reset-password"
+                    type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
                     autoComplete="new-password"
                     {...register('password')}
+                    className={inputClass}
                   />
-                  {errors.password && (
-                    <p className="text-xs text-red-500">{errors.password.message}</p>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-400)] hover:text-[var(--text-200)] transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="confirmPassword">Confirm password</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
+                {errors.password && <p className="text-xs text-red-400">{errors.password.message}</p>}
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="reset-confirm" className="block text-sm font-medium text-[var(--text-200)]">Confirm password</label>
+                <div className="relative">
+                  <input
+                    id="reset-confirm"
+                    type={showConfirm ? 'text' : 'password'}
                     placeholder="••••••••"
                     autoComplete="new-password"
                     {...register('confirmPassword')}
+                    className={inputClass}
                   />
-                  {errors.confirmPassword && (
-                    <p className="text-xs text-red-500">
-                      {errors.confirmPassword.message}
-                    </p>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm(!showConfirm)}
+                    aria-label={showConfirm ? 'Hide password' : 'Show password'}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-400)] hover:text-[var(--text-200)] transition-colors"
+                  >
+                    {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
                 </div>
+                {errors.confirmPassword && <p className="text-xs text-red-400">{errors.confirmPassword.message}</p>}
+              </div>
 
-                <p className="text-[11px] text-gray-400 leading-relaxed">
-                  Must be at least 8 characters and include one uppercase letter and one special character.
-                </p>
-
-                {serverError && (
-                  <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">
-                    {serverError}
-                  </div>
-                )}
-
-                <Button
-                  type="submit"
-                  className="w-full bg-[#19595b] hover:bg-[#134849] text-white"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Updating…
-                    </>
-                  ) : (
-                    'Update password'
-                  )}
-                </Button>
-              </form>
-
-              <p className="mt-5 text-center text-sm text-gray-500">
-                <Link href="/login" className="text-[#19595b] hover:underline font-medium">
-                  Back to sign in
-                </Link>
+              <p className="text-[11px] text-[var(--text-400)] leading-relaxed">
+                Must be at least 8 characters and include one uppercase letter and one special character.
               </p>
-            </>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+
+              {serverError && (
+                <div role="alert" className="rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2.5 text-sm text-red-400">
+                  {serverError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full min-h-[48px] py-3 text-sm btn-gradient disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {isSubmitting ? (
+                  <><Loader2 size={14} className="animate-spin" /> Updating…</>
+                ) : (
+                  'Update password'
+                )}
+              </button>
+            </form>
+
+            <p className="mt-5 text-center text-sm text-[var(--text-300)]">
+              <Link href="/login" className="text-[var(--teal-400)] hover:text-[var(--cyan-300)] font-medium transition-colors">
+                ← Back to sign in
+              </Link>
+            </p>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
