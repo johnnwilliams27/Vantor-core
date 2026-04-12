@@ -26,64 +26,217 @@ interface TeamMember {
 
 const ROLES: UserRole[] = ['enterprise_admin', 'executive', 'treasury_manager', 'accountant', 'auditor'];
 
-// TODO (Task 12 of RBAC plan): UX pass on all role-facing copy when the
-// Permission Map card is built. Labels/descriptions/badges below for
-// `executive` are placeholders just to keep tsc green in Task 1.
+// Copy reflects the new RBAC hierarchy. Each description leads with what
+// the role CAN do, then flags a strict constraint when one applies.
+// Badge tints match Vantor's muted-tint system (bg-{color}-500/8 class).
 const ROLE_LABELS: Record<UserRole, string> = {
-  enterprise_admin: 'Admin',
+  enterprise_admin: 'Enterprise Admin',
   executive:        'Executive',
-  auditor:          'Auditor',
-  accountant:       'Accountant',
   treasury_manager: 'Treasury Manager',
+  accountant:       'Accountant',
+  auditor:          'Auditor',
 };
 
 const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
-  enterprise_admin: 'Full access including team management and billing',
-  executive:        'Senior approver for high-threshold transfers',
-  auditor:          'View-only access to all records and reports',
-  accountant:       'Manage invoices, wallets, and ERP connections',
-  treasury_manager: 'Full access including payments, swaps, and AI',
+  enterprise_admin: 'Authors policies, manages team, billing. Cannot approve transfers — strict separation of duties.',
+  executive:        'Senior approver for high-value transfers ($1M+). Cannot author policies.',
+  treasury_manager: 'Day-to-day operator and standard approver. Cannot author policies.',
+  accountant:       'Manages invoices, vendors, wallets, ERP. Can approve low-threshold transfers when placed on a chain.',
+  auditor:          'Read-only access to records and reports. Can sit on chains as a check.',
 };
 
+// Badge tints use Vantor's convention: bg-{color}-500/8 text-{color}-400
+// in dark mode. Amber signals "author role" (elevated), purple signals
+// "high-threshold approver," teal is the operator, blue is ops-support,
+// gray is audit/read.
 const ROLE_BADGE: Record<UserRole, string> = {
-  enterprise_admin: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
-  executive:        'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300',
-  treasury_manager: 'bg-[#19595b]/10 text-[#134849] dark:bg-teal-500/20 dark:text-teal-300',
-  accountant:       'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
-  auditor:          'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+  enterprise_admin: 'bg-amber-500/10 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
+  executive:        'bg-purple-500/10 text-purple-700 dark:bg-purple-500/10 dark:text-purple-300',
+  treasury_manager: 'bg-teal-500/10 text-[#134849] dark:bg-teal-500/10 dark:text-teal-300',
+  accountant:       'bg-blue-500/10 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300',
+  auditor:          'bg-gray-500/10 text-gray-600 dark:bg-gray-500/15 dark:text-gray-300',
 };
 
-// TODO (Task 12 of RBAC plan): UX pass — `executive` capabilities are
-// mirrored from `treasury_manager` as a placeholder. True differentiation
-// (no-author, yes-high-threshold-approve) lands with the Permission Map
-// card rebuild.
-const CAPABILITIES: { label: string; enterprise_admin: boolean; executive: boolean; auditor: boolean; accountant: boolean; treasury_manager: boolean }[] = [
-  { label: 'View dashboard & analytics',      enterprise_admin: true, executive: true,  auditor: true,  accountant: true,  treasury_manager: true  },
-  { label: 'View transactions & audit trail', enterprise_admin: true, executive: true,  auditor: true,  accountant: true,  treasury_manager: true  },
-  { label: 'View invoices & vendors',         enterprise_admin: true, executive: true,  auditor: true,  accountant: true,  treasury_manager: true  },
-  { label: 'View compliance',                 enterprise_admin: true, executive: true,  auditor: true,  accountant: true,  treasury_manager: true  },
-  { label: 'View reporting',                  enterprise_admin: true, executive: true,  auditor: false, accountant: true,  treasury_manager: true  },
-  { label: 'View payments history',           enterprise_admin: true, executive: true,  auditor: false, accountant: true,  treasury_manager: true  },
-  { label: 'View transfers history',          enterprise_admin: true, executive: true,  auditor: false, accountant: true,  treasury_manager: true  },
-  { label: 'View swaps history',              enterprise_admin: true, executive: true,  auditor: false, accountant: true,  treasury_manager: true  },
-  { label: 'View ramps history',              enterprise_admin: true, executive: true,  auditor: false, accountant: true,  treasury_manager: true  },
-  { label: 'View bridges history',            enterprise_admin: true, executive: true,  auditor: false, accountant: true,  treasury_manager: true  },
-  { label: 'View yield positions',            enterprise_admin: true, executive: true,  auditor: false, accountant: true,  treasury_manager: true  },
-  { label: 'View AI recommendations',         enterprise_admin: true, executive: true,  auditor: false, accountant: true,  treasury_manager: true  },
-  { label: 'Manage invoices & vendors',       enterprise_admin: true, executive: true,  auditor: false, accountant: true,  treasury_manager: true  },
-  { label: 'Link wallets & bank accounts',    enterprise_admin: true, executive: true,  auditor: false, accountant: true,  treasury_manager: true  },
-  { label: 'Link ERP systems',               enterprise_admin: true, executive: true,  auditor: false, accountant: true,  treasury_manager: true  },
-  { label: 'Execute payments',               enterprise_admin: true, executive: true,  auditor: false, accountant: false, treasury_manager: true  },
-  { label: 'Execute transfers',              enterprise_admin: true, executive: true,  auditor: false, accountant: false, treasury_manager: true  },
-  { label: 'Execute swaps',                  enterprise_admin: true, executive: true,  auditor: false, accountant: false, treasury_manager: true  },
-  { label: 'Execute ramps',                  enterprise_admin: true, executive: true,  auditor: false, accountant: false, treasury_manager: true  },
-  { label: 'Execute bridges',               enterprise_admin: true, executive: true,  auditor: false, accountant: false, treasury_manager: true  },
-  { label: 'Execute yield deposit/withdrawal', enterprise_admin: true, executive: true,  auditor: false, accountant: false, treasury_manager: true  },
-  { label: 'Generate treasury rules',        enterprise_admin: true, executive: true,  auditor: false, accountant: false, treasury_manager: true  },
-  { label: 'Treasury AI & recommendations',  enterprise_admin: true, executive: true,  auditor: false, accountant: false, treasury_manager: true  },
-  { label: 'Manage integrations & billing',  enterprise_admin: true, executive: false, auditor: false, accountant: false, treasury_manager: true  },
-  { label: 'Manage users & permissions',     enterprise_admin: true, executive: false, auditor: false, accountant: false, treasury_manager: true  },
+// Permission matrix reflecting the RBAC hierarchy:
+//   - enterprise_admin authors policies + manages org but CANNOT approve
+//     transfers or directly execute movements (strict SoD)
+//   - executive approves high-value transfers, does not execute day-to-day
+//   - treasury_manager is the operator — executes transfers, approves at
+//     standard thresholds
+//   - accountant does back-office ops, can approve low-threshold chains
+//   - auditor is read-only with placement-based approval
+const CAPABILITIES: { label: string; enterprise_admin: boolean; executive: boolean; treasury_manager: boolean; accountant: boolean; auditor: boolean }[] = [
+  // Read — everyone sees
+  { label: 'View dashboard & analytics',      enterprise_admin: true,  executive: true,  treasury_manager: true,  accountant: true,  auditor: true  },
+  { label: 'View transactions & audit trail', enterprise_admin: true,  executive: true,  treasury_manager: true,  accountant: true,  auditor: true  },
+  { label: 'View compliance',                 enterprise_admin: true,  executive: true,  treasury_manager: true,  accountant: true,  auditor: true  },
+  { label: 'View reporting',                  enterprise_admin: true,  executive: true,  treasury_manager: true,  accountant: true,  auditor: false },
+  { label: 'View yield positions',            enterprise_admin: true,  executive: true,  treasury_manager: true,  accountant: true,  auditor: false },
+
+  // Back-office — accountant + ops
+  { label: 'Manage invoices & vendors',       enterprise_admin: true,  executive: false, treasury_manager: true,  accountant: true,  auditor: false },
+  { label: 'Link wallets & bank accounts',    enterprise_admin: true,  executive: false, treasury_manager: true,  accountant: true,  auditor: false },
+  { label: 'Link ERP systems',                enterprise_admin: true,  executive: false, treasury_manager: true,  accountant: true,  auditor: false },
+
+  // Execution — operator role
+  { label: 'Initiate transfers',              enterprise_admin: false, executive: false, treasury_manager: true,  accountant: false, auditor: false },
+  { label: 'Initiate swaps',                  enterprise_admin: false, executive: false, treasury_manager: true,  accountant: false, auditor: false },
+  { label: 'Initiate ramps',                  enterprise_admin: false, executive: false, treasury_manager: true,  accountant: false, auditor: false },
+  { label: 'Initiate bridges',                enterprise_admin: false, executive: false, treasury_manager: true,  accountant: false, auditor: false },
+  { label: 'Initiate payments',               enterprise_admin: false, executive: false, treasury_manager: true,  accountant: false, auditor: false },
+  { label: 'Initiate yield deposit/withdraw', enterprise_admin: false, executive: false, treasury_manager: true,  accountant: false, auditor: false },
+
+  // Approval — placement-based; matrix shows baseline slot eligibility
+  { label: 'Approve low-threshold transfers',    enterprise_admin: false, executive: true,  treasury_manager: true,  accountant: true,  auditor: true  },
+  { label: 'Approve standard-threshold transfers', enterprise_admin: false, executive: true,  treasury_manager: true,  accountant: false, auditor: false },
+  { label: 'Approve high-threshold transfers ($1M+)', enterprise_admin: false, executive: true,  treasury_manager: false, accountant: false, auditor: false },
+
+  // Authoring — strict
+  { label: 'Author policy rules & chains',    enterprise_admin: true,  executive: false, treasury_manager: false, accountant: false, auditor: false },
+  { label: 'Activate policy versions',        enterprise_admin: true,  executive: false, treasury_manager: false, accountant: false, auditor: false },
+  { label: 'Edit hard limits',                enterprise_admin: true,  executive: false, treasury_manager: false, accountant: false, auditor: false },
+  { label: 'Edit RBAC settings',              enterprise_admin: true,  executive: false, treasury_manager: false, accountant: false, auditor: false },
+
+  // Org-level — admin-only
+  { label: 'Manage integrations & billing',   enterprise_admin: true,  executive: false, treasury_manager: false, accountant: false, auditor: false },
+  { label: 'Manage users & permissions',      enterprise_admin: true,  executive: false, treasury_manager: false, accountant: false, auditor: false },
 ];
+
+// ── RBAC Settings Card ────────────────────────────────────────────────────────
+// Enterprise-admin-only surface for the author-approver separation toggle.
+// Mirrors the locked CTA hierarchy — the toggle is a real Switch, Save
+// is `btn-gradient` (filled primary per Vantor convention), the action
+// always confirms with a short inline note explaining the blast radius.
+function RbacSettingsCard({ sessionRole }: { sessionRole: UserRole | undefined }) {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [enabled, setEnabled] = useState<boolean>(true);
+  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const canEdit = sessionRole === 'enterprise_admin';
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/enterprise/rbac-settings')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (cancelled) return;
+        if (d?.data?.authorApproverSeparationEnabled !== undefined) {
+          setEnabled(d.data.authorApproverSeparationEnabled);
+        }
+        setLoading(false);
+      })
+      .catch(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch('/api/enterprise/rbac-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ authorApproverSeparationEnabled: enabled }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.reason ?? body?.error ?? `HTTP ${res.status}`);
+      }
+      toast({
+        title: 'RBAC settings updated',
+        description: `Author-approver separation is now ${enabled ? 'strict' : 'off'}.`,
+        variant: 'success',
+      });
+      setDirty(false);
+    } catch (err) {
+      toast({
+        title: 'Could not save',
+        description: (err as Error).message,
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Shield className="h-5 w-5 text-[#19595b] dark:text-teal-400" />
+          Policy & Approval Settings
+        </CardTitle>
+        <CardDescription>
+          Controls how strictly the approval workflow enforces separation of duties.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-start justify-between gap-6 rounded-lg border border-border bg-muted/30 p-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-medium text-sm">Author-approver separation</span>
+              <span
+                className={cn(
+                  'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium',
+                  enabled
+                    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                    : 'bg-gray-500/10 text-gray-600 dark:text-gray-400',
+                )}
+              >
+                {loading ? '…' : enabled ? 'strict' : 'off'}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground leading-snug">
+              When strict, a user who authored a rule cannot approve transfers triggered by that rule.
+              Recommended for production orgs. Small teams may disable for self-serve bootstrap.
+            </p>
+            {!canEdit && (
+              <p className="text-[11px] text-muted-foreground mt-2 italic">
+                Only enterprise admins can change this setting.
+              </p>
+            )}
+          </div>
+          <div className="flex flex-col items-end gap-2">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={enabled}
+              aria-label="Author-approver separation"
+              disabled={!canEdit || loading || saving}
+              onClick={() => {
+                if (!canEdit) return;
+                setEnabled((v) => !v);
+                setDirty(true);
+              }}
+              className={cn(
+                'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors',
+                enabled ? 'bg-[#19595b] dark:bg-teal-500' : 'bg-gray-300 dark:bg-gray-600',
+                (!canEdit || loading || saving) && 'opacity-50 cursor-not-allowed',
+              )}
+            >
+              <span
+                className={cn(
+                  'inline-block h-5 w-5 transform rounded-full bg-white transition-transform',
+                  enabled ? 'translate-x-5' : 'translate-x-0.5',
+                )}
+              />
+            </button>
+            {dirty && canEdit && (
+              <Button size="sm" onClick={save} disabled={saving}>
+                {saving ? 'Saving…' : 'Save'}
+              </Button>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 // ── Role Picker ────────────────────────────────────────────────────────────────
 function RolePicker({ value, onChange }: { value: UserRole; onChange: (r: UserRole) => void }) {
@@ -117,7 +270,7 @@ function RolePicker({ value, onChange }: { value: UserRole; onChange: (r: UserRo
       </button>
 
       {open && (
-        <div className="animate-dropdown absolute right-0 z-50 mt-1.5 w-64 rounded-xl border border-border bg-popover p-1.5 shadow-xl">
+        <div className="animate-dropdown absolute right-0 z-50 mt-1.5 w-72 rounded-xl border border-border bg-popover p-1.5 shadow-xl">
           {ROLES.map((role) => (
             <button
               key={role}
@@ -134,6 +287,18 @@ function RolePicker({ value, onChange }: { value: UserRole; onChange: (r: UserRo
                   <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium', ROLE_BADGE[role])}>
                     {ROLE_LABELS[role]}
                   </span>
+                  {/* Shield signals strict separation of duties: enterprise_admin cannot
+                      fill approval slots regardless of rank. Surfaces the invariant up
+                      front so admins don't wonder why they can't approve later. */}
+                  {role === 'enterprise_admin' && (
+                    <span
+                      className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-600 dark:text-amber-400"
+                      title="Enterprise admins cannot approve transfers — strict separation of duties"
+                    >
+                      <Shield className="h-3 w-3" />
+                      no approvals
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground leading-snug">{ROLE_DESCRIPTIONS[role]}</p>
               </div>
@@ -202,16 +367,46 @@ export default function AccountManagementPage() {
     setConfirmRole({ user, newRole });
   };
 
-  const applyRoleChange = () => {
+  const [roleChangeInFlight, setRoleChangeInFlight] = useState(false);
+
+  const applyRoleChange = async () => {
     if (!confirmRole) return;
     const { user, newRole } = confirmRole;
+    setRoleChangeInFlight(true);
+
+    // Optimistic UI: flip locally, roll back on failure. The previous
+    // implementation ONLY mutated local state and never persisted —
+    // refresh and the change reverted. This is the bug fix.
+    const previousRole = user.role;
     setUsers((prev) => prev.map((u) => u.id === user.id ? { ...u, role: newRole } : u));
-    toast({
-      title: 'Role updated',
-      description: `${user.name} is now a${newRole === 'auditor' ? 'n' : ''} ${ROLE_LABELS[newRole]}.`,
-      variant: 'success',
-    });
-    setConfirmRole(null);
+
+    try {
+      const res = await fetch(`/api/user/enterprise/team/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: newRole }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.reason ?? body?.error ?? `HTTP ${res.status}`);
+      }
+      toast({
+        title: 'Role updated',
+        description: `${user.name} is now ${ROLE_LABELS[newRole]}.`,
+        variant: 'success',
+      });
+      setConfirmRole(null);
+    } catch (err) {
+      // Roll back optimistic update
+      setUsers((prev) => prev.map((u) => u.id === user.id ? { ...u, role: previousRole } : u));
+      toast({
+        title: 'Role change failed',
+        description: (err as Error).message,
+        variant: 'destructive',
+      });
+    } finally {
+      setRoleChangeInFlight(false);
+    }
   };
 
   const handleRemove = (id: string) => {
@@ -269,6 +464,9 @@ export default function AccountManagementPage() {
           </Card>
         )}
 
+        {/* RBAC Settings — author-approver separation toggle */}
+        <RbacSettingsCard sessionRole={session?.user?.role as UserRole | undefined} />
+
         {/* Confirm role change dialog */}
         <Dialog open={!!confirmRole} onOpenChange={(o) => { if (!o) setConfirmRole(null); }}>
           <DialogContent>
@@ -286,8 +484,12 @@ export default function AccountManagementPage() {
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setConfirmRole(null)}>Cancel</Button>
-              <Button onClick={applyRoleChange}>Confirm</Button>
+              <Button variant="outline" onClick={() => setConfirmRole(null)} disabled={roleChangeInFlight}>
+                Cancel
+              </Button>
+              <Button onClick={applyRoleChange} disabled={roleChangeInFlight}>
+                {roleChangeInFlight ? 'Updating…' : 'Confirm'}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
