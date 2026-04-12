@@ -80,7 +80,7 @@ describe('PolicyGateService', () => {
       verdict: 'allow_auto',
       trace: makeTrace(),
       reason_codes: [],
-    } as EvaluationResult);
+    } as unknown as EvaluationResult);
 
     const approvalService = mockApprovalService();
     const gate = new PolicyGateService(SUPABASE, { evaluate, approvalService });
@@ -100,7 +100,7 @@ describe('PolicyGateService', () => {
       trace: makeTrace(),
       reason_codes: [],
       required_chain: CHAIN,
-    } as EvaluationResult);
+    } as unknown as EvaluationResult);
 
     const approvalService = mockApprovalService();
     const gate = new PolicyGateService(SUPABASE, { evaluate, approvalService });
@@ -128,7 +128,7 @@ describe('PolicyGateService', () => {
       verdict: 'block',
       trace: makeTrace(),
       reason_codes: ['sanctioned_counterparty'],
-    } as EvaluationResult);
+    } as unknown as EvaluationResult);
 
     const gate = new PolicyGateService(SUPABASE, {
       evaluate,
@@ -150,7 +150,7 @@ describe('PolicyGateService', () => {
       verdict: 'block_hard_limit',
       trace: makeTrace(),
       reason_codes: ['max_daily_outflow_usd'],
-    } as EvaluationResult);
+    } as unknown as EvaluationResult);
 
     const gate = new PolicyGateService(SUPABASE, {
       evaluate,
@@ -209,7 +209,7 @@ describe('PolicyGateService', () => {
       trace: makeTrace(),
       reason_codes: [],
       required_chain: CHAIN,
-    } as EvaluationResult);
+    } as unknown as EvaluationResult);
 
     const approvalService = {
       createApprovalRequest: vi.fn().mockRejectedValue(new Error('DB down')),
@@ -232,7 +232,7 @@ describe('PolicyGateService', () => {
       trace: makeTrace(),
       reason_codes: [],
       // required_chain is missing — policy bug
-    } as EvaluationResult);
+    } as unknown as EvaluationResult);
 
     const gate = new PolicyGateService(SUPABASE, {
       evaluate,
@@ -281,7 +281,7 @@ describe('PolicyGateService', () => {
       trace: makeTrace(),
       reason_codes: [],
       required_chain: CHAIN,
-    } as EvaluationResult);
+    } as unknown as EvaluationResult);
 
     const approvalService = mockApprovalService();
     const gate = new PolicyGateService(SUPABASE, { evaluate, approvalService });
@@ -297,7 +297,7 @@ describe('PolicyGateService', () => {
       verdict: 'allow_auto',
       trace: makeTrace({ policy_version_id: null }),
       reason_codes: [],
-    } as EvaluationResult);
+    } as unknown as EvaluationResult);
 
     const approvalService = mockApprovalService();
     const gate = new PolicyGateService(SUPABASE, { evaluate, approvalService });
@@ -314,7 +314,7 @@ describe('PolicyGateService', () => {
       trace: makeTrace(),
       reason_codes: [],
       required_chain: CHAIN,
-    } as EvaluationResult);
+    } as unknown as EvaluationResult);
 
     const approvalService = mockApprovalService();
     const gate = new PolicyGateService(SUPABASE, { evaluate, approvalService });

@@ -9,6 +9,15 @@ import { checkTransferEligibility } from '@/lib/sanctions/eligibility';
 import { z } from 'zod';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 import { requirePaidTier, tierGateResponse, TierGateError } from '@/lib/auth/tier-gate';
+import {
+  PolicyGateService,
+  mapTransferToMovement,
+  GateError,
+  mapGateErrorToHttp,
+  type GateActor,
+} from '@/lib/policy/gate';
+import { buildProductionEvaluate } from '@/lib/policy/gate/production-wiring';
+import { ApprovalWorkflowService } from '@/lib/policy/approvals';
 
 const PAYMENT_STATUSES = ['pending', 'processing', 'completed', 'failed', 'cancelled'] as const;
 
@@ -83,7 +92,7 @@ export async function POST(req: NextRequest) {
   // Verify wallet belongs to user
   const { data: wallet } = await supabase
     .from('wallets')
-    .select('id, chain')
+    .select('id, chain, address')
     .eq('id', parsed.data.fromWalletId)
     .eq('user_id', session.user.id)
     .eq('enterprise_id', enterpriseId)
@@ -142,11 +151,35 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Create pending transfer record — the client will drive on-chain execution
-  // via the user's connected wallet and call /api/transfers/confirm when done.
+  // ─── Policy gate + approval workflow integration ──────────────────
+  //
+  // Build the movement (pure, generates a fresh UUID). transfer.id =
+  // movement.id so the approval request can reference the transfer by
+  // its PK.
+  const movement = mapTransferToMovement(
+    {
+      fromWalletId: parsed.data.fromWalletId,
+      toAddress: parsed.data.toAddress,
+      chain: parsed.data.chain,
+      token: parsed.data.token,
+      amount: parsed.data.amount,
+      memo: parsed.data.memo,
+      counterpartyId: parsed.data.counterpartyId,
+    },
+    {
+      userId: session.user.id,
+      enterpriseId: enterpriseId as string,
+      fromAddress: (wallet as { address?: string }).address ?? '',
+    },
+  );
+
+  // Defensive insert: status='awaiting_approval' first. Flipped to 'pending'
+  // on allow_auto, or to 'denied' on gate throw. No signable row exists
+  // until the gate confirms it should.
   const { data: transfer, error: pErr } = await supabase
     .from('transfers')
     .insert({
+      id: movement.id,
       user_id: session.user.id,
       enterprise_id: enterpriseId,
       direction: 'sent',
@@ -161,24 +194,97 @@ export async function POST(req: NextRequest) {
       erp_config_id: parsed.data.erpConfigId ?? null,
       counterparty_id: parsed.data.counterpartyId ?? null,
       scheduled_for: null,
-      status: 'pending',
+      status: 'awaiting_approval',
     })
     .select()
     .single();
 
   if (pErr) return NextResponse.json({ error: pErr.message }, { status: 500 });
 
+  // Build + run the gate.
+  const gateService = new PolicyGateService(supabase, {
+    evaluate: buildProductionEvaluate(supabase),
+    approvalService: new ApprovalWorkflowService(supabase),
+  });
+
+  const actor: GateActor = {
+    user_id: session.user.id,
+    role: session.user.role as GateActor['role'],
+    enterprise_id: enterpriseId as string,
+  };
+
+  let gateResult;
+  try {
+    gateResult = await gateService.gate(movement, actor);
+  } catch (err) {
+    if (err instanceof GateError) {
+      // Rollback path: flip transfer to denied with the reason code.
+      await supabase
+        .from('transfers')
+        .update({ status: 'denied', denial_reason: err.reason_code })
+        .eq('id', transfer.id);
+
+      await writeAuditLog({
+        userId: session.user.id,
+        action: 'transfer_create_blocked',
+        entityType: 'transfer',
+        entityId: transfer.id,
+        details: {
+          reason_code: err.reason_code,
+          trace: (err.details as Record<string, unknown>)?.trace ?? undefined,
+        },
+      });
+
+      const { status, body } = mapGateErrorToHttp(err);
+      return NextResponse.json(body, { status });
+    }
+    // Unexpected error — rethrow so Next.js error boundary handles it.
+    throw err;
+  }
+
+  if (gateResult.verdict === 'allow_auto') {
+    await supabase
+      .from('transfers')
+      .update({ status: 'pending' })
+      .eq('id', transfer.id);
+
+    await writeAuditLog({
+      userId: session.user.id,
+      action: 'transfer_create',
+      entityType: 'transfer',
+      entityId: transfer.id,
+      details: {
+        chain: transfer.chain,
+        token: transfer.token,
+        amount: transfer.amount,
+      },
+    });
+
+    return NextResponse.json(
+      { data: { ...transfer, status: 'pending' } },
+      { status: 201 },
+    );
+  }
+
+  // require_approval — transfer stays 'awaiting_approval', approval_request
+  // already created by the gate.
   await writeAuditLog({
     userId: session.user.id,
-    action: 'transfer_create',
+    action: 'transfer_create_requires_approval',
     entityType: 'transfer',
     entityId: transfer.id,
     details: {
-      chain: transfer.chain,
-      token: transfer.token,
-      amount: transfer.amount,
+      approval_request_id: gateResult.approval_request.id,
+      chain_id: gateResult.approval_request.chain_id,
+      chain_name: gateResult.evaluation.required_chain?.chain_name,
     },
   });
 
-  return NextResponse.json({ data: transfer }, { status: 201 });
+  return NextResponse.json(
+    {
+      data: { ...transfer, status: 'awaiting_approval' },
+      approval_request: gateResult.approval_request,
+    },
+    { status: 202 },
+  );
 }

@@ -210,7 +210,7 @@ export class PolicyGateService {
    * 'unknown' for defensive completeness.
    */
   private readVersionId(evaluation: EvaluationResult): string {
-    const trace = evaluation.trace as Record<string, unknown> | undefined;
+    const trace = evaluation.trace as unknown as Record<string, unknown> | undefined;
     const versionId = trace?.policy_version_id;
     return typeof versionId === 'string' ? versionId : 'unknown';
   }
@@ -219,7 +219,7 @@ export class PolicyGateService {
    * Extract the triggered rule ids from the evaluation trace.
    */
   private readTriggeredRuleIds(evaluation: EvaluationResult): string[] {
-    const trace = evaluation.trace as Record<string, unknown> | undefined;
+    const trace = evaluation.trace as unknown as Record<string, unknown> | undefined;
     const ids = trace?.triggered_rule_ids;
     return Array.isArray(ids) ? (ids as string[]) : [];
   }

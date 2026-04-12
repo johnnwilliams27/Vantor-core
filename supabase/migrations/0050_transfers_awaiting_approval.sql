@@ -25,3 +25,9 @@ CREATE INDEX IF NOT EXISTS transfers_status_idx ON transfers (status);
 ALTER TABLE transfers DROP CONSTRAINT IF EXISTS transfers_denial_reason_length_check;
 ALTER TABLE transfers ADD CONSTRAINT transfers_denial_reason_length_check
   CHECK (denial_reason IS NULL OR LENGTH(denial_reason) <= 200);
+
+-- Audit action values for policy-gate outcomes. Keeps the CFO audit trail
+-- explicit: an approval-requested transfer is distinct from a blocked one
+-- and from a normal create.
+ALTER TYPE audit_action ADD VALUE IF NOT EXISTS 'transfer_create_blocked';
+ALTER TYPE audit_action ADD VALUE IF NOT EXISTS 'transfer_create_requires_approval';
