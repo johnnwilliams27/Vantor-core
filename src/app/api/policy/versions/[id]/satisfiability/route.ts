@@ -1,0 +1,29 @@
+import { NextRequest, NextResponse } from 'next/server';
+import {
+  handleAuthoringRequest,
+  AuthoringContext,
+} from '@/lib/policy/authoring/http';
+import { canViewActivePolicy } from '@/lib/policy/authoring/permissions';
+import { AuthoringError } from '@/lib/policy/authoring/errors';
+import { REASON_CODES } from '@/lib/policy/errors/reason-codes';
+
+export function POST(
+  req: NextRequest,
+  { params }: { params: { id: string } },
+) {
+  return handleAuthoringRequest(
+    async (_req: NextRequest, { actor, service }: AuthoringContext) => {
+      if (!canViewActivePolicy(actor.role)) {
+        throw new AuthoringError({
+          reason_code: REASON_CODES.requires_policy_admin,
+          human_readable: 'Checking satisfiability requires at least auditor role.',
+          user_action: 'Ask an admin to elevate your role.',
+          details: { role: actor.role },
+        });
+      }
+
+      const result = await service.checkSatisfiability(actor, params.id);
+      return NextResponse.json({ data: result });
+    },
+  )(req);
+}
