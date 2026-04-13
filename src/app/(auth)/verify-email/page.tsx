@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useCallback } from 'react';
+import { Suspense, useEffect, useCallback, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -62,6 +62,22 @@ function VerifyEmailContent() {
   const email = searchParams.get('email');
   const config = statusConfig[status] || statusConfig.pending;
   const Icon = config.icon;
+  const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+
+  const handleResend = async () => {
+    if (!email) return;
+    setResendState('sending');
+    try {
+      const res = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      setResendState(res.ok ? 'sent' : 'error');
+    } catch {
+      setResendState('error');
+    }
+  };
 
   const checkVerification = useCallback(async () => {
     if (!email) return false;
@@ -123,9 +139,28 @@ function VerifyEmailContent() {
           )}
 
           {status === 'pending' && email && (
-            <p className="text-xs text-[var(--text-400)] mt-4 animate-pulse">
-              This page will update automatically once verified.
-            </p>
+            <>
+              <p className="text-xs text-[var(--text-400)] mt-4 animate-pulse">
+                This page will update automatically once verified.
+              </p>
+              <div className="mt-4 text-xs text-[var(--text-400)]">
+                Didn&rsquo;t get it?{' '}
+                {resendState === 'sent' ? (
+                  <span className="text-[var(--teal-400)]">Sent — check your inbox.</span>
+                ) : resendState === 'error' ? (
+                  <span className="text-red-400">Couldn&rsquo;t send. Try again in a moment.</span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={resendState === 'sending'}
+                    className="font-medium text-[var(--teal-400)] hover:text-[var(--teal-300)] underline underline-offset-2 disabled:opacity-60"
+                  >
+                    {resendState === 'sending' ? 'Sending…' : 'Resend verification email'}
+                  </button>
+                )}
+              </div>
+            </>
           )}
 
           {status === 'expired' && (
