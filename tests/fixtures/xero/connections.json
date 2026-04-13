@@ -1,0 +1,12 @@
+{
+  "response": [
+    {
+      "id": "a1234567-0000-0000-0000-000000000001",
+      "tenantId": "tenant-test-0001",
+      "tenantType": "ORGANISATION",
+      "tenantName": "Demo Company (Global)",
+      "createdDateUtc": "2025-01-01T00:00:00Z",
+      "updatedDateUtc": "2025-01-01T00:00:00Z"
+    }
+  ]
+}

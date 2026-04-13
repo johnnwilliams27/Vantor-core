@@ -1,0 +1,17 @@
+{
+  "Id": "req-payment-0001",
+  "Status": "OK",
+  "Payments": [
+    {
+      "PaymentID": "p0000001-0000-0000-0000-000000000001",
+      "Date": "2025-04-10",
+      "Amount": 12500.00,
+      "CurrencyRate": 1.0,
+      "Reference": "Vantor-USDC tx:0xabcdef",
+      "Status": "AUTHORISED",
+      "PaymentType": "ACCPAYPAYMENT",
+      "Invoice": { "InvoiceID": "i0000001-0000-0000-0000-000000000001" },
+      "Account": { "AccountID": "a0000001-0000-0000-0000-000000000001" }
+    }
+  ]
+}

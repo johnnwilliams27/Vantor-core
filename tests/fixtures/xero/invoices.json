@@ -1,0 +1,24 @@
+{
+  "Id": "req-invoices-0001",
+  "Status": "OK",
+  "ProviderName": "Xero API Partner",
+  "DateTimeUTC": "/Date(1704067200000)/",
+  "Invoices": [
+    {
+      "InvoiceID": "i0000001-0000-0000-0000-000000000001",
+      "InvoiceNumber": "XERO-2025-001",
+      "Type": "ACCPAY",
+      "Contact": { "ContactID": "c0000001-0000-0000-0000-000000000001" },
+      "Date": "2025-04-01",
+      "DueDate": "2025-05-01",
+      "Status": "AUTHORISED",
+      "LineAmountTypes": "Exclusive",
+      "SubTotal": 12500.00,
+      "TotalTax": 0.00,
+      "Total": 12500.00,
+      "AmountDue": 12500.00,
+      "AmountPaid": 0.00,
+      "CurrencyCode": "USD"
+    }
+  ]
+}
