@@ -32,7 +32,7 @@ export function Hero() {
         <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 landing-fade-in landing-delay-3">
           <Link
             href="/register"
-            className="group w-full sm:w-auto min-h-[52px] px-10 py-4 text-base btn-gradient flex items-center justify-center"
+            className="group w-full sm:w-auto min-h-[52px] px-10 py-4 text-base font-semibold rounded-lg bg-white text-[var(--bg-void)] shadow-[0_4px_16px_rgba(0,0,0,0.3)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.4)] hover:-translate-y-px active:scale-[0.98] transition-all duration-200 flex items-center justify-center"
           >
             Get Started Free
             <ArrowRight size={16} aria-hidden="true" className="inline ml-2 group-hover:translate-x-0.5 transition-transform duration-200" />
