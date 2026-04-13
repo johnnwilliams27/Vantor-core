@@ -55,7 +55,7 @@ export async function POST(
   // Load the draft version via the authoring service so we reuse the
   // same hydration logic used elsewhere (returns a PolicyVersionSnapshot
   // with rules + hard_limits + chains already joined).
-  const authoring = new PolicyAuthoringService(supabase);
+  const authoring = new PolicyAuthoringService(supabase as unknown as ConstructorParameters<typeof PolicyAuthoringService>[0]);
   const actor = {
     user_id: session.user.id,
     role: session.user.role as any,
