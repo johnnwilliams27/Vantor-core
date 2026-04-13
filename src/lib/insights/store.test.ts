@@ -4,7 +4,7 @@ import {
   VALID_TRANSITIONS,
   isValidTransition,
 } from './store';
-import type { InsightState, InsightType } from './types';
+import type { DetectedInsight, InsightState, InsightType } from './types';
 
 /**
  * Pure tests for the insight state machine + cooldown table.
@@ -157,5 +157,28 @@ describe('DEFAULT_COOLDOWN_HOURS', () => {
     expect(DEFAULT_COOLDOWN_HOURS.concentration_breach).toBeLessThan(
       DEFAULT_COOLDOWN_HOURS.concentration_warning,
     );
+  });
+});
+
+describe('DetectedInsight type', () => {
+  it('DetectedInsight requires channel field at the type level', () => {
+    // Type-level assertion: this object must satisfy DetectedInsight,
+    // which means `channel` is a required field. If Task 6 ever drops
+    // the field from the interface, this test won't compile.
+    const insight: DetectedInsight = {
+      channel: 'deterministic',
+      type: 'concentration_warning',
+      severity: 'info',
+      title: 'test',
+      summary: 'test',
+      rationale: {},
+      recommendedAction: null,
+      impact: {},
+      dedupKey: 'test:dedup',
+      dataFreshness: 'fresh',
+      supportingData: {},
+      confidence: 0.9,
+    };
+    expect(insight.channel).toBe('deterministic');
   });
 });

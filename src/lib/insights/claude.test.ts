@@ -36,6 +36,7 @@ afterAll(() => {
 
 function buildInsight(overrides: Partial<DetectedInsight> = {}): DetectedInsight {
   return {
+    channel: 'deterministic',
     type: 'liquidity_below_buffer',
     severity: 'critical',
     title: 'Projected balance falls below safety buffer',

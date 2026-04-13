@@ -70,6 +70,7 @@ export const liquidityDetector: Detector = {
       );
 
       insights.push({
+        channel: 'deterministic',
         type: 'liquidity_below_buffer',
         severity: 'critical',
         title: 'Projected balance falls below safety buffer',
@@ -112,6 +113,7 @@ export const liquidityDetector: Detector = {
     if (!belowBuffer && availableCashUsd > safetyBuffer * IDLE_CASH_MULTIPLIER) {
       const excessUsd = availableCashUsd - safetyBuffer;
       insights.push({
+        channel: 'deterministic',
         type: 'liquidity_idle_cash',
         severity: 'info',
         title: 'Idle stablecoin balance exceeds safety buffer',
