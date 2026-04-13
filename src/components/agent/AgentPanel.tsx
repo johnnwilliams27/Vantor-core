@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import type Anthropic from '@anthropic-ai/sdk';
 import { useAppStore } from '@/store/appStore';
 import type { AgentMessage, SseEvent, ToolCallDisplay } from '@/lib/agent/types';
+import { HoverTooltip } from '@/components/ui/hover-tooltip';
 import { MessageList } from './MessageList';
 import { AgentInput } from './AgentInput';
 
@@ -176,22 +177,25 @@ export function AgentPanel() {
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <button
-                onClick={clearAgentMessages}
-                disabled={isStreaming || messages.length === 0}
-                className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                aria-label="Clear chat"
-                title="Clear chat"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-              <button
-                onClick={toggleAgentPanel}
-                className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                aria-label="Close agent panel"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <HoverTooltip label="Clear chat" side="bottom">
+                <button
+                  onClick={clearAgentMessages}
+                  disabled={isStreaming || messages.length === 0}
+                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  aria-label="Clear chat"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </HoverTooltip>
+              <HoverTooltip label="Close" side="bottom">
+                <button
+                  onClick={toggleAgentPanel}
+                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  aria-label="Close agent panel"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </HoverTooltip>
             </div>
           </div>
 

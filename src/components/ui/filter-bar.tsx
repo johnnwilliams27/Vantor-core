@@ -240,7 +240,7 @@ export function FilterBar({
                   }}
                   disabled={exportingCsv}
                   className="flex items-center gap-1 h-7 px-2 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-                  title="Export CSV"
+                  aria-label="Export CSV"
                 >
                   {exportingCsv ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
                   CSV
@@ -254,7 +254,7 @@ export function FilterBar({
                   }}
                   disabled={exportingPdf}
                   className="flex items-center gap-1 h-7 px-2 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-                  title="Export PDF"
+                  aria-label="Export PDF"
                 >
                   {exportingPdf ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />}
                   PDF

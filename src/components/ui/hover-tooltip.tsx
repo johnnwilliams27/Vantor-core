@@ -38,9 +38,11 @@ export function HoverTooltip({
       <span
         role="tooltip"
         className={cn(
-          'pointer-events-none absolute left-1/2 z-50 hidden -translate-x-1/2 whitespace-nowrap rounded-lg border border-border bg-popover px-2.5 py-1 text-xs font-medium text-foreground shadow-lg group-hover:block group-focus-within:block',
-          side === 'top' && 'bottom-full mb-1.5',
-          side === 'bottom' && 'top-full mt-1.5',
+          'pointer-events-none absolute left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded-lg border border-border bg-popover px-2.5 py-1 text-xs font-medium text-foreground shadow-lg',
+          'opacity-0 scale-95 transition-[opacity,transform] duration-150 ease-out',
+          'group-hover:opacity-100 group-hover:scale-100 group-focus-within:opacity-100 group-focus-within:scale-100',
+          side === 'top' && 'bottom-full mb-1.5 origin-bottom',
+          side === 'bottom' && 'top-full mt-1.5 origin-top',
         )}
       >
         {label}
