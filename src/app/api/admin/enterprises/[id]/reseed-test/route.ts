@@ -36,18 +36,38 @@ export async function POST(
     return NextResponse.json({ error: 'Enterprise not found' }, { status: 404 });
   }
 
-  // Accept either: (a) pass real enterprise id and we follow test_enterprise_id,
-  // or (b) pass test enterprise id directly (useful if admin looked it up manually).
+  // Resolve both test enterprise id and the REAL enterprise id — seedAll needs
+  // the real one to find a user (users are associated with the real enterprise,
+  // not the test one). Accept either:
+  //   (a) admin passed the real enterprise id: walk to test_enterprise_id
+  //   (b) admin passed the test enterprise id: reverse-lookup the real one
   let testEnterpriseId: string | null = null;
+  let realEnterpriseId: string | null = null;
+
   if (ent.is_test_enterprise) {
+    // Passed the test enterprise id — find the real enterprise that links to it
     testEnterpriseId = ent.id;
+    const { data: real } = await supabase
+      .from('enterprises')
+      .select('id')
+      .eq('test_enterprise_id', ent.id)
+      .maybeSingle();
+    realEnterpriseId = real?.id ?? null;
   } else if (ent.test_enterprise_id) {
+    // Passed the real enterprise id
     testEnterpriseId = ent.test_enterprise_id;
+    realEnterpriseId = ent.id;
   }
 
   if (!testEnterpriseId) {
     return NextResponse.json(
       { error: 'No test enterprise linked to this enterprise' },
+      { status: 404 }
+    );
+  }
+  if (!realEnterpriseId) {
+    return NextResponse.json(
+      { error: 'Could not resolve the real enterprise that owns this test enterprise' },
       { status: 404 }
     );
   }
@@ -70,19 +90,20 @@ export async function POST(
     .update({ test_data_wiped_at: null })
     .eq('id', testEnterpriseId);
 
-  // Source enterprise for user resolution inside seedAll
-  const sourceEnterpriseId = ent.is_test_enterprise ? id : ent.id;
-  await seedAll(testEnterpriseId, sourceEnterpriseId, supabase);
-
-  // Audit log
-  await supabase.from('audit_logs').insert({
-    user_id: session.user.id,
-    action: 'admin_reseed_test_enterprise',
-    details: {
-      enterprise_id: id,
-      test_enterprise_id: testEnterpriseId,
-    },
-  });
+  // seedAll resolves the userId from user_profiles.enterprise_id = sourceEnterpriseId.
+  // Users live under the REAL enterprise, so we must pass realEnterpriseId here.
+  // Prior bug: when admin clicked the button from the test enterprise's own detail
+  // page, sourceEnterpriseId collapsed to the test id and userId resolution returned
+  // null, causing seedAll to early-return with zero rows written.
+  try {
+    await seedAll(testEnterpriseId, realEnterpriseId, supabase);
+  } catch (err) {
+    console.error('[admin reseed] seedAll threw', err);
+    return NextResponse.json(
+      { error: `Seed failed: ${(err as Error).message ?? 'unknown'}` },
+      { status: 500 }
+    );
+  }
 
   return NextResponse.json({ ok: true, testEnterpriseId });
 }
