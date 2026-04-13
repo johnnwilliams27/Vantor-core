@@ -26,6 +26,7 @@ export async function wipeTestEnterprise(
   }
 
   const tables = [
+    'notifications',
     'audit_logs',
     'travel_rule_transfers',
     'kyt_alerts',
@@ -33,6 +34,14 @@ export async function wipeTestEnterprise(
     'sanctions_screenings',
     'yield_transactions',
     'yield_positions',
+    'treasury_insights',
+    'analytics_pin_preferences',
+    'treasury_state_snapshots',
+    'policy_hard_limits',
+    'policy_rules',
+    'policy_approval_chains',
+    'policy_versions',
+    'policy_policies',
     'simulation_runs',
     // treasury_forecasts dropped in migration 0044 (Phase A T20)
     'ai_recommendations',
@@ -82,6 +91,25 @@ export async function wipeTestEnterprise(
           .delete()
           .in('erp_config_id', erps.map(e => e.id));
       }
+      continue;
+    }
+
+    if (table === 'policy_versions') {
+      // Null out policy_policies.active_version_id before deleting versions (FK constraint)
+      await supabase
+        .from('policy_policies')
+        .update({ active_version_id: null })
+        .eq('enterprise_id', testEnterpriseId);
+      // Also null out superseded_by_version_id self-refs
+      const { data: vs } = await supabase
+        .from('policy_versions').select('id').eq('enterprise_id', testEnterpriseId);
+      if (vs?.length) {
+        await supabase
+          .from('policy_versions')
+          .update({ superseded_by_version_id: null })
+          .in('id', vs.map(v => v.id));
+      }
+      await supabase.from('policy_versions').delete().eq('enterprise_id', testEnterpriseId);
       continue;
     }
 
