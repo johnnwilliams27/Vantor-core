@@ -6,8 +6,6 @@ import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { getActiveTreasuryRule, computeRecommendation } from '@/lib/treasury/rules-engine';
 import { generateTreasuryReasoning } from '@/lib/treasury/claude';
-import { getBankingAdapter } from '@/lib/banking/factory';
-import { getIntegrationMode } from '@/lib/env/integration-mode';
 import { checkRateLimit } from '@/lib/api/rate-limit';
 import { decryptSlackCredentials, postRecommendationToSlack } from '@/lib/integrations/slack';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
@@ -54,17 +52,10 @@ export async function POST(_req: NextRequest) {
     result.recommendedAmountUsd !== null &&
     result.recommendedAmountUsd >= parseFloat(rule.approval_threshold_usd);
 
-  // INVARIANT: AI-initiated money movement never auto-executes, regardless
-  // of amount or policy threshold. The auto-execute branch below bypasses
-  // the policy gate entirely (no PolicyGateService, no approval workflow),
-  // which would violate the published guarantee that every AI rec reaches
-  // a human before moving money. Forcing this to false makes every non-
-  // no_action recommendation take the 'pending_approval' path. The branch
-  // at line ~169 is therefore unreachable; a follow-up PR will delete it
-  // and wire PolicyGateService via mapRecommendationToMovement() so that
-  // human-approved recs still go through the gate for rule + chain
-  // evaluation (see /approve route).
-  const willAutoExecute = false;
+  // INVARIANT: AI-initiated money movement never auto-executes. Every
+  // non-no_action rec lands in 'pending_approval' and must be approved
+  // by a human (web UI or Slack) — approval paths run the policy gate.
+  // no_action is a terminal state because there's nothing to execute.
 
   // 5. Insert recommendation record
   const { data: rec, error: insertErr } = await supabase
@@ -85,7 +76,7 @@ export async function POST(_req: NextRequest) {
       stablecoin_chain: result.targetChain,
       ai_reasoning: reasoning,
       ai_model: model,
-      status: willAutoExecute ? 'auto_executed' : (result.action === 'no_action' ? 'auto_executed' : 'pending_approval'),
+      status: result.action === 'no_action' ? 'auto_executed' : 'pending_approval',
       requires_approval: requiresApproval,
     })
     .select()
@@ -159,101 +150,26 @@ export async function POST(_req: NextRequest) {
     expiresAt: rec.expires_at,
   });
 
+  // Notification branches on whether there's anything to approve. Every
+  // non-no_action rec is pending_approval post-autoexec-removal, so the
+  // "pending" branch fires for any actionable rec. no_action recs slot
+  // into the auto_executed status with no follow-up needed.
+  const isActionable = result.action !== 'no_action';
   await NotificationService.notify({
-    eventType: requiresApproval ? 'recommendation_pending' : 'recommendation_auto_executed',
+    eventType: isActionable ? 'recommendation_pending' : 'recommendation_auto_executed',
     enterpriseId: session.user.enterprise_id!,
-    title: requiresApproval ? 'New AI Recommendation — Approval Required' : 'AI Recommendation Auto-Executed',
+    title: isActionable ? 'New AI Recommendation — Approval Required' : 'AI Recommendation Auto-Executed',
     body: `${result.action === 'onramp' ? 'On-ramp' : result.action === 'offramp' ? 'Off-ramp' : 'No action'} ${result.recommendedAmountUsd ? '$' + Math.round(result.recommendedAmountUsd).toLocaleString() : ''}`,
-    link: requiresApproval ? `/treasury?reviewRec=${rec.id}` : '/treasury',
+    link: isActionable ? `/treasury?reviewRec=${rec.id}` : '/treasury',
     metadata: {
       recommendationId: rec.id,
       action: result.action,
       amount: result.recommendedAmountUsd,
-      _emailSubject: requiresApproval ? 'Action Required: New AI Recommendation' : 'AI Recommendation Auto-Executed',
+      _emailSubject: isActionable ? 'Action Required: New AI Recommendation' : 'AI Recommendation Auto-Executed',
       _emailHtml: emailHtml,
     },
     actorId: session.user.id,
   }).catch(() => {});
-
-  // 6. Auto-execute path — DEAD CODE as of 2026-04-13. `willAutoExecute`
-  // is hardcoded false above to preserve the "AI recs never auto-execute"
-  // invariant. This branch is statically unreachable; a follow-up PR will
-  // delete it and replace it with a PolicyGateService integration so that
-  // threshold-below recs still go through the gate for rule + chain
-  // evaluation before landing as pending_approval.
-  if (willAutoExecute && result.action !== 'no_action' && result.recommendedAmountUsd) {
-    try {
-      const mode = getIntegrationMode(session.user.subscription_tier);
-      const adapter = getBankingAdapter(mode);
-      const rampResult = await adapter.executeRamp({
-        direction: result.action,
-        cryptoToken: result.targetStablecoinToken,
-        cryptoAmount: result.recommendedAmountUsd,
-        fiatAmount: result.recommendedAmountUsd,
-        fiatCurrency: 'USD',
-        exchangeRate: 1,
-        feeAmount: 0,
-        bankAccountRef: result.targetBankAccountId ?? undefined,
-      });
-
-      const { data: fiatTx } = await supabase
-        .from('fiat_transactions')
-        .insert({
-          user_id: session.user.id,
-          enterprise_id: enterpriseId,
-          bank_account_id: result.targetBankAccountId,
-          direction: result.action,
-          crypto_amount: result.recommendedAmountUsd,
-          crypto_token: result.targetStablecoinToken,
-          fiat_amount: result.recommendedAmountUsd,
-          fiat_currency: 'USD',
-          exchange_rate: 1,
-          fee_amount: 0,
-          status: rampResult.status,
-          provider: 'bridge',
-          provider_transaction_id: rampResult.providerTransactionId,
-          settled_at: rampResult.settledAt,
-        })
-        .select()
-        .single();
-
-      await supabase
-        .from('ai_recommendations')
-        .update({
-          status: 'auto_executed',
-          executed_at: new Date().toISOString(),
-          fiat_transaction_id: fiatTx?.id ?? null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', rec.id);
-
-      await writeAuditLog({
-        userId: session.user.id,
-        action: 'treasury_recommendation_execute',
-        entityType: 'ai_recommendation',
-        entityId: rec.id,
-        details: {
-          provider_tx_id: rampResult.providerTransactionId,
-          auto_executed: true,
-        },
-      });
-
-      return NextResponse.json({ data: { ...rec, status: 'auto_executed' } }, { status: 201 });
-    } catch (execErr) {
-      await supabase
-        .from('ai_recommendations')
-        .update({
-          execution_error: (execErr as Error).message,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', rec.id);
-
-      return NextResponse.json(
-        { data: rec, warning: 'Auto-execution failed: ' + (execErr as Error).message },
-        { status: 201 }
-      );
-    }
-  }
 
   return NextResponse.json({ data: rec }, { status: 201 });
 }
