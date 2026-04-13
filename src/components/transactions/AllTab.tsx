@@ -237,13 +237,15 @@ function mapFiatPayments(payments: FiatPayment[]): UnifiedRow[] {
   });
 }
 
-const TYPE_BADGE: Record<UnifiedRow['type'], string> = {
-  transfer: 'bg-[#19595b]/10 text-[#134849] dark:bg-[#19595b]/25 dark:text-teal-300',
-  swap: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200',
-  ramp: 'bg-amber-50 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
-  bridge: 'bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
-  yield: 'bg-green-50 text-green-700 dark:bg-green-900/40 dark:text-green-300',
-  payment: 'bg-purple-50 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
+// Migrated to semantic Badge variants (style guide Stage 3d).
+// Categorical palette — hues differentiate types, not semantic status.
+const TYPE_VARIANT: Record<UnifiedRow['type'], string> = {
+  transfer: 'active',   // teal (was #19595b teal — matches brand)
+  swap: 'inactive',     // gray
+  ramp: 'pending',      // amber
+  bridge: 'info-blue',  // blue
+  yield: 'live',        // green (kept green — yield/earning signals "running")
+  payment: 'special',   // purple
 };
 
 const ALL_EXPORT_COLUMNS: ExportColumn<UnifiedRow>[] = [
@@ -368,9 +370,9 @@ export function AllTab() {
                   onClick={() => setSelectedRow(row)}
                 >
                   <TableCell>
-                    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold border ${TYPE_BADGE[row.type]}`}>
+                    <Badge variant={TYPE_VARIANT[row.type] as any}>
                       {capitalize(row.type)}
-                    </span>
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-sm">
                     {row.fromAddress ? <TruncatedAddress address={row.fromAddress} /> : row.from}
@@ -443,9 +445,9 @@ export function AllTab() {
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold border ${selectedRow ? TYPE_BADGE[selectedRow.type] : ''}`}>
+            <Badge variant={selectedRow ? TYPE_VARIANT[selectedRow.type] as any : 'default' as any}>
               {selectedRow ? capitalize(selectedRow.type) : ''}
-            </span>
+            </Badge>
             Transaction Details
           </DialogTitle>
         </DialogHeader>

@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useKytAlerts, useUpdateKytAlert } from '@/hooks/useCompliance';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { RoleGate } from '@/components/auth/RoleGate';
@@ -10,19 +11,21 @@ import { capitalize } from '@/lib/utils';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { TableRowsSkeleton } from '@/components/ui/operations-skeletons';
 
-const SEVERITY_COLORS: Record<string, string> = {
-  low: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  medium: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  high: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-  severe: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+// Migrated to semantic Badge variants (style guide Stage 3d).
+// Severity escalates: info-blue → pending → urgent → failed.
+const SEVERITY_VARIANT: Record<string, string> = {
+  low: 'info-blue',
+  medium: 'pending',
+  high: 'urgent',
+  severe: 'failed',
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  open: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  under_review: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  dismissed: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
-  escalated: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-  resolved: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+const STATUS_VARIANT: Record<string, string> = {
+  open: 'failed',
+  under_review: 'pending',
+  dismissed: 'inactive',
+  escalated: 'special',
+  resolved: 'active',
 };
 
 type AlertAction = 'under_review' | 'dismissed' | 'escalated' | 'resolved';
@@ -119,9 +122,9 @@ export function KytAlertsTable() {
                 alerts.map((alert) => (
                   <tr key={alert.id} className="border-b last:border-0 hover:bg-muted/30">
                     <td className="px-4 py-2">
-                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${SEVERITY_COLORS[alert.severity]}`}>
+                      <Badge variant={SEVERITY_VARIANT[alert.severity] as any}>
                         {capitalize(alert.severity)}
-                      </span>
+                      </Badge>
                     </td>
                     <td className="px-4 py-2">{alert.category ?? '-'}</td>
                     <td
@@ -133,9 +136,9 @@ export function KytAlertsTable() {
                       </p>
                     </td>
                     <td className="px-4 py-2">
-                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[alert.status]}`}>
+                      <Badge variant={STATUS_VARIANT[alert.status] as any}>
                         {capitalize(alert.status)}
-                      </span>
+                      </Badge>
                     </td>
                     <td className="px-4 py-2 text-muted-foreground">
                       {new Date(alert.created_at).toLocaleString()}
