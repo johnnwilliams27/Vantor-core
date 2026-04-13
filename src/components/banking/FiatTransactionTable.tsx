@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CancelScheduledDialog } from '@/components/ui/cancel-scheduled-dialog';
 import { FilterBar } from '@/components/ui/filter-bar';
+import { HoverTooltip } from '@/components/ui/hover-tooltip';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { useTableFilter } from '@/hooks/useTableFilter';
 import { useToast } from '@/components/ui/toast';
@@ -285,7 +286,11 @@ export function FiatTransactionTable() {
                   </th>
                   <th scope="col" className="text-right py-2 pr-4">Bank</th>
                   <th scope="col" className="hidden lg:table-cell text-right py-2 pr-4">Rate</th>
-                  <th scope="col" className="hidden lg:table-cell text-right py-2 pr-4"><span title="Includes Vantor fee (0.25%) + provider fee">Total Fee</span></th>
+                  <th scope="col" className="hidden lg:table-cell text-right py-2 pr-4">
+                    <HoverTooltip label="Includes Vantor fee (0.25%) + provider fee">
+                      <span className="cursor-help underline decoration-dotted decoration-muted-foreground/50 underline-offset-2">Total Fee</span>
+                    </HoverTooltip>
+                  </th>
                   <th scope="col" className="text-left py-2 pr-4">From</th>
                   <th scope="col" className="text-left py-2 pr-4">To</th>
                   <th scope="col" className="text-left py-2 pr-4">Status</th>

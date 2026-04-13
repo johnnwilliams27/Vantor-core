@@ -124,10 +124,11 @@ export function InfoTooltip({ content, className, children, ariaLabel }: InfoToo
             visibility: open ? 'visible' : 'hidden',
           }}
           className={cn(
-            'rounded-lg border bg-popover text-popover-foreground shadow-lg px-3 py-2.5 text-xs leading-relaxed whitespace-pre-line transition-opacity duration-150',
+            'rounded-lg border bg-popover text-popover-foreground shadow-lg px-3 py-2.5 text-xs leading-relaxed whitespace-pre-line',
+            'transition-[opacity,transform] duration-150 ease-out origin-bottom',
             visible
-              ? 'opacity-100 pointer-events-auto'
-              : 'opacity-0 pointer-events-none',
+              ? 'opacity-100 scale-100 pointer-events-auto'
+              : 'opacity-0 scale-[0.97] pointer-events-none',
           )}
         >
           {content}

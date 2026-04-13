@@ -936,6 +936,7 @@
     <li><a href="#s14"><span class="toc-num">14</span>Elevation &amp; borders</a></li>
     <li><a href="#s15"><span class="toc-num">15</span>Motion &amp; transitions</a></li>
     <li><a href="#s16"><span class="toc-num">16</span>Empty states</a></li>
+    <li><a href="#s17"><span class="toc-num">17</span>Tooltips</a></li>
   </ol>
   <div class="toc-divider"></div>
   <ol>
@@ -5561,6 +5562,185 @@ interface CardProps {
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SECTION 17 — TOOLTIPS                                         -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+
+  <div class="section-header" id="s17" style="margin-top: 64px;">Section 17 — Tooltips</div>
+
+  <div class="locked-card">
+    <div class="tag">Locked ✓</div>
+    <div class="headline">Two primitives, one animation</div>
+    <div style="color: var(--text-200); font-size: 13px; line-height: 1.7; margin-bottom: 16px;">
+      Tooltips explain an icon-only control or clarify a labeled term. Both primitives share the same entrance: <code>150ms ease-out</code>, opacity 0→1, scale 0.95→1 (or 0.97→1 for InfoTooltip) — matches the default transition bucket in Section 15. Never use the browser's native <code>title=</code> attribute for UI — it has a long, inconsistent delay and no styling.
+    </div>
+    <table class="mini-table" style="font-size: 12px;">
+      <thead><tr><th style="width: 22%;">Primitive</th><th style="width: 28%;">Use for</th><th>Import</th></tr></thead>
+      <tbody>
+        <tr><td><code>HoverTooltip</code></td><td>Icon-only buttons, compact triggers, short one-line labels ("Copy", "Clear chat", "Toggle AI")</td><td><code>@/components/ui/hover-tooltip</code></td></tr>
+        <tr><td><code>InfoTooltip</code></td><td>Rich explanations next to a labeled term — multi-line copy, definitions, "what's this?" hints</td><td><code>@/components/ui/info-tooltip</code></td></tr>
+      </tbody>
+    </table>
+    <div class="note" style="margin-top: 14px;">
+      Keyboard &amp; a11y: both primitives expose on <code>focus-within</code> / <code>:focus</code>, render <code>role="tooltip"</code>, and use <code>pointer-events-none</code> when hidden. Always pair with <code>aria-label</code> on the trigger.
+    </div>
+  </div>
+
+  <h2>HoverTooltip — icon buttons</h2>
+
+  <div class="demo-grid" style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-end; padding: 36px 24px 48px; background: var(--surface-900); border: 1px solid var(--border); border-radius: 16px; margin-bottom: 16px;">
+    <style>
+      .tt-group { position: relative; display: inline-flex; }
+      .tt-group .tt-bubble {
+        position: absolute; left: 50%; z-index: 50;
+        transform: translateX(-50%) scale(0.95);
+        white-space: nowrap;
+        border-radius: 8px; border: 1px solid var(--border);
+        background: var(--surface-800); color: var(--text-100);
+        padding: 4px 10px; font-size: 12px; font-weight: 500;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        opacity: 0;
+        transition: opacity 150ms ease-out, transform 150ms ease-out;
+        pointer-events: none;
+      }
+      .tt-group .tt-bubble.top { bottom: 100%; margin-bottom: 6px; transform-origin: bottom; }
+      .tt-group .tt-bubble.bottom { top: 100%; margin-top: 6px; transform-origin: top; }
+      .tt-group:hover .tt-bubble,
+      .tt-group:focus-within .tt-bubble { opacity: 1; transform: translateX(-50%) scale(1); }
+      .tt-iconbtn {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 36px; height: 36px; border-radius: 8px;
+        background: transparent; color: var(--text-300);
+        border: 1px solid transparent;
+        transition: background 150ms ease, color 150ms ease;
+      }
+      .tt-iconbtn:hover { background: rgba(255,255,255,0.04); color: var(--text-100); }
+    </style>
+
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+      <div class="tt-group">
+        <button class="tt-iconbtn" aria-label="Copy address">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        </button>
+        <span class="tt-bubble top" role="tooltip">Copy address</span>
+      </div>
+      <div class="note" style="text-align: center;">Side: top (default)</div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+      <div class="tt-group">
+        <button class="tt-iconbtn" aria-label="Clear chat">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path></svg>
+        </button>
+        <span class="tt-bubble bottom" role="tooltip">Clear chat</span>
+      </div>
+      <div class="note" style="text-align: center;">Side: bottom (panel headers)</div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+      <div class="tt-group">
+        <button class="tt-iconbtn" aria-label="Export CSV">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        </button>
+        <span class="tt-bubble top" role="tooltip">Export CSV</span>
+      </div>
+      <div class="note" style="text-align: center;">Short one-line label</div>
+    </div>
+  </div>
+
+  <div class="note">
+    Hover or tab to any button above to see the entrance: <code>opacity 0→1</code> + <code>scale 0.95→1</code> over 150ms, anchored to the correct side via <code>transform-origin</code>.
+  </div>
+
+  <h2 style="margin-top: 36px;">InfoTooltip — rich explanations</h2>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 32px; padding: 36px 24px; background: var(--surface-900); border: 1px solid var(--border); border-radius: 16px; margin-bottom: 16px;">
+    <style>
+      .tt-term { display: inline-flex; align-items: center; gap: 6px; color: var(--text-100); font-size: 14px; }
+      .tt-info-group { position: relative; display: inline-flex; }
+      .tt-info-icon {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 16px; height: 16px; border-radius: 999px;
+        color: var(--text-400); cursor: help;
+        transition: color 150ms ease;
+      }
+      .tt-info-group:hover .tt-info-icon,
+      .tt-info-group:focus-within .tt-info-icon { color: var(--teal-400); }
+      .tt-info-bubble {
+        position: absolute; left: 50%; bottom: 100%;
+        transform: translateX(-50%) scale(0.97);
+        margin-bottom: 8px;
+        width: 240px; white-space: normal;
+        border-radius: 8px; border: 1px solid var(--border);
+        background: var(--surface-800); color: var(--text-100);
+        padding: 10px 12px; font-size: 12px; line-height: 1.55;
+        box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+        opacity: 0; transform-origin: bottom;
+        transition: opacity 150ms ease-out, transform 150ms ease-out;
+        pointer-events: none;
+      }
+      .tt-info-group:hover .tt-info-bubble,
+      .tt-info-group:focus-within .tt-info-bubble { opacity: 1; transform: translateX(-50%) scale(1); pointer-events: auto; }
+    </style>
+
+    <div class="tt-term">
+      Total Fee
+      <span class="tt-info-group">
+        <button class="tt-info-icon" aria-label="What is Total Fee?">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+        </button>
+        <span class="tt-info-bubble" role="tooltip">Includes the Vantor platform fee (0.25%) plus the on-/off-ramp provider's fee. Shown at quote time; never changed after execution.</span>
+      </span>
+    </div>
+
+    <div class="tt-term">
+      Slippage
+      <span class="tt-info-group">
+        <button class="tt-info-icon" aria-label="What is slippage?">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+        </button>
+        <span class="tt-info-bubble" role="tooltip">The difference between the quoted price and the price you actually execute at. Vantor splits large deposits into tranches to keep slippage below 5bps where possible.</span>
+      </span>
+    </div>
+
+    <div class="tt-term">
+      Travel Rule
+      <span class="tt-info-group">
+        <button class="tt-info-icon" aria-label="What is Travel Rule?">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+        </button>
+        <span class="tt-info-bubble" role="tooltip">FATF Recommendation 16: VASPs transferring $1,000+ must exchange originator and beneficiary identity data. Vantor attaches the required payload automatically for covered counterparties.</span>
+      </span>
+    </div>
+  </div>
+
+  <div class="note">
+    Hover the <code>i</code> icon next to each term. InfoTooltip wraps the bubble to a fixed <code>240px</code> width so long explanations stay readable. Use it next to a visible label — never as the only affordance.
+  </div>
+
+  <h2 style="margin-top: 36px;">Do &amp; Don't</h2>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;">
+    <div class="locked-card" style="padding: 18px;">
+      <div class="tag" style="background: rgba(52, 211, 153, 0.12); color: #34d399; border-color: rgba(52, 211, 153, 0.3);">Do ✓</div>
+      <ul style="font-size: 13px; color: var(--text-200); line-height: 1.7; padding-left: 18px; margin: 10px 0 0 0;">
+        <li>Wrap icon-only buttons in <code>HoverTooltip</code> with an <code>aria-label</code>.</li>
+        <li>Use <code>InfoTooltip</code> next to a visible term, not instead of one.</li>
+        <li>Keep HoverTooltip labels to ≤3 words.</li>
+        <li>Anchor header/panel tooltips with <code>side="bottom"</code> to avoid clipping.</li>
+      </ul>
+    </div>
+    <div class="locked-card" style="padding: 18px;">
+      <div class="tag" style="background: rgba(248, 113, 113, 0.12); color: #f87171; border-color: rgba(248, 113, 113, 0.3);">Don't ✗</div>
+      <ul style="font-size: 13px; color: var(--text-200); line-height: 1.7; padding-left: 18px; margin: 10px 0 0 0;">
+        <li>Use the native <code>title=</code> attribute on UI — unstyled, slow, inconsistent.</li>
+        <li>Hide critical info behind a tooltip (e.g. error recovery steps).</li>
+        <li>Put tooltips on elements that already have a visible label <em>and</em> duplicate the same text.</li>
+        <li>Build a one-off bubble with raw Tailwind — use the primitives.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
   <!-- ROADMAP                                                       -->
   <!-- ═══════════════════════════════════════════════════════════ -->
 
@@ -5709,6 +5889,15 @@ interface CardProps {
         <h4>Empty states <span class="roadmap-status done">shipped</span></h4>
         <div class="r-sub">IconTile + headline + helper + CTA · color signals emptiness type</div>
         <div class="r-examples">Feature-not-activated, search-empty, all-clear, feature-not-configured.</div>
+      </div>
+    </div>
+
+    <div class="roadmap-item done">
+      <div class="roadmap-num">17</div>
+      <div class="roadmap-body">
+        <h4>Tooltips <span class="roadmap-status done">shipped</span></h4>
+        <div class="r-sub">HoverTooltip (icon buttons) · InfoTooltip (rich terms) · 150ms opacity+scale entrance</div>
+        <div class="r-examples">No native <code>title=</code> · aria-label required · side="top" default, "bottom" for panel headers.</div>
       </div>
     </div>
 
