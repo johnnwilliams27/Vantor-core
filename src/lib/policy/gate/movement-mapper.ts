@@ -428,3 +428,61 @@ export function mapScheduledOperationToMovement(
     },
   };
 }
+
+// ─── AI recommendation (materializes as a fiat ramp) ────────────────────
+
+export interface RecommendationMovementInput {
+  recommendationId: string;
+  action: 'onramp' | 'offramp';
+  cryptoToken: 'USDC' | 'USDT';
+  /** Recommended amount expressed in USD; the same number is used for both
+   *  fiat and crypto legs because rec amounts are always USD-denominated. */
+  amountUsd: number;
+  fiatCurrency: string;
+  bankAccountId: string;
+  walletAddress?: string;
+}
+
+/**
+ * AI-recommendation mapper. The recommendation, when approved, executes
+ * as a fiat ramp — so the endpoints mirror mapRampToMovement. What the
+ * gate needs to know that's different is the initiator: 'ai_recommendation'
+ * lets rules key on "movement was originated by AI" (e.g. the published
+ * invariant that every AI rec goes through human approval, surfaced as
+ * a mandatory approval chain for this initiator type).
+ *
+ * movement.id is fresh — it'll become the resulting fiat_transactions.id
+ * at execution time, same as the direct ramp flow. The recommendation_id
+ * lives on initiator + metadata so audit + traceback can follow it back
+ * to the originating rec row.
+ */
+export function mapRecommendationToMovement(
+  input: RecommendationMovementInput,
+  ctx: MapperContext,
+): ProposedMovement {
+  const amountStr = input.amountUsd.toString();
+  const inner = mapRampToMovement(
+    {
+      direction: input.action,
+      cryptoToken: input.cryptoToken,
+      cryptoAmount: amountStr,
+      fiatCurrency: input.fiatCurrency,
+      fiatAmount: amountStr,
+      bankAccountId: input.bankAccountId,
+      ...(input.walletAddress ? { walletAddress: input.walletAddress } : {}),
+    },
+    ctx,
+  );
+
+  return {
+    ...inner,
+    initiator: {
+      type: 'ai_recommendation',
+      recommendation_id: input.recommendationId,
+    },
+    metadata: {
+      ...(inner.metadata ?? {}),
+      recommendation_id: input.recommendationId,
+    },
+  };
+}

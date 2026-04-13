@@ -41,23 +41,12 @@ const EXEMPT_ROUTES: ReadonlyArray<{ path: string; reason: string }> = [
   { path: 'src/app/api/yield/confirm-deposit/route.ts',   reason: 'confirm-step — gate ran at POST /api/yield/deposit' },
   { path: 'src/app/api/yield/confirm-withdraw/route.ts',  reason: 'confirm-step — gate ran at POST /api/yield/withdraw' },
 
-  // ─── KNOWN VIOLATIONS — follow-up work, not legitimate exemptions ──
-  //
-  // These three call `adapter.executeRamp(...)` + insert into
-  // `fiat_transactions` without passing through the policy gate. They
-  // also conflict with the project memory invariant
-  // "AI Recommendations Always Require Human Approval":
-  //   - /api/treasury/recommendations/generate has a willAutoExecute path
-  //   - /api/treasury/recommendations/[id]/approve runs an ungated ramp
-  //   - /api/integrations/slack/callback does the same via Slack approval
-  //
-  // Exempting here so the guardrail can land; each needs a dedicated PR
-  // that builds mapRecommendationToMovement() + wires PolicyGateService
-  // for the AI-recommendation flow. When fixed, remove from this list so
-  // the guardrail enforces.
-  { path: 'src/app/api/treasury/recommendations/generate/route.ts',       reason: 'FOLLOW-UP: ungated AI auto-execute path — violates human-approval invariant' },
-  { path: 'src/app/api/treasury/recommendations/[id]/approve/route.ts',   reason: 'FOLLOW-UP: ungated ramp on human-approved AI rec' },
-  { path: 'src/app/api/integrations/slack/callback/route.ts',             reason: 'FOLLOW-UP: ungated ramp on Slack-approved AI rec' },
+  // Auto-execute path is unreachable as of PR #23 (willAutoExecute
+  // hardcoded false). The dead `if (willAutoExecute && ...)` branch
+  // still contains ramp-execute + fiat_transactions.insert but cannot
+  // fire. Follow-up: delete the dead branch once we're sure no readers
+  // depend on seeing the branch structure.
+  { path: 'src/app/api/treasury/recommendations/generate/route.ts',       reason: 'dead branch — willAutoExecute=false; delete branch in follow-up' },
 ];
 
 /** Directories that seed / reset test-mode fixtures rather than moving
@@ -156,9 +145,11 @@ describe('policy gate — route coverage guardrail', () => {
     // Sort for stable comparison.
     gated.sort();
     expect(gated).toEqual([
+      'src/app/api/integrations/slack/callback/route.ts',
       'src/app/api/ramps/execute/route.ts',
       'src/app/api/scheduled-operations/route.ts',
       'src/app/api/transfers/route.ts',
+      'src/app/api/treasury/recommendations/[id]/approve/route.ts',
       'src/app/api/treasury/withdraw-and-offramp/route.ts',
       'src/app/api/yield/deposit/route.ts',
       'src/app/api/yield/withdraw/route.ts',

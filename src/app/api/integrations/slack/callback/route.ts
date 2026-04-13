@@ -10,6 +10,14 @@ import {
 } from '@/lib/integrations/slack';
 import { getBankingAdapter } from '@/lib/banking/factory';
 import { updateBalancesAfterRamp } from '@/lib/balances/update-after-movement';
+import {
+  PolicyGateService,
+  mapRecommendationToMovement,
+  GateError,
+  type GateActor,
+} from '@/lib/policy/gate';
+import { buildProductionEvaluate } from '@/lib/policy/gate/production-wiring';
+import { ApprovalWorkflowService } from '@/lib/policy/approvals';
 // No session available in Slack callback — authenticated via HMAC; always use live mode
 
 // No session auth — authenticated via Slack HMAC signature verification
@@ -164,7 +172,84 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    // Mark approved
+    // ─── Policy gate ──────────────────────────────────────────────
+    // Gate the Slack-approved ramp the same way as the UI approve path.
+    // Actor is the Slack integration owner; their role is fetched from
+    // user_profiles since we don't have a session here.
+    const { data: ownerProfile } = await supabase
+      .from('user_profiles')
+      .select('role')
+      .eq('id', ownerId)
+      .maybeSingle();
+
+    if (!ownerProfile?.role) {
+      await respondViaUrl(responseUrl, '❌ Slack integration owner has no profile role; contact support.');
+      return NextResponse.json({ ok: true });
+    }
+
+    const movement = mapRecommendationToMovement(
+      {
+        recommendationId: rec.id,
+        action: rec.action as 'onramp' | 'offramp',
+        cryptoToken: (rec.stablecoin_token ?? 'USDC') as 'USDC' | 'USDT',
+        amountUsd: parseFloat(rec.recommended_amount_usd),
+        fiatCurrency: 'USD',
+        bankAccountId: rec.bank_account_id,
+      },
+      { userId: ownerId, enterpriseId, fromAddress: '' },
+    );
+
+    const gateService = new PolicyGateService(supabase, {
+      evaluate: buildProductionEvaluate(supabase),
+      approvalService: new ApprovalWorkflowService(supabase),
+    });
+
+    const actor: GateActor = {
+      user_id: ownerId,
+      role: ownerProfile.role as GateActor['role'],
+      enterprise_id: enterpriseId,
+    };
+
+    let gateResult;
+    try {
+      gateResult = await gateService.gate(movement, actor);
+    } catch (err) {
+      if (err instanceof GateError) {
+        await supabase
+          .from('ai_recommendations')
+          .update({
+            status: 'rejected',
+            rejected_by: ownerId,
+            rejected_at: new Date().toISOString(),
+            rejection_reason: err.reason_code,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', recId)
+          .eq('enterprise_id', enterpriseId);
+
+        await writeAuditLog({
+          userId: ownerId,
+          action: 'transfer_create_blocked',
+          entityType: 'ai_recommendation',
+          entityId: recId,
+          details: {
+            slack_user: slackUsername,
+            reason_code: err.reason_code,
+            ...(err.details as Record<string, unknown>),
+          },
+        });
+
+        await respondViaUrl(
+          responseUrl,
+          `❌ Policy blocked this recommendation (${err.reason_code}). ${err.human_readable}`,
+        );
+        return NextResponse.json({ ok: true });
+      }
+      throw err;
+    }
+
+    // Mark approved (treasurer-equivalent: Slack integration owner
+    // approved here; further approvals may still be pending).
     await supabase
       .from('ai_recommendations')
       .update({
@@ -183,7 +268,26 @@ export async function POST(req: NextRequest) {
       details: { slack_user: slackUsername, action: rec.action, amount_usd: rec.recommended_amount_usd },
     });
 
-    // Execute ramp
+    if (gateResult.verdict === 'require_approval') {
+      await writeAuditLog({
+        userId: ownerId,
+        action: 'transfer_create_requires_approval',
+        entityType: 'ai_recommendation',
+        entityId: recId,
+        details: {
+          slack_user: slackUsername,
+          approval_request_id: gateResult.approval_request.id,
+          chain_id: gateResult.approval_request.chain_id,
+        },
+      });
+      await respondViaUrl(
+        responseUrl,
+        `⏳ Approved by ${slackUsername}, but policy requires additional approvers (${gateResult.evaluation.required_chain?.chain_name ?? 'approval chain'}). The ramp will execute when the chain completes.`,
+      );
+      return NextResponse.json({ ok: true });
+    }
+
+    // allow_auto — execute the ramp.
     try {
       const adapter = getBankingAdapter('live');
       const rampResult = await adapter.executeRamp({
