@@ -99,7 +99,7 @@ function LineChartView({ result, height }: { result: ViewResult; height: number 
           contentStyle={{ backgroundColor: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8 }}
           labelStyle={{ color: '#94a3b8' }}
         />
-        <Legend />
+        <Legend wrapperStyle={{ fontSize: 11 }} iconSize={10} />
         {seriesKeys.map((key, i) => (
           <Line
             key={key}
@@ -142,7 +142,7 @@ function BarChartView({ result, height }: { result: ViewResult; height: number }
           contentStyle={{ backgroundColor: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8 }}
           labelStyle={{ color: '#94a3b8' }}
         />
-        <Legend />
+        <Legend wrapperStyle={{ fontSize: 11 }} iconSize={10} />
         {groupKeys.map((key, i) => (
           <Bar
             key={key}

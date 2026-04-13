@@ -72,7 +72,7 @@ function ComingSoonCard({ integration }: { integration: ComingSoonIntegration })
               </CardDescription>
             </div>
           </div>
-          <Badge variant="secondary" className="shrink-0 text-[10px]">Coming soon</Badge>
+          <Badge variant="pending" className="shrink-0 text-[10px]">Coming soon</Badge>
         </div>
       </CardHeader>
     </Card>
@@ -189,27 +189,29 @@ export default function IntegrationsPage() {
   return (
     <div className="space-y-6 max-w-4xl">
         {/* Slack Integration Card */}
-        <Card className="max-w-2xl">
+        <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
                   <SlackLogo size={22} />
                 </span>
-                <div>
-                  <CardTitle>Slack</CardTitle>
-                  <CardDescription>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <CardTitle>Slack</CardTitle>
+                    {isLoading ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                    ) : isConnected ? (
+                      <Badge variant="active">Connected</Badge>
+                    ) : (
+                      <Badge variant="outline">Not connected</Badge>
+                    )}
+                  </div>
+                  <CardDescription className="mt-1">
                     Post treasury recommendations to Slack and approve or deny them directly from the channel.
                   </CardDescription>
                 </div>
               </div>
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-              ) : isConnected ? (
-                <Badge variant="active">Connected</Badge>
-              ) : (
-                <Badge variant="outline">Not connected</Badge>
-              )}
             </div>
           </CardHeader>
           <CardContent className="space-y-6">

@@ -4,12 +4,14 @@ import { useQuery } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { CreditCard } from 'lucide-react';
 import { TierSlug, isPaidTier } from '@/lib/billing/tiers';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/spinner';
 
 export function PaymentMethodTab() {
   const { data: session } = useSession();
   const tier = (session?.user?.subscription_tier || 'lite') as TierSlug;
 
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['payment-method'],
     queryFn: () => fetch('/api/billing/payment-method').then(r => r.json()),
     enabled: isPaidTier(tier),
@@ -24,6 +26,10 @@ export function PaymentMethodTab() {
         </p>
       </div>
     );
+  }
+
+  if (isLoading) {
+    return <PaymentMethodSkeleton />;
   }
 
   const pm = data?.paymentMethod;
@@ -49,24 +55,35 @@ export function PaymentMethodTab() {
               </p>
             </div>
           </div>
-          <button
-            onClick={handleUpdateCard}
-            className="px-4 py-2 text-sm border border-border rounded-lg hover:bg-muted transition-colors"
-          >
+          <Button variant="outline" size="sm" onClick={handleUpdateCard}>
             Update Card
-          </button>
+          </Button>
         </div>
       ) : (
         <div className="text-center py-6">
           <p className="text-muted-foreground mb-3">No payment method on file.</p>
-          <button
-            onClick={handleUpdateCard}
-            className="px-4 py-2 rounded-lg bg-gradient-to-r from-primary to-primary/80 text-white text-sm font-medium shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]"
-          >
+          <Button size="sm" onClick={handleUpdateCard}>
             Add Payment Method
-          </button>
+          </Button>
         </div>
       )}
+    </div>
+  );
+}
+
+function PaymentMethodSkeleton() {
+  return (
+    <div className="rounded-xl border border-border p-6 bg-card" role="status" aria-label="Loading payment method">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Skeleton className="w-8 h-8 rounded" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-3 w-28" />
+          </div>
+        </div>
+        <Skeleton className="h-8 w-24 rounded-lg" />
+      </div>
     </div>
   );
 }

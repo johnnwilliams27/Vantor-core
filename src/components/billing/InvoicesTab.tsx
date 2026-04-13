@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Download } from 'lucide-react';
 import { exportCsv } from '@/lib/export/csv';
 import type { ExportColumn } from '@/lib/export';
+import { Skeleton } from '@/components/ui/spinner';
 
 interface InvoiceRow {
   period: string;
@@ -26,7 +27,7 @@ export function InvoicesTab() {
   });
 
   if (isLoading) {
-    return <div className="text-muted-foreground">Loading invoices...</div>;
+    return <InvoicesTabSkeleton />;
   }
 
   const invoices = data?.invoices || [];
@@ -107,6 +108,30 @@ export function InvoicesTab() {
             ))}
           </tbody>
         </table>
+      </div>
+    </div>
+  );
+}
+
+function InvoicesTabSkeleton() {
+  return (
+    <div className="space-y-3" role="status" aria-label="Loading invoices">
+      <div className="flex justify-end">
+        <Skeleton className="h-8 w-24 rounded-lg" />
+      </div>
+      <div className="rounded-xl border border-border overflow-hidden">
+        <div className="flex items-center gap-4 px-3 py-3 bg-muted/50 border-b border-border">
+          {['Period', 'Amount', 'Status', 'Date', 'PDF'].map((_, i) => (
+            <Skeleton key={i} className="h-3.5 flex-1" style={{ maxWidth: i === 4 ? '40px' : undefined }} />
+          ))}
+        </div>
+        {Array.from({ length: 4 }).map((_, r) => (
+          <div key={r} className="flex items-center gap-4 px-3 py-3.5 border-t border-border">
+            {Array.from({ length: 5 }).map((_, c) => (
+              <Skeleton key={c} className="h-3.5 flex-1" style={{ maxWidth: c === 4 ? '40px' : c === 2 ? '80px' : undefined }} />
+            ))}
+          </div>
+        ))}
       </div>
     </div>
   );
