@@ -144,11 +144,12 @@ const PROVIDER_DISPLAY: Record<ProviderId, string> = {
 };
 
 /**
- * Only Xero has a real adapter wired up today. The other four providers
- * ship in the dropdown as "coming soon" so users understand what's on
- * the roadmap, but Test / Save are blocked until the adapter lands.
+ * All five ERP providers are exposed in beta via their mock adapters
+ * (see `src/lib/erp/factory.ts`). The Xero real adapter is in progress;
+ * the others will be gated back here as real adapters land so Test / Save
+ * can block until each provider is production-ready.
  */
-const SUPPORTED_PROVIDERS: ProviderId[] = ['xero'];
+const SUPPORTED_PROVIDERS: ProviderId[] = ['sap', 'oracle', 'xero', 'netsuite', 'quickbooks'];
 const isSupported = (p: ProviderId) => SUPPORTED_PROVIDERS.includes(p);
 
 /**
@@ -351,7 +352,7 @@ export default function ERPSettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Link ERP System</CardTitle>
-            <CardDescription>Connect Xero to sync invoices and vendors. SAP, Oracle, NetSuite, and QuickBooks coming soon.</CardDescription>
+            <CardDescription>Connect your ERP to sync invoices and vendors.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -360,10 +361,10 @@ export default function ERPSettingsPage() {
                   <Label>ERP Provider</Label>
                   <Select {...register('provider')}>
                     <option value="xero">Xero</option>
-                    <option value="sap">SAP (coming soon)</option>
-                    <option value="oracle">Oracle (coming soon)</option>
-                    <option value="netsuite">NetSuite (coming soon)</option>
-                    <option value="quickbooks">QuickBooks (coming soon)</option>
+                    <option value="sap">SAP</option>
+                    <option value="oracle">Oracle</option>
+                    <option value="netsuite">NetSuite</option>
+                    <option value="quickbooks">QuickBooks</option>
                   </Select>
                 </div>
                 <div className="space-y-2">
@@ -372,15 +373,6 @@ export default function ERPSettingsPage() {
                   {errors.label && <p className="text-sm text-red-500">{errors.label.message}</p>}
                 </div>
               </div>
-
-              {!providerSupported && (
-                <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4 text-sm text-amber-300/90 leading-relaxed space-y-1">
-                  <p className="font-medium">{PROVIDER_DISPLAY[selectedProvider]} is coming soon</p>
-                  <p className="text-xs opacity-90">
-                    The {PROVIDER_DISPLAY[selectedProvider]} adapter isn&apos;t wired up yet. We&apos;ll let you know when it&apos;s ready. In the meantime you can connect your Xero workspace.
-                  </p>
-                </div>
-              )}
 
               {providerSupported && isOAuth && (
                 <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-300/90 leading-relaxed">
