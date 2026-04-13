@@ -3,8 +3,8 @@ import type {
   ERPCredentials,
   ERPVendorRaw,
   ERPInvoiceRaw,
-  ERPGLPostPayload,
-  ERPGLPostResult,
+  ERPBillPaymentPayload,
+  ERPBillPaymentResult,
 } from '@/types/erp';
 
 export class NetsuiteMockAdapter implements IERPAdapter {
@@ -113,12 +113,12 @@ export class NetsuiteMockAdapter implements IERPAdapter {
     ];
   }
 
-  async postGLEntry(payload: ERPGLPostPayload): Promise<ERPGLPostResult> {
+  async recordBillPayment(payload: ERPBillPaymentPayload): Promise<ERPBillPaymentResult> {
     await delay(400);
     return {
-      externalGlId: `NS-GL-${Date.now()}`,
-      status: 'posted',
-      message: `GL entry posted to NetSuite account ${payload.glAccount} (mock)`,
+      externalPaymentId: `NS-PMT-${Date.now()}`,
+      status: 'recorded',
+      message: `Payment of ${payload.amount} ${payload.currency} recorded against NetSuite bill ${payload.invoiceId} (mock), ref: ${payload.reference} tx:${payload.externalTxHash}`,
     };
   }
 }

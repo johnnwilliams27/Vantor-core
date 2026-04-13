@@ -1,0 +1,14 @@
+{
+  "Id": "req-accounts-0001",
+  "Status": "OK",
+  "Accounts": [
+    {
+      "AccountID": "a0000001-0000-0000-0000-000000000001",
+      "Code": "090",
+      "Name": "Business Bank Account",
+      "Type": "BANK",
+      "Status": "ACTIVE",
+      "CurrencyCode": "USD"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "Id": "req-contacts-0001",
+  "Status": "OK",
+  "ProviderName": "Xero API Partner",
+  "DateTimeUTC": "/Date(1704067200000)/",
+  "Contacts": [
+    {
+      "ContactID": "c0000001-0000-0000-0000-000000000001",
+      "Name": "Apex Consulting",
+      "EmailAddress": "accounts@apexconsulting.co",
+      "IsSupplier": true,
+      "IsCustomer": false
+    },
+    {
+      "ContactID": "c0000001-0000-0000-0000-000000000002",
+      "Name": "Meridian Supplies",
+      "EmailAddress": "billing@meridiansupplies.com",
+      "IsSupplier": true,
+      "IsCustomer": false
+    }
+  ]
+}

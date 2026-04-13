@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -77,11 +78,8 @@ const schema = z
         );
         break;
       case 'xero':
-        required.push(
-          { key: 'clientId', label: 'Client ID' },
-          { key: 'clientSecret', label: 'Client Secret' },
-          { key: 'tenantId', label: 'Tenant ID' },
-        );
+        // Xero connects via OAuth — no form fields to validate; the Connect
+        // Xero button bypasses the form submit entirely.
         break;
       case 'quickbooks':
         required.push(
@@ -217,6 +215,8 @@ export default function ERPSettingsPage() {
   const docsUrl = PROVIDER_DOCS[selectedProvider];
   const isOAuth = USES_OAUTH[selectedProvider];
   const providerSupported = isSupported(selectedProvider);
+  const searchParams = useSearchParams();
+  const xeroConnected = searchParams.get('xero') === 'connected';
 
   const handleSetActive = async (id: string, is_active: boolean) => {
     setActionPending(true);
@@ -350,6 +350,11 @@ export default function ERPSettingsPage() {
   return (
     <>
     <div className="space-y-6">
+        {xeroConnected && (
+          <div className="rounded-md bg-green-50 dark:bg-green-950 p-3 text-sm text-green-700 dark:text-green-300">
+            Xero connected successfully.
+          </div>
+        )}
         {/* Connect new ERP */}
         <Card>
           <CardHeader>
@@ -376,9 +381,17 @@ export default function ERPSettingsPage() {
                 </div>
               </div>
 
-              {providerSupported && isOAuth && (
-                <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-300/90 leading-relaxed">
-                  Xero uses OAuth 2.0 — hosted Connect-with-Xero flow is coming soon. In the meantime, enter the Client ID / Secret and Tenant ID from your app registration below.
+              {providerSupported && isOAuth && selectedProvider === 'xero' && (
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2">
+                  <p className="text-xs text-foreground/80 leading-relaxed">
+                    Xero uses OAuth 2.0. Click Connect Xero to authorize Vantor from your Xero account — Vantor handles the consent flow, token rotation, and tenant/bank account resolution for you.
+                  </p>
+                  <a
+                    href="/api/erp/xero/authorize"
+                    className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                  >
+                    Connect Xero
+                  </a>
                 </div>
               )}
 
@@ -497,31 +510,9 @@ export default function ERPSettingsPage() {
                 </>
               )}
 
-              {/* Xero fields */}
-              {selectedProvider === 'xero' && (
-                <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Client ID</Label>
-                      <Input placeholder="client-id" {...register('clientId')} autoComplete="off" />
-                      {errors.clientId && <p className="text-sm text-destructive">{errors.clientId.message}</p>}
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Client Secret</Label>
-                      <PasswordField placeholder="••••••••" {...register('clientSecret')} />
-                      {errors.clientSecret && <p className="text-sm text-destructive">{errors.clientSecret.message}</p>}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1.5">
-                      Tenant ID
-                      <InfoTooltip content="Returned by the Xero OAuth flow after you install the app. Visible in the Xero developer app connection list." />
-                    </Label>
-                    <Input placeholder="tenant-id" {...register('tenantId')} />
-                    {errors.tenantId && <p className="text-sm text-destructive">{errors.tenantId.message}</p>}
-                  </div>
-                </>
-              )}
+              {/* Xero connects via OAuth — no manual credentials form. The
+                  Connect Xero button above redirects to Xero's consent screen,
+                  which rotates tokens and persists the connection for us. */}
 
               {/* QuickBooks fields */}
               {selectedProvider === 'quickbooks' && (
@@ -610,7 +601,7 @@ export default function ERPSettingsPage() {
                 </div>
               )}
 
-              {providerSupported && (
+              {providerSupported && selectedProvider !== 'xero' && (
                 <div className="flex items-center justify-end gap-3 pt-2">
                   {!isValid ? (
                     <HoverTooltip label="Fill required fields to enable">

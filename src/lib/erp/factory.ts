@@ -30,11 +30,20 @@ export function getERPAdapter(
     }
   }
 
-  // Real adapters would be loaded here when ERP_USE_MOCK=false
-  // e.g. return new SAPRealAdapter(credentials);
-  throw new Error(
-    `Real ERP adapter for '${provider}' not implemented. Set ERP_USE_MOCK=true.`
-  );
+  // Real adapters — getERPAdapter only has the credentials blob, but real
+  // Xero needs the full erp_configurations row (tenant id, bank account id,
+  // expiry, status). Point callers at the row-aware builder instead of
+  // building a half-working adapter from partial state.
+  switch (provider) {
+    case 'xero':
+      throw new Error(
+        "Use buildXeroAdapter(row, deps) from '@/lib/erp/real/xero/build-adapter' — getERPAdapter() alone cannot build a real Xero adapter.",
+      );
+    default:
+      throw new Error(
+        `Real ERP adapter for '${provider}' not implemented. Set ERP_USE_MOCK=true.`,
+      );
+  }
 }
 
 /**
