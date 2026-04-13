@@ -3,6 +3,7 @@ import {
   xeroContactsToVendors,
   xeroInvoicesToVantorInvoices,
   xeroPaymentToBillPaymentResult,
+  parseXeroDate,
 } from '@/lib/erp/real/xero/mapper';
 import {
   ContactsResponseSchema,
@@ -27,6 +28,19 @@ describe('mapper', () => {
     expect(invoices.length).toBeGreaterThan(0);
     expect(invoices[0].invoiceNumber).toBe('XERO-2025-001');
     expect(invoices[0].amount).toBe(12500);
+    // DueDate in the fixture is Xero's /Date(ms+tz)/ format; mapper must
+    // normalize to ISO yyyy-mm-dd so downstream doesn't see MS .NET dates.
+    expect(invoices[0].dueDate).toBe('2025-05-01');
+  });
+
+  it('parseXeroDate converts /Date(ms+tz)/ to ISO, leaves ISO unchanged', () => {
+    expect(parseXeroDate('/Date(1743120000000+0000)/')).toBe('2025-03-28');
+    expect(parseXeroDate('/Date(1743120000000)/')).toBe('2025-03-28'); // tz optional
+    expect(parseXeroDate('/Date(-1000)/')).toBe('1969-12-31');          // pre-epoch edge
+    expect(parseXeroDate('2025-05-01')).toBe('2025-05-01');             // already ISO
+    expect(parseXeroDate(undefined)).toBeUndefined();
+    expect(parseXeroDate('')).toBeUndefined();
+    expect(parseXeroDate('not a date')).toBe('not a date');             // pass-through
   });
 
   it('maps Xero payment response to ERPBillPaymentResult', () => {
