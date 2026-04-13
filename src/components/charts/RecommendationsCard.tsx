@@ -462,10 +462,10 @@ export function RecommendationsCard() {
             icon={<BrainCircuit />}
             iconVariant="special"
             title="No AI insights yet"
-            helper="Configure your treasury rules and Vantor AI will start surfacing rebalancing opportunities."
+            helper="Configure a policy and Vantor AI will start surfacing rebalancing opportunities."
             cta={
-              <Link href="/treasury?tab=rules" className={cn(buttonVariants({ size: 'sm' }))}>
-                Configure rules
+              <Link href="/policy" className={cn(buttonVariants({ size: 'sm' }))}>
+                Configure policy
               </Link>
             }
             className="h-48 border-0 shadow-none bg-transparent"
