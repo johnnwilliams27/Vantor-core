@@ -701,9 +701,9 @@ export default function ERPSettingsPage() {
                             </TableCell>
                             <TableCell>
                               {cfg.is_active ? (
-                                <Badge variant="success">Active</Badge>
+                                <Badge variant="active">Active</Badge>
                               ) : (
-                                <Badge variant="secondary">Inactive</Badge>
+                                <Badge variant="inactive">Inactive</Badge>
                               )}
                             </TableCell>
                             <TableCell>
