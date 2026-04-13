@@ -29,6 +29,7 @@ import {
   GitBranchPlus,
   CreditCard,
   Bell,
+  CheckSquare,
 } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import type { UserRole } from '@/types/database';
@@ -66,6 +67,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     heading: 'Operations',
     items: [
+      { label: 'Approvals', href: '/approvals', icon: CheckSquare, minRole: 'accountant' },
       { label: 'Payments', href: '/payments', icon: CreditCard, minRole: 'treasury_manager' },
       { label: 'Transfers', href: '/transfers', icon: Send, minRole: 'treasury_manager' },
       { label: 'Swaps', href: '/swaps', icon: ArrowLeftRight, minRole: 'treasury_manager' },

@@ -12,6 +12,8 @@ import { ApprovalWorkflowService } from './service';
 import { ApprovalError } from './errors';
 import type { ApprovalActor } from './types';
 import type { ReasonCode } from '../errors/reason-codes';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { buildProductionEvaluate } from '../gate/production-wiring';
 
 // ─── Status code mapping table ─────────────────────────────────────────
 //
@@ -45,11 +47,17 @@ const STATUS_409: ReadonlySet<ReasonCode> = new Set([
 export interface ApprovalContext {
   actor: ApprovalActor;
   service: ApprovalWorkflowService;
+  /** Exposed so route handlers can dispatch to the executor registry after
+   *  service.fillSlot/deny returns. Same admin client the service uses. */
+  supabase: SupabaseClient;
 }
 
 /**
  * Resolves the current NextAuth session into an ApprovalActor and an
- * ApprovalWorkflowService backed by the admin Supabase client.
+ * ApprovalWorkflowService backed by the admin Supabase client. The
+ * service is wired with the production evaluate function so the
+ * post-approval re-evaluation runs against real policy state (Plan 2b
+ * shipped with the evaluate hook but no-op; Plan 3 wires it here).
  *
  * Returns null when the session is missing or lacks an enterprise_id;
  * the caller should respond with 401.
@@ -70,7 +78,13 @@ export async function resolveApprovalContext(
     enterprise_id,
   };
 
-  return { actor, service: new ApprovalWorkflowService(supabase) };
+  return {
+    actor,
+    service: new ApprovalWorkflowService(supabase, {
+      evaluate: buildProductionEvaluate(supabase),
+    }),
+    supabase,
+  };
 }
 
 // ─── Error mapping ─────────────────────────────────────────────────────
