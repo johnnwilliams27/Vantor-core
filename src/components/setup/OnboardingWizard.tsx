@@ -288,7 +288,7 @@ export function OnboardingWizard() {
               size="sm"
               onClick={handleNext}
               disabled={completing || transitioning}
-              className="bg-[#19595b] hover:bg-[#134849] text-white gap-1.5 transition-all duration-200 hover:shadow-[0_0_20px_rgba(25,89,91,0.3)]"
+              className="gap-1.5"
             >
               {isLast ? (completing ? 'Setting up...' : 'Go to Dashboard') : 'Continue'}
               {!isLast && <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />}

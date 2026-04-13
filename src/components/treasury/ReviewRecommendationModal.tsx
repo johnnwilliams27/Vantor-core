@@ -127,8 +127,7 @@ export function ReviewRecommendationModal({ recommendationId, onClose }: Props) 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowReject(false)}>Back</Button>
             <Button
-              variant="outline"
-              className="text-red-600 border-red-300 hover:bg-red-50"
+              variant="destructive-outline"
               onClick={handleReject}
               disabled={reject.isPending}
             >
@@ -203,8 +202,7 @@ export function ReviewRecommendationModal({ recommendationId, onClose }: Props) 
         {canAct ? (
           <DialogFooter className="gap-2">
             <Button
-              variant="outline"
-              className="text-red-600 border-red-300 hover:bg-red-50"
+              variant="destructive-outline"
               onClick={() => setShowReject(true)}
               disabled={approve.isPending || reject.isPending}
             >

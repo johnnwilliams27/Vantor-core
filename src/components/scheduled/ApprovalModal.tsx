@@ -228,8 +228,7 @@ export function ApprovalModal({ op, open, onOpenChange }: Props) {
           {confirmAction === null ? (
             <>
               <Button
-                variant="outline"
-                className="text-red-600 border-red-300 hover:bg-red-50"
+                variant="destructive-outline"
                 onClick={() => setConfirmAction('deny')}
                 disabled={busy}
               >
@@ -261,8 +260,7 @@ export function ApprovalModal({ op, open, onOpenChange }: Props) {
                   </Button>
                 ) : (
                   <Button
-                    variant="outline"
-                    className="text-red-600 border-red-300 hover:bg-red-50"
+                    variant="destructive-outline"
                     onClick={handleDeny}
                     disabled={busy}
                   >

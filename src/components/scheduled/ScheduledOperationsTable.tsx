@@ -151,8 +151,8 @@ export function ScheduledOperationsTable({ type, title }: Props) {
                         {canCancel(op.status) && (
                           <Button
                             size="sm"
-                            variant="outline"
-                            className="h-7 text-xs px-3 text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400"
+                            variant="destructive-outline"
+                            className="h-7 text-xs px-3"
                             onClick={() => setConfirmCancelOp(op)}
                           >
                             Cancel
@@ -198,8 +198,7 @@ export function ScheduledOperationsTable({ type, title }: Props) {
               Go Back
             </Button>
             <Button
-              variant="outline"
-              className="text-red-600 border-red-300 hover:bg-red-50"
+              variant="destructive-outline"
               onClick={handleCancel}
               disabled={cancel.isPending}
             >
