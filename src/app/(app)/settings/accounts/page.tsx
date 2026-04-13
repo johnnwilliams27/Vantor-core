@@ -45,16 +45,15 @@ const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
   auditor:          'Read-only access to records and reports. Can sit on chains as a check.',
 };
 
-// Badge tints use Vantor's convention: bg-{color}-500/8 text-{color}-400
-// in dark mode. Amber signals "author role" (elevated), purple signals
-// "high-threshold approver," teal is the operator, blue is ops-support,
-// gray is audit/read.
-const ROLE_BADGE: Record<UserRole, string> = {
-  enterprise_admin: 'bg-amber-500/10 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
-  executive:        'bg-purple-500/10 text-purple-700 dark:bg-purple-500/10 dark:text-purple-300',
-  treasury_manager: 'bg-teal-500/10 text-[#134849] dark:bg-teal-500/10 dark:text-teal-300',
-  accountant:       'bg-blue-500/10 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300',
-  auditor:          'bg-gray-500/10 text-gray-600 dark:bg-gray-500/15 dark:text-gray-300',
+// Migrated to semantic Badge variants (style guide Stage 3e).
+// Amber signals "author role" (elevated), purple signals "high-threshold
+// approver," teal is the operator, blue is ops-support, gray is audit/read.
+const ROLE_VARIANT: Record<UserRole, string> = {
+  enterprise_admin: 'pending',   // amber
+  executive:        'special',   // purple
+  treasury_manager: 'active',    // teal
+  accountant:       'info-blue', // blue
+  auditor:          'inactive',  // gray
 };
 
 // Permission matrix reflecting the RBAC hierarchy:
@@ -263,9 +262,9 @@ function RolePicker({ value, onChange }: { value: UserRole; onChange: (r: UserRo
         onClick={() => setOpen((v) => !v)}
         className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-sm transition-colors hover:bg-muted/60"
       >
-        <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium', ROLE_BADGE[value])}>
+        <Badge variant={ROLE_VARIANT[value] as any}>
           {ROLE_LABELS[value]}
-        </span>
+        </Badge>
         <ChevronDown className={cn('h-3.5 w-3.5 text-muted-foreground transition-transform', open && 'rotate-180')} />
       </button>
 
@@ -284,9 +283,9 @@ function RolePicker({ value, onChange }: { value: UserRole; onChange: (r: UserRo
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium', ROLE_BADGE[role])}>
+                  <Badge variant={ROLE_VARIANT[role] as any}>
                     {ROLE_LABELS[role]}
-                  </span>
+                  </Badge>
                   {/* Shield signals strict separation of duties: enterprise_admin cannot
                       fill approval slots regardless of rank. Surfaces the invariant up
                       front so admins don't wonder why they can't approve later. */}
@@ -474,13 +473,13 @@ export default function AccountManagementPage() {
               <DialogTitle>Change role</DialogTitle>
               <DialogDescription>
                 Change <span className="font-medium text-foreground">{confirmRole?.user.name}</span>'s role from{' '}
-                <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium', confirmRole ? ROLE_BADGE[confirmRole.user.role] : '')}>
+                <Badge variant={(confirmRole ? ROLE_VARIANT[confirmRole.user.role] : 'default') as any}>
                   {confirmRole ? ROLE_LABELS[confirmRole.user.role] : ''}
-                </span>{' '}
+                </Badge>{' '}
                 to{' '}
-                <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium', confirmRole ? ROLE_BADGE[confirmRole.newRole] : '')}>
+                <Badge variant={(confirmRole ? ROLE_VARIANT[confirmRole.newRole] : 'default') as any}>
                   {confirmRole ? ROLE_LABELS[confirmRole.newRole] : ''}
-                </span>?
+                </Badge>?
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -562,9 +561,9 @@ export default function AccountManagementPage() {
                         {inviteRole === role && <div className="h-2 w-2 rounded-full bg-[#19595b] dark:bg-teal-400" />}
                       </div>
                       <div>
-                        <div className={cn('text-xs font-medium rounded-full inline-flex px-2 py-0.5 mb-0.5', ROLE_BADGE[role])}>
+                        <Badge variant={ROLE_VARIANT[role] as any} className="mb-0.5">
                           {ROLE_LABELS[role]}
-                        </div>
+                        </Badge>
                         <p className="text-xs text-muted-foreground">{ROLE_DESCRIPTIONS[role]}</p>
                       </div>
                     </button>
@@ -652,9 +651,9 @@ export default function AccountManagementPage() {
                     return (
                       <th key={role} className="px-4 py-3 text-center font-medium">
                         <div className="flex flex-col items-center gap-1">
-                          <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium', ROLE_BADGE[role])}>
+                          <Badge variant={ROLE_VARIANT[role] as any}>
                             {ROLE_LABELS[role]}
-                          </span>
+                          </Badge>
                           <span className="text-[11px] text-muted-foreground font-normal">{count} of {CAPABILITIES.length}</span>
                         </div>
                       </th>
