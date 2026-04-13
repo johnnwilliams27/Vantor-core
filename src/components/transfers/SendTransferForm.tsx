@@ -363,7 +363,7 @@ export function SendTransferForm() {
         }
         confirmLabel="Continue & Sign"
         cancelLabel="Cancel"
-        variant="default"
+        variant="primary"
         onConfirm={() => solTransfer.confirmAta()}
       />
     </Card>

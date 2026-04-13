@@ -137,9 +137,7 @@ export function SlippageWarning({ estimate, onConfirm, onCancel, isExecuting }: 
         <Button
           onClick={onConfirm}
           disabled={!canConfirm || isExecuting}
-          className={cn(
-            estimate.severity === 'red' && 'bg-red-600 hover:bg-red-700',
-          )}
+          variant={estimate.severity === 'red' ? 'destructive-outline' : 'default'}
         >
           {isExecuting ? 'Executing…' : estimate.severity === 'green' ? 'Continue' : 'Acknowledge & Proceed'}
         </Button>

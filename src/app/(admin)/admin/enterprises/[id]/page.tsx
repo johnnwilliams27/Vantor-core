@@ -143,7 +143,7 @@ export default function EnterpriseDetailPage() {
                 </Button>
               ) : (
                 <Button
-                  variant="destructive"
+                  variant="destructive-outline"
                   size="sm"
                   onClick={() => freeze.mutate(id)}
                   disabled={freeze.isPending}
