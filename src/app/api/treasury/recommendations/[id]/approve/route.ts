@@ -153,11 +153,17 @@ export async function POST(
     // already been created by the gate; the fiat_ramp executor (Plan 2b)
     // will execute the ramp once the chain completes. No ramp runs here.
     //
-    // Follow-up: the linkage between ai_recommendations.id and the
-    // approval_request is not yet persisted — the movement.id on the
-    // request won't match anything queryable on the rec. A dedicated
-    // column (pending_approval_request_id) would tighten this; out of
-    // scope for this PR.
+    // Persist the linkage so UI can render "awaiting CFO (2/3 approvers)"
+    // by joining ai_recommendations → policy_approval_requests.
+    await supabase
+      .from('ai_recommendations')
+      .update({
+        pending_approval_request_id: gateResult.approval_request.id,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', params.id)
+      .eq('enterprise_id', enterpriseId as string);
+
     await writeAuditLog({
       userId: session.user.id,
       // Reuses the requires-approval audit_action added for transfers.
