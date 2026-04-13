@@ -17,6 +17,7 @@ import type { HardLimit } from '@/lib/policy/types/hard-limit';
 import { TemplatePicker } from '@/components/policy/TemplatePicker';
 import { ChainDesignerDialog } from '@/components/policy/ChainDesignerDialog';
 import { HardLimitDialog } from '@/components/policy/HardLimitDialog';
+import { RuleBuilderDialog } from '@/components/policy/RuleBuilderDialog';
 import { Pencil } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -69,6 +70,7 @@ export default function VersionEditorPage() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [builderDialog, setBuilderDialog] = useState<{ open: boolean; rule?: PolicyRule | null }>({ open: false });
   const [chainDialog, setChainDialog] = useState<{ open: boolean; chain?: ApprovalChain | null }>({ open: false });
   const [limitDialog, setLimitDialog] = useState<{ open: boolean; limit?: HardLimit | null }>({ open: false });
   const [activateOpen, setActivateOpen] = useState(false);
@@ -293,6 +295,8 @@ export default function VersionEditorPage() {
                   rule={r}
                   index={i}
                   triggerCount={triggers.data?.[r.id]?.trigger_count ?? 0}
+                  canEdit={isDraft}
+                  onEdit={() => setBuilderDialog({ open: true, rule: r })}
                   canDelete={isDraft}
                   onDelete={() => deleteRule(r.id)}
                   deleting={deletingId === r.id}
@@ -374,6 +378,16 @@ export default function VersionEditorPage() {
         onCreated={() => {
           qc.invalidateQueries({ queryKey: ['policy', 'version', versionId] });
         }}
+        onStartFromScratch={() => setBuilderDialog({ open: true, rule: null })}
+      />
+
+      <RuleBuilderDialog
+        versionId={versionId}
+        rule={builderDialog.rule}
+        chains={chains}
+        open={builderDialog.open}
+        onOpenChange={(o) => setBuilderDialog({ open: o, rule: o ? builderDialog.rule : null })}
+        onSaved={() => qc.invalidateQueries({ queryKey: ['policy', 'version', versionId] })}
       />
 
       <ChainDesignerDialog
@@ -432,10 +446,12 @@ export default function VersionEditorPage() {
   );
 }
 
-function RuleRow({ rule, index, triggerCount, canDelete, onDelete, deleting }: {
+function RuleRow({ rule, index, triggerCount, canEdit, onEdit, canDelete, onDelete, deleting }: {
   rule: PolicyRule;
   index: number;
   triggerCount: number;
+  canEdit: boolean;
+  onEdit: () => void;
   canDelete: boolean;
   onDelete: () => void;
   deleting: boolean;
@@ -470,6 +486,18 @@ function RuleRow({ rule, index, triggerCount, canDelete, onDelete, deleting }: {
             <Badge variant="pending" size="sm" className="font-mono tabular-nums">
               {triggerCount}× · 30d
             </Badge>
+          )}
+          {canEdit && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit();
+              }}
+              className="p-1.5 rounded-md hover:bg-white/[0.04] text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Edit rule"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
           )}
           {canDelete && (
             <button

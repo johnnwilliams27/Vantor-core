@@ -10,7 +10,7 @@ import { IconTile } from '@/components/ui/icon-tile';
 import { useToast } from '@/components/ui/toast';
 import { cn, sanitizeErrorMessage } from '@/lib/utils';
 import { RULE_TEMPLATES, type RuleTemplate, type TemplateField } from '@/lib/policy/templates';
-import { Flame, ShieldOff, Users, Ban, Clock, Filter, TrendingDown, Sparkles, ArrowLeft, Check } from 'lucide-react';
+import { Flame, ShieldOff, Users, Ban, Clock, Filter, TrendingDown, Sparkles, ArrowLeft, Check, Wrench, ArrowRight } from 'lucide-react';
 
 const ICON_FOR_TEMPLATE: Record<string, React.ReactNode> = {
   large_amount_approval: <Flame />,
@@ -28,6 +28,9 @@ interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   onCreated: () => void;
+  /** Invoked when user clicks the "Start from scratch" card — closes the picker
+   *  and hands off to the full rule builder dialog. */
+  onStartFromScratch?: () => void;
 }
 
 /**
@@ -37,7 +40,7 @@ interface Props {
  *
  * No modals-on-modals. Form replaces the picker in place.
  */
-export function TemplatePicker({ versionId, open, onOpenChange, onCreated }: Props) {
+export function TemplatePicker({ versionId, open, onOpenChange, onCreated, onStartFromScratch }: Props) {
   const [picked, setPicked] = useState<RuleTemplate | null>(null);
   const [ruleName, setRuleName] = useState('');
   const [values, setValues] = useState<Record<string, string | number>>({});
@@ -104,6 +107,35 @@ export function TemplatePicker({ versionId, open, onOpenChange, onCreated }: Pro
             </DialogHeader>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[60vh] overflow-y-auto pr-1">
+              {onStartFromScratch && (
+                <button
+                  onClick={() => {
+                    onOpenChange(false);
+                    reset();
+                    onStartFromScratch();
+                  }}
+                  className={cn(
+                    'text-left rounded-lg border border-dashed border-purple-500/30 bg-purple-500/[0.04] p-4 sm:col-span-2',
+                    'hover:border-purple-500/50 hover:bg-purple-500/[0.08] transition-colors',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50',
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <IconTile variant="special" size="md" emphasized>
+                      <Wrench />
+                    </IconTile>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-semibold flex items-center gap-2">
+                        Start from scratch
+                        <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        Compose conditions by hand — amount, attribute, time, sanctions.
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              )}
               {RULE_TEMPLATES.map((t) => (
                 <button
                   key={t.id}
