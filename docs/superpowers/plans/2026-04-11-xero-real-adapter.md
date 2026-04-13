@@ -10,9 +10,24 @@
 
 **Spec:** `docs/superpowers/specs/2026-04-11-xero-real-adapter-design.md`
 
-**Hard dependency:** A separate AES-256-GCM credential encryption upgrade must be landed first. This plan's Phase 0 verifies it; if absent, stop and land the encryption spec before continuing.
+**Hard dependency:** AES-256-GCM credential encryption — **LANDED on master**. `src/lib/crypto/envelope.ts` exports async `encryptJson`/`decryptJson`; `src/lib/erp/factory.ts` wraps them as `async encryptCredentials`/`async decryptCredentials`.
 
 **Working directory:** All work happens inside the `.worktrees/xero-real-adapter` worktree on branch `feature/xero-real-adapter`. Never run `git add` from the main checkout.
+
+---
+
+## Patch log — 2026-04-13 (post-rebase)
+
+The original plan (committed 2026-04-11) was authored against a pre-policy-engine master. The branch was rebased onto `6847c56` on 2026-04-13; the following inline edits were applied to keep the plan executable:
+
+1. **Hard dependency** — no longer a blocker (encryption landed). Phase 0 Task 0.1 Step 3 rewritten to verify the envelope module exists, not to grep for `aes-256-gcm` in `factory.ts`.
+2. **5 mock adapters, not 4** — `QuickBooksMockAdapter` was added on master (migration 0046 added `'quickbooks'` to the `erp_provider` enum). Task 1.2 updated to cover all 5.
+3. **Migration number 0053, not 0038** — master is at 0052. Task 1.5 filename + commit message updated.
+4. **Migration tool `npx tsx scripts/migrate.ts`, not `supabase db push`** — matches `CLAUDE.md`. Task 1.5 Steps 2–3 rewritten.
+5. **`npm run db:types` does not exist** — Task 1.5 Step 4 rewritten to update `src/types/database.ts` manually.
+6. **`encryptCredentials` is now async** — Phase 8 Task 8.2 callback must `await encryptCredentials(...)`. Plan line ~3044 patched.
+7. **Policy-gate integration NOT required for `recordBillPayment`** — MovementKind in `src/lib/policy/types/movement.ts` has 7 kinds, none map to ERP ledger writes. `recordBillPayment` is a post-settlement ledger entry (money already moved, `externalTxHash` is a past-tense reference), not a gated money movement. No change needed.
+8. **`.env.local` lives in the main checkout, not the worktree** — Phase 0 Task 0.1 Steps 4–5 rewritten to read from the parent `C:/Users/John/crypto-treasury/.env.local`. `XERO_CLIENT_ID`/`XERO_CLIENT_SECRET`/`XERO_REDIRECT_URI` are **not yet set**; this blocks Phase 8 (OAuth routes) but not Phase 1–7.
 
 ---
 
@@ -34,22 +49,20 @@ Expected: on `feature/xero-real-adapter`, no uncommitted changes except possibly
 
 - [ ] **Step 3: Verify encryption dependency is landed**
 
-Run: `grep -n "createCipheriv\\|aes-256-gcm" src/lib/erp/factory.ts`
-Expected: at least one match showing real AES-GCM usage.
+Run: `ls src/lib/crypto/envelope.ts src/lib/crypto/provider.ts && grep -n "encryptJson\\|decryptJson" src/lib/erp/factory.ts`
+Expected: both files exist; `factory.ts` shows `encryptCredentials` / `decryptCredentials` delegating to `encryptJson` / `decryptJson`.
 
-If zero matches, stop. `src/lib/erp/factory.ts` still has base64 passthrough. The encryption spec (separate document) must be implemented first — storing Xero refresh tokens base64-encoded is unacceptable.
+- [ ] **Step 4: Confirm `CREDENTIALS_ENCRYPTION_KEY` is set in the main checkout's `.env.local`**
 
-- [ ] **Step 4: Confirm `CREDENTIALS_ENCRYPTION_KEY` is set in `.env.local`**
+Run: `grep -c CREDENTIALS_ENCRYPTION_KEY ../../.env.local`
+Expected: `1` or higher. (The worktree has no `.env.local` of its own; Next.js reads from the parent checkout when run here, so the file at `C:/Users/John/crypto-treasury/.env.local` is the source of truth.)
 
-Run: `grep -c CREDENTIALS_ENCRYPTION_KEY .env.local`
-Expected: `1` or higher.
+- [ ] **Step 5: Xero OAuth env vars — deferred to Phase 8**
 
-- [ ] **Step 5: Confirm required Xero env vars are set**
+Run: `grep -cE '^XERO_(CLIENT_ID|CLIENT_SECRET|REDIRECT_URI)=' ../../.env.local`
+If the count is `3`, great. If it is `0`, that is expected at this point — `XERO_CLIENT_ID` / `XERO_CLIENT_SECRET` / `XERO_REDIRECT_URI` are only required for Phase 8 (OAuth routes + connect UI) and Phase 9 (live Demo Company tests). Phase 1–7 work without them.
 
-Run: `grep -cE '^XERO_(CLIENT_ID|CLIENT_SECRET|REDIRECT_URI)=' .env.local`
-Expected: `3`.
-
-If any are missing, add them to `.env.local` (dev credentials from the user's Xero developer account) before continuing. Production values are set in Vercel directly, not in this file.
+Before starting Phase 8, stop and have the user add these three vars to `../../.env.local` using dev credentials from their Xero developer account.
 
 - [ ] **Step 6: Confirm Vitest, Zod, and Next.js versions**
 
@@ -112,13 +125,14 @@ Expected: errors in `src/lib/erp/mock/*.ts` and `src/app/api/erp/gl-post/route.t
 
 Phase 1 commits as one unit after all contract-consuming files are updated.
 
-### Task 1.2: Update all four mock adapters to implement `recordBillPayment`
+### Task 1.2: Update all five mock adapters to implement `recordBillPayment`
 
 **Files:**
 - Modify: `src/lib/erp/mock/xero-mock.ts`
 - Modify: `src/lib/erp/mock/sap-mock.ts`
 - Modify: `src/lib/erp/mock/oracle-mock.ts`
 - Modify: `src/lib/erp/mock/netsuite-mock.ts`
+- Modify: `src/lib/erp/mock/quickbooks-mock.ts`
 
 - [ ] **Step 1: Update `xero-mock.ts` imports and method**
 
@@ -190,7 +204,21 @@ async recordBillPayment(payload: ERPBillPaymentPayload): Promise<ERPBillPaymentR
 }
 ```
 
-- [ ] **Step 5: Re-run the type check**
+- [ ] **Step 5: Apply the same contract update to `quickbooks-mock.ts`**
+
+Same import change. Replace `postGLEntry` with:
+```ts
+async recordBillPayment(payload: ERPBillPaymentPayload): Promise<ERPBillPaymentResult> {
+  await delay(400);
+  return {
+    externalPaymentId: `QB-PMT-${Date.now()}`,
+    status: 'recorded',
+    message: `Payment of ${payload.amount} ${payload.currency} recorded against QuickBooks bill ${payload.invoiceId} (mock), ref: ${payload.reference} tx:${payload.externalTxHash}`,
+  };
+}
+```
+
+- [ ] **Step 6: Re-run the type check**
 
 Run: `npx tsc --noEmit 2>&1 | head -30`
 Expected: mock adapter errors gone. Remaining errors should only be in `src/app/api/erp/gl-post/route.ts` and possibly `src/lib/test-mode/seed/erp.ts` / `wipe.ts`.
@@ -273,14 +301,14 @@ Expected: no errors. If there are any, they're the remaining contract-consumers 
 ### Task 1.5: Supabase migration — drop `gl_postings`, create `bill_payments`, add Xero columns
 
 **Files:**
-- Create: `supabase/migrations/0038_xero_adapter.sql`
+- Create: `supabase/migrations/0053_xero_adapter.sql`
 
 - [ ] **Step 1: Write the migration**
 
-Create `supabase/migrations/0038_xero_adapter.sql`:
+Create `supabase/migrations/0053_xero_adapter.sql`:
 
 ```sql
--- 0038_xero_adapter.sql
+-- 0053_xero_adapter.sql
 -- Xero real adapter: drop dormant gl_postings, create bill_payments,
 -- add Xero-specific columns to erp_configurations.
 
@@ -350,22 +378,25 @@ CREATE TABLE xero_ci_bootstrap (
 
 - [ ] **Step 2: Apply the migration to the dev Supabase project**
 
-Run: `npx supabase db push --db-url "postgresql://postgres:$(op read op://dev/supabase/db-password)@db.spllxotyxipdvfpkkvgu.supabase.co:5432/postgres"`
+Per `CLAUDE.md`, the project uses `scripts/migrate.ts`, not `supabase db push`. `NEXT_PUBLIC_SUPABASE_URL` in `.env.local` selects which project the script targets — set it to the dev project ref (`spllxotyxipdvfpkkvgu`) before running.
 
-(Or follow the team's existing migration workflow if different — the memory note says dev project is `spllxotyxipdvfpkkvgu`.)
+Run: `npx tsx scripts/migrate.ts supabase/migrations/0053_xero_adapter.sql`
 
-Expected: migration applies without error. If it errors on `DROP TABLE gl_postings` because of a foreign key from an unrelated table, investigate — do NOT force-drop with extra CASCADE without understanding what would break.
+Expected: migration applies without error and writes a tracker row to `supabase_migrations.schema_migrations`. If it errors on `DROP TABLE gl_postings` because of a foreign key from an unrelated table, investigate — do NOT add extra CASCADE without understanding what would break.
 
 - [ ] **Step 3: Apply the migration to prod Supabase**
 
-Run: same command with prod db URL (`lfujbwemavgiifkltrag`).
+Swap `NEXT_PUBLIC_SUPABASE_URL` to the prod project ref (`lfujbwemavgiifkltrag`), then rerun the same `scripts/migrate.ts` command. Restore dev URL afterwards.
 
-Both Supabase projects must be migrated together per the project's Supabase invariant. If one succeeds and the other fails, rerun the failing one — the migration is idempotent on the additive parts but `DROP TABLE` will be a no-op the second time.
+Both Supabase projects must be migrated together per the project's Supabase invariant. If one succeeds and the other fails, rerun the failing one — the additive parts are idempotent (`IF NOT EXISTS`) and the `DROP TABLE` is a no-op the second time.
 
-- [ ] **Step 4: Regenerate database types**
+- [ ] **Step 4: Update hand-maintained database types**
 
-Run: `npm run db:types`
-(Or whatever the team's type-generation script is. If there isn't one, manually update `src/types/database.ts` to remove `gl_postings` and add `bill_payments` + the new `erp_configurations` columns.)
+There is no `npm run db:types` script — `src/types/database.ts` is maintained by hand. Manually edit it to:
+- Remove the `gl_postings` Row/Insert/Update types and its entry in the `Tables` map.
+- Add `bill_payments` Row/Insert/Update types + entry in the `Tables` map, matching the columns in the migration.
+- Add the five new columns to `erp_configurations` Row/Insert/Update: `xero_tenant_id: string | null`, `xero_bank_account_id: string | null`, `access_token_expires_at: string | null`, `refresh_token_rotated_at: string | null`, `status: 'active' | 'expired' | 'needs_reconnect'` (not-null, default `'active'`).
+- Add `xero_ci_bootstrap` Row/Insert/Update + entry in the `Tables` map.
 
 - [ ] **Step 5: Re-run the type check**
 
@@ -390,7 +421,7 @@ Expected: clean build.
 
 Run:
 ```bash
-git add src/types/erp.ts src/lib/erp/mock/ src/lib/test-mode/seed/ supabase/migrations/0038_xero_adapter.sql src/types/database.ts
+git add src/types/erp.ts src/lib/erp/mock/ src/lib/test-mode/seed/ supabase/migrations/0053_xero_adapter.sql src/types/database.ts
 git rm src/app/api/erp/gl-post/route.ts
 git commit -m "$(cat <<'EOF'
 refactor(erp): replace postGLEntry with recordBillPayment across adapter contract
@@ -3040,8 +3071,8 @@ export async function GET(req: Request): Promise<Response> {
   }
   const bankAccount = acctsParsed.data.Accounts[0];
 
-  // Encrypt + upsert.
-  const credentialsBlob = encryptCredentials({
+  // Encrypt + upsert. encryptCredentials is async — must await.
+  const credentialsBlob = await encryptCredentials({
     apiUrl: 'https://api.xero.com',
     clientId,
     clientSecret,
