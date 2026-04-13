@@ -338,11 +338,15 @@ html:has(.landing-page) {
   border-radius: 8px;
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
               box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 4px 14px rgba(45, 212, 191, 0.22);
+  box-shadow:
+    0 6px 20px rgba(45, 212, 191, 0.38),
+    0 0 32px rgba(45, 212, 191, 0.22);
 }
 .btn-gradient:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(45, 212, 191, 0.32);
+  box-shadow:
+    0 8px 26px rgba(45, 212, 191, 0.48),
+    0 0 42px rgba(45, 212, 191, 0.32);
 }
 .btn-gradient:active {
   transform: scale(0.98);
