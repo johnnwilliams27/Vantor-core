@@ -11,15 +11,19 @@
 
 The Vantor Style Guide (at `docs/style-guide.html`) formalizes the full visual system across 16 sections — buttons, badges, icon containers, status dots, cards, form inputs, tabs, switches, avatars, progress, typography, color tokens, spacing, elevation, motion, empty states.
 
-This spec maps each section's decisions to concrete codebase migrations, grouped into **5 shippable stages**. Each stage is one PR. Stages are ordered by risk and dependency:
+This spec maps each section's decisions to concrete codebase migrations, grouped into **7 shippable stages**. Each stage is one PR (Stage 3 splits into multiple module-sub-PRs). Stages are ordered by risk and dependency:
 
 | Stage | Scope | Risk | PR count |
 |---|---|---|---|
 | **1 · Foundation** | Tokens, Satoshi font, L1 primary color, CSS vars | Zero regression (additive only) | 1 |
 | **2 · Primitives** | Extend Button/Badge/Card/Input; new IconTile/StatusDot/Avatar/specialized cards | Low (new APIs, existing usage intact) | 1-2 |
-| **3 · Migration** | Retire ~100 inline patterns across modules | Medium (large diff, visual regressions possible) | 4-6 (split by module) |
+| **3 · Migration** | Retire ~100 inline patterns across web surfaces | Medium (large diff, visual regressions possible) | 4-6 (split by module) |
 | **4 · Deviations** | Fix known inconsistencies from original audit | Low (surgical) | 1 |
 | **5 · Empty states** | Replace 3 dashboard empty states | Low | 1 |
+| **6 · Emails** | Align 5 Resend templates with style system (email-safe palette, inline styles, table layouts) | Low (isolated rendering surface) | 1 |
+| **7 · PDFs** | Align `@react-pdf/renderer` exports with style system (embedded Satoshi, PDF StyleSheet tokens) | Low (isolated rendering surface) | 1 |
+
+**Rendering-surface scope** — Stages 1–5 cover web surfaces (app, landing, auth) where standard CSS/web fonts apply. Stages 6–7 cover alternative rendering surfaces (email clients, PDF generation) which require their own style system because they can't use web fonts, flexbox/grid, CSS variables with opacity notation, or external stylesheets.
 
 ---
 
@@ -461,6 +465,264 @@ Use `<EmptyStateCard variant="special">` (purple — AI-not-configured) with tit
 
 ---
 
+## Stage 6 · Emails
+
+**Goal:** align Resend email templates with the style system — same color palette, same brand voice, same visual rhythm — within the constraints of email client rendering.
+
+### Why emails are separate
+
+Email clients can't use:
+- **Web fonts** — Satoshi won't load in Outlook, Gmail desktop, many corporate email clients. Must use fallback system stacks.
+- **CSS variables** — stripped or ignored in most clients. Colors must be inline hex.
+- **Flexbox / grid** — Outlook requires table-based layouts.
+- **Opacity notation** in CSS colors — `rgba()` works, but opacity-on-class-name (`/8`, `/20`) doesn't compile in email.
+- **External stylesheets** — everything must be inlined or in a single `<style>` tag inside `<head>`.
+- **Modern features** — `@media (prefers-color-scheme)` works in Apple Mail + Gmail webmail but NOT Outlook. Dark-mode design must degrade gracefully.
+
+### 6.1 — Audit the 5 existing templates
+
+Files at `src/lib/email/templates/`:
+- `invitation.ts` — team invite
+- `monthly-bill.ts` — billing summary
+- `new-signup-alert.ts` — admin notification
+- `password-reset-email.ts` — auth flow
+- `verify-email.ts` — auth flow
+
+For each template:
+1. Inventory the current HTML structure (tables vs divs, inline vs class styles)
+2. Note current font stack, color values, button construction
+3. Flag any content that relies on features that don't render email-safe
+
+### 6.2 — Create email-safe style tokens
+
+New file: `src/lib/email/tokens.ts`
+
+Email-safe hex equivalents of the semantic palette (no opacity notation — use pre-baked hex values that look like the tinted versions on a known dark bg):
+
+```ts
+export const EMAIL_COLORS = {
+  // Brand
+  brandTeal: '#2DD4BF',
+  brandCyan: '#67E8F9',
+  primaryL1: '#1A7F71',
+  primaryL1Hover: '#15695F',
+
+  // Surfaces (dark mode — default for Vantor emails)
+  bgVoid: '#060D1F',
+  bgCard: '#0E1A2E',
+
+  // Text
+  text100: '#E5E7EB',
+  text200: '#D1D5DB',
+  text300: '#9CA3AF',
+  text400: '#6B7280',
+
+  // Semantic (full hex — tints pre-baked for dark bg)
+  active:   { bg: '#0F2B28', text: '#2DD4BF', border: '#1A4D47' },
+  pending:  { bg: '#2B2008', text: '#FBBF24', border: '#4D3813' },
+  failed:   { bg: '#2B0D0D', text: '#F87171', border: '#4D1818' },
+  info:     { bg: '#0D1B2D', text: '#60A5FA', border: '#18304D' },
+  special:  { bg: '#1E0D2D', text: '#C084FC', border: '#35184D' },
+  inactive: { bg: '#1C1D20', text: '#9CA3AF', border: '#2E3136' },
+  urgent:   { bg: '#2B0E11', text: '#FB7185', border: '#4D181E' },
+  live:     { bg: '#0B2516', text: '#4ADE80', border: '#13452B' },
+
+  // Focus ring equivalent (not needed in email — no keyboard focus)
+} as const;
+
+export const EMAIL_FONT_STACK = 'Arial, Helvetica, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+```
+
+**Why Arial leads the fallback stack:** most reliable across email clients (Outlook, Apple Mail, Gmail, Yahoo). `-apple-system` and friends are listed but won't render in most corporate email environments. Accept the tradeoff — use Arial in emails, Satoshi in web app.
+
+### 6.3 — Create email-safe component builders
+
+New file: `src/lib/email/components.ts`
+
+HTML-string-building functions (not React components — emails are raw HTML):
+
+```ts
+import { EMAIL_COLORS as c, EMAIL_FONT_STACK } from './tokens';
+
+export function emailButton(opts: {
+  label: string;
+  href: string;
+  variant?: 'primary' | 'secondary';
+}): string {
+  const bg = opts.variant === 'secondary' ? 'transparent' : c.primaryL1;
+  const color = opts.variant === 'secondary' ? c.text100 : '#FFFFFF';
+  const border = opts.variant === 'secondary' ? `1px solid ${c.text400}` : 'none';
+  return `
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto;">
+      <tr>
+        <td style="border-radius: 8px; background: ${bg};">
+          <a href="${opts.href}" style="display: inline-block; padding: 12px 24px; font-family: ${EMAIL_FONT_STACK}; font-size: 14px; font-weight: 600; color: ${color}; text-decoration: none; border-radius: 8px; border: ${border};">
+            ${opts.label}
+          </a>
+        </td>
+      </tr>
+    </table>`;
+}
+
+export function emailBadge(opts: { label: string; variant: keyof typeof c }): string {
+  const v = c[opts.variant] as { bg: string; text: string; border: string };
+  if (!v.bg) throw new Error('Invalid badge variant for email');
+  return `<span style="display: inline-block; padding: 2px 9px; border-radius: 6px; background: ${v.bg}; color: ${v.text}; border: 1px solid ${v.border}; font-family: ${EMAIL_FONT_STACK}; font-size: 11px; font-weight: 600;">${opts.label}</span>`;
+}
+
+export function emailCard(content: string): string {
+  return `
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background: ${c.bgCard}; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;">
+      <tr><td style="padding: 24px;">${content}</td></tr>
+    </table>`;
+}
+
+// emailLayout wraps all content in the branded email shell (logo header, dark bg, footer)
+export function emailLayout(opts: { subject: string; content: string }): string { /* ... */ }
+```
+
+### 6.4 — Migrate the 5 templates
+
+For each template, replace ad-hoc HTML/styles with the new component builders. Content/copy stays unchanged; only the rendering primitives change.
+
+**Acceptance:**
+- All 5 emails send correctly through Resend
+- Preview in: Apple Mail (iOS + macOS), Gmail (webmail + app), Outlook (desktop + web)
+- Links work, buttons tap correctly on mobile
+- Dark mode renders cleanly in Apple Mail + Gmail (Outlook stays dark by design via background color)
+- No broken images, no layout shift
+
+### 6.5 — Optional: Resend React Email integration
+
+If scope allows, evaluate [React Email](https://react.email) to write templates as JSX instead of HTML strings. React Email compiles JSX → email-safe HTML. Would align with the rest of the Vantor codebase (everything else is React/TSX).
+
+Defer this to a follow-up — not required for Stage 6.
+
+---
+
+## Stage 7 · PDFs
+
+**Goal:** align `@react-pdf/renderer` exports with the style system.
+
+### Why PDFs are separate
+
+`@react-pdf/renderer` uses its own StyleSheet API (similar to React Native). It supports:
+- Custom fonts via `Font.register()` (can embed Satoshi OTF)
+- Flexbox via Yoga layout engine
+- Hex colors (full support)
+- Standard font-weight range
+
+It does NOT support:
+- CSS variables (must use JS constants)
+- Tailwind classes (use inline StyleSheet)
+- Web-only units (rem, em — use px or points)
+- All OpenType features (tabular-nums partial support via alternate font variants)
+
+### 7.1 — Audit the existing PDF surface
+
+Files:
+- `src/lib/export/pdf.tsx` — core PDF renderer + shared styles
+- `src/lib/export/csv.ts` — CSV export (not a PDF concern, skip)
+- `src/components/reporting/sections/*.tsx` — 8 report section renderers:
+  - `ComplianceSection.tsx`
+  - `InvoicesSection.tsx`
+  - `ObligationCoverageSection.tsx`
+  - `RampHistorySection.tsx`
+  - `RecommendationsSection.tsx`
+  - `SwapsSection.tsx`
+  - `TransfersSection.tsx`
+  - `TreasuryOverviewSection.tsx`
+  - `YieldSection.tsx`
+
+Each section currently defines ad-hoc styles. Consolidate.
+
+### 7.2 — Register Satoshi for PDFs
+
+```tsx
+// src/lib/export/fonts.ts
+import { Font } from '@react-pdf/renderer';
+
+Font.register({
+  family: 'Satoshi',
+  fonts: [
+    { src: '/fonts/Satoshi-Regular.otf', fontWeight: 400 },
+    { src: '/fonts/Satoshi-Medium.otf', fontWeight: 500 },
+    { src: '/fonts/Satoshi-Bold.otf', fontWeight: 700 },
+  ],
+});
+```
+
+Requires downloading Satoshi OTF files from fontshare.com and placing in `public/fonts/` (or bundling and serving via API route if PDFs are generated server-side).
+
+### 7.3 — Define PDF style tokens
+
+New file: `src/lib/export/pdf-tokens.ts`
+
+```tsx
+import { StyleSheet } from '@react-pdf/renderer';
+
+export const PDF_COLORS = {
+  // Reuse semantic palette, baked hex for PDF reliability
+  brandTeal: '#2DD4BF',
+  primaryL1: '#1A7F71',
+  bgCard: '#0E1A2E',
+  bgPage: '#FFFFFF',  // PDFs default to light bg for print
+  text100: '#0F172A',  // inverted for light bg
+  text200: '#334155',
+  text300: '#64748B',
+  text400: '#94A3B8',
+  border: '#E2E8F0',
+  // Semantic badges — use lighter tints for print context
+  active:   { bg: '#DCFAF6', text: '#0F766E' },
+  pending:  { bg: '#FEF3C7', text: '#92400E' },
+  failed:   { bg: '#FEE2E2', text: '#991B1B' },
+  // ...
+} as const;
+
+export const PDF_STYLES = StyleSheet.create({
+  page: { fontFamily: 'Satoshi', fontSize: 10, color: PDF_COLORS.text100, padding: 32 },
+  h1: { fontSize: 24, fontWeight: 700, marginBottom: 8 },
+  h2: { fontSize: 16, fontWeight: 600, marginBottom: 6 },
+  body: { fontSize: 10, lineHeight: 1.5 },
+  card: { backgroundColor: '#F8FAFC', borderRadius: 8, padding: 16, marginBottom: 12 },
+  tabular: { fontFamily: 'Satoshi', fontSize: 10, fontWeight: 500 },
+  // ...
+});
+```
+
+**Note on light vs dark:** PDFs are typically printed or viewed in PDF readers with white backgrounds. Using Vantor's dark-mode palette directly would waste toner and look broken when printed. Use a **light-mode variant** of the semantic palette for PDF output. Brand teal stays the same; background/text scales flip.
+
+### 7.4 — Migrate the 8 report sections
+
+For each section in `src/components/reporting/sections/`:
+1. Replace ad-hoc `styles = StyleSheet.create(...)` with imports from `pdf-tokens.ts`
+2. Replace hardcoded hex colors with `PDF_COLORS` references
+3. Replace ad-hoc font choices with the registered `Satoshi` family
+
+**Acceptance:**
+- All 8 report sections render without font-warning console errors
+- Output PDF displays correctly in Preview (macOS), Adobe Reader, Chrome PDF viewer
+- Tabular columns align (monospaced numerals)
+- Brand teal consistent across sections
+- Printed output (if tested) looks professional
+
+### 7.5 — Optional: shared PDF primitives
+
+If the 8 sections have copy-paste layout patterns (card wrapper, stat row, table row), extract into `src/lib/export/pdf-components.tsx`:
+
+```tsx
+export const PdfCard = ({ title, children }) => (
+  <View style={PDF_STYLES.card}>
+    {title && <Text style={PDF_STYLES.h2}>{title}</Text>}
+    {children}
+  </View>
+);
+```
+
+Defer to follow-up if not needed to complete the migration.
+
+---
+
 ## Rollback plan
 
 Each stage is isolated enough to revert independently:
@@ -472,6 +734,8 @@ Each stage is isolated enough to revert independently:
 | 3 · Migration | Medium — each sub-PR is independently revertable. Keep PRs 3a-3f small for easy rollback. |
 | 4 · Deviations | Low — touches ≤10 files, surgical revert possible per file. |
 | 5 · Empty states | Low — 3 components, easy revert. |
+| 6 · Emails | Low — new `tokens.ts` + `components.ts` can be deleted; template file reverts restore prior HTML. |
+| 7 · PDFs | Low — new `fonts.ts` + `pdf-tokens.ts` can be deleted; section files revert to prior StyleSheet definitions. |
 
 **Guardrails:**
 - Stage 1 lands and runs in production for at least 1 day before Stage 2 lands
@@ -491,8 +755,10 @@ Each stage is isolated enough to revert independently:
 | Avatar divs with hardcoded colors | ~5 sites | 1 primitive: `<Avatar>` |
 | Hardcoded teal `#19595b` | ~3 sites | `bg-primary` (L1 token) |
 | Wrong-palette destructive outline (red-600/red-300) | 6 sites | `<Button variant="destructive-outline">` |
+| Ad-hoc email template styles | 5 templates | Central `src/lib/email/tokens.ts` + `components.ts` |
+| Ad-hoc PDF StyleSheets | 8 sections + 1 core | Central `src/lib/export/pdf-tokens.ts` + registered Satoshi font |
 
-**Total inline pattern sites retired: ~125-140.**
+**Total inline pattern sites retired: ~140-155** (web) plus 13 template/section refactors (email + PDF).
 
 ---
 
@@ -501,8 +767,10 @@ Each stage is isolated enough to revert independently:
 - **Visual QA process** — assumed to exist (or be added). Each PR merge should include side-by-side screenshots of affected pages.
 - **Unit tests for primitives** — should be added as each primitive is created in Stage 2. Aim for one test per variant/size combination.
 - **Storybook** — Vantor doesn't currently use Storybook. Not adding it as part of this spec, but it would be a natural fit for a future stage.
-- **Dark/light mode parity** — Vantor is dark-only. If light mode is added later, the semantic palette needs lighter equivalents defined.
+- **Dark/light mode parity** — Vantor is dark-only for web. PDFs (Stage 7) use a light-mode variant of the palette by necessity. If light mode is added to the web app later, the semantic palette needs lighter equivalents defined.
 - **Accessibility audit** — every primitive should already follow WCAG AA (focus rings, aria labels, touch targets ≥44px for page-level). Spot-check during Stage 2 creation.
+- **Email client QA matrix** — Stage 6 assumes spot-checking in Apple Mail, Gmail, Outlook covers 90% of recipients. Enterprise customers may have unusual email environments (Proofpoint, hMailServer) — add to QA list if issues arise.
+- **PDF print fidelity** — Stage 7 optimizes for screen PDF viewing. If customers actually print reports, add a print-stylesheet pass (margins, page breaks, logo placement).
 
 ---
 
