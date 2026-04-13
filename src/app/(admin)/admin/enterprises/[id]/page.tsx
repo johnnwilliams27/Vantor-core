@@ -9,6 +9,7 @@ import {
   useUnfreezeEnterprise,
 } from '@/hooks/useAdmin';
 import { Spinner } from '@/components/ui/spinner';
+import { Badge } from '@/components/ui/badge';
 import {
   ArrowLeft,
   Loader2,
@@ -23,35 +24,32 @@ import {
   Shield,
 } from 'lucide-react';
 
+// Migrated to semantic Badge variants (style guide Stage 3e).
 function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    active: 'bg-emerald-500/15 text-emerald-400',
-    frozen: 'bg-blue-500/15 text-blue-400',
-    suspended: 'bg-red-500/15 text-red-400',
-    pending_kyc: 'bg-amber-500/15 text-amber-400',
+  const variants: Record<string, string> = {
+    active: 'active',
+    frozen: 'info-blue',
+    suspended: 'failed',
+    pending_kyc: 'pending',
   };
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${colors[status] ?? 'bg-gray-500/15 text-gray-400'}`}
-    >
+    <Badge variant={(variants[status] ?? 'inactive') as any}>
       {status.replace('_', ' ')}
-    </span>
+    </Badge>
   );
 }
 
 function KycBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    verified: 'bg-emerald-500/15 text-emerald-400',
-    pending: 'bg-amber-500/15 text-amber-400',
-    rejected: 'bg-red-500/15 text-red-400',
-    none: 'bg-gray-500/15 text-gray-400',
+  const variants: Record<string, string> = {
+    verified: 'active',
+    pending: 'pending',
+    rejected: 'failed',
+    none: 'inactive',
   };
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${colors[status] ?? 'bg-gray-500/15 text-gray-400'}`}
-    >
+    <Badge variant={(variants[status] ?? 'inactive') as any}>
       {status}
-    </span>
+    </Badge>
   );
 }
 
