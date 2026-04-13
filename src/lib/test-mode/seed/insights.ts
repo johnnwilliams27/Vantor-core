@@ -20,7 +20,7 @@ export async function seedInsights(ctx: SeedContext): Promise<void> {
       policy_verdict: 'require_approval', policy_reason: 'AI-initiated movement — always requires human approval',
       impact_dollar_value: 350000, impact_buffer_days: 4,
       confidence: 0.92, data_freshness: 'fresh',
-      venue_category: null, supporting_data: {},
+      venue_category: null, supporting_data: {}, channel: 'deterministic',
       created_at: daysAgo(0),
     },
     // 2. CRITICAL concentration_breach — new, has agent reasoning
@@ -37,7 +37,7 @@ export async function seedInsights(ctx: SeedContext): Promise<void> {
       recommended_action: { kind: 'swap', from_asset: 'USDC', to_asset: 'USDT', amount_usd: 200000 },
       policy_verdict: 'require_approval', policy_reason: 'AI-initiated movement — always requires human approval',
       impact_dollar_value: 200000, confidence: 0.95, data_freshness: 'fresh',
-      venue_category: null, supporting_data: {},
+      venue_category: null, supporting_data: {}, channel: 'deterministic',
       created_at: daysAgo(0),
     },
     // 3. WARNING yield_drop — new
@@ -51,7 +51,7 @@ export async function seedInsights(ctx: SeedContext): Promise<void> {
       rationale: { protocol: 'morpho_reservoir', apy_before: 7.0, apy_now: 5.2, window_days: 7 },
       recommended_action: null, policy_verdict: null, policy_reason: null,
       impact_apy_delta_bps: -180, confidence: 0.88, data_freshness: 'fresh',
-      venue_category: 'defi_lending', supporting_data: {},
+      venue_category: 'defi_lending', supporting_data: {}, channel: 'deterministic',
       created_at: daysAgo(1),
     },
     // 4. WARNING yield_opportunity — viewed
@@ -67,7 +67,7 @@ export async function seedInsights(ctx: SeedContext): Promise<void> {
       policy_verdict: 'require_approval', policy_reason: 'AI-initiated movement — always requires human approval',
       impact_apy_delta_bps: 130, impact_dollar_value: 150000,
       confidence: 0.78, data_freshness: 'fresh',
-      venue_category: 'defi_lending', supporting_data: {},
+      venue_category: 'defi_lending', supporting_data: {}, channel: 'deterministic',
       created_at: daysAgo(3),
     },
     // 5. WARNING yield_idle_opportunity — new
@@ -83,7 +83,7 @@ export async function seedInsights(ctx: SeedContext): Promise<void> {
       policy_verdict: null, policy_reason: null,
       impact_dollar_value: 450000, impact_apy_delta_bps: 480,
       confidence: 0.82, data_freshness: 'fresh',
-      venue_category: 'tokenized_mmf', supporting_data: {},
+      venue_category: 'tokenized_mmf', supporting_data: {}, channel: 'deterministic',
       created_at: daysAgo(2),
     },
     // 6. INFO concentration_warning — new
@@ -97,7 +97,7 @@ export async function seedInsights(ctx: SeedContext): Promise<void> {
       rationale: { ethereum_pct: 91, solana_pct: 9 },
       recommended_action: null, policy_verdict: null, policy_reason: null,
       confidence: 0.75, data_freshness: 'fresh',
-      venue_category: null, supporting_data: {},
+      venue_category: null, supporting_data: {}, channel: 'deterministic',
       created_at: daysAgo(4),
     },
     // 7. INFO yield_opportunity — dismissed
@@ -111,7 +111,7 @@ export async function seedInsights(ctx: SeedContext): Promise<void> {
       rationale: { protocol: 'ondo_ousg', apy: 4.5, min_size_usd: 500000 },
       recommended_action: null, policy_verdict: null, policy_reason: null,
       confidence: 0.70, data_freshness: 'fresh',
-      venue_category: 'tokenized_mmf', supporting_data: {},
+      venue_category: 'tokenized_mmf', supporting_data: {}, channel: 'deterministic',
       created_at: daysAgo(6),
     },
     // 8. INFO liquidity_idle_cash — viewed
@@ -125,7 +125,7 @@ export async function seedInsights(ctx: SeedContext): Promise<void> {
       rationale: { account: 'HSBC GBP', idle_amount_gbp: 67000, idle_days: 30 },
       recommended_action: null, policy_verdict: null, policy_reason: null,
       confidence: 0.65, data_freshness: 'fresh',
-      venue_category: null, supporting_data: {},
+      venue_category: null, supporting_data: {}, channel: 'deterministic',
       created_at: daysAgo(5),
     },
   ];
