@@ -15,6 +15,9 @@ import { formatRelativeOrDate, sanitizeErrorMessage } from '@/lib/utils';
 import type { PolicyVersionSnapshot, PolicyRule, ApprovalChain } from '@/lib/policy/types/policy-version';
 import type { HardLimit } from '@/lib/policy/types/hard-limit';
 import { TemplatePicker } from '@/components/policy/TemplatePicker';
+import { ChainDesignerDialog } from '@/components/policy/ChainDesignerDialog';
+import { HardLimitDialog } from '@/components/policy/HardLimitDialog';
+import { Pencil } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Field } from '@/components/ui/field';
@@ -66,6 +69,8 @@ export default function VersionEditorPage() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [chainDialog, setChainDialog] = useState<{ open: boolean; chain?: ApprovalChain | null }>({ open: false });
+  const [limitDialog, setLimitDialog] = useState<{ open: boolean; limit?: HardLimit | null }>({ open: false });
   const [activateOpen, setActivateOpen] = useState(false);
   const [activateReason, setActivateReason] = useState('');
   const [activating, setActivating] = useState(false);
@@ -114,6 +119,36 @@ export default function VersionEditorPage() {
       toast({ title: 'Could not delete', description: sanitizeErrorMessage((err as Error).message), variant: 'destructive' });
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  async function deleteChain(chainId: string) {
+    if (!confirm('Delete this approval chain? Rules referencing it will be left with a dangling reference.')) return;
+    try {
+      const res = await fetch(`/api/policy/versions/${versionId}/approval-chains/${chainId}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.human_readable ?? err.error ?? `Delete failed (${res.status})`);
+      }
+      qc.invalidateQueries({ queryKey: ['policy', 'version', versionId] });
+      toast({ title: 'Chain removed', variant: 'success' });
+    } catch (err) {
+      toast({ title: 'Could not delete chain', description: sanitizeErrorMessage((err as Error).message), variant: 'destructive' });
+    }
+  }
+
+  async function deleteHardLimit(limitId: string) {
+    if (!confirm('Delete this hard limit?')) return;
+    try {
+      const res = await fetch(`/api/policy/versions/${versionId}/hard-limits/${limitId}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.human_readable ?? err.error ?? `Delete failed (${res.status})`);
+      }
+      qc.invalidateQueries({ queryKey: ['policy', 'version', versionId] });
+      toast({ title: 'Limit removed', variant: 'success' });
+    } catch (err) {
+      toast({ title: 'Could not delete limit', description: sanitizeErrorMessage((err as Error).message), variant: 'destructive' });
     }
   }
 
@@ -268,34 +303,66 @@ export default function VersionEditorPage() {
         )}
       </section>
 
-      {/* Approval chains — read-only */}
+      {/* Approval chains */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <h2 className="text-sm font-semibold">Approval chains</h2>
-          <span className="text-[11px] text-muted-foreground tabular-nums">{chains.length}</span>
-          <Badge variant="inactive" size="xs">read-only · editor in PR 2</Badge>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold">Approval chains</h2>
+            <span className="text-[11px] text-muted-foreground tabular-nums">{chains.length}</span>
+          </div>
+          {isDraft && (
+            <Button variant="outline" size="sm" onClick={() => setChainDialog({ open: true, chain: null })}>
+              <Plus className="w-3.5 h-3.5 mr-1.5" />
+              Add chain
+            </Button>
+          )}
         </div>
         {chains.length === 0 ? (
-          <div className="text-sm text-muted-foreground italic">No approval chains defined.</div>
+          <div className="text-sm text-muted-foreground italic py-2">
+            No approval chains. Rules with verdict <span className="font-mono">require_approval</span> need at least one chain to route to.
+          </div>
         ) : (
           <div className="space-y-2">
-            {chains.map((c: ApprovalChain) => <ChainCard key={c.id} chain={c} />)}
+            {chains.map((c: ApprovalChain) => (
+              <ChainCard
+                key={c.id}
+                chain={c}
+                canEdit={isDraft}
+                onEdit={() => setChainDialog({ open: true, chain: c })}
+                onDelete={() => deleteChain(c.id)}
+              />
+            ))}
           </div>
         )}
       </section>
 
-      {/* Hard limits — read-only */}
+      {/* Hard limits */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <h2 className="text-sm font-semibold">Hard limits</h2>
-          <span className="text-[11px] text-muted-foreground tabular-nums">{hardLimits.length}</span>
-          <Badge variant="inactive" size="xs">read-only · editor in PR 2</Badge>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold">Hard limits</h2>
+            <span className="text-[11px] text-muted-foreground tabular-nums">{hardLimits.length}</span>
+          </div>
+          {isDraft && (
+            <Button variant="outline" size="sm" onClick={() => setLimitDialog({ open: true, limit: null })}>
+              <Plus className="w-3.5 h-3.5 mr-1.5" />
+              Add hard limit
+            </Button>
+          )}
         </div>
         {hardLimits.length === 0 ? (
-          <div className="text-sm text-muted-foreground italic">No hard limits configured.</div>
+          <div className="text-sm text-muted-foreground italic py-2">No hard limits configured.</div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {hardLimits.map((h: HardLimit) => <HardLimitCard key={h.id} limit={h} />)}
+            {hardLimits.map((h: HardLimit) => (
+              <HardLimitCard
+                key={h.id}
+                limit={h}
+                canEdit={isDraft}
+                onEdit={() => setLimitDialog({ open: true, limit: h })}
+                onDelete={() => deleteHardLimit(h.id)}
+              />
+            ))}
           </div>
         )}
       </section>
@@ -307,6 +374,22 @@ export default function VersionEditorPage() {
         onCreated={() => {
           qc.invalidateQueries({ queryKey: ['policy', 'version', versionId] });
         }}
+      />
+
+      <ChainDesignerDialog
+        versionId={versionId}
+        chain={chainDialog.chain}
+        open={chainDialog.open}
+        onOpenChange={(o) => setChainDialog({ open: o, chain: o ? chainDialog.chain : null })}
+        onSaved={() => qc.invalidateQueries({ queryKey: ['policy', 'version', versionId] })}
+      />
+
+      <HardLimitDialog
+        versionId={versionId}
+        limit={limitDialog.limit}
+        open={limitDialog.open}
+        onOpenChange={(o) => setLimitDialog({ open: o, limit: o ? limitDialog.limit : null })}
+        onSaved={() => qc.invalidateQueries({ queryKey: ['policy', 'version', versionId] })}
       />
 
       {/* Activate confirmation */}
@@ -423,14 +506,39 @@ function RuleRow({ rule, index, triggerCount, canDelete, onDelete, deleting }: {
   );
 }
 
-function ChainCard({ chain }: { chain: ApprovalChain }) {
+function ChainCard({ chain, canEdit, onEdit, onDelete }: {
+  chain: ApprovalChain;
+  canEdit?: boolean;
+  onEdit?: () => void;
+  onDelete?: () => void;
+}) {
   return (
     <Card className="rounded-lg dark:border-white/[0.08]">
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
           <IconTile variant="info" size="sm"><Users /></IconTile>
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold">{chain.name}</div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-sm font-semibold truncate">{chain.name}</div>
+              {canEdit && (
+                <div className="flex items-center gap-0.5 shrink-0">
+                  <button
+                    onClick={onEdit}
+                    className="p-1.5 rounded-md hover:bg-white/[0.04] text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label="Edit chain"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={onDelete}
+                    className="p-1.5 rounded-md hover:bg-red-500/10 text-muted-foreground hover:text-red-400 transition-colors"
+                    aria-label="Delete chain"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
             <div className="flex items-center gap-1.5 flex-wrap mt-2">
               {chain.slots?.map((s, i) => (
                 <div key={i} className="flex items-center gap-1">
@@ -450,13 +558,31 @@ function ChainCard({ chain }: { chain: ApprovalChain }) {
   );
 }
 
-function HardLimitCard({ limit }: { limit: HardLimit }) {
-  const formatAmt = (v: any) => {
-    if (!v) return '—';
-    if (typeof v === 'object' && 'amount' in v) {
-      return Number(v.amount).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+function HardLimitCard({ limit, canEdit, onEdit, onDelete }: {
+  limit: HardLimit;
+  canEdit?: boolean;
+  onEdit?: () => void;
+  onDelete?: () => void;
+}) {
+  const formatValue = () => {
+    const v = limit.limit_value;
+    if (limit.limit_currency === 'USD' || limit.limit_type.endsWith('_usd')) {
+      return Number(v).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+    }
+    if (limit.limit_type.endsWith('_pct')) {
+      return `${v}%`;
+    }
+    if (limit.limit_type === 'obligation_coverage_days') {
+      return `${v} days`;
     }
     return String(v);
+  };
+
+  const scopeSummary = () => {
+    const parts: string[] = [];
+    if (limit.scope?.asset) parts.push(limit.scope.asset);
+    if (limit.scope?.venue) parts.push(limit.scope.venue);
+    return parts.length > 0 ? parts.join(' · ') : null;
   };
 
   return (
@@ -465,9 +591,35 @@ function HardLimitCard({ limit }: { limit: HardLimit }) {
         <div className="flex items-start gap-3">
           <IconTile variant="failed" size="sm"><Gauge /></IconTile>
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold">{limit.name}</div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-sm font-semibold truncate">{limit.name}</div>
+              {canEdit && (
+                <div className="flex items-center gap-0.5 shrink-0">
+                  <button
+                    onClick={onEdit}
+                    className="p-1.5 rounded-md hover:bg-white/[0.04] text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label="Edit limit"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={onDelete}
+                    className="p-1.5 rounded-md hover:bg-red-500/10 text-muted-foreground hover:text-red-400 transition-colors"
+                    aria-label="Delete limit"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
             <div className="text-xs text-muted-foreground mt-1 font-mono">
-              {limit.limit_type} · max {formatAmt(limit.limit_value)}
+              {limit.limit_type} · max {formatValue()}
+              {scopeSummary() && (
+                <>
+                  <span className="mx-1.5">·</span>
+                  <span>{scopeSummary()}</span>
+                </>
+              )}
             </div>
           </div>
         </div>
