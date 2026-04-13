@@ -1,7 +1,10 @@
 'use client';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { EmptyStateCard } from '@/components/ui/empty-state-card';
+import { cn } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
@@ -455,9 +458,18 @@ export function RecommendationsCard() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">
-            No AI insights yet. <a href="/treasury?tab=rules" className="text-primary hover:underline">Configure treasury rules →</a>
-          </div>
+          <EmptyStateCard
+            icon={<BrainCircuit />}
+            iconVariant="special"
+            title="No AI insights yet"
+            helper="Configure your treasury rules and Vantor AI will start surfacing rebalancing opportunities."
+            cta={
+              <Link href="/treasury?tab=rules" className={cn(buttonVariants({ size: 'sm' }))}>
+                Configure rules
+              </Link>
+            }
+            className="h-48 border-0 shadow-none bg-transparent"
+          />
         </CardContent>
       </Card>
     );
