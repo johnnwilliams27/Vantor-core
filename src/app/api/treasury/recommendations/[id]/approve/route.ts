@@ -12,14 +12,12 @@ import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 import { NotificationService } from '@/lib/notifications/service';
 import { recommendationEmailHtml } from '@/lib/notifications/recommendation-email';
 import {
-  PolicyGateService,
+  buildGateService,
   mapRecommendationToMovement,
   GateError,
   mapGateErrorToHttp,
   type GateActor,
 } from '@/lib/policy/gate';
-import { buildProductionEvaluate } from '@/lib/policy/gate/production-wiring';
-import { ApprovalWorkflowService } from '@/lib/policy/approvals';
 
 export async function POST(
   _req: NextRequest,
@@ -78,10 +76,7 @@ export async function POST(
     },
   );
 
-  const gateService = new PolicyGateService(supabase, {
-    evaluate: buildProductionEvaluate(supabase),
-    approvalService: new ApprovalWorkflowService(supabase),
-  });
+  const gateService = buildGateService(supabase);
 
   const actor: GateActor = {
     user_id: session.user.id,

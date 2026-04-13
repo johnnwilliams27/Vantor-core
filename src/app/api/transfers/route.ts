@@ -10,14 +10,12 @@ import { z } from 'zod';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 import { requirePaidTier, tierGateResponse, TierGateError } from '@/lib/auth/tier-gate';
 import {
-  PolicyGateService,
+  buildGateService,
   mapTransferToMovement,
   GateError,
   mapGateErrorToHttp,
   type GateActor,
 } from '@/lib/policy/gate';
-import { buildProductionEvaluate } from '@/lib/policy/gate/production-wiring';
-import { ApprovalWorkflowService } from '@/lib/policy/approvals';
 
 const PAYMENT_STATUSES = ['pending', 'processing', 'completed', 'failed', 'cancelled'] as const;
 
@@ -202,10 +200,7 @@ export async function POST(req: NextRequest) {
   if (pErr) return NextResponse.json({ error: pErr.message }, { status: 500 });
 
   // Build + run the gate.
-  const gateService = new PolicyGateService(supabase, {
-    evaluate: buildProductionEvaluate(supabase),
-    approvalService: new ApprovalWorkflowService(supabase),
-  });
+  const gateService = buildGateService(supabase);
 
   const actor: GateActor = {
     user_id: session.user.id,

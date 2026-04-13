@@ -11,14 +11,12 @@ import { z } from 'zod';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 import { requirePaidTier, tierGateResponse, TierGateError } from '@/lib/auth/tier-gate';
 import {
-  PolicyGateService,
+  buildGateService,
   mapYieldDepositToMovement,
   GateError,
   mapGateErrorToHttp,
   type GateActor,
 } from '@/lib/policy/gate';
-import { buildProductionEvaluate } from '@/lib/policy/gate/production-wiring';
-import { ApprovalWorkflowService } from '@/lib/policy/approvals';
 import { markPolicyEvaluationExecuted } from '@/lib/policy/persistence/persist-evaluation';
 
 const depositSchema = z.object({
@@ -121,10 +119,7 @@ export async function POST(req: NextRequest) {
 
   if (txErr) return NextResponse.json({ error: txErr.message }, { status: 500 });
 
-  const gateService = new PolicyGateService(supabase, {
-    evaluate: buildProductionEvaluate(supabase),
-    approvalService: new ApprovalWorkflowService(supabase),
-  });
+  const gateService = buildGateService(supabase);
   const actor: GateActor = {
     user_id: session.user.id,
     role: session.user.role as GateActor['role'],

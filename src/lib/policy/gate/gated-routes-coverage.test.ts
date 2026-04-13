@@ -84,7 +84,12 @@ function hasPostHandler(src: string): boolean {
 }
 
 function importsPolicyGate(src: string): boolean {
-  return /PolicyGateService/.test(src);
+  // A route is "gated" if it references the gate entry points — either
+  // the `buildGateService` factory (the modern path) or `PolicyGateService`
+  // directly (pre-factory routes, kept as a fallback in case future routes
+  // inline construction again — the coverage guardrail catches the ungated
+  // case regardless).
+  return /buildGateService|PolicyGateService/.test(src);
 }
 
 describe('policy gate — route coverage guardrail', () => {
