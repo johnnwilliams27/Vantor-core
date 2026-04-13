@@ -41,12 +41,6 @@ const EXEMPT_ROUTES: ReadonlyArray<{ path: string; reason: string }> = [
   { path: 'src/app/api/yield/confirm-deposit/route.ts',   reason: 'confirm-step — gate ran at POST /api/yield/deposit' },
   { path: 'src/app/api/yield/confirm-withdraw/route.ts',  reason: 'confirm-step — gate ran at POST /api/yield/withdraw' },
 
-  // Auto-execute path is unreachable as of PR #23 (willAutoExecute
-  // hardcoded false). The dead `if (willAutoExecute && ...)` branch
-  // still contains ramp-execute + fiat_transactions.insert but cannot
-  // fire. Follow-up: delete the dead branch once we're sure no readers
-  // depend on seeing the branch structure.
-  { path: 'src/app/api/treasury/recommendations/generate/route.ts',       reason: 'dead branch — willAutoExecute=false; delete branch in follow-up' },
 ];
 
 /** Directories that seed / reset test-mode fixtures rather than moving
