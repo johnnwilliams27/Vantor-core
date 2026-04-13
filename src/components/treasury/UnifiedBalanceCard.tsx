@@ -1,7 +1,11 @@
 'use client';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { EmptyStateCard } from '@/components/ui/empty-state-card';
+import { cn } from '@/lib/utils';
 import { Building2, Coins, Info, Landmark, TrendingUp } from 'lucide-react';
 import { useTreasuryOverview } from '@/hooks/useTreasury';
 import { useYieldPositions } from '@/hooks/useYield';
@@ -335,7 +339,18 @@ function YieldPositionsCard({
         {isLoading ? (
           <CardSkeleton rows={4} />
         ) : !hasMmf && !hasDefi ? (
-          <div className="text-sm text-muted-foreground py-4">No yield positions active. <a href="/yield" className="text-primary hover:underline">Explore yield opportunities →</a></div>
+          <EmptyStateCard
+            icon={<TrendingUp />}
+            iconVariant="active"
+            title="No active positions"
+            helper="Start earning on idle stablecoins via Aave, Compound, and MMF partners."
+            cta={
+              <Link href="/yield" className={cn(buttonVariants({ size: 'sm' }))}>
+                Explore yield
+              </Link>
+            }
+            className="border-0 shadow-none bg-transparent"
+          />
         ) : (
           <div className="flex-1 flex flex-col">
             <div className="flex-1">
