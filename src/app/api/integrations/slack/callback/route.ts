@@ -269,6 +269,17 @@ export async function POST(req: NextRequest) {
     });
 
     if (gateResult.verdict === 'require_approval') {
+      // Link the rec to the pending approval request so UI can resolve
+      // the in-between state (approved-by-Slack, awaiting-CFO, etc.).
+      await supabase
+        .from('ai_recommendations')
+        .update({
+          pending_approval_request_id: gateResult.approval_request.id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', recId)
+        .eq('enterprise_id', enterpriseId);
+
       await writeAuditLog({
         userId: ownerId,
         action: 'transfer_create_requires_approval',
