@@ -10,6 +10,17 @@ import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 import { TOLERANCE_BPS } from '@/lib/scheduled-operations/tolerances';
 import { z } from 'zod';
 import type { ScheduledOperationType } from '@/types/scheduled-operations';
+import {
+  PolicyGateService,
+  mapRampToMovement,
+  mapScheduledOperationToMovement,
+  GateError,
+  mapGateErrorToHttp,
+  type GateActor,
+} from '@/lib/policy/gate';
+import { buildProductionEvaluate } from '@/lib/policy/gate/production-wiring';
+import { ApprovalWorkflowService } from '@/lib/policy/approvals';
+import { randomUUID } from 'crypto';
 
 const VALID_TYPES: ScheduledOperationType[] = ['swap', 'bridge', 'ramp'];
 const VALID_STATUSES = ['pending', 'processing', 'awaiting_authorization', 'completed', 'failed', 'cancelled', 'expired'] as const;
@@ -201,13 +212,55 @@ export async function POST(req: NextRequest) {
   const toleranceBps = TOLERANCE_BPS[type];
   const supabase = createAdminClient();
 
+  // ─── Policy gate at creation ───────────────────────────────────────
+  // Gate runs at schedule time so a policy-blocked operation never sits
+  // queued, and a require_approval operation needs an approver click
+  // before the cron can pick it up.
+  //
+  // NOTE: the cron executor currently does NOT re-gate at execution time.
+  // If policy state changes between schedule and execution (e.g., balances
+  // drop, sanctions update), the scheduled op still runs. Re-gating at
+  // execution is a documented follow-up (see project memory).
+  //
+  // Scope note: only 'ramp' reaches here — swap/bridge are 501-gated above.
+  // We still build a movement + gate it; adding swap/bridge later is a
+  // switch branch per type, reusing the same scaffolding.
+  const opId = randomUUID();
+
+  // Build the inner movement from ramp params.
+  const r = validatedParams as z.infer<typeof rampParamsSchema>;
+  const { data: userWallet } = await supabase
+    .from('wallets')
+    .select('id, address')
+    .eq('user_id', session.user.id)
+    .eq('enterprise_id', enterpriseId)
+    .limit(1)
+    .maybeSingle();
+  const innerMovement = mapRampToMovement(
+    {
+      direction: r.direction,
+      cryptoToken: r.cryptoToken,
+      cryptoAmount: String(r.cryptoAmount),
+      fiatCurrency: r.fiatCurrency,
+      ...(r.fiatAmount !== undefined ? { fiatAmount: String(r.fiatAmount) } : {}),
+      bankAccountId: r.bankAccountId,
+      ...(userWallet?.address ? { walletAddress: userWallet.address } : {}),
+    },
+    { userId: session.user.id, enterpriseId: enterpriseId as string, fromAddress: userWallet?.address ?? '' },
+  );
+  const movement = mapScheduledOperationToMovement(
+    { scheduledOpId: opId, type, inner: innerMovement },
+    { userId: session.user.id, enterpriseId: enterpriseId as string, fromAddress: userWallet?.address ?? '' },
+  );
+
   const { data: op, error: insertErr } = await supabase
     .from('scheduled_operations')
     .insert({
+      id: opId,
       user_id: session.user.id,
       enterprise_id: enterpriseId,
       type,
-      status: 'pending',
+      status: 'awaiting_approval',
       scheduled_for: scheduledFor,
       params: validatedParams,
       initial_quote: initialQuote,
@@ -221,6 +274,85 @@ export async function POST(req: NextRequest) {
 
   if (insertErr) return NextResponse.json({ error: insertErr.message }, { status: 500 });
 
+  const gateService = new PolicyGateService(supabase, {
+    evaluate: buildProductionEvaluate(supabase),
+    approvalService: new ApprovalWorkflowService(supabase),
+  });
+  const actor: GateActor = {
+    user_id: session.user.id,
+    role: session.user.role as GateActor['role'],
+    enterprise_id: enterpriseId as string,
+  };
+
+  let gateResult;
+  try {
+    gateResult = await gateService.gate(movement, actor);
+  } catch (err) {
+    if (err instanceof GateError) {
+      await supabase
+        .from('scheduled_operations')
+        .update({ status: 'denied', denial_reason: err.reason_code })
+        .eq('id', op.id)
+        .eq('enterprise_id', enterpriseId as string);
+      await writeAuditLog({
+        userId: session.user.id,
+        action: 'scheduled_operation_blocked' as any,
+        entityType: 'scheduled_operation',
+        entityId: op.id,
+        details: { reason_code: err.reason_code, type, ...(err.details as Record<string, unknown>) },
+      });
+      const { status, body } = mapGateErrorToHttp(err);
+      return NextResponse.json(body, { status });
+    }
+    throw err;
+  }
+
+  if (gateResult.verdict === 'require_approval') {
+    await writeAuditLog({
+      userId: session.user.id,
+      action: 'scheduled_operation_requires_approval' as any,
+      entityType: 'scheduled_operation',
+      entityId: op.id,
+      details: {
+        approval_request_id: gateResult.approval_request.id,
+        chain_id: gateResult.approval_request.chain_id,
+        type,
+        scheduledFor,
+      },
+    });
+    return NextResponse.json(
+      { data: op, initialQuote, toleranceBps, approval_request: gateResult.approval_request },
+      { status: 202 },
+    );
+  }
+
+  // allow_auto: flip to 'pending' so the cron executor picks it up at
+  // scheduled_for. Any conditional-update race is harmless here since the
+  // cron runs against status='pending' AND scheduled_for <= now().
+  const { data: flipped, error: flipErr } = await supabase
+    .from('scheduled_operations')
+    .update({ status: 'pending' })
+    .eq('id', op.id)
+    .eq('enterprise_id', enterpriseId as string)
+    .select()
+    .single();
+  if (flipErr) {
+    await supabase
+      .from('scheduled_operations')
+      .update({ status: 'denied', denial_reason: 'gate_update_failed' })
+      .eq('id', op.id)
+      .eq('enterprise_id', enterpriseId as string);
+    return NextResponse.json(
+      {
+        reason_code: 'gate_update_failed',
+        human_readable: 'Policy gate cleared the scheduled operation but the status flip failed.',
+        user_action: 'Retry the schedule request.',
+        details: { scheduled_op_id: op.id },
+      },
+      { status: 500 },
+    );
+  }
+
   await writeAuditLog({
     userId: session.user.id,
     action: 'scheduled_operation_create' as any,
@@ -233,5 +365,5 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return NextResponse.json({ data: op, initialQuote, toleranceBps }, { status: 201 });
+  return NextResponse.json({ data: flipped ?? op, initialQuote, toleranceBps }, { status: 201 });
 }

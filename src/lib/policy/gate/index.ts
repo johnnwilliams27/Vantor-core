@@ -15,8 +15,27 @@ export type {
 // a collision with the identical type exported from ./approvals via
 // the policy-level barrel. Import directly from ./gate if needed.
 
-export { mapTransferToMovement } from './movement-mapper';
-export type { TransferMovementInput, MapperContext } from './movement-mapper';
+export {
+  mapTransferToMovement,
+  mapYieldDepositToMovement,
+  mapYieldWithdrawToMovement,
+  mapRampToMovement,
+  mapFiatPaymentToMovement,
+  mapSwapToMovement,
+  mapBridgeToMovement,
+  mapScheduledOperationToMovement,
+} from './movement-mapper';
+export type {
+  TransferMovementInput,
+  YieldDepositMovementInput,
+  YieldWithdrawMovementInput,
+  RampMovementInput,
+  FiatPaymentMovementInput,
+  SwapMovementInput,
+  BridgeMovementInput,
+  ScheduledOperationMovementInput,
+  MapperContext,
+} from './movement-mapper';
 
 export { mapGateErrorToHttp } from './http';
 export type { GateErrorBody } from './http';
