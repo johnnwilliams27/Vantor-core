@@ -20,7 +20,13 @@ interface ConfirmDialogProps {
   description: string;
   confirmLabel?: string;
   cancelLabel?: string;
-  variant?: 'destructive' | 'default';
+  /**
+   * Confirm button treatment:
+   *   'primary'     — gradient Tier 1 pill (safe state changes: Go Live, Save, Enter Test Mode)
+   *   'destructive' — solid red (irreversible actions, typically paired with requireText)
+   *   'default'     — solid L1 teal (legacy; prefer 'primary' for new safe confirms)
+   */
+  variant?: 'destructive' | 'default' | 'primary';
   isPending?: boolean;
   onConfirm: () => void;
   /**
