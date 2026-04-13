@@ -406,7 +406,11 @@ export interface ScheduledOperationMovementInput {
  * Scheduled-op mapper reuses the inner per-kind mapper's source/destination
  * and overrides initiator to 'schedule'. This lets policy rules key on the
  * same fields as the synchronous flow but distinguish the execution mode.
- * The scheduled_op_id is carried on the initiator so audit joins are cheap.
+ *
+ * movement.id IS the scheduled_operations.id. Keeping them identical
+ * preserves the cross-domain invariant that approval_request.movement_id
+ * can be used directly to look up the held domain row — no metadata
+ * detour required.
  */
 export function mapScheduledOperationToMovement(
   input: ScheduledOperationMovementInput,
@@ -414,7 +418,7 @@ export function mapScheduledOperationToMovement(
 ): ProposedMovement {
   return {
     ...input.inner,
-    id: randomUUID(), // new movement id; the scheduled_op_id is on the initiator
+    id: input.scheduledOpId,
     initiator: { type: 'schedule', scheduled_op_id: input.scheduledOpId },
     metadata: {
       ...(input.inner.metadata ?? {}),
