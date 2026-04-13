@@ -22,12 +22,16 @@ import { useToast } from '@/components/ui/toast';
 import { CancelScheduledDialog } from '@/components/ui/cancel-scheduled-dialog';
 import { Check, Clock, XCircle } from 'lucide-react';
 
+// Migrated to semantic badge variants (style guide Stage 3b).
+// pending/processing → pending (amber, user waits) · completed → active
+// (teal, matches STATUS_BADGE.executed) · failed → failed (red) ·
+// cancelled → inactive (gray).
 const STATUS_COLORS: Record<string, string> = {
-  pending: 'warning',
-  processing: 'info',
-  completed: 'success',
-  failed: 'destructive',
-  cancelled: 'secondary',
+  pending: 'pending',
+  processing: 'pending',
+  completed: 'active',
+  failed: 'failed',
+  cancelled: 'inactive',
 };
 
 const TRANSFER_FILTER_CONFIG = {
