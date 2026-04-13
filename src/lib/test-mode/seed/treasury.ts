@@ -5,7 +5,7 @@ export async function seedTreasury(ctx: SeedContext): Promise<void> {
   const { supabase, enterpriseId, userId } = ctx;
 
   // Treasury rule
-  await supabase.from('treasury_rules').insert({
+  const trErr = (await supabase.from('treasury_rules').insert({
     user_id: userId,
     enterprise_id: enterpriseId,
     label: 'Primary Safety Rule',
@@ -15,7 +15,8 @@ export async function seedTreasury(ctx: SeedContext): Promise<void> {
     approval_threshold_usd: '100000',
     target_stablecoin: 'USDC',
     target_chain: 'ethereum',
-  });
+  })).error;
+  if (trErr) console.error('[seed:treasury] treasury_rules insert failed', trErr);
 
   // Manual obligations — monthly, biweekly, one-time across 90-day window
   const obligations: any[] = [];
@@ -37,7 +38,7 @@ export async function seedTreasury(ctx: SeedContext): Promise<void> {
         amount_usd: item.amount,
         due_date: dateDaysFromNow(m * 30 + randInt(1, 5)),
         recurrence: 'monthly',
-        category: item.category,
+        tags: [item.category],
         is_active: true,
       });
     }
@@ -52,7 +53,7 @@ export async function seedTreasury(ctx: SeedContext): Promise<void> {
       amount_usd: '180000',
       due_date: dateDaysFromNow(i * 14 + randInt(0, 2)),
       recurrence: 'biweekly',
-      category: 'payroll',
+      tags: ['payroll'],
       is_active: true,
     });
   }
@@ -77,7 +78,8 @@ export async function seedTreasury(ctx: SeedContext): Promise<void> {
   }
 
   // Table renamed from manual_obligations → obligations in migration 0041.
-  await supabase.from('obligations').insert(obligations);
+  const oErr = (await supabase.from('obligations').insert(obligations)).error;
+  if (oErr) console.error('[seed:treasury] obligations insert failed', oErr);
 
   // AI recommendations
   const recommendations = [
@@ -128,7 +130,8 @@ export async function seedTreasury(ctx: SeedContext): Promise<void> {
     },
   ];
 
-  await supabase.from('ai_recommendations').insert(recommendations);
+  const arErr = (await supabase.from('ai_recommendations').insert(recommendations)).error;
+  if (arErr) console.error('[seed:treasury] ai_recommendations insert failed', arErr);
 
   // Treasury forecast
   // T20: treasury_forecasts seed removed. The table was dropped after
@@ -139,7 +142,7 @@ export async function seedTreasury(ctx: SeedContext): Promise<void> {
   // into the obligations table above.
 
   // Simulation run
-  await supabase.from('simulation_runs').insert({
+  const srErr = (await supabase.from('simulation_runs').insert({
     user_id: userId, enterprise_id: enterpriseId,
     rule_snapshot: { safety_buffer_multiplier: 1.5, obligation_lookahead_days: 30, target_stablecoin: 'USDC', target_chain: 'ethereum', approval_threshold_usd: 100000 },
     results: [
@@ -148,5 +151,6 @@ export async function seedTreasury(ctx: SeedContext): Promise<void> {
       { scenario: 'stress_-40%', end_balance: 1470000, min_balance: 940000, shortfall_days: 3 },
     ],
     summary: { total_scenarios: 3, scenarios_with_shortfall: 1, worst_case_min_balance: 940000, recommendation: 'Current treasury position is resilient under moderate stress. Consider increasing buffer if 40% drawdown scenario is a concern.' },
-  });
+  })).error;
+  if (srErr) console.error('[seed:treasury] simulation_runs insert failed', srErr);
 }
