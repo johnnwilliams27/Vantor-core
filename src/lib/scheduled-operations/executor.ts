@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getBankingAdapter } from '@/lib/banking/factory';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { NotificationService } from '@/lib/notifications/service';
+import { reGateAtExecution, type ReGateOutcome } from './regate';
 
 const SCHEDULED_OP_ROUTE: Record<string, string> = {
   swap: '/swaps',
@@ -64,6 +65,64 @@ async function markStatus(
     .from('scheduled_operations')
     .update({ status, updated_at: new Date().toISOString(), ...extra })
     .eq('id', id);
+}
+
+/**
+ * Shared handler for the "re-gate denied this op at execution time"
+ * branch. Both executeScheduledOperation and approveAndExecute use it.
+ * Marks the row denied, writes audit, notifies the user. Never throws.
+ */
+async function handleReGateDenial(
+  op: ScheduledOperation,
+  outcome: Extract<ReGateOutcome, { ok: false }>,
+  realEnterpriseId: string | null,
+): Promise<void> {
+  // Truncate the reason to fit the 200-char denial_reason CHECK constraint.
+  const denialReason = outcome.reason.slice(0, 200);
+  await markStatus(op.id, 'denied', {
+    denial_reason: denialReason,
+    error_message: outcome.human_readable,
+  });
+
+  await writeAuditLog({
+    userId: op.user_id,
+    enterpriseId: op.enterprise_id ?? undefined,
+    action: 'scheduled_operation_blocked' as any,
+    entityType: 'scheduled_operation',
+    entityId: op.id,
+    details: {
+      type: op.type,
+      regate_reason: outcome.reason,
+      ...outcome.details,
+    },
+  });
+
+  if (op.enterprise_id) {
+    const deniedEmailHtml = alertEmail({
+      title: 'Scheduled Operation Denied by Policy',
+      description: outcome.human_readable,
+      ctaLabel: 'Review Operation',
+      ctaHref: SCHEDULED_OP_ROUTE[op.type] ?? '/transactions',
+      severity: outcome.reason === 'engine_error' ? 'warning' : 'error',
+    });
+
+    NotificationService.notify({
+      eventType: 'scheduled_operation_failed',
+      enterpriseId: realEnterpriseId ?? op.enterprise_id,
+      title: 'Scheduled Operation Denied by Policy',
+      body: outcome.human_readable,
+      link: SCHEDULED_OP_ROUTE[op.type] ?? '/transactions',
+      metadata: {
+        operationId: op.id,
+        operationType: op.type,
+        regate_reason: outcome.reason,
+        origin: 'scheduled_operation',
+        _emailSubject: 'Scheduled Operation Denied by Policy',
+        _emailHtml: deniedEmailHtml,
+      },
+      actorId: op.user_id,
+    }).catch(() => {});
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -455,7 +514,16 @@ export async function executeScheduledOperation(
       return { executed: false, flagged: true };
     }
 
-    // Within tolerance — execute
+    // Within tolerance — but before handing to the adapter, re-gate
+    // against current policy state. Approvers signed off at CREATE time;
+    // if balances / forecasts / sanctions / rules have drifted since, we
+    // must not silently execute on stale approval. See regate.ts.
+    const regateOutcome = await reGateAtExecution(op);
+    if (!regateOutcome.ok) {
+      await handleReGateDenial(op, regateOutcome, realEnterpriseId);
+      return { executed: false, error: regateOutcome.human_readable };
+    }
+
     const meta = scheduledMeta(originalRate, currentRate, deviationBps, op.scheduled_for);
     const result = await executeByType(op, freshQuote, meta);
 
@@ -585,6 +653,16 @@ export async function approveAndExecute(
         updated_at: new Date().toISOString(),
       })
       .eq('id', op.id);
+
+    // Re-gate: tolerance-override from the user does NOT override
+    // policy. A flagged op that now breaches balance/forecast/sanctions
+    // rules still gets denied here.
+    const regateOutcome = await reGateAtExecution(op);
+    if (!regateOutcome.ok) {
+      const realEnterpriseId = await getRealEnterpriseId(op.user_id);
+      await handleReGateDenial(op, regateOutcome, realEnterpriseId);
+      return { executed: false, error: regateOutcome.human_readable };
+    }
 
     // Execute regardless of deviation
     const meta = scheduledMeta(originalRate, currentRate, deviationBps, op.scheduled_for);
