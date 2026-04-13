@@ -1,4 +1,4 @@
--- 0053_xero_adapter.sql
+-- 0055_xero_adapter.sql
 -- Xero real adapter: drop dormant gl_postings, create bill_payments,
 -- add Xero-specific columns to erp_configurations.
 
