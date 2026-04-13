@@ -170,6 +170,9 @@ function applyHypothetical(
   return {
     ...state,
     totalValueBaseUsd: state.totalValueBaseUsd + totalDelta,
+    totalBankBaseUsd: state.totalBankBaseUsd + totalDelta,
+    // Dual-write the legacy field while the drop migration (0051) is
+    // still pending. Can be removed once the legacy columns come out.
     totalFiatBaseUsd: state.totalFiatBaseUsd + totalDelta,
   };
 }

@@ -91,20 +91,22 @@ export async function buildTreasurySnapshot(
   const snap = await stateSvc.computeSnapshot(enterpriseId, 'pre_decision');
 
   // Fan yield positions into MMF / DeFi / other via the canonical
-  // holdings-category logic. Every position must land in exactly one
-  // bucket and the three bucket totals must sum to the legacy
-  // totalDefiBaseUsd. This is the invariant the regression test locks in.
-  let mmfTotal = 0;
-  let defiTotal = 0;
-  let otherTotal = 0;
+  // holdings-category logic. Used for `yieldPositions[]` venue metadata
+  // and the yield-only `totalYieldBalanceUsd`. Post-C-1.5b the MMF and
+  // DeFi aggregates are equivalent to snap.totalMmfBaseUsd and
+  // snap.totalDefiVaultBaseUsd+snap.totalDefiLendingBaseUsd respectively;
+  // the invariant is locked in by segmentation.ts tests.
+  let yieldMmfTotal = 0;
+  let yieldDefiTotal = 0;
+  let yieldOtherTotal = 0;
   for (const p of snap.positions.defiPositions) {
     const placement = getHoldingCardPlacement({
       kind: 'yield_position',
       protocol: p.protocol as YieldProtocolId,
     });
-    if (placement === 'cash') mmfTotal += p.currentValueBaseUsd;
-    else if (placement === 'defi_positions') defiTotal += p.currentValueBaseUsd;
-    else otherTotal += p.currentValueBaseUsd;
+    if (placement === 'cash') yieldMmfTotal += p.currentValueBaseUsd;
+    else if (placement === 'defi_positions') yieldDefiTotal += p.currentValueBaseUsd;
+    else yieldOtherTotal += p.currentValueBaseUsd;
   }
 
   // Build YieldPositionSnapshot[] for the insights engine. DefiPosition
@@ -134,15 +136,20 @@ export async function buildTreasurySnapshot(
     };
   });
 
-  const totalYieldBalanceUsd = mmfTotal + defiTotal + otherTotal;
+  const totalYieldBalanceUsd = yieldMmfTotal + yieldDefiTotal + yieldOtherTotal;
 
   return {
-    totalBankBalanceUsd: snap.totalFiatBaseUsd,
-    // Wallet stablecoins ONLY — no yield conflation.
-    totalCryptoBalanceUsd: snap.totalStablecoinBaseUsd,
-    totalMmfPositionsUsd: mmfTotal,
-    totalDefiPositionsUsd: defiTotal,
-    totalOtherYieldUsd: otherTotal,
+    totalBankBalanceUsd: snap.totalBankBaseUsd,
+    // Idle USDC/USDT wallet balances ONLY — never yield, never non-stables.
+    totalCryptoBalanceUsd: snap.totalStablecoinIdleBaseUsd,
+    totalMmfPositionsUsd: yieldMmfTotal,
+    totalDefiPositionsUsd: yieldDefiTotal,
+    // Catch-all so the five bucket sum reconciles to Total Treasury:
+    // non-stable wallet tokens (ETH/SOL, from snap.totalOtherBaseUsd minus
+    // the yield-other slice we just computed) PLUS unknown-venue yield.
+    // Equivalent to snap.totalOtherBaseUsd — segmentation.ts ensures the
+    // two slices there sum to that aggregate.
+    totalOtherYieldUsd: snap.totalOtherBaseUsd,
     totalYieldBalanceUsd,
     bankAccounts: snap.positions.bankAccounts.map((b) => ({
       id: b.accountId,
