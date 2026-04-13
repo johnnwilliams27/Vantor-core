@@ -171,14 +171,14 @@ export function ScheduleRampForm() {
             <div className="flex rounded-xl bg-white/[0.04] p-1 border border-white/[0.06]">
               <label className="flex-1">
                 <input type="radio" value="offramp" {...register('direction')} className="sr-only" />
-                <div className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-all duration-200 ${isOfframp ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-white/70'}`}>
+                <div className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-colors duration-200 ${isOfframp ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-white/70'}`}>
                   <ArrowUpRight className="h-4 w-4" />
                   Off-ramp
                 </div>
               </label>
               <label className="flex-1">
                 <input type="radio" value="onramp" {...register('direction')} className="sr-only" />
-                <div className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-all duration-200 ${!isOfframp ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-white/70'}`}>
+                <div className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-colors duration-200 ${!isOfframp ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-white/70'}`}>
                   <ArrowDownLeft className="h-4 w-4" />
                   On-ramp
                 </div>

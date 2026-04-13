@@ -153,7 +153,7 @@ export function SettingsMenu({ userInitial, userName, userEmail, userRole, onSig
               onClick={handleRefresh}
               disabled={!confirmArmed || refreshing}
               className={cn(
-                'flex w-full items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
+                'flex w-full items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200',
                 confirmArmed && !refreshing
                   ? 'bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer'
                   : 'bg-muted text-muted-foreground cursor-not-allowed opacity-60'

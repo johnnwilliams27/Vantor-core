@@ -117,12 +117,12 @@ export function OnboardingWizard() {
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-500 ${
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-[background-color,backdrop-filter] duration-500 ${
         mounted ? 'bg-black/60 backdrop-blur-sm' : 'bg-black/0 backdrop-blur-0'
       }`}
     >
       <div
-        className={`w-full max-w-md rounded-xl border border-border bg-card shadow-2xl overflow-hidden transition-all duration-500 ${
+        className={`w-full max-w-md rounded-xl border border-border bg-card shadow-2xl overflow-hidden transition-[opacity,transform] duration-500 ${
           mounted ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'
         }`}
       >
@@ -140,7 +140,7 @@ export function OnboardingWizard() {
                   className="h-1.5 flex-1 rounded-full bg-white/20 overflow-hidden"
                 >
                   <div
-                    className="h-full rounded-full bg-white transition-all duration-500 ease-out"
+                    className="h-full rounded-full bg-white transition-[width] duration-500 ease-out"
                     style={{ width: i <= step ? '100%' : '0%' }}
                   />
                 </div>
@@ -149,7 +149,7 @@ export function OnboardingWizard() {
 
             {/* Icon + title with transition */}
             <div
-              className={`flex items-center gap-3 transition-all duration-300 ${
+              className={`flex items-center gap-3 transition-[opacity,transform] duration-300 ${
                 transitioning ? 'opacity-0 translate-x-2' : 'opacity-100 translate-x-0'
               }`}
             >
@@ -162,7 +162,7 @@ export function OnboardingWizard() {
               </div>
             </div>
             <p
-              className={`mt-3 text-sm text-white/80 leading-relaxed transition-all duration-300 delay-75 ${
+              className={`mt-3 text-sm text-white/80 leading-relaxed transition-[opacity,transform] duration-300 delay-75 ${
                 transitioning ? 'opacity-0 translate-x-2' : 'opacity-100 translate-x-0'
               }`}
             >
@@ -174,7 +174,7 @@ export function OnboardingWizard() {
         {/* Content with step transitions */}
         <div className="px-6 py-5">
           <div
-            className={`transition-all duration-300 ${
+            className={`transition-[opacity,transform] duration-300 ${
               transitioning
                 ? direction === 'forward'
                   ? 'opacity-0 -translate-x-4'

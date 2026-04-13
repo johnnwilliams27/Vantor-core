@@ -158,7 +158,7 @@ export function AgentPanel() {
 
   return (
     <div
-      className={`flex flex-col border-l border-border bg-background dark:bg-gray-900 transition-all duration-300 ease-in-out overflow-hidden shrink-0 ${
+      className={`flex flex-col border-l border-border bg-background dark:bg-gray-900 transition-[width] duration-300 ease-in-out overflow-hidden shrink-0 ${
         agentPanelOpen ? 'fixed inset-0 z-50 w-full sm:relative sm:inset-auto sm:z-auto sm:w-[380px]' : 'w-0'
       }`}
     >

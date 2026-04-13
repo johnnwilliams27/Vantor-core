@@ -60,7 +60,7 @@ export function TierComparisonGrid({ currentTier, onSelectTier, pendingDowngrade
         return (
           <div
             key={slug}
-            className={`relative rounded-xl border p-4 flex flex-col transition-all duration-200 ${
+            className={`relative rounded-xl border p-4 flex flex-col transition-colors duration-200 ${
               isCurrent
                 ? 'border-primary ring-2 ring-primary/20 bg-primary/5'
                 : 'border-border hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5'
@@ -106,7 +106,7 @@ export function TierComparisonGrid({ currentTier, onSelectTier, pendingDowngrade
               ) : slug === 'enterprise' ? (
                 <a
                   href="mailto:sales@vantor.xyz?subject=Enterprise%20Plan%20Inquiry"
-                  className="flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-lg border border-amber-500/30 bg-amber-500/5 text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/50 text-xs font-semibold transition-all duration-200"
+                  className="flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-lg border border-amber-500/30 bg-amber-500/5 text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/50 text-xs font-semibold transition-colors duration-200"
                 >
                   <MessageSquare className="w-3.5 h-3.5" />
                   Contact Sales
@@ -126,7 +126,7 @@ export function TierComparisonGrid({ currentTier, onSelectTier, pendingDowngrade
               ) : (
                 <button
                   onClick={() => onSelectTier(slug)}
-                  className="w-full py-2 px-3 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-border/80 text-xs font-medium transition-all duration-200"
+                  className="w-full py-2 px-3 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-border/80 text-xs font-medium transition-colors duration-200"
                 >
                   Downgrade
                 </button>

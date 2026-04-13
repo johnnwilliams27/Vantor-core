@@ -7,7 +7,7 @@ import { Select } from '@/components/ui/select';
 import { RoleGate } from '@/components/auth/RoleGate';
 import { useToast } from '@/components/ui/toast';
 import type { KytAlertStatus, KytAlertSeverity } from '@/types/database';
-import { capitalize } from '@/lib/utils';
+import { capitalize, formatDateTime } from '@/lib/utils';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { TableRowsSkeleton } from '@/components/ui/operations-skeletons';
 
@@ -141,7 +141,7 @@ export function KytAlertsTable() {
                       </Badge>
                     </td>
                     <td className="px-4 py-2 text-muted-foreground">
-                      {new Date(alert.created_at).toLocaleString()}
+                      {formatDateTime(alert.created_at)}
                     </td>
                     <td className="px-4 py-2">
                       {(alert.status === 'open' || alert.status === 'under_review') && (

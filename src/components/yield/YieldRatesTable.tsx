@@ -242,7 +242,7 @@ function RiskMeter({ factors }: { factors: RiskFactors }) {
       <div className="flex items-center gap-2">
         <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
           <div
-            className={`h-full rounded-full transition-all ${
+            className={`h-full rounded-full transition-[width,background-color] ${
               avg <= 1.5 ? 'bg-green-500' : avg <= 2.25 ? 'bg-yellow-500' : 'bg-red-500'
             }`}
             style={{ width: `${Math.max(pct, 8)}%` }}

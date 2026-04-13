@@ -1,6 +1,6 @@
 'use client';
 
-import { LayoutDashboard, Coins, TrendingUp, Shield, Plug, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Coins, TrendingUp, Shield, Plug, BarChart3, Check } from 'lucide-react';
 
 const CAPABILITIES = [
   {
@@ -101,7 +101,7 @@ export function CapabilityGrid() {
                     className="text-[13px] text-[var(--text-200)] flex items-center gap-2"
                     style={{ letterSpacing: '-0.005em' }}
                   >
-                    <span className="text-[var(--teal-400)] font-bold text-xs">✓</span>
+                    <Check className="h-3.5 w-3.5 text-[var(--teal-400)] shrink-0" aria-hidden="true" strokeWidth={2.5} />
                     {b}
                   </li>
                 ))}

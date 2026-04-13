@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check } from 'lucide-react';
 
 type Slide = {
   label: string;
@@ -197,7 +197,7 @@ export function FeatureCarousel() {
               onClick={() => goto(i)}
               aria-label={`Go to slide ${i + 1}`}
               aria-current={i === active ? 'true' : undefined}
-              className="rounded-full transition-all duration-300"
+              className="rounded-full transition-[width,background-color] duration-300"
               style={{
                 width: i === active ? '28px' : '8px',
                 height: '8px',
@@ -234,7 +234,7 @@ function SlideCopy({ slide }: { slide: Slide }) {
             className="text-[13px] text-[var(--text-200)] flex items-center gap-2.5"
             style={{ letterSpacing: '-0.005em' }}
           >
-            <span className="text-[var(--teal-400)] font-bold">✓</span>
+            <Check className="h-4 w-4 text-[var(--teal-400)] shrink-0" aria-hidden="true" strokeWidth={2.5} />
             {b}
           </li>
         ))}

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
 import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { capitalize } from '@/lib/utils';
+import { capitalize, formatDateTime } from '@/lib/utils';
 import { Search, ShieldCheck, ShieldAlert, AlertTriangle } from 'lucide-react';
 import { TableRowsSkeleton } from '@/components/ui/operations-skeletons';
 
@@ -117,7 +117,7 @@ export function SanctionsScreeningPanel() {
                         </Badge>
                       </td>
                       <td className="px-4 py-2 text-muted-foreground">
-                        {new Date(s.screened_at).toLocaleString()}
+                        {formatDateTime(s.screened_at)}
                       </td>
                     </tr>
                   );

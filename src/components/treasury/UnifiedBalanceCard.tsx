@@ -82,7 +82,7 @@ function AllocationBar({ segments }: { segments: { label: string; value: number;
           return (
             <div
               key={seg.label}
-              className={`${seg.color} transition-all duration-500`}
+              className={`${seg.color} transition-[width] duration-500`}
               style={{ width: `${pct}%` }}
             />
           );
@@ -166,7 +166,7 @@ function TotalTreasuryCard({
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-white/70">Total Treasury</p>
-            <p className="text-3xl font-bold tabular-nums tracking-tight mt-0.5 whitespace-nowrap">≈{fmt(total, dc)} <span className="text-lg font-semibold text-white/60">{dc} equiv.</span></p>
+            <p className="text-3xl font-bold tabular-nums tracking-tight mt-0.5 whitespace-nowrap"><span aria-label="approximately">≈</span>{fmt(total, dc)} <span className="text-lg font-semibold text-white/60">{dc} equiv.</span></p>
           </div>
           {yieldValue > 0 && (
             <div className="text-right">

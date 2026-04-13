@@ -36,7 +36,7 @@ export function AgentInput({ onSend, isStreaming, value, onChange }: AgentInputP
 
   return (
     <div className="border-t border-border bg-background dark:bg-gray-900 p-3">
-      <div className="flex items-end gap-2 rounded-xl border border-border bg-muted/50 px-3 py-2 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/30 transition-all">
+      <div className="flex items-end gap-2 rounded-xl border border-border bg-muted/50 px-3 py-2 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/30 transition-colors">
         <textarea
           ref={textareaRef}
           value={value}

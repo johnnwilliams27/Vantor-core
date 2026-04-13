@@ -37,12 +37,12 @@ export function PaymentFailedGate() {
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-400 ${
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-[background-color,backdrop-filter] duration-400 ${
         mounted ? 'bg-black/50 backdrop-blur-sm' : 'bg-black/0 backdrop-blur-0'
       }`}
     >
       <div
-        className={`bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transition-all duration-500 ${
+        className={`bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transition-[opacity,transform] duration-500 ${
           mounted ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-6'
         }`}
       >

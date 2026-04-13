@@ -418,7 +418,7 @@ export function InvoiceTable() {
           <div className="space-y-2">
             <Label>Invoice Number</Label>
             <Input placeholder="INV-001" {...registerCreate('invoiceNumber')} />
-            {createErrors.invoiceNumber && <p className="text-xs text-red-500">{createErrors.invoiceNumber.message}</p>}
+            {createErrors.invoiceNumber && <p className="text-xs text-destructive">{createErrors.invoiceNumber.message}</p>}
           </div>
 
           <div className="space-y-2">
@@ -435,7 +435,7 @@ export function InvoiceTable() {
             <div className="space-y-2">
               <Label>Amount</Label>
               <Input placeholder="1000.00" {...registerCreate('amount')} />
-              {createErrors.amount && <p className="text-xs text-red-500">{createErrors.amount.message}</p>}
+              {createErrors.amount && <p className="text-xs text-destructive">{createErrors.amount.message}</p>}
             </div>
             <div className="space-y-2">
               <Label>Currency</Label>

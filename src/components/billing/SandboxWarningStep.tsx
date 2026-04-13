@@ -43,7 +43,7 @@ export function SandboxWarningStep({ onContinue }: SandboxWarningStepProps) {
       <button
         onClick={onContinue}
         disabled={!acknowledged}
-        className="w-full px-5 py-2.5 rounded-lg text-sm font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-primary hover:bg-[#134849] text-white"
+        className="w-full px-5 py-2.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-primary hover:bg-[#134849] text-white"
       >
         Continue to Payment
       </button>

@@ -100,7 +100,7 @@ function FilterDropdown({
       <div
         className={cn(
           'absolute z-50 mt-1 min-w-[140px] rounded-md border bg-popover text-popover-foreground shadow-lg overflow-hidden',
-          'transition-all duration-200 origin-top',
+          'transition-[opacity,transform] duration-200 origin-top',
           open
             ? 'opacity-100 scale-y-100 translate-y-0 pointer-events-auto'
             : 'opacity-0 scale-y-[0.97] -translate-y-0.5 pointer-events-none',

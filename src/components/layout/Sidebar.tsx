@@ -232,7 +232,7 @@ export function Sidebar() {
               {group.heading && (
                 <p
                   className={cn(
-                    'px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-white/40 whitespace-nowrap transition-all duration-200',
+                    'px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-white/40 whitespace-nowrap transition-[opacity,height] duration-200',
                     sidebarOpen ? 'opacity-100 h-auto' : 'opacity-0 h-0 overflow-hidden mb-0',
                   )}
                   aria-hidden={!sidebarOpen}
@@ -282,7 +282,7 @@ export function Sidebar() {
       {/* Upgrade CTA for Lite users — fades with sidebar state */}
       {session?.user?.subscription_tier === 'lite' && (
         <div className={cn(
-          'mx-3 mb-3 transition-all duration-200',
+          'mx-3 mb-3 transition-[opacity,height] duration-200',
           sidebarOpen ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden mb-0 pointer-events-none',
         )}>
           <Link

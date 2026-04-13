@@ -20,7 +20,7 @@ export function SectionSelector({ enabled, onToggle }: SectionSelectorProps) {
             type="button"
             onClick={() => onToggle(section.id)}
             className={cn(
-              'relative flex items-start gap-3 rounded-lg border p-3.5 text-left transition-all duration-200',
+              'relative flex items-start gap-3 rounded-lg border p-3.5 text-left transition-colors duration-200',
               isOn
                 ? 'border-primary/40 bg-primary/5 ring-1 ring-primary/20'
                 : 'border-border bg-card hover:border-border/80 hover:bg-muted/30 opacity-70 hover:opacity-90',
@@ -37,7 +37,7 @@ export function SectionSelector({ enabled, onToggle }: SectionSelectorProps) {
               <div className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{section.description}</div>
             </div>
             <div className={cn(
-              'absolute top-2.5 right-2.5 flex h-5 w-5 items-center justify-center rounded-full border transition-all duration-200',
+              'absolute top-2.5 right-2.5 flex h-5 w-5 items-center justify-center rounded-full border transition-colors duration-200',
               isOn
                 ? 'border-primary bg-primary text-white'
                 : 'border-muted-foreground/30',

@@ -24,7 +24,7 @@ export function TestModeToggle() {
         <button
           disabled
           className={cn(
-            'flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all border opacity-50 cursor-not-allowed',
+            'flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors border opacity-50 cursor-not-allowed',
             'bg-amber-500/8 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20'
           )}
         >
@@ -74,7 +74,7 @@ export function TestModeToggle() {
         <button
           onClick={handleToggleClick}
           className={cn(
-            'flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all border',
+            'flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors border',
             testMode
               ? 'bg-amber-500/8 text-amber-700 border-amber-200 hover:bg-amber-500/15 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20'
               : 'bg-green-500/8 text-green-700 border-green-200 hover:bg-green-500/15 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20'

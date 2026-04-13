@@ -337,7 +337,7 @@ export function SendTransferForm() {
                 return (
                   <div
                     key={step}
-                    className={`h-1.5 rounded-full transition-all duration-300 ${
+                    className={`h-1.5 rounded-full transition-[width,background-color] duration-300 ${
                       i < activeIdx ? 'w-1.5 bg-teal-500' :
                       i === activeIdx ? 'w-4 bg-teal-400' :
                       'w-1.5 bg-white/10'

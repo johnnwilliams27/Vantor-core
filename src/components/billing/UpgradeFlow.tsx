@@ -120,12 +120,12 @@ export function UpgradeFlow({ targetTier, onCancel }: UpgradeFlowProps) {
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-400 ${
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-[background-color,backdrop-filter] duration-400 ${
         mounted ? 'bg-black/40 backdrop-blur-[3px]' : 'bg-black/0 backdrop-blur-0'
       }`}
     >
       <div
-        className={`bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden transition-all duration-500 ${
+        className={`bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden transition-[opacity,transform] duration-500 ${
           mounted ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-6'
         }`}
       >
@@ -148,7 +148,7 @@ export function UpgradeFlow({ targetTier, onCancel }: UpgradeFlowProps) {
               </div>
               <button
                 onClick={onCancel}
-                className="text-white/40 hover:text-white/70 text-xs font-medium px-2 py-1 rounded-md hover:bg-white/10 transition-all"
+                className="text-white/40 hover:text-white/70 text-xs font-medium px-2 py-1 rounded-md hover:bg-white/10 transition-colors"
               >
                 Cancel
               </button>
@@ -166,7 +166,7 @@ export function UpgradeFlow({ targetTier, onCancel }: UpgradeFlowProps) {
                     <div className="flex-1">
                       <div className="h-1 rounded-full bg-white/15 overflow-hidden mb-2">
                         <div
-                          className="h-full rounded-full transition-all duration-700 ease-out"
+                          className="h-full rounded-full transition-[width] duration-700 ease-out"
                           style={{
                             width: isDone ? '100%' : isActive ? '50%' : '0%',
                             background: isDone
@@ -199,7 +199,7 @@ export function UpgradeFlow({ targetTier, onCancel }: UpgradeFlowProps) {
         {/* Content with step transitions */}
         <div className="p-6">
           <div
-            className={`transition-all duration-300 ${
+            className={`transition-[opacity,transform] duration-300 ${
               transitioning ? 'opacity-0 translate-y-3' : 'opacity-100 translate-y-0'
             }`}
           >

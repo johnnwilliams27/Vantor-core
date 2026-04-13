@@ -49,7 +49,9 @@ export function PaymentMethodTab() {
           <div className="flex items-center gap-3">
             <CreditCard className="w-8 h-8 text-muted-foreground" />
             <div>
-              <p className="font-medium capitalize">{pm.card_brand} &bull;&bull;&bull;&bull; {pm.card_last4}</p>
+              <p className="font-medium">
+                <span className="capitalize">{pm.card_brand}</span> &bull;&bull;&bull;&bull; {pm.card_last4}
+              </p>
               <p className="text-sm text-muted-foreground">
                 Expires {pm.card_exp_month}/{pm.card_exp_year}
               </p>
