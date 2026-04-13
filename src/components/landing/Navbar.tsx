@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
 import { Menu, X, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const navLinks = [
   { label: 'Platform', href: '#platform' },
@@ -235,17 +236,17 @@ export function Navbar() {
                       {loginError}
                     </div>
                   )}
-                  <button
+                  <Button
                     type="submit"
                     disabled={loginLoading}
-                    className="w-full py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-teal-500 to-cyan-400 text-white hover:shadow-[0_0_24px_rgba(45,212,191,0.3)] transition-[background,box-shadow,transform] duration-300 disabled:opacity-60 flex items-center justify-center gap-2"
+                    className="w-full"
                   >
                     {loginLoading ? (
-                      <><Loader2 size={14} className="animate-spin" /> Signing in...</>
+                      <><Loader2 size={14} className="animate-spin mr-2" /> Signing in...</>
                     ) : (
                       'Sign in'
                     )}
-                  </button>
+                  </Button>
                   <p className="text-center text-xs text-gray-500 mt-3">
                     Don&apos;t have an account?{' '}
                     <Link href="/register" className="text-teal-400 hover:text-teal-300 font-medium">Sign up free</Link>
@@ -332,17 +333,18 @@ export function Navbar() {
                   {loginError}
                 </div>
               )}
-              <button
+              <Button
                 type="submit"
                 disabled={loginLoading}
-                className="w-full py-3 min-h-[48px] rounded-xl text-sm font-semibold bg-gradient-to-r from-teal-500 to-cyan-400 text-white hover:shadow-[0_0_24px_rgba(45,212,191,0.3)] transition-[background,box-shadow,transform] duration-300 disabled:opacity-60 flex items-center justify-center gap-2"
+                className="w-full min-h-[48px]"
+                size="lg"
               >
                 {loginLoading ? (
-                  <><Loader2 size={14} className="animate-spin" /> Signing in...</>
+                  <><Loader2 size={14} className="animate-spin mr-2" /> Signing in...</>
                 ) : (
                   'Sign in'
                 )}
-              </button>
+              </Button>
               <p className="text-center text-xs text-gray-500 mt-3">
                 Don&apos;t have an account?{' '}
                 <Link href="/register" onClick={() => setMobileOpen(false)} className="text-teal-400 hover:text-teal-300 font-medium">Sign up free</Link>
