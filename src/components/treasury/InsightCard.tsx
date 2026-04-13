@@ -37,10 +37,12 @@ const SEVERITY_BORDER: Record<InsightSeverity, string> = {
   info: 'border-l-teal-500',
 };
 
-const SEVERITY_DOT: Record<InsightSeverity, string> = {
-  critical: 'bg-red-500',
-  warning: 'bg-amber-500',
-  info: 'bg-teal-500',
+import { StatusDot, type StatusDotVariant } from '@/components/ui/status-dot';
+
+const SEVERITY_VARIANT: Record<InsightSeverity, StatusDotVariant> = {
+  critical: 'failed',
+  warning: 'pending',
+  info: 'active',
 };
 
 // ─── Formatters ─────────────────────────────────────────────────────
@@ -132,7 +134,7 @@ export function InsightCard({ insight }: { insight: TreasuryInsightRow }) {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className={`h-1.5 w-1.5 rounded-full ${SEVERITY_DOT[insight.severity]}`} />
+              <StatusDot variant={SEVERITY_VARIANT[insight.severity]} size="xs" />
               {insight.severity === 'critical' ? 'Critical' : insight.severity === 'warning' ? 'Warning' : 'Info'}
             </span>
             <span className="text-xs text-muted-foreground flex items-center gap-1">
