@@ -29,12 +29,13 @@ import { Check, Clock, XCircle, Building2 } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import { useSession } from 'next-auth/react';
 
+// Migrated to semantic badge variants (style guide Stage 3b).
 const STATUS_COLORS: Record<string, string> = {
-  pending: 'warning',
-  processing: 'info',
-  completed: 'success',
-  failed: 'destructive',
-  cancelled: 'secondary',
+  pending: 'pending',
+  processing: 'pending',
+  completed: 'active',
+  failed: 'failed',
+  cancelled: 'inactive',
 };
 
 function getPaymentStatus(p: FiatPayment): string {
@@ -44,9 +45,10 @@ function getPaymentStatus(p: FiatPayment): string {
 }
 
 function getStatusVariant(p: FiatPayment): string {
-  if (p.scheduled_for && !p.executed_at) return 'info';
-  if (p.status === 'pending' && p.executed_at) return 'warning';
-  return STATUS_COLORS[p.status] ?? 'secondary';
+  // Scheduled ops = informational (future action), in-flight pending = pending (amber).
+  if (p.scheduled_for && !p.executed_at) return 'info-blue';
+  if (p.status === 'pending' && p.executed_at) return 'pending';
+  return STATUS_COLORS[p.status] ?? 'inactive';
 }
 
 function formatFromBank(p: FiatPayment): string {

@@ -18,14 +18,16 @@ import { useScheduledOperations, useCancelScheduledOperation } from '@/hooks/use
 import { formatDateTime, capitalize } from '@/lib/utils';
 import type { ScheduledOperationType, ScheduledOperation, SwapParams, BridgeParams, RampParams } from '@/types/scheduled-operations';
 
+// Migrated to semantic badge variants (style guide Stage 3b).
+// awaiting_authorization kept as pending (user action required).
 const STATUS_COLORS: Record<string, string> = {
-  pending: 'warning',
-  processing: 'info',
-  awaiting_authorization: 'warning',
-  completed: 'success',
-  failed: 'destructive',
-  cancelled: 'secondary',
-  expired: 'secondary',
+  pending: 'pending',
+  processing: 'pending',
+  awaiting_authorization: 'pending',
+  completed: 'active',
+  failed: 'failed',
+  cancelled: 'inactive',
+  expired: 'inactive',
 };
 
 function operationSummary(op: ScheduledOperation): string {
