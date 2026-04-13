@@ -20,6 +20,11 @@ describe('/api/erp/xero/authorize', () => {
     expect(location).toContain('client_id=test-ci');
     expect(location).toContain('code_challenge_method=S256');
     expect(location).toContain('scope=');
+    // Granular scopes required by post-March-2026 Xero apps.
+    expect(location).toContain('accounting.invoices.read');
+    expect(location).toContain('accounting.payments');
+    expect(location).toContain('accounting.contacts.read');
+    expect(location).toContain('accounting.settings.read');
 
     const cookie = res.headers.get('set-cookie')!;
     expect(cookie).toContain('xero_oauth=');

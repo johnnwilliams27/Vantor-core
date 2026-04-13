@@ -3,11 +3,23 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/nextauth.config';
 import { randomBytes, createHash } from 'node:crypto';
 
+// Granular scopes (post 2026-03-02 Xero migration). New Xero apps cannot
+// use the deprecated broad `accounting.transactions` / `.transactions.read`
+// scopes — they were split into invoices / payments / banktransactions /
+// manualjournals. Vantor's read surface needs invoices + contacts + settings
+// (for /Accounts BANK lookup); the write surface (recordBillPayment → POST
+// /Payments) needs accounting.payments. OIDC scopes (openid/profile/email)
+// must be paired with the accounting scopes — Xero rejects accounting-only
+// requests with unauthorized_client at the consent screen.
 const SCOPES = [
+  'openid',
+  'profile',
+  'email',
   'offline_access',
   'accounting.contacts.read',
-  'accounting.transactions',
-  'accounting.journals',
+  'accounting.invoices.read',
+  'accounting.payments',
+  'accounting.settings.read',
 ].join(' ');
 
 export async function GET(_req: Request) {

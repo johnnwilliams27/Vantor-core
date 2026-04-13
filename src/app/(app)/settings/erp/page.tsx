@@ -78,11 +78,8 @@ const schema = z
         );
         break;
       case 'xero':
-        required.push(
-          { key: 'clientId', label: 'Client ID' },
-          { key: 'clientSecret', label: 'Client Secret' },
-          { key: 'tenantId', label: 'Tenant ID' },
-        );
+        // Xero connects via OAuth — no form fields to validate; the Connect
+        // Xero button bypasses the form submit entirely.
         break;
       case 'quickbooks':
         required.push(
@@ -513,31 +510,9 @@ export default function ERPSettingsPage() {
                 </>
               )}
 
-              {/* Xero fields */}
-              {selectedProvider === 'xero' && (
-                <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Client ID</Label>
-                      <Input placeholder="client-id" {...register('clientId')} autoComplete="off" />
-                      {errors.clientId && <p className="text-sm text-destructive">{errors.clientId.message}</p>}
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Client Secret</Label>
-                      <PasswordField placeholder="••••••••" {...register('clientSecret')} />
-                      {errors.clientSecret && <p className="text-sm text-destructive">{errors.clientSecret.message}</p>}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1.5">
-                      Tenant ID
-                      <InfoTooltip content="Returned by the Xero OAuth flow after you install the app. Visible in the Xero developer app connection list." />
-                    </Label>
-                    <Input placeholder="tenant-id" {...register('tenantId')} />
-                    {errors.tenantId && <p className="text-sm text-destructive">{errors.tenantId.message}</p>}
-                  </div>
-                </>
-              )}
+              {/* Xero connects via OAuth — no manual credentials form. The
+                  Connect Xero button above redirects to Xero's consent screen,
+                  which rotates tokens and persists the connection for us. */}
 
               {/* QuickBooks fields */}
               {selectedProvider === 'quickbooks' && (
@@ -626,7 +601,7 @@ export default function ERPSettingsPage() {
                 </div>
               )}
 
-              {providerSupported && (
+              {providerSupported && selectedProvider !== 'xero' && (
                 <div className="flex items-center justify-end gap-3 pt-2">
                   {!isValid ? (
                     <HoverTooltip label="Fill required fields to enable">
