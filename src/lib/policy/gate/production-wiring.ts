@@ -19,14 +19,19 @@
 //   - balances loader (hard-limit checks)
 //
 // Graceful-failure stubs (extend when rules need them):
-//   - forecast factory (Plan 1's sanctioned stub until forecast ships)
 //   - counterparty history (only used by counterparty-aware rules)
 //   - sanctions screening (route already enforces this upstream)
 //
-// Real wiring (via RPC defined in 0052_policy_aggregate_rpc.sql):
-//   - aggregate queries — calls public.policy_aggregate_window(...). Prior
-//     to this the stub silently returned 0 for every aggregate, so any
-//     rule using a trailing-window sum or splitting guard didn't fire.
+// Real wiring:
+//   - aggregate queries — calls public.policy_aggregate_window(...) via RPC
+//     (0052_policy_aggregate_rpc.sql). Prior the stub silently returned 0
+//     for every aggregate, so any rule using a trailing-window sum or
+//     splitting guard didn't fire.
+//   - forecast factory — wraps the real ForecastService from
+//     src/lib/forecast/service.ts via RealForecastQueryFactory. Prior the
+//     stub returned { covered: true, minBalance: ~999e15 } so every
+//     forecast-dependent rule (obligation coverage, lookahead balance
+//     min) silently passed.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { EvaluationEngine } from '../engine/evaluator';
@@ -35,8 +40,7 @@ import { CoingeckoPolicyRateProvider } from '../canonicalizer/coingecko-provider
 import { fetchStablecoinPricesWithTimestamp } from '../canonicalizer/oracle-adapter';
 import { AggregationDetector } from '../aggregate-detector/detector';
 import type { RunAggregateQuery, AggregateQueryParams } from '../aggregate-detector/queries';
-import { StubForecastQueryFactory } from '../forecast/stub';
-import { NoopStubLogger } from '../forecast/stub-logger';
+import { RealForecastQueryFactory } from '../forecast/real';
 import type { PolicyRule, ApprovalChain, PolicyVersionSnapshot } from '../types/policy-version';
 import type { HardLimit } from '../types/hard-limit';
 import type { BalanceRow } from '../context-loader/treasury-state';
@@ -66,7 +70,7 @@ export function buildProductionEvaluate(
     runQuery: buildRunAggregateQuery(supabase),
   });
 
-  const forecastFactory = new StubForecastQueryFactory(new NoopStubLogger());
+  const forecastFactory = new RealForecastQueryFactory(supabase);
 
   const loader = new EvaluationContextLoader({
     rateProvider,
