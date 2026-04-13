@@ -130,7 +130,18 @@ export async function seedInsights(ctx: SeedContext): Promise<void> {
     },
   ];
 
-  const { error } = await supabase.from('treasury_insights').insert(rows);
+  // treasury_insights has two NOT NULL columns with no defaults that aren't
+  // spelled out above: dedup_key (stable per-row key) and expires_at (48h after
+  // creation per the insights engine's auto-expire convention). Add them here
+  // so each row is complete without bloating the inline row literals.
+  const expiresAtIso = new Date(Date.now() + 48 * 3600 * 1000).toISOString();
+  const rowsWithMeta = rows.map((r, i) => ({
+    ...r,
+    dedup_key: `seed-insight-${i + 1}-${enterpriseId.slice(0, 8)}`,
+    expires_at: expiresAtIso,
+  }));
+
+  const { error } = await supabase.from('treasury_insights').insert(rowsWithMeta);
   if (error) console.error('[seed:insights] insert failed', error);
   else console.log('[seed:insights] ✓ 8 insights (2 critical w/ agent, 3 warning, 3 info)');
 }
