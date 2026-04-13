@@ -6,6 +6,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { CheckCircle2, XCircle, Clock, Mail } from 'lucide-react';
 import { LoginBackground } from '@/components/auth/LoginBackground';
+import { buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 const statusConfig = {
   success: {
@@ -114,7 +116,7 @@ function VerifyEmailContent() {
           {config.showLogin && (
             <Link
               href="/login"
-              className="inline-block mt-6 min-h-[44px] px-6 py-2.5 text-sm btn-gradient"
+              className={cn(buttonVariants({ size: 'lg' }), 'mt-6 min-h-[44px]')}
             >
               Sign in
             </Link>
@@ -129,7 +131,7 @@ function VerifyEmailContent() {
           {status === 'expired' && (
             <Link
               href="/register"
-              className="inline-block mt-6 min-h-[44px] px-6 py-2.5 text-sm btn-gradient"
+              className={cn(buttonVariants({ size: 'lg' }), 'mt-6 min-h-[44px]')}
             >
               Register again
             </Link>

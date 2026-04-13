@@ -326,18 +326,17 @@ html:has(.landing-page) {
   box-shadow: 0 0 36px rgba(45, 212, 191, 0.16);
 }
 
-/* v5.6 primary gradient button — shared across Hero, Navbar, ContactForm */
+/* Tier 1 brand gradient button — Hero, Navbar Login, ContactForm.
+   Per style guide Stage 3f: rounded-lg (was pill), flat (halo stripped).
+   The gradient alone carries emphasis; no ambient glow needed. */
 .btn-gradient {
   background: linear-gradient(90deg, #2dd4bf, #67e8f9);
   color: var(--bg-void);
   font-weight: 600;
-  border-radius: 9999px;
-  transition: box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 0 44px rgba(45, 212, 191, 0.32);
+  border-radius: 8px;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .btn-gradient:hover {
-  box-shadow: 0 0 56px rgba(45, 212, 191, 0.48);
   transform: translateY(-1px);
 }
 .btn-gradient:active {

@@ -7,6 +7,8 @@ import { z } from 'zod';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Loader2, CheckCircle2, XCircle, Eye, EyeOff } from 'lucide-react';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 const schema = z
   .object({
@@ -99,7 +101,7 @@ export function ResetPasswordForm() {
             </p>
             <Link
               href="/forgot-password"
-              className="inline-block mt-5 min-h-[44px] px-6 py-2.5 text-sm btn-gradient"
+              className={cn(buttonVariants({ size: 'lg' }), 'mt-5 min-h-[44px]')}
             >
               Request new link
             </Link>
@@ -113,7 +115,7 @@ export function ResetPasswordForm() {
             </p>
             <Link
               href="/login"
-              className="inline-block mt-5 min-h-[44px] px-6 py-2.5 text-sm btn-gradient"
+              className={cn(buttonVariants({ size: 'lg' }), 'mt-5 min-h-[44px]')}
             >
               Sign in
             </Link>
@@ -181,17 +183,18 @@ export function ResetPasswordForm() {
                 </div>
               )}
 
-              <button
+              <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full min-h-[48px] py-3 text-sm btn-gradient disabled:opacity-60 flex items-center justify-center gap-2"
+                className="w-full min-h-[48px]"
+                size="lg"
               >
                 {isSubmitting ? (
-                  <><Loader2 size={14} className="animate-spin" /> Updating…</>
+                  <><Loader2 size={14} className="animate-spin mr-2" /> Updating…</>
                 ) : (
                   'Update password'
                 )}
-              </button>
+              </Button>
             </form>
 
             <p className="mt-5 text-center text-sm text-[var(--text-300)]">

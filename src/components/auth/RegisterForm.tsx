@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Image from 'next/image';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const registerSchema = z.object({
   fullName: z.string().min(2, 'Name must be at least 2 characters'),
@@ -200,17 +201,18 @@ export function RegisterForm() {
             </div>
           )}
 
-          <button
+          <Button
             type="submit"
             disabled={isSubmitting}
-            className="w-full min-h-[48px] py-3 text-sm btn-gradient disabled:opacity-60 flex items-center justify-center gap-2"
+            className="w-full min-h-[48px]"
+            size="lg"
           >
             {isSubmitting ? (
-              <><Loader2 size={14} className="animate-spin" /> Creating account…</>
+              <><Loader2 size={14} className="animate-spin mr-2" /> Creating account…</>
             ) : (
               'Create account'
             )}
-          </button>
+          </Button>
         </form>
 
         <p className="mt-5 text-center text-sm text-[var(--text-300)]">
