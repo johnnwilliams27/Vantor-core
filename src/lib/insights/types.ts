@@ -34,6 +34,17 @@ export type InsightState = 'new' | 'viewed' | 'dismissed' | 'acted_on' | 'expire
 
 export type DataFreshness = 'fresh' | 'stale_under_10min' | 'stale_over_10min';
 
+/**
+ * Channel identifies whether an insight is a deterministic detector
+ * output (actionable, can gate movement) or an advisory AI-authored
+ * note (narrative only, never actionable). See design spec §5.
+ *
+ * DB-enforced: the `channel` column on `treasury_insights` has a CHECK
+ * constraint that requires advisory rows to have null
+ * `recommended_action` and `policy_verdict`.
+ */
+export type InsightChannel = 'deterministic' | 'advisory';
+
 // ─── Policy verdict ──────────────────────────────────────────────────
 
 import type { Verdict } from '@/lib/policy/types/verdict';
@@ -93,6 +104,7 @@ export type CustomerKycTier = 'retail' | 'accredited' | 'qualified_purchaser';
  * via the store, calling dedup/cooldown checks along the way.
  */
 export interface DetectedInsight {
+  channel: InsightChannel;
   type: InsightType;
   severity: InsightSeverity;
   title: string;
@@ -152,6 +164,7 @@ export interface TreasuryInsightRow {
   enterprise_id: string;
   user_id: string;
   detector_name: string;
+  channel: InsightChannel;
   insight_type: InsightType;
   severity: InsightSeverity;
   state: InsightState;

@@ -2,6 +2,13 @@ import { defineConfig, configDefaults } from 'vitest/config';
 import path from 'path';
 
 export default defineConfig({
+  esbuild: {
+    // Use React 17+ automatic JSX runtime so test files don't have to
+    // `import * as React from 'react'` to use JSX. tsconfig.json sets
+    // `jsx: preserve` for Next, but Vitest transforms via esbuild and
+    // needs an explicit choice here.
+    jsx: 'automatic',
+  },
   test: {
     globals: true,
     environment: 'node',

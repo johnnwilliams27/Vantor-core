@@ -5,5 +5,6 @@
 // so we wire dotenv here explicitly. Tests that don't need DB access are unaffected.
 import { config as loadEnv } from 'dotenv';
 import { resolve } from 'path';
+import '@testing-library/jest-dom/vitest';
 
 loadEnv({ path: resolve(__dirname, '..', '.env.local') });
