@@ -41,3 +41,5 @@ export type {
 
 export { mapGateErrorToHttp } from './http';
 export type { GateErrorBody } from './http';
+
+export { buildGateService } from './service-factory';
