@@ -327,17 +327,22 @@ html:has(.landing-page) {
 }
 
 /* Tier 1 brand gradient button — Hero, Navbar Login, ContactForm.
-   Per style guide Stage 3f: rounded-lg (was pill), flat (halo stripped).
-   The gradient alone carries emphasis; no ambient glow needed. */
+   rounded-lg shape + subtle directional teal-tinted drop shadow.
+   Gentler than the original 44px ambient halo but enough to give the
+   brand CTA presence against the dark navy surface. Hover expands the
+   glow slightly. */
 .btn-gradient {
   background: linear-gradient(90deg, #2dd4bf, #67e8f9);
   color: var(--bg-void);
   font-weight: 600;
   border-radius: 8px;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 14px rgba(45, 212, 191, 0.22);
 }
 .btn-gradient:hover {
   transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(45, 212, 191, 0.32);
 }
 .btn-gradient:active {
   transform: scale(0.98);
