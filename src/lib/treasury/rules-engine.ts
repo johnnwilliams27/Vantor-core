@@ -11,6 +11,7 @@ import type {
 import { getStablecoinPrices } from './oracle';
 import { TreasuryStateService } from './state/service';
 import { createForecastService } from '@/lib/forecast/service';
+import { obligationAmountToUsdPessimistic } from '@/lib/fx/obligation-fx';
 import { getHoldingCardPlacement } from './holdings-category';
 import { getVenue } from '@/lib/yield/venues';
 
@@ -221,11 +222,10 @@ export async function collectObligations(
     id: o.id,
     source: o.source === 'erp_sync' ? 'erp_invoice' : 'manual',
     label: o.label,
-    // Rules engine legacy shape is USD-native. Stablecoin currencies
-    // (USDC/USDT) are effectively $1 so pass through cleanly; multi-
-    // currency fiat obligations would need a caller-side FX pass —
-    // that's Item 2 in the Phase A leftovers roadmap.
-    amountUsd: o.amount,
+    // Pessimistic FX: fresh lookup, shift the rate UP so the rules
+    // engine over-estimates rather than under-estimates what you owe.
+    // Stablecoins (USDC/USDT) pass through 1:1 USD without haircut.
+    amountUsd: obligationAmountToUsdPessimistic(o.amount, o.currency),
     dueDate: o.dueDate,
   }));
 }
