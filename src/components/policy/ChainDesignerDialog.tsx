@@ -29,7 +29,6 @@ interface Props {
 }
 
 const ROLE_LABELS: Record<ApproverRole, string> = {
-  auditor: 'Auditor',
   accountant: 'Accountant',
   treasury_manager: 'Treasury manager',
   executive: 'Executive',
