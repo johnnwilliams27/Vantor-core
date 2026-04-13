@@ -20,6 +20,7 @@ import {
 } from '@/lib/policy/gate';
 import { buildProductionEvaluate } from '@/lib/policy/gate/production-wiring';
 import { ApprovalWorkflowService } from '@/lib/policy/approvals';
+import { markPolicyEvaluationExecuted } from '@/lib/policy/persistence/persist-evaluation';
 
 const schema = z.object({
   direction: z.enum(['onramp', 'offramp']),
@@ -246,6 +247,12 @@ export async function POST(req: NextRequest) {
         providerTxId: result.providerTransactionId,
       },
     });
+
+    markPolicyEvaluationExecuted(supabase, {
+      movementId: fiatTx.id,
+      enterpriseId,
+      executionRef: result.providerTransactionId ?? null,
+    }).catch(() => {});
 
     return NextResponse.json({ data: updatedTx ?? fiatTx }, { status: 201 });
   } catch (err) {

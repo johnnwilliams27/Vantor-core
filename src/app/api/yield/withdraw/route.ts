@@ -21,6 +21,7 @@ import {
 } from '@/lib/policy/gate';
 import { buildProductionEvaluate } from '@/lib/policy/gate/production-wiring';
 import { ApprovalWorkflowService } from '@/lib/policy/approvals';
+import { markPolicyEvaluationExecuted } from '@/lib/policy/persistence/persist-evaluation';
 
 const withdrawSchema = z.object({
   positionId: z.string().uuid(),
@@ -248,6 +249,12 @@ export async function POST(req: NextRequest) {
       entityId: positionId,
       details: { protocol: position.protocol, token: position.underlying_token, amount, txHash: result.txHash },
     });
+
+    markPolicyEvaluationExecuted(supabase, {
+      movementId: tx.id,
+      enterpriseId: enterpriseId as string,
+      executionRef: result.txHash,
+    }).catch(() => {});
 
     return NextResponse.json({
       data: {

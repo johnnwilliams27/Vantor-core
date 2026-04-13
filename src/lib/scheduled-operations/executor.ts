@@ -3,6 +3,7 @@ import { getBankingAdapter } from '@/lib/banking/factory';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { NotificationService } from '@/lib/notifications/service';
 import { reGateAtExecution, type ReGateOutcome } from './regate';
+import { markPolicyEvaluationExecuted } from '@/lib/policy/persistence/persist-evaluation';
 
 const SCHEDULED_OP_ROUTE: Record<string, string> = {
   swap: '/swaps',
@@ -532,6 +533,15 @@ export async function executeScheduledOperation(
       tx_hash: (result as any).txHash ?? null,
     });
 
+    // movement.id === op.id by construction (see mapScheduledOperationToMovement).
+    if (op.enterprise_id) {
+      markPolicyEvaluationExecuted(createAdminClient(), {
+        movementId: op.id,
+        enterpriseId: op.enterprise_id,
+        executionRef: (result as any).txHash ?? (result as any).providerTxId ?? null,
+      }).catch(() => {});
+    }
+
     await writeAuditLog({
       userId: op.user_id,
       action: 'scheduled_operation_execute' as any,
@@ -672,6 +682,14 @@ export async function approveAndExecute(
       executed_at: new Date().toISOString(),
       tx_hash: (result as any).txHash ?? null,
     });
+
+    if (op.enterprise_id) {
+      markPolicyEvaluationExecuted(createAdminClient(), {
+        movementId: op.id,
+        enterpriseId: op.enterprise_id,
+        executionRef: (result as any).txHash ?? (result as any).providerTxId ?? null,
+      }).catch(() => {});
+    }
 
     await writeAuditLog({
       userId: op.user_id,
