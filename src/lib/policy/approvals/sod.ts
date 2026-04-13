@@ -65,9 +65,14 @@ export function validateSoD(params: ValidateSoDParams): SoDResult {
     return { ok: false, reason_code: REASON_CODES.no_matching_slot };
   }
 
-  // 0. Strict separation of duties. Checked before any other SoD rule
-  //    so the caller gets a specific, debuggable reason code rather
-  //    than the generic `no_matching_slot` fallthrough.
+  // 0. Role-level exclusions. Checked before any other SoD rule so
+  //    the caller gets a specific reason code rather than falling
+  //    through to `no_matching_slot`.
+  if (approverRole === 'auditor') {
+    // Auditors are read-only reviewers. Distinct reason code so UI
+    // can explain the exclusion rather than a vague "no matching slot."
+    return { ok: false, reason_code: REASON_CODES.auditor_cannot_approve };
+  }
   if (approverRole === 'enterprise_admin') {
     return { ok: false, reason_code: REASON_CODES.enterprise_admin_cannot_approve };
   }
