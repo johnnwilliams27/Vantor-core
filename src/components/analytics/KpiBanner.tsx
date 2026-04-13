@@ -32,12 +32,18 @@ function formatValue(key: string, value: number): string {
   return `$${value.toFixed(0)}`;
 }
 
-function valueColor(key: string, value: number, hasObligations: boolean): string {
+function valueColor(
+  key: string,
+  value: number,
+  hasObligations: boolean,
+  hasBalances: boolean,
+): string {
   if (key === 'idle_cash_usd') return 'text-teal-400';
   if (key === 'coverage_ratio') {
-    // When there are no obligations at all, coverage_ratio is undefined in the
-    // domain sense — no liabilities to cover. Treat as neutral instead of red.
-    if (!hasObligations) return 'text-muted-foreground';
+    // Coverage is only meaningful when both sides exist. No obligations means
+    // nothing to cover; no balances means the treasury hasn't been funded yet
+    // (empty state, not a red alert). Only color when both are > 0.
+    if (!hasObligations || !hasBalances) return 'text-muted-foreground';
     return value >= 1.5 ? 'text-green-400' : value >= 1 ? 'text-yellow-400' : 'text-red-400';
   }
   return 'text-foreground';
@@ -51,6 +57,7 @@ export function KpiBanner({ result }: KpiBannerProps) {
   const scalar = result.scalar ?? {};
   const keys = Object.keys(scalar);
   const hasObligations = (scalar.obligation_total_usd ?? 0) > 0;
+  const hasBalances = (scalar.total_balance_usd ?? 0) > 0;
 
   // No scalar returned at all → the view has no data. Show empty state so the
   // user doesn't stare at "$0 / 0.0x" and think the coverage is failing.
@@ -72,7 +79,7 @@ export function KpiBanner({ result }: KpiBannerProps) {
           return (
             <div key={key}>
               <div className="text-xs text-muted-foreground">{LABELS[key] ?? key}</div>
-              <div className={`text-lg font-semibold ${valueColor(key, value, hasObligations)}`}>
+              <div className={`text-lg font-semibold ${valueColor(key, value, hasObligations, hasBalances)}`}>
                 {formatValue(key, value)}
               </div>
             </div>

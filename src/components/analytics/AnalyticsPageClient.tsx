@@ -11,6 +11,7 @@ import { KpiBanner } from './KpiBanner';
 import { PinnedViewCard } from './PinnedViewCard';
 import { ViewListRow } from './ViewListRow';
 import { ForkViewModal } from './ForkViewModal';
+import { NewViewPickerModal } from './NewViewPickerModal';
 import type { AnalyticsViewListItem } from '@/hooks/useAnalyticsViews';
 
 function defaultDateRange(): { from: string; to: string } {
@@ -33,6 +34,7 @@ export function AnalyticsPageClient() {
 
   const [forkSource, setForkSource] = useState<AnalyticsViewListItem | null>(null);
   const [forkOpen, setForkOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   // Treasury Summary — always shown
   const summaryQuery = useViewQuery({ viewSlug: 'treasury-summary', from, to });
@@ -102,7 +104,7 @@ export function AnalyticsPageClient() {
           <Button
             size="sm"
             className="btn-gradient"
-            onClick={() => { setForkSource(standardViews[0] ?? null); setForkOpen(true); }}
+            onClick={() => setPickerOpen(true)}
           >
             + New View
           </Button>
@@ -182,6 +184,18 @@ export function AnalyticsPageClient() {
           </>
         )}
       </div>
+
+      {/* Source picker for "+ New View" */}
+      <NewViewPickerModal
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        sources={standardViews}
+        onPick={(source) => {
+          setPickerOpen(false);
+          setForkSource(source);
+          setForkOpen(true);
+        }}
+      />
 
       {/* Fork modal */}
       <ForkViewModal
