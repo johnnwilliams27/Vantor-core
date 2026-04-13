@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { HoverTooltip } from '@/components/ui/hover-tooltip';
 import { useToast } from '@/components/ui/toast';
 import { Building2, Check, CheckCircle2, ChevronDown, Shield, Trash2, UserPlus, XCircle, AlertCircle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -167,7 +168,7 @@ function RbacSettingsCard({ sessionRole }: { sessionRole: UserRole | undefined }
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Shield className="h-5 w-5 text-[#19595b] dark:text-teal-400" />
+          <Shield className="h-5 w-5 text-primary dark:text-teal-400" />
           Policy & Approval Settings
         </CardTitle>
         <CardDescription>
@@ -214,7 +215,7 @@ function RbacSettingsCard({ sessionRole }: { sessionRole: UserRole | undefined }
               }}
               className={cn(
                 'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors',
-                enabled ? 'bg-[#19595b] dark:bg-teal-500' : 'bg-gray-300 dark:bg-gray-600',
+                enabled ? 'bg-primary dark:bg-teal-500' : 'bg-gray-300 dark:bg-gray-600',
                 (!canEdit || loading || saving) && 'opacity-50 cursor-not-allowed',
               )}
             >
@@ -277,7 +278,7 @@ function RolePicker({ value, onChange }: { value: UserRole; onChange: (r: UserRo
               className={cn(
                 'flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left transition-colors',
                 value === role
-                  ? 'bg-[#19595b]/8 dark:bg-teal-500/10'
+                  ? 'bg-primary/8 dark:bg-teal-500/10'
                   : 'hover:bg-muted/60'
               )}
             >
@@ -290,19 +291,18 @@ function RolePicker({ value, onChange }: { value: UserRole; onChange: (r: UserRo
                       fill approval slots regardless of rank. Surfaces the invariant up
                       front so admins don't wonder why they can't approve later. */}
                   {role === 'enterprise_admin' && (
-                    <span
-                      className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-600 dark:text-amber-400"
-                      title="Enterprise admins cannot approve transfers — strict separation of duties"
-                    >
-                      <Shield className="h-3 w-3" />
-                      no approvals
-                    </span>
+                    <HoverTooltip label="Enterprise admins cannot approve transfers — strict separation of duties">
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                        <Shield className="h-3 w-3" />
+                        no approvals
+                      </span>
+                    </HoverTooltip>
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground leading-snug">{ROLE_DESCRIPTIONS[role]}</p>
               </div>
               {value === role && (
-                <Check className="h-4 w-4 shrink-0 mt-0.5 text-[#19595b] dark:text-teal-400" />
+                <Check className="h-4 w-4 shrink-0 mt-0.5 text-primary dark:text-teal-400" />
               )}
             </button>
           ))}
@@ -345,7 +345,7 @@ export default function AccountManagementPage() {
       .then(d => {
         if (d?.name) setEnterpriseName(d.name);
         if (d?.team?.length) {
-          const colors = ['bg-[#19595b]', 'bg-emerald-600', 'bg-blue-500', 'bg-violet-500', 'bg-amber-500', 'bg-rose-400', 'bg-sky-500', 'bg-indigo-500'];
+          const colors = ['bg-primary', 'bg-emerald-600', 'bg-blue-500', 'bg-violet-500', 'bg-amber-500', 'bg-rose-400', 'bg-sky-500', 'bg-indigo-500'];
           setUsers(d.team.map((m: any, i: number) => ({
             id: m.id,
             name: m.name,
@@ -439,8 +439,8 @@ export default function AccountManagementPage() {
         {enterpriseName && (
           <Card>
             <CardContent className="flex items-center gap-4 py-5">
-              <div className="flex items-center justify-center h-12 w-12 rounded-xl bg-[#19595b]/10 dark:bg-teal-500/15">
-                <Building2 className="h-6 w-6 text-[#19595b] dark:text-teal-400" />
+              <div className="flex items-center justify-center h-12 w-12 rounded-xl bg-primary/10 dark:bg-teal-500/15">
+                <Building2 className="h-6 w-6 text-primary dark:text-teal-400" />
               </div>
               <div className="flex-1">
                 <h2 className="text-lg font-semibold">{enterpriseName}</h2>
@@ -550,15 +550,15 @@ export default function AccountManagementPage() {
                       className={cn(
                         'flex items-start gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors',
                         inviteRole === role
-                          ? 'border-[#19595b]/40 bg-[#19595b]/5 dark:border-teal-500/40 dark:bg-teal-500/10'
+                          ? 'border-primary/40 bg-primary/5 dark:border-teal-500/40 dark:bg-teal-500/10'
                           : 'border-border hover:bg-muted/50'
                       )}
                     >
                       <div className={cn(
                         'mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center',
-                        inviteRole === role ? 'border-[#19595b] dark:border-teal-400' : 'border-muted-foreground/40'
+                        inviteRole === role ? 'border-primary dark:border-teal-400' : 'border-muted-foreground/40'
                       )}>
-                        {inviteRole === role && <div className="h-2 w-2 rounded-full bg-[#19595b] dark:bg-teal-400" />}
+                        {inviteRole === role && <div className="h-2 w-2 rounded-full bg-primary dark:bg-teal-400" />}
                       </div>
                       <div>
                         <Badge variant={ROLE_VARIANT[role] as any} className="mb-0.5">
@@ -625,7 +625,7 @@ export default function AccountManagementPage() {
                   <button
                     onClick={() => setConfirmRemove(user)}
                     className="ml-1 p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"
-                    title={`Remove ${user.name}`}
+                    aria-label={`Remove ${user.name}`}
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -668,7 +668,7 @@ export default function AccountManagementPage() {
                     {ROLES.map((role) => (
                       <td key={role} className="px-4 py-3 text-center">
                         {cap[role] ? (
-                          <CheckCircle2 className="h-4 w-4 text-[#19595b] dark:text-teal-400 mx-auto" />
+                          <CheckCircle2 className="h-4 w-4 text-primary dark:text-teal-400 mx-auto" />
                         ) : (
                           <XCircle className="h-4 w-4 text-gray-300 dark:text-gray-600 mx-auto" />
                         )}

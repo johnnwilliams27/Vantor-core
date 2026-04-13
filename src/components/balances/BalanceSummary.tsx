@@ -12,7 +12,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 
 const TOKEN_COLORS: Record<string, string> = {
-  USDC: 'bg-[#19595b]/5 border-[#19595b]/20',
+  USDC: 'bg-primary/5 border-primary/20',
   USDT: 'bg-green-50 border-green-200',
 };
 

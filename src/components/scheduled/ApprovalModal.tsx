@@ -162,7 +162,7 @@ export function ApprovalModal({ op, open, onOpenChange }: Props) {
 
           {/* Memo */}
           {op.memo && (
-            <p className="text-xs text-muted-foreground italic border-l-2 border-[#19595b] pl-3">
+            <p className="text-xs text-muted-foreground italic border-l-2 border-primary pl-3">
               {op.memo}
             </p>
           )}

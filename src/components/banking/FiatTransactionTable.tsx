@@ -343,8 +343,10 @@ export function FiatTransactionTable() {
                     <td className="py-2 pr-4 text-sm text-muted-foreground whitespace-nowrap">
                       {row.scheduled_for ? formatDateTime(row.scheduled_for) : '—'}
                     </td>
-                    <td className="py-2 pr-4 text-sm text-muted-foreground whitespace-nowrap" title={formatRelativeOrDate(row.created_at).full}>
-                      {formatRelativeOrDate(row.created_at).text}
+                    <td className="py-2 pr-4 text-sm text-muted-foreground whitespace-nowrap">
+                      <HoverTooltip label={formatRelativeOrDate(row.created_at).full}>
+                        <span>{formatRelativeOrDate(row.created_at).text}</span>
+                      </HoverTooltip>
                     </td>
                     <td className="py-2">
                       {canCancel(row) && (

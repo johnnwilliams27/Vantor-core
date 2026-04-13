@@ -130,7 +130,7 @@ export function UpgradeFlow({ targetTier, onCancel }: UpgradeFlowProps) {
         }`}
       >
         {/* Teal header */}
-        <div className="bg-[#19595b] px-6 pt-5 pb-6 relative overflow-hidden">
+        <div className="bg-primary px-6 pt-5 pb-6 relative overflow-hidden">
           {/* Shimmer */}
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.04] to-transparent animate-[shimmer_8s_ease-in-out_infinite]" />
 
@@ -228,7 +228,7 @@ export function UpgradeFlow({ targetTier, onCancel }: UpgradeFlowProps) {
                     <p className="text-red-400 text-sm mb-4">{checkoutError}</p>
                     <button
                       onClick={handleCheckout}
-                      className="px-5 py-2.5 rounded-lg bg-[#19595b] hover:bg-[#134849] text-white text-sm font-medium transition-colors"
+                      className="px-5 py-2.5 rounded-lg bg-primary hover:bg-[#134849] text-white text-sm font-medium transition-colors"
                     >
                       Retry
                     </button>

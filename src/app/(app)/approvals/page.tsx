@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { FilterBar } from '@/components/ui/filter-bar';
+import { HoverTooltip } from '@/components/ui/hover-tooltip';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { TableCardSkeleton } from '@/components/ui/operations-skeletons';
 import { useTableFilter } from '@/hooks/useTableFilter';
@@ -197,8 +198,10 @@ export default function ApprovalsPage() {
                         <TableCell className="text-sm text-muted-foreground">
                           {filled}/{total}
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground" title={age.full}>
-                          {age.text}
+                        <TableCell className="text-sm text-muted-foreground">
+                          <HoverTooltip label={age.full}>
+                            <span>{age.text}</span>
+                          </HoverTooltip>
                         </TableCell>
                         <TableCell>
                           <Badge variant={(STATUS_COLORS[r.status] ?? 'secondary') as any}>

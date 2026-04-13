@@ -31,6 +31,7 @@ import {
   Bell,
   CheckSquare,
 } from 'lucide-react';
+import { HoverTooltip } from '@/components/ui/hover-tooltip';
 import { useAppStore } from '@/store/appStore';
 import type { UserRole } from '@/types/database';
 import { ROLE_RANK } from '@/lib/auth/roles';
@@ -242,7 +243,7 @@ export function Sidebar() {
               <div className="space-y-1">
                 {visibleItems.map((item) => {
                   const active = pathname.startsWith(item.href);
-                  return (
+                  const link = (
                     <Link
                       key={item.href}
                       href={item.href}
@@ -252,7 +253,6 @@ export function Sidebar() {
                           ? 'bg-white/[0.12] text-white border-l-2 border-teal-400'
                           : 'text-white/60 hover:bg-white/[0.08] hover:text-white/90 border-l-2 border-transparent'
                       )}
-                      title={!sidebarOpen ? item.label : undefined}
                     >
                       <item.icon className="h-5 w-5 shrink-0" />
                       <span
@@ -264,6 +264,13 @@ export function Sidebar() {
                         {item.label}
                       </span>
                     </Link>
+                  );
+                  return !sidebarOpen ? (
+                    <HoverTooltip key={item.href} label={item.label}>
+                      {link}
+                    </HoverTooltip>
+                  ) : (
+                    link
                   );
                 })}
               </div>

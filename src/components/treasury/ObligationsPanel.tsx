@@ -146,7 +146,7 @@ export function ObligationsPanel() {
                 onClick={() => setTab(t)}
                 className={`px-3 py-1 text-xs rounded-full font-medium transition-colors ${
                   tab === t
-                    ? 'bg-[#19595b] text-white'
+                    ? 'bg-primary text-white'
                     : 'bg-muted text-muted-foreground hover:bg-muted/80'
                 }`}
               >

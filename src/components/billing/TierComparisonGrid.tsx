@@ -114,7 +114,7 @@ export function TierComparisonGrid({ currentTier, onSelectTier, pendingDowngrade
               ) : isUpgrade ? (
                 <button
                   onClick={() => onSelectTier(slug)}
-                  className="flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 text-white text-xs font-semibold shadow-[0_0_12px_rgba(45,212,191,0.2)] hover:shadow-[0_0_20px_rgba(45,212,191,0.35)] transition-all duration-200"
+                  className="btn-gradient flex items-center justify-center gap-1.5 w-full py-2 px-3 text-xs"
                 >
                   Upgrade
                   <ArrowRight className="w-3.5 h-3.5" />

@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
+import { HoverTooltip } from '@/components/ui/hover-tooltip';
 import { PasswordField } from '@/components/ui/password-field';
 import { NicknameEdit } from '@/components/ui/nickname-edit';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -610,15 +611,27 @@ export default function ERPSettingsPage() {
 
               {providerSupported && (
                 <div className="flex items-center justify-end gap-3 pt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleTest}
-                    disabled={testing || !isValid}
-                    title={!isValid ? 'Fill required fields to enable' : undefined}
-                  >
-                    {testing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Testing…</> : 'Test Connection'}
-                  </Button>
+                  {!isValid ? (
+                    <HoverTooltip label="Fill required fields to enable">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleTest}
+                        disabled={testing || !isValid}
+                      >
+                        {testing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Testing…</> : 'Test Connection'}
+                      </Button>
+                    </HoverTooltip>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleTest}
+                      disabled={testing || !isValid}
+                    >
+                      {testing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Testing…</> : 'Test Connection'}
+                    </Button>
+                  )}
                   <Button type="submit" disabled={isSubmitting || !isValid}>
                     {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Connecting…</> : 'Save & Connect'}
                   </Button>
@@ -693,9 +706,11 @@ export default function ERPSettingsPage() {
                               {(() => {
                                 const f = syncFreshness(cfg.last_synced);
                                 return (
-                                  <Badge variant={f.variant as any} className="text-xs" title={cfg.last_synced ? new Date(cfg.last_synced).toLocaleString() : 'Never synced'}>
-                                    {f.label}
-                                  </Badge>
+                                  <HoverTooltip label={cfg.last_synced ? new Date(cfg.last_synced).toLocaleString() : 'Never synced'}>
+                                    <Badge variant={f.variant as any} className="text-xs">
+                                      {f.label}
+                                    </Badge>
+                                  </HoverTooltip>
                                 );
                               })()}
                             </TableCell>

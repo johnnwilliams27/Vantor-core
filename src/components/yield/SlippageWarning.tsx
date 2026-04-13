@@ -68,7 +68,7 @@ export function SlippageWarning({ estimate, onConfirm, onCancel, isExecuting }: 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="rounded-md border bg-background/50 px-3 py-2">
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Est. Slippage</div>
-          <div className={cn('text-sm font-bold', estimate.severity === 'red' ? 'text-red-500' : estimate.severity === 'yellow' ? 'text-amber-500' : 'text-foreground')}>
+          <div className={cn('text-sm font-bold tabular-nums', estimate.severity === 'red' ? 'text-red-400' : estimate.severity === 'yellow' ? 'text-amber-400' : 'text-foreground')}>
             {estimate.estimatedSlippageBps} bps
           </div>
         </div>

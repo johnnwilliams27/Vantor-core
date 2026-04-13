@@ -127,7 +127,7 @@ export function OnboardingWizard() {
         }`}
       >
         {/* Teal header with subtle shimmer */}
-        <div className="bg-[#19595b] px-6 py-5 relative overflow-hidden">
+        <div className="bg-primary px-6 py-5 relative overflow-hidden">
           {/* Animated gradient accent */}
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.05] to-transparent animate-[shimmer_8s_ease-in-out_infinite]" />
 
@@ -193,8 +193,8 @@ export function OnboardingWizard() {
                       animation: !transitioning ? `fadeSlideIn 0.4s ease-out ${i * 60}ms both` : undefined,
                     }}
                   >
-                    <div className="w-8 h-8 rounded-md bg-[#19595b]/10 flex items-center justify-center flex-shrink-0">
-                      <FIcon className="h-4 w-4 text-[#19595b]" />
+                    <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <FIcon className="h-4 w-4 text-primary" />
                     </div>
                     <span className="text-sm text-foreground">{label}</span>
                   </div>
@@ -214,7 +214,7 @@ export function OnboardingWizard() {
                   </p>
                 </div>
                 <div
-                  className="p-4 rounded-lg border border-[#19595b]/20 bg-[#19595b]/5"
+                  className="p-4 rounded-lg border border-primary/20 bg-primary/5"
                   style={{ animation: 'fadeSlideIn 0.4s ease-out 100ms both' }}
                 >
                   <p className="text-xs text-muted-foreground">
@@ -236,7 +236,7 @@ export function OnboardingWizard() {
                   </p>
                 </div>
                 <div
-                  className="p-4 rounded-lg border border-[#19595b]/20 bg-[#19595b]/5"
+                  className="p-4 rounded-lg border border-primary/20 bg-primary/5"
                   style={{ animation: 'fadeSlideIn 0.4s ease-out 100ms both' }}
                 >
                   <p className="text-xs text-muted-foreground">

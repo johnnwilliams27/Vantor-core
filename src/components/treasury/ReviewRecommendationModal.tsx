@@ -157,7 +157,7 @@ export function ReviewRecommendationModal({ recommendationId, onClose }: Props) 
             <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
           </div>
 
-          <div className="border-l-2 border-[#19595b] pl-3 text-sm text-foreground space-y-2">
+          <div className="border-l-2 border-primary pl-3 text-sm text-foreground space-y-2">
             <SimpleMarkdown text={rec.ai_reasoning} />
           </div>
 

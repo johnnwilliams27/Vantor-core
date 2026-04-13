@@ -14,6 +14,7 @@ import { useToast } from '@/components/ui/toast';
 import { useWallets } from '@/hooks/useWallets';
 import { useBalances, useWalletTokenHoldings, formatWalletTokensLabel } from '@/hooks/useBalances';
 import { BalanceHint, FiatBalanceHint } from '@/components/ui/balance-hint';
+import { FormDivider } from '@/components/ui/form-divider';
 import { Loader2, ArrowDownLeft, ArrowUpRight, ArrowDown, CircleAlert } from 'lucide-react';
 import { sanitizeErrorMessage } from '@/lib/utils';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
@@ -516,7 +517,7 @@ export function RampForm() {
           const sym = { USD: '$', EUR: '€', GBP: '£', BRL: 'R$', MXN: 'MX$' }[fiatCurrency] ?? fiatCurrency;
           return (
           <div className="mt-4 rounded-xl border border-teal-500/20 bg-[#0a2a2a] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="h-0.5 bg-gradient-to-r from-teal-500/60 to-cyan-500/40" />
+          <FormDivider />
           <div className="p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div>

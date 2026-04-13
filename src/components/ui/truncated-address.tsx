@@ -85,7 +85,7 @@ export function TruncatedAddress({
           aria-keyshortcuts={showCopy ? 'C' : undefined}
           className={cn(
             'text-left break-all transition-colors cursor-pointer',
-            'hover:text-[#19595b] dark:hover:text-teal-400',
+            'hover:text-primary dark:hover:text-teal-400',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40 rounded',
             addressClassName,
           )}

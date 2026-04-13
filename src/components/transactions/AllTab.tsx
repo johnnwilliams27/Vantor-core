@@ -406,9 +406,9 @@ export function AllTab() {
                   </TableCell>
                   <TableCell className="text-sm">
                     <Badge variant={
-                      row.status === 'completed' ? 'success' as any :
-                      row.status === 'failed' ? 'destructive' :
-                      'warning' as any
+                      row.status === 'completed' ? 'active' :
+                      row.status === 'failed' ? 'failed' :
+                      'pending'
                     }>
                       {capitalize(row.status)}
                     </Badge>
@@ -499,7 +499,7 @@ export function AllTab() {
 
             {/* Memo */}
             {selectedRow.memo && (
-              <div className="border-l-2 border-[#19595b] pl-3 text-sm text-muted-foreground">
+              <div className="border-l-2 border-primary pl-3 text-sm text-muted-foreground">
                 {selectedRow.memo}
               </div>
             )}

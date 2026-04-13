@@ -51,12 +51,12 @@ const createInvoiceSchema = z.object({
 
 type CreateInvoiceForm = z.infer<typeof createInvoiceSchema>;
 
-const STATUS_VARIANTS: Record<InvoiceStatus, 'default' | 'success' | 'warning' | 'destructive' | 'secondary'> = {
-  unpaid: 'warning',
-  paid: 'success',
-  partially_paid: 'info' as any,
-  overdue: 'destructive',
-  cancelled: 'secondary',
+const STATUS_VARIANTS: Record<InvoiceStatus, 'active' | 'pending' | 'failed' | 'info-blue' | 'inactive'> = {
+  unpaid: 'pending',
+  paid: 'active',
+  partially_paid: 'info-blue',
+  overdue: 'failed',
+  cancelled: 'inactive',
 };
 
 function sourceLabel(inv: Invoice): string {
@@ -254,7 +254,7 @@ export function InvoiceTable() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-7 text-xs px-3 bg-[#19595b] text-white hover:bg-[#134849] border-0"
+                        className="h-7 text-xs px-3 bg-primary text-white hover:bg-[#134849] border-0"
                         onClick={(e) => { e.stopPropagation(); setPayInvoice(inv); }}
                       >
                         <CreditCard className="h-3 w-3 mr-1" />
@@ -388,7 +388,7 @@ export function InvoiceTable() {
 
             {/* Description / Memo */}
             {selectedInvoice.description && (
-              <div className="border-l-2 border-[#19595b] pl-3 text-sm text-muted-foreground">
+              <div className="border-l-2 border-primary pl-3 text-sm text-muted-foreground">
                 {selectedInvoice.description}
               </div>
             )}

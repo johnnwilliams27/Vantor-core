@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CancelScheduledDialog } from '@/components/ui/cancel-scheduled-dialog';
 import { FilterBar } from '@/components/ui/filter-bar';
+import { HoverTooltip } from '@/components/ui/hover-tooltip';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { useTableFilter } from '@/hooks/useTableFilter';
 import { useToast } from '@/components/ui/toast';
@@ -278,8 +279,10 @@ export function BridgeHistory() {
                     <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                       {b.scheduled_for ? formatDateTime(b.scheduled_for) : '—'}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground whitespace-nowrap" title={formatRelativeOrDate(b.created_at).full}>
-                      {formatRelativeOrDate(b.created_at).text}
+                    <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                      <HoverTooltip label={formatRelativeOrDate(b.created_at).full}>
+                        <span>{formatRelativeOrDate(b.created_at).text}</span>
+                      </HoverTooltip>
                     </TableCell>
                     <TableCell>
                       {canCancel(b) && (
