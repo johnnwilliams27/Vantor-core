@@ -20,6 +20,8 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export function LoginForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+  const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [showPassword, setShowPassword] = useState(false);
   const {
     register,
@@ -29,6 +31,8 @@ export function LoginForm() {
 
   const onSubmit = async (data: LoginFormData) => {
     setError(null);
+    setUnverifiedEmail(null);
+    setResendState('idle');
     const result = await signIn('credentials', {
       email: data.email,
       password: data.password,
@@ -44,7 +48,7 @@ export function LoginForm() {
         if (checkRes.ok) {
           const checkData = await checkRes.json();
           if (!checkData.verified) {
-            setError('Please verify your email before signing in. Check your inbox for the verification link.');
+            setUnverifiedEmail(data.email);
             return;
           }
         }
@@ -55,6 +59,21 @@ export function LoginForm() {
       return;
     }
     window.location.href = '/dashboard';
+  };
+
+  const handleResend = async () => {
+    if (!unverifiedEmail) return;
+    setResendState('sending');
+    try {
+      const res = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: unverifiedEmail }),
+      });
+      setResendState(res.ok ? 'sent' : 'error');
+    } catch {
+      setResendState('error');
+    }
   };
 
   return (
@@ -133,6 +152,32 @@ export function LoginForm() {
           {error && (
             <div role="alert" className="rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2.5 text-sm text-red-400">
               {error}
+            </div>
+          )}
+
+          {unverifiedEmail && (
+            <div role="alert" className="rounded-lg bg-amber-500/10 border border-amber-500/20 px-3 py-3 text-sm">
+              <p className="text-amber-300 mb-2">
+                Please verify your email before signing in. Check your inbox for the verification link.
+              </p>
+              {resendState === 'sent' ? (
+                <p className="text-[var(--text-300)] text-xs">
+                  Sent. Check your inbox (and spam folder).
+                </p>
+              ) : resendState === 'error' ? (
+                <p className="text-red-400 text-xs">
+                  Couldn&rsquo;t send. Try again in a moment.
+                </p>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={resendState === 'sending'}
+                  className="text-xs font-medium text-amber-200 hover:text-amber-100 underline underline-offset-2 disabled:opacity-60"
+                >
+                  {resendState === 'sending' ? 'Sending…' : 'Resend verification email'}
+                </button>
+              )}
             </div>
           )}
 
