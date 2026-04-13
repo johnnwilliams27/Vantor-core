@@ -54,7 +54,17 @@ export async function POST(_req: NextRequest) {
     result.recommendedAmountUsd !== null &&
     result.recommendedAmountUsd >= parseFloat(rule.approval_threshold_usd);
 
-  const willAutoExecute = result.action !== 'no_action' && !requiresApproval;
+  // INVARIANT: AI-initiated money movement never auto-executes, regardless
+  // of amount or policy threshold. The auto-execute branch below bypasses
+  // the policy gate entirely (no PolicyGateService, no approval workflow),
+  // which would violate the published guarantee that every AI rec reaches
+  // a human before moving money. Forcing this to false makes every non-
+  // no_action recommendation take the 'pending_approval' path. The branch
+  // at line ~169 is therefore unreachable; a follow-up PR will delete it
+  // and wire PolicyGateService via mapRecommendationToMovement() so that
+  // human-approved recs still go through the gate for rule + chain
+  // evaluation (see /approve route).
+  const willAutoExecute = false;
 
   // 5. Insert recommendation record
   const { data: rec, error: insertErr } = await supabase
@@ -165,7 +175,12 @@ export async function POST(_req: NextRequest) {
     actorId: session.user.id,
   }).catch(() => {});
 
-  // 6. Auto-execute if below threshold and action is not no_action
+  // 6. Auto-execute path — DEAD CODE as of 2026-04-13. `willAutoExecute`
+  // is hardcoded false above to preserve the "AI recs never auto-execute"
+  // invariant. This branch is statically unreachable; a follow-up PR will
+  // delete it and replace it with a PolicyGateService integration so that
+  // threshold-below recs still go through the gate for rule + chain
+  // evaluation before landing as pending_approval.
   if (willAutoExecute && result.action !== 'no_action' && result.recommendedAmountUsd) {
     try {
       const mode = getIntegrationMode(session.user.subscription_tier);
