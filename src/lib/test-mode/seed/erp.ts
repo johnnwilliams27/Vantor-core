@@ -150,23 +150,25 @@ export async function seedErp(ctx: SeedContext): Promise<ErpIds> {
     .insert([...invoiceRows, ...latamInvoiceRows])
     .select('id, erp_config_id, amount, token, status');
 
-  // GL postings for paid invoices
+  // Bill payments for paid invoices
   const paidInvoices = invoices?.filter(inv => inv.status === 'paid') || [];
   if (paidInvoices.length) {
-    const glRows = paidInvoices.map(inv => ({
+    const paymentRows = paidInvoices.map((inv, i) => ({
       user_id: userId,
       enterprise_id: enterpriseId,
       erp_config_id: inv.erp_config_id,
-      invoice_id: inv.id,
-      external_gl_id: `GL-TEST-${inv.id.slice(0, 8)}`,
+      invoice_id: `SEED-BILL-${inv.id.slice(0, 8)}`,
+      external_payment_id: `SEED-PMT-${inv.id.slice(0, 8)}`,
+      external_tx_hash: `0xseed${i.toString().padStart(60, '0')}`,
       amount: inv.amount,
-      token: inv.token,
-      gl_account: pick(['2000-AP', '5000-OPEX', '6000-SGA', '7000-COGS']),
-      posted_at: daysAgo(Math.floor(rand(5, 80))),
-      status: 'posted',
+      currency: 'USD',
+      payment_date: daysAgo(Math.floor(rand(5, 80))).slice(0, 10),
+      reference: `seed-${i}`,
+      status: 'recorded',
+      response_data: { seeded: true },
     }));
 
-    await supabase.from('gl_postings').insert(glRows);
+    await supabase.from('bill_payments').insert(paymentRows);
   }
 
   return {

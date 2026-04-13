@@ -111,6 +111,34 @@ export interface ErpConfiguration {
   last_synced: string | null;
   created_at: string;
   updated_at: string;
+  xero_tenant_id: string | null;
+  xero_bank_account_id: string | null;
+  access_token_expires_at: string | null;
+  refresh_token_rotated_at: string | null;
+  status: 'active' | 'expired' | 'needs_reconnect';
+}
+
+export interface BillPayment {
+  id: string;
+  user_id: string;
+  enterprise_id: string | null;
+  erp_config_id: string;
+  invoice_id: string;              // ERP-side, not a Vantor UUID
+  external_payment_id: string | null;
+  external_tx_hash: string;
+  amount: string;                  // NUMERIC comes back as string
+  currency: string;
+  payment_date: string;            // yyyy-mm-dd
+  reference: string | null;
+  status: 'recorded' | 'failed';
+  response_data: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export interface XeroCiBootstrap {
+  id: number;
+  refresh_token: string;
+  rotated_at: string;
 }
 
 export interface ErpVendor {

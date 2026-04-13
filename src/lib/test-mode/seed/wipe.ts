@@ -44,7 +44,7 @@ export async function wipeTestEnterprise(
     'transfer_attempts',
     'transfers',
     'transactions',
-    'gl_postings',
+    'bill_payments',
     'invoices',
     'erp_vendors',
     'erp_configurations',

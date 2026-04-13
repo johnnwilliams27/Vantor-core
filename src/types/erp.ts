@@ -48,18 +48,25 @@ export interface ERPInvoiceRaw {
   dueDate?: string;
 }
 
-export interface ERPGLPostPayload {
+export interface ERPBillPaymentPayload {
+  /** ERP-side invoice/bill ID (not a Vantor UUID). */
   invoiceId: string;
-  paymentId: string;
+  /** Amount paid, in the invoice's currency. */
   amount: number;
-  token: TokenSymbol;
-  glAccount: string;
-  memo?: string;
+  /** ISO 4217 currency code. */
+  currency: string;
+  /** ISO yyyy-mm-dd. */
+  paymentDate: string;
+  /** Free-text reference, e.g. 'Vantor-USDC'. */
+  reference: string;
+  /** On-chain transaction hash Vantor paid from. */
+  externalTxHash: string;
 }
 
-export interface ERPGLPostResult {
-  externalGlId: string;
-  status: string;
+export interface ERPBillPaymentResult {
+  /** ERP-side payment ID. */
+  externalPaymentId: string;
+  status: 'recorded';
   message?: string;
 }
 
@@ -68,5 +75,5 @@ export interface IERPAdapter {
   testConnection(): Promise<{ success: boolean; message: string }>;
   fetchVendors(): Promise<ERPVendorRaw[]>;
   fetchInvoices(): Promise<ERPInvoiceRaw[]>;
-  postGLEntry(payload: ERPGLPostPayload): Promise<ERPGLPostResult>;
+  recordBillPayment(payload: ERPBillPaymentPayload): Promise<ERPBillPaymentResult>;
 }
