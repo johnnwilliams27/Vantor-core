@@ -10,6 +10,15 @@ import type { YieldProtocolId } from '@/lib/yield/interface';
 import { z } from 'zod';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 import { requirePaidTier, tierGateResponse, TierGateError } from '@/lib/auth/tier-gate';
+import {
+  PolicyGateService,
+  mapYieldDepositToMovement,
+  GateError,
+  mapGateErrorToHttp,
+  type GateActor,
+} from '@/lib/policy/gate';
+import { buildProductionEvaluate } from '@/lib/policy/gate/production-wiring';
+import { ApprovalWorkflowService } from '@/lib/policy/approvals';
 
 const depositSchema = z.object({
   protocol: z.enum(['aave_v3', 'morpho_reservoir', 'morpho_steakhouse', 'kamino', 'kamino_multiply', 'ondo_usdy', 'sky', 'ethena']),
@@ -73,7 +82,8 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Look up wallet
+  // Look up wallet (optional — deposit works even if we don't know the wallet row;
+  // the chain address is what matters for the adapter).
   const { data: wallet } = await supabase
     .from('wallets')
     .select('id')
@@ -81,10 +91,20 @@ export async function POST(req: NextRequest) {
     .eq('user_id', session.user.id)
     .maybeSingle();
 
-  // Create pending transaction
+  // ─── Policy gate ───────────────────────────────────────────────────
+  // Create the movement first so we have a stable id shared between the
+  // yield_transactions row and any approval_request. Row is inserted as
+  // 'awaiting_approval' so no execution side effect can occur before the
+  // gate clears it.
+  const movement = mapYieldDepositToMovement(
+    { protocol, token, amount, walletAddress, chain, vaultAddress },
+    { userId: session.user.id, enterpriseId: enterpriseId as string, fromAddress: walletAddress },
+  );
+
   const { data: tx, error: txErr } = await supabase
     .from('yield_transactions')
     .insert({
+      id: movement.id,
       user_id: session.user.id,
       enterprise_id: enterpriseId,
       protocol,
@@ -93,12 +113,94 @@ export async function POST(req: NextRequest) {
       underlying_token: token,
       amount: parseFloat(amount),
       amount_usd: parseFloat(amount), // stablecoin ~= 1 USD
-      status: 'pending',
+      status: 'awaiting_approval',
     })
     .select()
     .single();
 
   if (txErr) return NextResponse.json({ error: txErr.message }, { status: 500 });
+
+  const gateService = new PolicyGateService(supabase, {
+    evaluate: buildProductionEvaluate(supabase),
+    approvalService: new ApprovalWorkflowService(supabase),
+  });
+  const actor: GateActor = {
+    user_id: session.user.id,
+    role: session.user.role as GateActor['role'],
+    enterprise_id: enterpriseId as string,
+  };
+
+  let gateResult;
+  try {
+    gateResult = await gateService.gate(movement, actor);
+  } catch (err) {
+    if (err instanceof GateError) {
+      await supabase
+        .from('yield_transactions')
+        .update({ status: 'denied', denial_reason: err.reason_code })
+        .eq('id', tx.id)
+        .eq('enterprise_id', enterpriseId as string);
+      await writeAuditLog({
+        userId: session.user.id,
+        action: 'yield_deposit_blocked' as any,
+        entityType: 'yield_transaction',
+        entityId: tx.id,
+        details: { reason_code: err.reason_code, ...(err.details as Record<string, unknown>) },
+      });
+      const { status, body } = mapGateErrorToHttp(err);
+      return NextResponse.json(body, { status });
+    }
+    throw err;
+  }
+
+  // require_approval: transaction stays 'awaiting_approval'. Adapter is NOT
+  // invoked — no external state created. Approver's later click will produce
+  // the approval outcome; execution-on-approve is a follow-up PR (needs an
+  // executor registry keyed on movement.kind — see project memory).
+  if (gateResult.verdict === 'require_approval') {
+    await writeAuditLog({
+      userId: session.user.id,
+      action: 'yield_deposit_requires_approval' as any,
+      entityType: 'yield_transaction',
+      entityId: tx.id,
+      details: {
+        approval_request_id: gateResult.approval_request.id,
+        chain_id: gateResult.approval_request.chain_id,
+        protocol,
+        token,
+        amount,
+      },
+    });
+    return NextResponse.json(
+      { data: tx, approval_request: gateResult.approval_request },
+      { status: 202 },
+    );
+  }
+
+  // allow_auto: flip to 'pending' and run the adapter. Same failure
+  // modes as before (adapter error → status='failed') plus a new
+  // pending→completed transition from the adapter result.
+  const { error: flipErr } = await supabase
+    .from('yield_transactions')
+    .update({ status: 'pending' })
+    .eq('id', tx.id)
+    .eq('enterprise_id', enterpriseId as string);
+  if (flipErr) {
+    await supabase
+      .from('yield_transactions')
+      .update({ status: 'denied', denial_reason: 'gate_update_failed' })
+      .eq('id', tx.id)
+      .eq('enterprise_id', enterpriseId as string);
+    return NextResponse.json(
+      {
+        reason_code: 'gate_update_failed',
+        human_readable: 'Policy gate cleared the deposit but the status flip failed.',
+        user_action: 'Retry the deposit.',
+        details: { transaction_id: tx.id },
+      },
+      { status: 500 },
+    );
+  }
 
   try {
     const adapter = getYieldAdapter(protocol as YieldProtocolId);
@@ -122,7 +224,7 @@ export async function POST(req: NextRequest) {
       const newCurrentValue = parseFloat(existingPos.current_value_usd) + parseFloat(amount);
       const newYieldTokenBalance = parseFloat(existingPos.yield_token_balance || '0') + result.tokensReceived;
       const newAccruedYield = Math.max(0, newCurrentValue - newDeposited);
-      const { data: updated } = await supabase
+      await supabase
         .from('yield_positions')
         .update({
           deposited_amount: newDeposited,
@@ -132,9 +234,7 @@ export async function POST(req: NextRequest) {
           apy_snapshot: result.estimatedAPY,
           last_refreshed_at: new Date().toISOString(),
         })
-        .eq('id', existingPos.id)
-        .select()
-        .single();
+        .eq('id', existingPos.id);
       positionId = existingPos.id;
     } else {
       const { data: newPos, error: posErr } = await supabase

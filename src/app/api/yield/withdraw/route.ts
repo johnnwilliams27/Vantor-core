@@ -12,6 +12,15 @@ import type { TokenSymbol } from '@/types/database';
 import { z } from 'zod';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 import { requirePaidTier, tierGateResponse, TierGateError } from '@/lib/auth/tier-gate';
+import {
+  PolicyGateService,
+  mapYieldWithdrawToMovement,
+  GateError,
+  mapGateErrorToHttp,
+  type GateActor,
+} from '@/lib/policy/gate';
+import { buildProductionEvaluate } from '@/lib/policy/gate/production-wiring';
+import { ApprovalWorkflowService } from '@/lib/policy/approvals';
 
 const withdrawSchema = z.object({
   positionId: z.string().uuid(),
@@ -60,10 +69,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Withdrawal amount exceeds position value' }, { status: 400 });
   }
 
-  // Create pending transaction
+  // ─── Policy gate ───────────────────────────────────────────────────
+  const movement = mapYieldWithdrawToMovement(
+    {
+      positionId,
+      protocol: position.protocol,
+      token: position.underlying_token,
+      amount,
+      walletAddress,
+      chain: position.chain,
+    },
+    { userId: session.user.id, enterpriseId: enterpriseId as string, fromAddress: walletAddress },
+  );
+
   const { data: tx, error: txErr } = await supabase
     .from('yield_transactions')
     .insert({
+      id: movement.id,
       user_id: session.user.id,
       enterprise_id: enterpriseId,
       position_id: positionId,
@@ -73,12 +95,88 @@ export async function POST(req: NextRequest) {
       underlying_token: position.underlying_token,
       amount: parseFloat(amount),
       amount_usd: parseFloat(amount),
-      status: 'pending',
+      status: 'awaiting_approval',
     })
     .select()
     .single();
 
   if (txErr) return NextResponse.json({ error: txErr.message }, { status: 500 });
+
+  const gateService = new PolicyGateService(supabase, {
+    evaluate: buildProductionEvaluate(supabase),
+    approvalService: new ApprovalWorkflowService(supabase),
+  });
+  const actor: GateActor = {
+    user_id: session.user.id,
+    role: session.user.role as GateActor['role'],
+    enterprise_id: enterpriseId as string,
+  };
+
+  let gateResult;
+  try {
+    gateResult = await gateService.gate(movement, actor);
+  } catch (err) {
+    if (err instanceof GateError) {
+      await supabase
+        .from('yield_transactions')
+        .update({ status: 'denied', denial_reason: err.reason_code })
+        .eq('id', tx.id)
+        .eq('enterprise_id', enterpriseId as string);
+      await writeAuditLog({
+        userId: session.user.id,
+        action: 'yield_withdraw_blocked' as any,
+        entityType: 'yield_transaction',
+        entityId: tx.id,
+        details: { reason_code: err.reason_code, ...(err.details as Record<string, unknown>) },
+      });
+      const { status, body } = mapGateErrorToHttp(err);
+      return NextResponse.json(body, { status });
+    }
+    throw err;
+  }
+
+  if (gateResult.verdict === 'require_approval') {
+    await writeAuditLog({
+      userId: session.user.id,
+      action: 'yield_withdraw_requires_approval' as any,
+      entityType: 'yield_transaction',
+      entityId: tx.id,
+      details: {
+        approval_request_id: gateResult.approval_request.id,
+        chain_id: gateResult.approval_request.chain_id,
+        protocol: position.protocol,
+        token: position.underlying_token,
+        amount,
+      },
+    });
+    return NextResponse.json(
+      { data: tx, approval_request: gateResult.approval_request },
+      { status: 202 },
+    );
+  }
+
+  // allow_auto
+  const { error: flipErr } = await supabase
+    .from('yield_transactions')
+    .update({ status: 'pending' })
+    .eq('id', tx.id)
+    .eq('enterprise_id', enterpriseId as string);
+  if (flipErr) {
+    await supabase
+      .from('yield_transactions')
+      .update({ status: 'denied', denial_reason: 'gate_update_failed' })
+      .eq('id', tx.id)
+      .eq('enterprise_id', enterpriseId as string);
+    return NextResponse.json(
+      {
+        reason_code: 'gate_update_failed',
+        human_readable: 'Policy gate cleared the withdraw but the status flip failed.',
+        user_action: 'Retry the withdraw.',
+        details: { transaction_id: tx.id },
+      },
+      { status: 500 },
+    );
+  }
 
   try {
     const adapter = getYieldAdapter(position.protocol as YieldProtocolId);
@@ -128,7 +226,6 @@ export async function POST(req: NextRequest) {
         .eq('id', positionId);
     }
 
-    // Update transaction to completed
     await supabase
       .from('yield_transactions')
       .update({
