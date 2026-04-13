@@ -24,11 +24,11 @@ export interface InsightReasoningResult {
 function mockInsightReasoning(insight: DetectedInsight): string {
   const typeLabel = insight.type.replace(/_/g, ' ');
   return (
-    `🔍 **Analysis**\n` +
+    `**Analysis**\n` +
     `${insight.summary}\n\n` +
-    `💡 **Context**\n` +
+    `**Context**\n` +
     `This ${typeLabel} was detected with ${Math.round(insight.confidence * 100)}% confidence based on current treasury state.\n\n` +
-    `✅ **Next Step**\n` +
+    `**Next Step**\n` +
     (insight.recommendedAction
       ? `Review the recommended ${insight.recommendedAction.type.replace(/_/g, ' ')} of $${insight.recommendedAction.amountUsd.toLocaleString()} and approve if appropriate.`
       : `Review the current position and determine if rebalancing is needed.`)
@@ -74,9 +74,9 @@ export async function generateInsightReasoning(
     max_tokens: 384,
     system:
       'You are Vantor\'s treasury AI. Explain a detected insight using exactly 3 sections:\n\n' +
-      '🔍 **Analysis**\nOne sentence explaining what was detected and why it matters.\n\n' +
-      '💡 **Context**\nOne sentence with the key numbers (dollar amounts, APY, percentages) that triggered this.\n\n' +
-      '✅ **Next Step**\nOne sentence with a specific, actionable recommendation.\n\n' +
+      '**Analysis**\nOne sentence explaining what was detected and why it matters.\n\n' +
+      '**Context**\nOne sentence with the key numbers (dollar amounts, APY, percentages) that triggered this.\n\n' +
+      '**Next Step**\nOne sentence with a specific, actionable recommendation.\n\n' +
       'Keep each section to exactly 1 sentence. Use specific dollar amounts. No other formatting. ' +
       'Never suggest auto-executing — all actions require treasurer approval.',
     messages: [

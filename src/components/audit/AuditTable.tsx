@@ -114,7 +114,9 @@ export function AuditTable() {
                       {log.entity_type ? `${log.entity_type} ${log.entity_id?.slice(0, 8)}…` : '—'}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
-                      {log.details ? JSON.stringify(log.details) : ''}
+                      {log.details && typeof log.details === 'object' && Object.keys(log.details).length > 0
+                        ? JSON.stringify(log.details)
+                        : '—'}
                     </TableCell>
                   </TableRow>
                 ))

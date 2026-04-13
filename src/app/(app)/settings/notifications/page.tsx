@@ -234,8 +234,7 @@ export default function NotificationsSettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Notification Preferences</h1>
-        <p className="text-sm text-muted-foreground mt-1">Choose how you want to be notified for each event type.</p>
+        <p className="text-sm text-muted-foreground">Choose how you want to be notified for each event type.</p>
       </div>
 
       {/* Sticky column headers */}

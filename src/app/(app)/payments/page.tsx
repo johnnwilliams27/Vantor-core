@@ -419,7 +419,6 @@ export default function PaymentsPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      <h1 className="text-xl font-semibold text-white">Payments</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <SendPaymentForm />
         <SchedulePaymentForm />
