@@ -218,17 +218,15 @@ export default function AdminDashboardPage() {
               <div>
                 <p className="text-sm text-muted-foreground">Total Enterprises</p>
                 <p className="text-2xl font-bold">
-                  {health.isLoading ? (
-                    '...'
-                  ) : (
-                    <>
-                      {health.data?.total_enterprises ?? 0}
-                      <span className="ml-2 text-sm font-normal text-muted-foreground">
-                        ({health.data?.real_enterprises ?? 0} real)
-                      </span>
-                    </>
-                  )}
+                  {health.isLoading ? '...' : health.data?.total_enterprises ?? 0}
                 </p>
+                {!health.isLoading && health.data && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    <span className="text-foreground">{health.data.real_free_enterprises}</span> on free
+                    {' · '}
+                    <span className="text-foreground">{health.data.paid_enterprises}</span> paid
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
