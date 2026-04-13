@@ -86,7 +86,7 @@ export default function ApprovalsPage() {
     <div className="space-y-6 p-4 sm:p-8">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">Approvals</h1>
+          <h2 className="text-2xl font-semibold">Pending approvals</h2>
           <p className="text-sm text-muted-foreground mt-1">
             Money movements that policy required a human to sign off on before execution.
           </p>

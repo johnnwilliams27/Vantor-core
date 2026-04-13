@@ -352,7 +352,6 @@ export default function SwapsPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      <h1 className="text-xl font-semibold text-white">Swaps</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <SwapForm />
         <ScheduleSwapForm />

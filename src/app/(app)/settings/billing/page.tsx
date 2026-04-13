@@ -102,8 +102,7 @@ function BillingSettingsContent() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Billing</h1>
-        <p className="text-muted-foreground mt-1">
+        <p className="text-muted-foreground">
           Manage your subscription, view usage, and update payment details.
         </p>
       </div>
