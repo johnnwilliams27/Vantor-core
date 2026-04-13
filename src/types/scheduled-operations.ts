@@ -6,6 +6,8 @@ export type ScheduledOperationStatus =
   | 'pending'
   | 'processing'
   | 'awaiting_authorization'
+  | 'awaiting_approval'
+  | 'denied'
   | 'completed'
   | 'failed'
   | 'cancelled'
