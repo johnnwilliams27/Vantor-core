@@ -206,7 +206,7 @@ export default function IntegrationsPage() {
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
               ) : isConnected ? (
-                <Badge variant="success">Connected</Badge>
+                <Badge variant="active">Connected</Badge>
               ) : (
                 <Badge variant="outline">Not connected</Badge>
               )}
