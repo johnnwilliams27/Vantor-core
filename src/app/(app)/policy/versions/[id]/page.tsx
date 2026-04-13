@@ -245,9 +245,16 @@ export default function VersionEditorPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Button variant="outline" size="sm" disabled title="Coming in PR 3">
-              Simulate
-            </Button>
+            <Link href={`/policy/versions/${versionId}/diff`}>
+              <Button variant="outline" size="sm">
+                Diff
+              </Button>
+            </Link>
+            <Link href={`/policy/versions/${versionId}/simulate`}>
+              <Button variant="outline" size="sm">
+                Simulate
+              </Button>
+            </Link>
             {isDraft && (
               <Button variant="default" size="sm" onClick={() => setActivateOpen(true)}>
                 <CheckCircle2 className="w-4 h-4 mr-1.5" />
