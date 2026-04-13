@@ -41,7 +41,7 @@ export type RunAggregateQuery = (params: AggregateQueryParams) => Promise<RawAgg
  * to import when wiring up the real database client.
  *
  * PHASE-1 DESIGN NOTES:
- * - Filters by `final_verdict = 'allow_auto'` — this means manually-approved
+ * - Filters by `verdict = 'allow_auto'` — this means manually-approved
  *   executed transfers are NOT counted toward trailing aggregates. A user
  *   structuring around a rule via manual approval would evade the splitting
  *   guard. Plan 2 should widen this to include all executed verdicts if
@@ -105,7 +105,7 @@ export function buildAggregateQuerySql(
       ARRAY_AGG(id) AS included_evaluation_ids
     FROM policy_evaluations
     WHERE enterprise_id = $1
-      AND final_verdict = 'allow_auto'
+      AND verdict = 'allow_auto'
       AND executed_at IS NOT NULL
       AND executed_at >= $2
       AND executed_at <  $3

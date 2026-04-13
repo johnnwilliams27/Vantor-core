@@ -19,10 +19,14 @@
 //   - balances loader (hard-limit checks)
 //
 // Graceful-failure stubs (extend when rules need them):
-//   - aggregate queries (splitting guard + window aggregates)
 //   - forecast factory (Plan 1's sanctioned stub until forecast ships)
 //   - counterparty history (only used by counterparty-aware rules)
 //   - sanctions screening (route already enforces this upstream)
+//
+// Real wiring (via RPC defined in 0052_policy_aggregate_rpc.sql):
+//   - aggregate queries — calls public.policy_aggregate_window(...). Prior
+//     to this the stub silently returned 0 for every aggregate, so any
+//     rule using a trailing-window sum or splitting guard didn't fire.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { EvaluationEngine } from '../engine/evaluator';
@@ -30,6 +34,7 @@ import { EvaluationContextLoader } from '../context-loader/loader';
 import { CoingeckoPolicyRateProvider } from '../canonicalizer/coingecko-provider';
 import { fetchStablecoinPricesWithTimestamp } from '../canonicalizer/oracle-adapter';
 import { AggregationDetector } from '../aggregate-detector/detector';
+import type { RunAggregateQuery, AggregateQueryParams } from '../aggregate-detector/queries';
 import { StubForecastQueryFactory } from '../forecast/stub';
 import { NoopStubLogger } from '../forecast/stub-logger';
 import type { PolicyRule, ApprovalChain, PolicyVersionSnapshot } from '../types/policy-version';
@@ -58,21 +63,7 @@ export function buildProductionEvaluate(
   });
 
   const aggregateDetector = new AggregationDetector({
-    runQuery: async (_params) => {
-      // Graceful-failure stub. Rules that depend on aggregate windows
-      // will see failure records in the trace; the engine tolerates
-      // this per its failure semantics (see detector.ts header). A
-      // follow-up will wire real SQL execution via an rpc function
-      // over policy_evaluations.
-      return {
-        sum_amount_usd: '0',
-        sum_amount_by_asset: {},
-        count: 0,
-        distinct_destinations: 0,
-        distinct_counterparties: 0,
-        included_evaluation_ids: [],
-      };
-    },
+    runQuery: buildRunAggregateQuery(supabase),
   });
 
   const forecastFactory = new StubForecastQueryFactory(new NoopStubLogger());
@@ -93,6 +84,112 @@ export function buildProductionEvaluate(
     const ctx = await loader.load(movement, enterpriseId);
     return engine.evaluate(movement, ctx);
   };
+}
+
+// ─── Aggregate window RPC adapter ─────────────────────────────────────
+
+/**
+ * Translate a WindowSpec + ProposedMovement into the positional args the
+ * `policy_aggregate_window` RPC expects, then shape the RPC result back
+ * into RawAggregateResult. Filter semantics mirror `buildAggregateQuerySql`
+ * 1:1 so any quirks in the builder (e.g. the initiator-field mismatch
+ * documented in queries.ts) are preserved, not amplified.
+ *
+ * sum_amount_by_asset is returned as an empty map — parity with the
+ * builder, which doesn't emit per-asset breakdowns either. Group-by-asset
+ * rules constrain the WHERE clause instead, so sum_amount_usd IS the
+ * asset-specific total when needed.
+ */
+export function buildRunAggregateQuery(
+  supabase: SupabaseClient<any, any>,
+): RunAggregateQuery {
+  return async (params: AggregateQueryParams) => {
+    const { enterpriseId, window, movement, windowStart, windowEnd } = params;
+    const direction = window.direction ?? 'outflow';
+
+    const p_initiator_id =
+      window.group_by.initiator ? extractInitiatorIdentity(movement) : null;
+    const p_counterparty_id =
+      window.group_by.counterparty && movement.counterparty
+        ? movement.counterparty.id
+        : null;
+    const p_destination_identity = window.group_by.destination
+      ? `${movement.destination.venue}:${
+          movement.destination.address ?? movement.destination.account_id ?? ''
+        }`
+      : null;
+    const p_asset = window.group_by.asset ? movement.amount.asset : null;
+
+    const { data, error } = await supabase.rpc('policy_aggregate_window', {
+      p_enterprise_id: enterpriseId,
+      p_window_start: windowStart.toISOString(),
+      p_window_end: windowEnd.toISOString(),
+      p_direction: direction,
+      p_initiator_id,
+      p_counterparty_id,
+      p_destination_identity,
+      p_asset,
+    });
+
+    if (error) {
+      // Throw so the detector's try/catch classifies this as a query
+      // failure and produces a structured failure record rather than
+      // silently passing $0. That's the behavior we explicitly wanted
+      // when replacing the stub — fail-closed on aggregate errors.
+      throw new Error(
+        `policy_aggregate_window rpc failed: ${error.message}`,
+      );
+    }
+
+    // Supabase RPCs returning TABLE types come back as an array of rows.
+    // Our function always produces exactly one row, so treat no-row as
+    // "empty window" and more-than-one as a contract violation.
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) {
+      return {
+        sum_amount_usd: '0',
+        sum_amount_by_asset: {},
+        count: 0,
+        distinct_destinations: 0,
+        distinct_counterparties: 0,
+        included_evaluation_ids: [],
+      };
+    }
+
+    return {
+      // NUMERIC comes back as string from PostgREST — preserve as string
+      // to match RawAggregateResult.sum_amount_usd's decimal contract.
+      sum_amount_usd: String(row.sum_amount_usd ?? '0'),
+      sum_amount_by_asset: {},
+      count: Number(row.count ?? 0),
+      distinct_destinations: Number(row.distinct_destinations ?? 0),
+      distinct_counterparties: Number(row.distinct_counterparties ?? 0),
+      included_evaluation_ids: Array.isArray(row.included_evaluation_ids)
+        ? (row.included_evaluation_ids as string[])
+        : [],
+    };
+  };
+}
+
+/** Mirrors queries.ts::extractInitiatorIdentity. Kept local to avoid a
+ *  cross-import of a small helper; if a third caller ever needs it,
+ *  export from queries.ts. */
+function extractInitiatorIdentity(movement: ProposedMovement): string {
+  const init = movement.initiator;
+  switch (init.type) {
+    case 'human':
+      return init.user_id;
+    case 'agent':
+      return init.agent_id;
+    case 'ai_recommendation':
+      return init.recommendation_id;
+    case 'schedule':
+      return init.scheduled_op_id;
+    default: {
+      const _exhaustive: never = init;
+      throw new Error(`Unhandled initiator type: ${JSON.stringify(_exhaustive)}`);
+    }
+  }
 }
 
 // ─── Policy version loader ────────────────────────────────────────────
