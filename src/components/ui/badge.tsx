@@ -47,7 +47,7 @@ const badgeVariants = cva(
         mxn: 'border-transparent bg-rose-500/8 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400',
       },
       size: {
-        xs: 'text-[10px] px-1.5 py-0 gap-1',
+        xs: 'text-3xs px-1.5 py-0 gap-1',
         sm: 'text-xs px-2 py-0.5 gap-1',
         md: 'text-xs px-2.5 py-0.5 gap-1.5',
         lg: 'text-xs px-3 py-1 gap-1.5',

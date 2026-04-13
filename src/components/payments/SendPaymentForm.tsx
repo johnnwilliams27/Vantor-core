@@ -143,7 +143,7 @@ export function SendPaymentForm() {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Source */}
           <div className="space-y-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Source</p>
+            <p className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">Source</p>
             <div className="space-y-2">
               <Label>From Bank Account</Label>
               <Select {...register('fromBankAccountId')} aria-required="true">
@@ -181,7 +181,7 @@ export function SendPaymentForm() {
 
           {/* Destination */}
           <div className="space-y-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Destination</p>
+            <p className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">Destination</p>
           <div className="space-y-2">
             <Label>Bank Name</Label>
             <Input placeholder="Chase, Bank of America…" {...register('toBankName')} />
@@ -232,7 +232,7 @@ export function SendPaymentForm() {
 
           {/* Payment Details */}
           <div className="space-y-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Payment Details</p>
+            <p className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">Payment Details</p>
 
           {/* Amount + Currency */}
           <div className="grid grid-cols-2 gap-4">

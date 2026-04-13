@@ -110,7 +110,7 @@ function VerifyEmailContent() {
         {/* Body */}
         <div className="px-8 py-8 text-center">
           <Icon className={`w-12 h-12 mx-auto mb-4 ${config.iconColor}`} />
-          <h2 className="text-lg font-semibold text-white mb-2">{config.title}</h2>
+          <h1 className="text-lg font-semibold text-white mb-2">{config.title}</h1>
           <p className="text-sm text-[var(--text-300)] leading-relaxed">{config.message}</p>
 
           {config.showLogin && (

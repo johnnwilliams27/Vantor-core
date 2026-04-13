@@ -99,7 +99,7 @@ export function TreasuryRulesForm() {
           <div>
             <Label htmlFor="rule-label">Rule Label</Label>
             <Input id="rule-label" placeholder="Default Rule" {...register('label')} />
-            {errors.label && <p className="text-xs text-red-500 mt-1">{errors.label.message}</p>}
+            {errors.label && <p className="text-xs text-destructive mt-1">{errors.label.message}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -114,7 +114,7 @@ export function TreasuryRulesForm() {
                 {...register('safety_buffer_multiplier')}
               />
               {errors.safety_buffer_multiplier && (
-                <p className="text-xs text-red-500 mt-1">{errors.safety_buffer_multiplier.message}</p>
+                <p className="text-xs text-destructive mt-1">{errors.safety_buffer_multiplier.message}</p>
               )}
             </div>
             <div>
@@ -127,7 +127,7 @@ export function TreasuryRulesForm() {
                 {...register('obligation_lookahead_days')}
               />
               {errors.obligation_lookahead_days && (
-                <p className="text-xs text-red-500 mt-1">{errors.obligation_lookahead_days.message}</p>
+                <p className="text-xs text-destructive mt-1">{errors.obligation_lookahead_days.message}</p>
               )}
             </div>
           </div>
@@ -145,7 +145,7 @@ export function TreasuryRulesForm() {
               Ramps above this amount require manual approval
             </p>
             {errors.approval_threshold_usd && (
-              <p className="text-xs text-red-500 mt-1">{errors.approval_threshold_usd.message}</p>
+              <p className="text-xs text-destructive mt-1">{errors.approval_threshold_usd.message}</p>
             )}
           </div>
 

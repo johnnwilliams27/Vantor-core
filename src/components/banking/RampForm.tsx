@@ -14,6 +14,7 @@ import { useToast } from '@/components/ui/toast';
 import { useWallets } from '@/hooks/useWallets';
 import { useBalances, useWalletTokenHoldings, formatWalletTokensLabel } from '@/hooks/useBalances';
 import { BalanceHint, FiatBalanceHint } from '@/components/ui/balance-hint';
+import { FormDivider } from '@/components/ui/form-divider';
 import { Loader2, ArrowDownLeft, ArrowUpRight, ArrowDown, CircleAlert } from 'lucide-react';
 import { sanitizeErrorMessage } from '@/lib/utils';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
@@ -289,7 +290,7 @@ export function RampForm() {
               <div key={label} className="flex items-center gap-1.5">
                 {i > 0 && <div className={`w-6 h-px ${i <= step ? 'bg-teal-500/60' : 'bg-white/10'}`} />}
                 <div className={`flex items-center gap-1 ${i <= step ? 'text-teal-400' : 'text-white/25'}`}>
-                  <span className={`w-4.5 h-4.5 rounded-full flex items-center justify-center text-[10px] font-bold ${i < step ? 'bg-teal-500/20 text-teal-400' : i === step ? 'bg-teal-500 text-white' : 'bg-white/5 text-white/25'}`}>
+                  <span className={`w-4.5 h-4.5 rounded-full flex items-center justify-center text-3xs font-bold ${i < step ? 'bg-teal-500/20 text-teal-400' : i === step ? 'bg-teal-500 text-white' : 'bg-white/5 text-white/25'}`}>
                     {i + 1}
                   </span>
                   <span className="font-medium">{label}</span>
@@ -308,14 +309,14 @@ export function RampForm() {
             <div className="flex rounded-xl bg-white/[0.04] p-1 border border-white/[0.06]">
               <label className="flex-1">
                 <input type="radio" value="offramp" {...register('direction')} className="sr-only" />
-                <div className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-all duration-200 ${direction === 'offramp' ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-white/70'}`}>
+                <div className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-colors duration-200 ${direction === 'offramp' ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-white/70'}`}>
                   <ArrowUpRight className="h-4 w-4" />
                   Off-ramp
                 </div>
               </label>
               <label className="flex-1">
                 <input type="radio" value="onramp" {...register('direction')} className="sr-only" />
-                <div className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-all duration-200 ${direction === 'onramp' ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-white/70'}`}>
+                <div className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-colors duration-200 ${direction === 'onramp' ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-white/70'}`}>
                   <ArrowDownLeft className="h-4 w-4" />
                   On-ramp
                 </div>
@@ -516,7 +517,7 @@ export function RampForm() {
           const sym = { USD: '$', EUR: '€', GBP: '£', BRL: 'R$', MXN: 'MX$' }[fiatCurrency] ?? fiatCurrency;
           return (
           <div className="mt-4 rounded-xl border border-teal-500/20 bg-[#0a2a2a] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="h-0.5 bg-gradient-to-r from-teal-500/60 to-cyan-500/40" />
+          <FormDivider />
           <div className="p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div>

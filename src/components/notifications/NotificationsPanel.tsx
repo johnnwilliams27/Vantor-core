@@ -78,7 +78,7 @@ export function NotificationsPanel() {
           className={cn(
             'relative p-2 rounded-lg transition-colors',
             open
-              ? 'bg-[#19595b]/10 text-[#19595b] dark:bg-teal-500/20 dark:text-teal-300'
+              ? 'bg-primary/10 text-primary dark:bg-teal-500/20 dark:text-teal-300'
               : 'hover:bg-black/5 dark:hover:bg-white/10 text-muted-foreground'
           )}
           aria-label="Open notifications"
@@ -86,7 +86,7 @@ export function NotificationsPanel() {
         >
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
-            <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white leading-none">
+            <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-3xs font-bold text-white leading-none">
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
@@ -133,7 +133,7 @@ export function NotificationsPanel() {
                   onClick={() => handleClickNotification(notif)}
                   className={cn(
                     'flex items-start gap-3 px-4 py-3 transition-colors w-full text-left',
-                    !notif.read ? 'bg-[#19595b]/5' : 'hover:bg-black/[0.03] dark:hover:bg-white/[0.03]'
+                    !notif.read ? 'bg-primary/5' : 'hover:bg-black/[0.03] dark:hover:bg-white/[0.03]'
                   )}
                 >
                   <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', !notif.read ? (CATEGORY_DOT[notif.category] ?? 'bg-muted-foreground') : 'bg-transparent')} />

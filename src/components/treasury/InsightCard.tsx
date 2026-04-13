@@ -1,5 +1,6 @@
 'use client';
 import { Card, CardContent } from '@/components/ui/card';
+import { HoverTooltip } from '@/components/ui/hover-tooltip';
 import { useToast } from '@/components/ui/toast';
 import { useDismissInsight, useMarkInsightActedOn } from '@/hooks/useInsights';
 import type { TreasuryInsightRow } from '@/lib/insights/types';
@@ -130,7 +131,9 @@ export function InsightCard({ insight }: { insight: TreasuryInsightRow }) {
             <span className="text-muted-foreground shrink-0">
               {TYPE_ICONS[insight.insight_type]}
             </span>
-            <p className="text-sm font-medium text-foreground truncate cursor-pointer" title={insight.title} onClick={(e) => e.currentTarget.classList.toggle('truncate')}>{insight.title}</p>
+            <HoverTooltip label={insight.title}>
+              <p className="text-sm font-medium text-foreground truncate cursor-pointer" onClick={(e) => e.currentTarget.classList.toggle('truncate')}>{insight.title}</p>
+            </HoverTooltip>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -159,19 +162,19 @@ export function InsightCard({ insight }: { insight: TreasuryInsightRow }) {
           <div className="grid grid-cols-3 gap-3 rounded-lg border border-border/50 p-3">
             {insight.impact_dollar_value != null && (
               <div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider">Impact</div>
+                <div className="text-2xs text-muted-foreground uppercase tracking-wider">Impact</div>
                 <div className="text-sm font-semibold tabular-nums mt-0.5">{fmtCurrency(insight.impact_dollar_value)}</div>
               </div>
             )}
             {insight.impact_apy_delta_bps != null && (
               <div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider">APY Delta</div>
+                <div className="text-2xs text-muted-foreground uppercase tracking-wider">APY Delta</div>
                 <div className="text-sm font-semibold tabular-nums mt-0.5">{formatBps(insight.impact_apy_delta_bps)}</div>
               </div>
             )}
             {insight.impact_buffer_days != null && (
               <div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider">Buffer</div>
+                <div className="text-2xs text-muted-foreground uppercase tracking-wider">Buffer</div>
                 <div className="text-sm font-semibold tabular-nums mt-0.5">{formatDays(insight.impact_buffer_days)}</div>
               </div>
             )}

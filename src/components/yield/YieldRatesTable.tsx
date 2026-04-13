@@ -242,7 +242,7 @@ function RiskMeter({ factors }: { factors: RiskFactors }) {
       <div className="flex items-center gap-2">
         <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
           <div
-            className={`h-full rounded-full transition-all ${
+            className={`h-full rounded-full transition-[width,background-color] ${
               avg <= 1.5 ? 'bg-green-500' : avg <= 2.25 ? 'bg-yellow-500' : 'bg-red-500'
             }`}
             style={{ width: `${Math.max(pct, 8)}%` }}
@@ -272,7 +272,7 @@ function RiskMeter({ factors }: { factors: RiskFactors }) {
                   />
                 ))}
               </div>
-              <span className={`text-[10px] font-medium ${SCORE_TEXT_COLORS[score]}`}>
+              <span className={`text-3xs font-medium ${SCORE_TEXT_COLORS[score]}`}>
                 {RISK_SCORE_LABELS[score]}
               </span>
             </div>
@@ -471,10 +471,10 @@ function InlineDepositForm({
               ))}
             </Select>
             {walletsLoading && (
-              <p className="text-[11px] text-muted-foreground mt-1">Loading wallets…</p>
+              <p className="text-2xs text-muted-foreground mt-1">Loading wallets…</p>
             )}
             {!walletsLoading && chainWallets.length === 0 && (
-              <p className="text-[11px] text-muted-foreground mt-1">
+              <p className="text-2xs text-muted-foreground mt-1">
                 No {protocol.chain} wallets connected. Add one in Wallets first.
               </p>
             )}
@@ -623,7 +623,7 @@ function CategoryFilterBar({
             `}
           >
             {label(c)}
-            <span className={`text-[10px] rounded-full px-1.5 py-0.5 tabular-nums ${
+            <span className={`text-3xs rounded-full px-1.5 py-0.5 tabular-nums ${
               isActive ? 'bg-white/20 text-white' : 'bg-muted text-muted-foreground'
             }`}>
               {counts[c] ?? 0}
@@ -647,21 +647,19 @@ function TokenizedMmfCard({ protocol }: { protocol: YieldProtocolWithRates }) {
       <div className="flex items-center justify-between px-5 pt-5 pb-3">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-lg font-semibold truncate">{venue.displayName}</span>
-          <span className="ml-1 inline-flex items-center rounded-full bg-amber-500/10 text-amber-400 px-2 py-0.5 text-[10px] font-medium">
-            Coming Soon
-          </span>
+          <Badge variant="pending" className="ml-1 text-3xs">Coming Soon</Badge>
         </div>
         <div className="flex flex-col items-end gap-1.5 shrink-0">
           <div className="flex items-center gap-1">
             {venue.supportedChains
               .filter((c) => c.toLowerCase() === 'ethereum' || c.toLowerCase() === 'solana')
               .map((chain) => (
-                <Badge key={chain} variant={chain.toLowerCase() === 'ethereum' ? 'ethereum' : 'solana'} className="text-[10px]">
+                <Badge key={chain} variant={chain.toLowerCase() === 'ethereum' ? 'ethereum' : 'solana'} className="text-3xs">
                   {chain}
                 </Badge>
               ))}
           </div>
-          <span className="text-[11px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+          <span className="text-2xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
             USDC
           </span>
         </div>
@@ -675,7 +673,7 @@ function TokenizedMmfCard({ protocol }: { protocol: YieldProtocolWithRates }) {
         {/* Reference yield — the hero metric for an MMF card */}
         <div className="flex items-center justify-between rounded-lg border border-border/50 px-4 py-3">
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
               Reference Yield
             </span>
             <InfoTooltip content={`7-day annualized yield as of ${venue.yieldAsOf}. Not a live quote — refreshed quarterly from rwa.xyz.`} />
@@ -688,7 +686,7 @@ function TokenizedMmfCard({ protocol }: { protocol: YieldProtocolWithRates }) {
         {/* Fund Size — deliberately NOT called "TVL" */}
         <div className="flex items-center justify-between rounded-md border border-border/60 bg-muted/20 px-3 py-2">
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
               Fund Size / AUM
             </span>
             <InfoTooltip content="Assets under management (AUM) of the underlying fund. Unlike a DeFi pool's TVL, this is informational — tokenized MMFs are backed by the underlying Treasury market and have effectively unlimited capacity." />
@@ -701,36 +699,36 @@ function TokenizedMmfCard({ protocol }: { protocol: YieldProtocolWithRates }) {
         {/* Metadata grid — 3 rows × 2 columns */}
         <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
           <div>
-            <div className="text-[11px] text-muted-foreground uppercase tracking-wider">Fund Manager</div>
+            <div className="text-2xs text-muted-foreground uppercase tracking-wider">Fund Manager</div>
             <div className="font-medium truncate">{venue.fundManager}</div>
           </div>
           <div>
-            <div className="text-[11px] text-muted-foreground uppercase tracking-wider">Eligibility</div>
+            <div className="text-2xs text-muted-foreground uppercase tracking-wider">Eligibility</div>
             <div className="font-medium">{ELIGIBILITY_LABELS[venue.eligibility]}</div>
           </div>
           <div>
-            <div className="text-[11px] text-muted-foreground uppercase tracking-wider">Underlying</div>
+            <div className="text-2xs text-muted-foreground uppercase tracking-wider">Underlying</div>
             <div className="font-medium">{venue.underlyingComposition}</div>
           </div>
           <div>
-            <div className="text-[11px] text-muted-foreground uppercase tracking-wider">Reporting</div>
+            <div className="text-2xs text-muted-foreground uppercase tracking-wider">Reporting</div>
             <div className="font-medium">{venue.reportingCadence}</div>
           </div>
           <div>
-            <div className="text-[11px] text-muted-foreground uppercase tracking-wider">Redemption</div>
+            <div className="text-2xs text-muted-foreground uppercase tracking-wider">Redemption</div>
             <div className="font-medium flex items-center gap-1">
               <Clock className="h-3 w-3 text-muted-foreground" />
               {venue.timeToCash}
             </div>
           </div>
           <div>
-            <div className="text-[11px] text-muted-foreground uppercase tracking-wider">Wrapper</div>
+            <div className="text-2xs text-muted-foreground uppercase tracking-wider">Wrapper</div>
             <div className="font-medium">{venue.regulatoryWrapper}</div>
           </div>
         </div>
 
         {/* Rate source + as-of date */}
-        <div className="text-[11px] text-muted-foreground space-y-0.5">
+        <div className="text-2xs text-muted-foreground space-y-0.5">
           <p className="flex items-center gap-1">
             <Info className="h-2.5 w-2.5 shrink-0" />
             {PROTOCOL_RATE_SOURCE[venue.id] ?? 'rwa.xyz reference'}
@@ -907,18 +905,16 @@ export function YieldRatesTable() {
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="text-lg font-semibold truncate">{p.name}</span>
                   {comingSoon && (
-                    <span className="inline-flex items-center rounded-full bg-amber-500/10 text-amber-400 px-2 py-0.5 text-[10px] font-medium">
-                      Coming Soon
-                    </span>
+                    <Badge variant="pending" className="text-3xs">Coming Soon</Badge>
                   )}
                   {p.kycRequired && (
                     p.id === 'ondo_usdy' && ondoKycVerified ? (
-                      <Badge className="bg-green-500/10 text-green-400 text-[10px]">
+                      <Badge variant="active" className="text-3xs">
                         <CheckCircle2 className="h-3 w-3 mr-1" />
                         KYC Verified
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="text-[10px] text-yellow-500 border-yellow-500/30">
+                      <Badge variant="pending" className="text-3xs">
                         <Lock className="h-3 w-3 mr-1" />
                         KYC Required
                       </Badge>
@@ -927,14 +923,14 @@ export function YieldRatesTable() {
                 </div>
                 <div className="flex flex-col items-end gap-1.5 shrink-0">
                   <div className="flex items-center gap-1">
-                    <Badge variant={p.chain === 'ethereum' ? 'ethereum' : 'solana'} className="text-[10px]">
+                    <Badge variant={p.chain === 'ethereum' ? 'ethereum' : 'solana'} className="text-3xs">
                       {CHAIN_LABELS[p.chain] ?? p.chain}
                     </Badge>
                   </div>
                   {p.supportedTokens?.length > 0 && (
                     <div className="flex items-center gap-1">
                       {p.supportedTokens.map((t) => (
-                        <span key={t} className="text-[11px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                        <span key={t} className="text-2xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                           {t}
                         </span>
                       ))}
@@ -959,7 +955,7 @@ export function YieldRatesTable() {
                   return (
                     <div className="flex items-center justify-between rounded-lg border border-border/50 px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
                           Pool TVL
                         </span>
                         <InfoTooltip content="Total Value Locked across all tokens supported by this protocol. Refreshed every minute from on-chain reads or the protocol's own API." />
@@ -1000,7 +996,7 @@ export function YieldRatesTable() {
                             <td className="text-right px-3 py-2">
                               <span className="font-semibold text-green-400">{formatAPY(r.totalAPY)}</span>
                               {rateWithMeta.isStale && (
-                                <span className="ml-1.5 inline-flex items-center rounded-full bg-amber-500/10 text-amber-400 px-1.5 py-0.5 text-[10px] font-medium">
+                                <span className="ml-1.5 inline-flex items-center rounded-full bg-amber-500/10 text-amber-400 px-1.5 py-0.5 text-3xs font-medium">
                                   Stale
                                 </span>
                               )}
@@ -1020,7 +1016,7 @@ export function YieldRatesTable() {
                     .pop();
                   const source = PROTOCOL_RATE_SOURCE[p.id];
                   return (
-                    <div className="text-[11px] text-muted-foreground space-y-0.5">
+                    <div className="text-2xs text-muted-foreground space-y-0.5">
                       {source && (
                         <p className="flex items-center gap-1">
                           <Info className="h-2.5 w-2.5 shrink-0" />

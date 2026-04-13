@@ -147,7 +147,7 @@ export function ResetPasswordForm() {
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
-                {errors.password && <p className="text-xs text-red-400">{errors.password.message}</p>}
+                {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
               </div>
 
               <div className="space-y-1.5">
@@ -170,10 +170,10 @@ export function ResetPasswordForm() {
                     {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
-                {errors.confirmPassword && <p className="text-xs text-red-400">{errors.confirmPassword.message}</p>}
+                {errors.confirmPassword && <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>}
               </div>
 
-              <p className="text-[11px] text-[var(--text-400)] leading-relaxed">
+              <p className="text-2xs text-[var(--text-400)] leading-relaxed">
                 Must be at least 8 characters and include one uppercase letter and one special character.
               </p>
 

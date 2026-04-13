@@ -130,7 +130,7 @@ export function ForkViewModal({ open, onOpenChange, sourceView, from, to }: Fork
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span>Source: {sourceView.label}</span>
             {sourceView.kind === 'custom' && (
-              <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-400">
+              <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-3xs text-amber-400">
                 custom
               </span>
             )}

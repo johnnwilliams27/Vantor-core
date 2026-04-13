@@ -119,7 +119,7 @@ export function RegisterForm() {
               {...register('fullName')}
               className={inputClass}
             />
-            {errors.fullName && <p className="text-xs text-red-400">{errors.fullName.message}</p>}
+            {errors.fullName && <p className="text-xs text-destructive">{errors.fullName.message}</p>}
           </div>
 
           <div className="space-y-1.5">
@@ -131,7 +131,7 @@ export function RegisterForm() {
               {...register('companyName')}
               className={inputClass}
             />
-            {errors.companyName && <p className="text-xs text-red-400">{errors.companyName.message}</p>}
+            {errors.companyName && <p className="text-xs text-destructive">{errors.companyName.message}</p>}
           </div>
 
           <div className="space-y-1.5">
@@ -146,7 +146,7 @@ export function RegisterForm() {
               readOnly={!!inviteEmail}
               className={`${inputClass} ${inviteEmail ? 'opacity-60 cursor-not-allowed' : ''}`}
             />
-            {errors.email && <p className="text-xs text-red-400">{errors.email.message}</p>}
+            {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
           </div>
 
           <div className="space-y-1.5">
@@ -169,7 +169,7 @@ export function RegisterForm() {
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
-            {errors.password && <p className="text-xs text-red-400">{errors.password.message}</p>}
+            {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
           </div>
 
           <div className="space-y-1.5">
@@ -192,7 +192,7 @@ export function RegisterForm() {
                 {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
-            {errors.confirmPassword && <p className="text-xs text-red-400">{errors.confirmPassword.message}</p>}
+            {errors.confirmPassword && <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>}
           </div>
 
           {error && (

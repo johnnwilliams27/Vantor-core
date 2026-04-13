@@ -158,7 +158,7 @@ export function AgentPanel() {
 
   return (
     <div
-      className={`flex flex-col border-l border-border bg-background dark:bg-gray-900 transition-all duration-300 ease-in-out overflow-hidden shrink-0 ${
+      className={`flex flex-col border-l border-border bg-background dark:bg-gray-900 transition-[width] duration-300 ease-in-out overflow-hidden shrink-0 ${
         agentPanelOpen ? 'fixed inset-0 z-50 w-full sm:relative sm:inset-auto sm:z-auto sm:w-[380px]' : 'w-0'
       }`}
     >
@@ -168,7 +168,7 @@ export function AgentPanel() {
           {/* Header */}
           <div className="flex h-16 shrink-0 items-center justify-between border-b border-border px-4 dark:bg-gray-900">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#19595b] text-white text-sm font-bold">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white text-sm font-bold">
                 V
               </div>
               <div>

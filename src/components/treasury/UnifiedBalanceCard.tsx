@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { EmptyStateCard } from '@/components/ui/empty-state-card';
+import { HoverTooltip } from '@/components/ui/hover-tooltip';
 import { cn } from '@/lib/utils';
 import { Building2, Coins, Info, Landmark, TrendingUp } from 'lucide-react';
 import { useTreasuryOverview } from '@/hooks/useTreasury';
@@ -82,7 +83,7 @@ function AllocationBar({ segments }: { segments: { label: string; value: number;
           return (
             <div
               key={seg.label}
-              className={`${seg.color} transition-all duration-500`}
+              className={`${seg.color} transition-[width] duration-500`}
               style={{ width: `${pct}%` }}
             />
           );
@@ -166,7 +167,7 @@ function TotalTreasuryCard({
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-white/70">Total Treasury</p>
-            <p className="text-3xl font-bold tabular-nums tracking-tight mt-0.5 whitespace-nowrap">≈{fmt(total, dc)} <span className="text-lg font-semibold text-white/60">{dc} equiv.</span></p>
+            <p className="text-3xl font-bold tabular-nums tracking-tight mt-0.5 whitespace-nowrap"><span aria-label="approximately">≈</span>{fmt(total, dc)} <span className="text-lg font-semibold text-white/60">{dc} equiv.</span></p>
           </div>
           {yieldValue > 0 && (
             <div className="text-right">
@@ -189,10 +190,12 @@ function TotalTreasuryCard({
           </div>
         )}
 
-        <div className="flex items-center gap-1 text-[11px] text-white/50 mt-2">
-          <Info className="h-3 w-3 shrink-0" />
-          <span>{[freshness, ...sources].filter(Boolean).join(' · ')}</span>
-        </div>
+        <HoverTooltip label="Shown data: FX rates from Open Exchange · on-chain balances from wallet RPCs · bank balances from provider APIs">
+          <div className="flex items-center gap-1 text-2xs text-white/50 mt-2 cursor-help">
+            <Info className="h-3 w-3 shrink-0" />
+            <span>{[freshness, ...sources].filter(Boolean).join(' · ')}</span>
+          </div>
+        </HoverTooltip>
         </>
         )}
       </CardContent>
@@ -251,9 +254,9 @@ function CashHoldingsCard({
               {hasBank && (
                 <div role="table" aria-label="Bank balances">
                   <div role="row" className={`grid ${hasMultiple ? 'grid-cols-[auto_1fr_1fr]' : 'grid-cols-[auto_1fr]'} gap-x-3 items-center mb-1.5 px-1`}>
-                    <span role="columnheader" className="text-[11px] text-muted-foreground uppercase tracking-wider">Currency</span>
-                    {hasMultiple && <span role="columnheader" className="text-[11px] text-muted-foreground uppercase tracking-wider text-right">Local</span>}
-                    <span role="columnheader" className="text-[11px] text-muted-foreground uppercase tracking-wider text-right">{displayCurrency} Value</span>
+                    <span role="columnheader" className="text-2xs text-muted-foreground uppercase tracking-wider">Currency</span>
+                    {hasMultiple && <span role="columnheader" className="text-2xs text-muted-foreground uppercase tracking-wider text-right">Local</span>}
+                    <span role="columnheader" className="text-2xs text-muted-foreground uppercase tracking-wider text-right">{displayCurrency} Value</span>
                   </div>
                   <div className="space-y-0.5">
                     {currencies.map(([currency, { usd, local }]) => (
@@ -275,8 +278,8 @@ function CashHoldingsCard({
               {hasStablecoins && (
                 <div className={hasBank ? 'mt-3 pt-3 border-t border-dashed' : ''} role="table" aria-label="Stablecoin balances">
                   <div role="row" className="flex items-center justify-between mb-1.5 px-1">
-                    <span role="columnheader" className="text-[11px] text-muted-foreground uppercase tracking-wider">Stablecoins</span>
-                    <span role="columnheader" className="text-[11px] text-muted-foreground uppercase tracking-wider">USD Value</span>
+                    <span role="columnheader" className="text-2xs text-muted-foreground uppercase tracking-wider">Stablecoins</span>
+                    <span role="columnheader" className="text-2xs text-muted-foreground uppercase tracking-wider">USD Value</span>
                   </div>
                   <div className="space-y-0.5">
                     {Object.entries(cryptoByToken).map(([token, usdValue]) => (
@@ -358,8 +361,8 @@ function YieldPositionsCard({
               {hasMmf && (
                 <div role="table" aria-label="Tokenized MMF positions">
                   <div role="row" className="flex items-center justify-between mb-1.5 px-1">
-                    <span role="columnheader" className="text-[11px] text-muted-foreground uppercase tracking-wider">Tokenized MMFs</span>
-                    <span role="columnheader" className="text-[11px] text-muted-foreground uppercase tracking-wider">Position</span>
+                    <span role="columnheader" className="text-2xs text-muted-foreground uppercase tracking-wider">Tokenized MMFs</span>
+                    <span role="columnheader" className="text-2xs text-muted-foreground uppercase tracking-wider">Position</span>
                   </div>
                   <div className="space-y-0.5">
                     {mmfPositions.map((pos) => {
@@ -369,7 +372,7 @@ function YieldPositionsCard({
                         <div role="row" key={pos.id} className="flex items-center justify-between py-1.5 px-1 rounded hover:bg-muted/30 transition-colors">
                           <div className="flex items-center gap-2 min-w-0">
                             <span className="text-sm truncate">{label}</span>
-                            <span className="text-[10px] text-muted-foreground shrink-0">
+                            <span className="text-3xs text-muted-foreground shrink-0">
                               {apy ? `${apy}% as of ${pos.asOfDate}` : `as of ${pos.asOfDate}`}
                             </span>
                           </div>
@@ -385,8 +388,8 @@ function YieldPositionsCard({
               {hasDefi && (
                 <div className={hasMmf ? 'mt-3 pt-3 border-t border-dashed' : ''} role="table" aria-label="DeFi positions">
                   <div role="row" className="flex items-center justify-between mb-1.5 px-1">
-                    <span role="columnheader" className="text-[11px] text-muted-foreground uppercase tracking-wider">DeFi Protocols</span>
-                    <span role="columnheader" className="text-[11px] text-muted-foreground uppercase tracking-wider">Position</span>
+                    <span role="columnheader" className="text-2xs text-muted-foreground uppercase tracking-wider">DeFi Protocols</span>
+                    <span role="columnheader" className="text-2xs text-muted-foreground uppercase tracking-wider">Position</span>
                   </div>
                   <div className="space-y-0.5">
                     {defiPositions.map((pos) => {
@@ -399,7 +402,7 @@ function YieldPositionsCard({
                             <span className="text-sm truncate">{label}</span>
                             <span className="text-xs text-muted-foreground">{pos.underlying_token}</span>
                             {apy && (
-                              <span className="text-[10px] text-muted-foreground shrink-0">
+                              <span className="text-3xs text-muted-foreground shrink-0">
                                 {apy}%{apyAsOfLabel ? ` · ${apyAsOfLabel}` : ''}
                               </span>
                             )}

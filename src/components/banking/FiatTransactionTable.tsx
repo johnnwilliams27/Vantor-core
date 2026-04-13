@@ -279,7 +279,7 @@ export function FiatTransactionTable() {
                       aria-sort={filter.sortKey === 'amount' ? (filter.sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
                     >
                       Stablecoin
-                      <span className={`text-[10px] ${filter.sortKey === 'amount' ? 'text-teal-400' : 'opacity-0 group-hover:opacity-40'}`}>
+                      <span className={`text-3xs ${filter.sortKey === 'amount' ? 'text-teal-400' : 'opacity-0 group-hover:opacity-40'}`}>
                         {filter.sortKey === 'amount' ? (filter.sortDir === 'asc' ? '↑' : '↓') : '↕'}
                       </span>
                     </button>
@@ -303,7 +303,7 @@ export function FiatTransactionTable() {
                       aria-sort={filter.sortKey === 'date' ? (filter.sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
                     >
                       Date
-                      <span className={`text-[10px] ${filter.sortKey === 'date' ? 'text-teal-400' : 'opacity-0 group-hover:opacity-40'}`}>
+                      <span className={`text-3xs ${filter.sortKey === 'date' ? 'text-teal-400' : 'opacity-0 group-hover:opacity-40'}`}>
                         {filter.sortKey === 'date' ? (filter.sortDir === 'asc' ? '↑' : '↓') : '↕'}
                       </span>
                     </button>
@@ -317,16 +317,16 @@ export function FiatTransactionTable() {
                     <td className="py-2 pr-4">
                       <DirectionBadge direction={row.direction} />
                     </td>
-                    <td className="py-2 pr-4 text-sm text-right">
+                    <td className="py-2 pr-4 text-sm text-right tabular-nums">
                       {parseFloat(row.crypto_amount).toLocaleString(undefined, { maximumFractionDigits: 2 })} {row.crypto_token}
                     </td>
-                    <td className="py-2 pr-4 text-sm text-right">
+                    <td className="py-2 pr-4 text-sm text-right tabular-nums">
                       {parseFloat(row.fiat_amount).toLocaleString(undefined, { style: 'currency', currency: row.fiat_currency })}
                     </td>
-                    <td className="hidden lg:table-cell py-2 pr-4 text-right text-muted-foreground">
+                    <td className="hidden lg:table-cell py-2 pr-4 text-right text-muted-foreground tabular-nums">
                       {row.exchange_rate ? parseFloat(row.exchange_rate).toFixed(4) : '—'}
                     </td>
-                    <td className="hidden lg:table-cell py-2 pr-4 text-right text-muted-foreground">
+                    <td className="hidden lg:table-cell py-2 pr-4 text-right text-muted-foreground tabular-nums">
                       {row.fee_amount
                         ? parseFloat(row.fee_amount).toLocaleString(undefined, { style: 'currency', currency: row.fiat_currency })
                         : '—'}
@@ -343,8 +343,10 @@ export function FiatTransactionTable() {
                     <td className="py-2 pr-4 text-sm text-muted-foreground whitespace-nowrap">
                       {row.scheduled_for ? formatDateTime(row.scheduled_for) : '—'}
                     </td>
-                    <td className="py-2 pr-4 text-sm text-muted-foreground whitespace-nowrap" title={formatRelativeOrDate(row.created_at).full}>
-                      {formatRelativeOrDate(row.created_at).text}
+                    <td className="py-2 pr-4 text-sm text-muted-foreground whitespace-nowrap">
+                      <HoverTooltip label={formatRelativeOrDate(row.created_at).full}>
+                        <span>{formatRelativeOrDate(row.created_at).text}</span>
+                      </HoverTooltip>
                     </td>
                     <td className="py-2">
                       {canCancel(row) && (

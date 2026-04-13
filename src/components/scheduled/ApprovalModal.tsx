@@ -162,7 +162,7 @@ export function ApprovalModal({ op, open, onOpenChange }: Props) {
 
           {/* Memo */}
           {op.memo && (
-            <p className="text-xs text-muted-foreground italic border-l-2 border-[#19595b] pl-3">
+            <p className="text-xs text-muted-foreground italic border-l-2 border-primary pl-3">
               {op.memo}
             </p>
           )}
@@ -197,7 +197,7 @@ export function ApprovalModal({ op, open, onOpenChange }: Props) {
                 <span className="text-xs text-muted-foreground">Deviation</span>
                 <Badge
                   variant={withinTolerance ? 'success' : 'destructive'}
-                  className="text-[10px] px-1.5 py-0"
+                  className="text-3xs px-1.5 py-0"
                 >
                   {deviationBps} bps
                 </Badge>

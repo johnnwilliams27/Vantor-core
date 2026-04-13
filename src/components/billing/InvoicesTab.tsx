@@ -79,7 +79,7 @@ export function InvoicesTab() {
                   {new Date(inv.period_start * 1000).toLocaleDateString()} —{' '}
                   {new Date(inv.period_end * 1000).toLocaleDateString()}
                 </td>
-                <td className="p-3 text-sm font-medium">
+                <td className="p-3 text-sm font-medium tabular-nums">
                   ${(inv.amount_paid / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </td>
                 <td className="p-3 text-sm">

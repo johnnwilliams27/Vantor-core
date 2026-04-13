@@ -149,7 +149,7 @@ export function DatePickerDropdown({
       <div
         className={cn(
           'absolute z-50 mt-1 w-[280px] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-lg',
-          'origin-top transition-all duration-200',
+          'origin-top transition-[opacity,transform] duration-200',
           open
             ? 'pointer-events-auto translate-y-0 scale-y-100 opacity-100'
             : 'pointer-events-none -translate-y-0.5 scale-y-[0.97] opacity-0',
@@ -182,7 +182,7 @@ export function DatePickerDropdown({
 
           <div className="mb-1 grid grid-cols-7">
             {DAY_NAMES.map((d) => (
-              <div key={d} className="py-1 text-center text-[11px] font-medium text-muted-foreground">
+              <div key={d} className="py-1 text-center text-2xs font-medium text-muted-foreground">
                 {d}
               </div>
             ))}

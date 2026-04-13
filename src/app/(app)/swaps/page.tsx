@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CancelScheduledDialog } from '@/components/ui/cancel-scheduled-dialog';
 import { FilterBar } from '@/components/ui/filter-bar';
+import { HoverTooltip } from '@/components/ui/hover-tooltip';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { useTableFilter } from '@/hooks/useTableFilter';
 import { useToast } from '@/components/ui/toast';
@@ -20,6 +21,7 @@ import { useScheduledOperations, useCancelScheduledOperation } from '@/hooks/use
 import type { ScheduledOperation, SwapParams } from '@/types/scheduled-operations';
 import { TruncatedAddress } from '@/components/ui/truncated-address';
 import { Check, Clock, XCircle, ArrowLeftRight } from 'lucide-react';
+import { ComingSoonPanel } from '@/components/ui/coming-soon-panel';
 import { useAppStore } from '@/store/appStore';
 import { useSession } from 'next-auth/react';
 import { TableCardSkeleton } from '@/components/ui/operations-skeletons';
@@ -193,7 +195,7 @@ function SwapHistory() {
                   aria-sort={filter.sortKey === 'amount' ? (filter.sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
                 >
                   From
-                  <span className={`text-[10px] ${filter.sortKey === 'amount' ? 'text-teal-400' : 'opacity-0 group-hover:opacity-40'}`}>
+                  <span className={`text-3xs ${filter.sortKey === 'amount' ? 'text-teal-400' : 'opacity-0 group-hover:opacity-40'}`}>
                     {filter.sortKey === 'amount' ? (filter.sortDir === 'asc' ? '↑' : '↓') : '↕'}
                   </span>
                 </button>
@@ -212,7 +214,7 @@ function SwapHistory() {
                   aria-sort={filter.sortKey === 'date' ? (filter.sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
                 >
                   Date
-                  <span className={`text-[10px] ${filter.sortKey === 'date' ? 'text-teal-400' : 'opacity-0 group-hover:opacity-40'}`}>
+                  <span className={`text-3xs ${filter.sortKey === 'date' ? 'text-teal-400' : 'opacity-0 group-hover:opacity-40'}`}>
                     {filter.sortKey === 'date' ? (filter.sortDir === 'asc' ? '↑' : '↓') : '↕'}
                   </span>
                 </button>
@@ -242,9 +244,9 @@ function SwapHistory() {
                   <TableCell><Badge variant={s.chain === 'ethereum' ? 'ethereum' : 'solana'}>{capitalize(s.chain)}</Badge></TableCell>
                   <TableCell>
                     <Badge variant={
-                      s.status === 'completed' ? 'success' as any :
-                      s.status === 'failed' || s.status === 'cancelled' ? 'destructive' :
-                      'warning' as any
+                      s.status === 'completed' ? 'active' :
+                      s.status === 'failed' || s.status === 'cancelled' ? 'failed' :
+                      'pending'
                     }>
                       {s.status === 'completed' ? <Check className="h-3 w-3 mr-1" /> :
                        s.status === 'failed' || s.status === 'cancelled' ? <XCircle className="h-3 w-3 mr-1" /> :
@@ -255,8 +257,10 @@ function SwapHistory() {
                   <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                     {s.scheduled_for ? formatDateTime(s.scheduled_for) : '—'}
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground whitespace-nowrap" title={formatRelativeOrDate(s.created_at).full}>
-                    {formatRelativeOrDate(s.created_at).text}
+                  <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                    <HoverTooltip label={formatRelativeOrDate(s.created_at).full}>
+                      <span>{formatRelativeOrDate(s.created_at).text}</span>
+                    </HoverTooltip>
                   </TableCell>
                   <TableCell>
                     {canCancel(s) && (
@@ -336,21 +340,10 @@ export default function SwapsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="rounded-lg border border-dashed border-border bg-muted/20 p-12 text-center">
-              <Clock className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
-              <p className="text-base font-semibold mb-2">Coming soon</p>
-              <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
-                Stablecoin swaps (USDC ↔ USDT) are being rewired through a
-                dedicated DEX aggregator to give you real on-chain execution
-                and pricing. We&apos;ll open this back up once the integration
-                is complete.
-              </p>
-              <p className="text-xs text-muted-foreground mt-4 max-w-md mx-auto">
-                In the meantime, you can still view historical swap records in
-                reporting exports, and use on-chain transfers from your wallets
-                for any immediate rebalancing.
-              </p>
-            </div>
+            <ComingSoonPanel
+              description="Stablecoin swaps (USDC ↔ USDT) are being rewired through a dedicated DEX aggregator to give you real on-chain execution and pricing. We'll open this back up once the integration is complete."
+              secondary="In the meantime, you can still view historical swap records in reporting exports, and use on-chain transfers from your wallets for any immediate rebalancing."
+            />
           </CardContent>
         </Card>
       </div>

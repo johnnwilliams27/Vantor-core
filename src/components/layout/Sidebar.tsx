@@ -32,6 +32,7 @@ import {
   CheckSquare,
   Gavel,
 } from 'lucide-react';
+import { HoverTooltip } from '@/components/ui/hover-tooltip';
 import { useAppStore } from '@/store/appStore';
 import type { UserRole } from '@/types/database';
 import { ROLE_RANK } from '@/lib/auth/roles';
@@ -233,7 +234,7 @@ export function Sidebar() {
               {group.heading && (
                 <p
                   className={cn(
-                    'px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-white/40 whitespace-nowrap transition-all duration-200',
+                    'px-3 mb-1 text-2xs font-semibold uppercase tracking-wider text-white/40 whitespace-nowrap transition-[opacity,height] duration-200',
                     sidebarOpen ? 'opacity-100 h-auto' : 'opacity-0 h-0 overflow-hidden mb-0',
                   )}
                   aria-hidden={!sidebarOpen}
@@ -244,7 +245,7 @@ export function Sidebar() {
               <div className="space-y-1">
                 {visibleItems.map((item) => {
                   const active = pathname.startsWith(item.href);
-                  return (
+                  const link = (
                     <Link
                       key={item.href}
                       href={item.href}
@@ -254,7 +255,6 @@ export function Sidebar() {
                           ? 'bg-white/[0.12] text-white border-l-2 border-teal-400'
                           : 'text-white/60 hover:bg-white/[0.08] hover:text-white/90 border-l-2 border-transparent'
                       )}
-                      title={!sidebarOpen ? item.label : undefined}
                     >
                       <item.icon className="h-5 w-5 shrink-0" />
                       <span
@@ -267,6 +267,13 @@ export function Sidebar() {
                       </span>
                     </Link>
                   );
+                  return !sidebarOpen ? (
+                    <HoverTooltip key={item.href} label={item.label}>
+                      {link}
+                    </HoverTooltip>
+                  ) : (
+                    link
+                  );
                 })}
               </div>
             </div>
@@ -277,7 +284,7 @@ export function Sidebar() {
       {/* Upgrade CTA for Lite users — fades with sidebar state */}
       {session?.user?.subscription_tier === 'lite' && (
         <div className={cn(
-          'mx-3 mb-3 transition-all duration-200',
+          'mx-3 mb-3 transition-[opacity,height] duration-200',
           sidebarOpen ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden mb-0 pointer-events-none',
         )}>
           <Link
@@ -287,7 +294,7 @@ export function Sidebar() {
             className="group block px-4 py-3 rounded-lg border border-teal-400/30 bg-teal-500/10 hover:bg-teal-500/15 transition-colors"
           >
             <p className="text-xs font-semibold text-teal-300 mb-0.5">Upgrade Plan</p>
-            <p className="text-[11px] text-white/50">Unlock live mode and full features</p>
+            <p className="text-2xs text-white/50">Unlock live mode and full features</p>
           </Link>
         </div>
       )}

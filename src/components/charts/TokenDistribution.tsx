@@ -73,7 +73,7 @@ function renderCustomLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent
   const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
   return (
-    <text x={x} y={y} textAnchor="middle" dominantBaseline="central" className="text-[10px] font-medium fill-white">
+    <text x={x} y={y} textAnchor="middle" dominantBaseline="central" className="text-3xs font-medium fill-white">
       {`${(percent * 100).toFixed(0)}%`}
     </text>
   );

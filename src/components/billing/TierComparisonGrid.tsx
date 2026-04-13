@@ -3,6 +3,7 @@
 import { TIERS, TIER_ORDER, TierSlug } from '@/lib/billing/tiers';
 import { Check, X, Sparkles, Zap, TrendingUp, Rocket, Building2, ArrowRight, MessageSquare } from 'lucide-react';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
+import { Badge } from '@/components/ui/badge';
 
 const TRANSACTION_TOOLTIP =
   'A transaction is any on-chain or off-chain movement of funds billed through Vantor: Payments, Transfers, Swaps, Bridges, and Ramps. The 0.25% fee applies per event.';
@@ -60,7 +61,7 @@ export function TierComparisonGrid({ currentTier, onSelectTier, pendingDowngrade
         return (
           <div
             key={slug}
-            className={`relative rounded-xl border p-4 flex flex-col transition-all duration-200 ${
+            className={`relative rounded-xl border p-4 flex flex-col transition-colors duration-200 ${
               isCurrent
                 ? 'border-primary ring-2 ring-primary/20 bg-primary/5'
                 : 'border-border hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5'
@@ -68,7 +69,7 @@ export function TierComparisonGrid({ currentTier, onSelectTier, pendingDowngrade
           >
             {/* Popular badge */}
             {config.popular && !isCurrent && (
-              <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-teal-500 to-cyan-400 text-white text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
+              <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-teal-500 to-cyan-400 text-white text-3xs font-bold uppercase tracking-wider whitespace-nowrap">
                 Popular
               </div>
             )}
@@ -81,7 +82,7 @@ export function TierComparisonGrid({ currentTier, onSelectTier, pendingDowngrade
             </div>
 
             <h3 className="font-semibold text-base">{tier.name}</h3>
-            <p className="text-xl font-bold mt-1">{tier.displayPrice}</p>
+            <p className="text-xl font-bold mt-1 tabular-nums">{tier.displayPrice}</p>
 
             <ul className="mt-3 space-y-1.5 flex-1 text-xs">
               <FeatureRow enabled={true} label="Test mode" />
@@ -100,13 +101,13 @@ export function TierComparisonGrid({ currentTier, onSelectTier, pendingDowngrade
 
             <div className="mt-3">
               {isCurrent ? (
-                <div className="text-center text-xs font-semibold text-primary py-2 px-3 rounded-lg bg-primary/10 border border-primary/20">
+                <Badge variant="active" className="w-full justify-center py-1.5 text-xs font-semibold">
                   Current Plan
-                </div>
+                </Badge>
               ) : slug === 'enterprise' ? (
                 <a
                   href="mailto:sales@vantor.xyz?subject=Enterprise%20Plan%20Inquiry"
-                  className="flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-lg border border-amber-500/30 bg-amber-500/5 text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/50 text-xs font-semibold transition-all duration-200"
+                  className="flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-lg border border-amber-500/30 bg-amber-500/5 text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/50 text-xs font-semibold transition-colors duration-200"
                 >
                   <MessageSquare className="w-3.5 h-3.5" />
                   Contact Sales
@@ -114,7 +115,7 @@ export function TierComparisonGrid({ currentTier, onSelectTier, pendingDowngrade
               ) : isUpgrade ? (
                 <button
                   onClick={() => onSelectTier(slug)}
-                  className="flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 text-white text-xs font-semibold shadow-[0_0_12px_rgba(45,212,191,0.2)] hover:shadow-[0_0_20px_rgba(45,212,191,0.35)] transition-all duration-200"
+                  className="btn-gradient flex items-center justify-center gap-1.5 w-full py-2 px-3 text-xs"
                 >
                   Upgrade
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -126,7 +127,7 @@ export function TierComparisonGrid({ currentTier, onSelectTier, pendingDowngrade
               ) : (
                 <button
                   onClick={() => onSelectTier(slug)}
-                  className="w-full py-2 px-3 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-border/80 text-xs font-medium transition-all duration-200"
+                  className="w-full py-2 px-3 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-border/80 text-xs font-medium transition-colors duration-200"
                 >
                   Downgrade
                 </button>

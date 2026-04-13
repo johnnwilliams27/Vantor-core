@@ -2,10 +2,11 @@
 import { useState } from 'react';
 import { useSanctionsScreenings, useScreenAddress } from '@/hooks/useCompliance';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/toast';
 import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { capitalize } from '@/lib/utils';
+import { capitalize, formatDateTime } from '@/lib/utils';
 import { Search, ShieldCheck, ShieldAlert, AlertTriangle } from 'lucide-react';
 import { TableRowsSkeleton } from '@/components/ui/operations-skeletons';
 
@@ -46,12 +47,12 @@ export function SanctionsScreeningPanel() {
       <div className="rounded-lg border bg-card p-4">
         <h3 className="text-sm font-semibold mb-3">Screen Address</h3>
         <div className="flex flex-col sm:flex-row gap-2">
-          <input
+          <Input
             type="text"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            placeholder="Enter wallet address..."
-            className="flex-1 rounded-md border bg-background px-3 py-2 text-sm"
+            placeholder="Enter wallet address…"
+            className="flex-1"
           />
           <Select
             value={chain}
@@ -117,7 +118,7 @@ export function SanctionsScreeningPanel() {
                         </Badge>
                       </td>
                       <td className="px-4 py-2 text-muted-foreground">
-                        {new Date(s.screened_at).toLocaleString()}
+                        {formatDateTime(s.screened_at)}
                       </td>
                     </tr>
                   );

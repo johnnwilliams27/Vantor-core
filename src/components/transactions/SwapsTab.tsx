@@ -78,11 +78,11 @@ export function SwapsTab() {
               filter.pagedData.map((s) => (
                 <TableRow key={s.id}>
                   <TableCell>
-                    <span className="font-semibold">{formatCurrency(s.from_amount)}</span>{' '}
+                    <span className="font-semibold tabular-nums">{formatCurrency(s.from_amount)}</span>{' '}
                     <Badge variant="outline">{s.from_token}</Badge>
                   </TableCell>
                   <TableCell>
-                    <span className="font-semibold">{formatCurrency(s.to_amount ?? s.from_amount)}</span>{' '}
+                    <span className="font-semibold tabular-nums">{formatCurrency(s.to_amount ?? s.from_amount)}</span>{' '}
                     <Badge variant="outline">{s.to_token}</Badge>
                     {!s.to_amount && <span className="text-xs text-muted-foreground ml-1">(est.)</span>}
                   </TableCell>

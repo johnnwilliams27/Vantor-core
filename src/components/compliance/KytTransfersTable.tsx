@@ -1,16 +1,26 @@
 'use client';
 import { useKytTransfers } from '@/hooks/useCompliance';
 import { Badge } from '@/components/ui/badge';
-import { capitalize } from '@/lib/utils';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { TruncatedAddress } from '@/components/ui/truncated-address';
+import { ChainBadge } from '@/components/ui/icons/chain-logos';
+import { capitalize, formatDateTime } from '@/lib/utils';
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { TableRowsSkeleton } from '@/components/ui/operations-skeletons';
 
-function riskColor(score: number | null): string {
-  if (score === null) return 'text-muted-foreground';
-  if (score < 25) return 'text-green-600 dark:text-green-400';
-  if (score < 50) return 'text-amber-600 dark:text-amber-400';
-  return 'text-red-600 dark:text-red-400';
+function riskTone(score: number | null): 'muted' | 'active' | 'pending' | 'failed' {
+  if (score === null) return 'muted';
+  if (score < 25) return 'active';
+  if (score < 50) return 'pending';
+  return 'failed';
 }
+
+const RISK_TEXT: Record<'muted' | 'active' | 'pending' | 'failed', string> = {
+  muted: 'text-muted-foreground',
+  active: 'text-teal-400',
+  pending: 'text-amber-400',
+  failed: 'text-red-400',
+};
 
 export function KytTransfersTable() {
   const { data: transfers, isLoading } = useKytTransfers();
@@ -21,33 +31,34 @@ export function KytTransfersTable() {
         <h3 className="text-sm font-semibold">Monitored Transfers</h3>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b text-left text-muted-foreground">
-              <th className="px-4 py-2 font-medium">Direction</th>
-              <th className="px-4 py-2 font-medium">Amount (USD)</th>
-              <th className="px-4 py-2 font-medium">Chain</th>
-              <th className="px-4 py-2 font-medium">Risk Score</th>
-              <th className="px-4 py-2 font-medium">Cluster</th>
-              <th className="px-4 py-2 font-medium">Tx Hash</th>
-              <th className="px-4 py-2 font-medium">Registered</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Direction</TableHead>
+              <TableHead>Amount (USD)</TableHead>
+              <TableHead>Chain</TableHead>
+              <TableHead>Risk Score</TableHead>
+              <TableHead>Cluster</TableHead>
+              <TableHead>Tx Hash</TableHead>
+              <TableHead>Registered</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {isLoading ? (
               <TableRowsSkeleton columns={7} rows={4} />
             ) : !transfers?.length ? (
-              <tr>
-                <td colSpan={7} className="p-8 text-center text-sm text-muted-foreground">
+              <TableRow>
+                <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">
                   No KYT transfers recorded yet
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : (
               transfers.map((t) => {
                 const score = t.risk_score !== null ? parseFloat(t.risk_score) : null;
+                const tone = riskTone(score);
                 return (
-                  <tr key={t.id} className="border-b last:border-0 hover:bg-muted/30">
-                    <td className="px-4 py-2">
+                  <TableRow key={t.id}>
+                    <TableCell>
                       {t.direction === 'received' ? (
                         <Badge variant="onramp" className="gap-1">
                           <ArrowDownLeft className="h-3 w-3 shrink-0" />
@@ -59,33 +70,31 @@ export function KytTransfersTable() {
                           Sent
                         </Badge>
                       )}
-                    </td>
-                    <td className="px-4 py-2">
+                    </TableCell>
+                    <TableCell className="tabular-nums">
                       {t.asset_amount_usd || t.amount
                         ? Number(t.asset_amount_usd ?? t.amount).toLocaleString('en-US', { style: 'currency', currency: 'USD' })
-                        : '-'}
-                    </td>
-                    <td className="px-4 py-2">
-                      <Badge variant={t.chain === 'ethereum' ? 'ethereum' : 'solana'}>
-                        {capitalize(t.chain)}
-                      </Badge>
-                    </td>
-                    <td className={`px-4 py-2 font-medium ${riskColor(score)}`}>
-                      {score !== null ? score.toFixed(1) : '-'}
-                    </td>
-                    <td className="px-4 py-2">{t.cluster_name ?? '-'}</td>
-                    <td className="px-4 py-2 font-mono text-xs">
-                      {t.tx_hash ? `${t.tx_hash.slice(0, 10)}...` : '-'}
-                    </td>
-                    <td className="px-4 py-2 text-muted-foreground">
-                      {new Date(t.registered_at).toLocaleString()}
-                    </td>
-                  </tr>
+                        : '—'}
+                    </TableCell>
+                    <TableCell>
+                      <ChainBadge chain={t.chain} />
+                    </TableCell>
+                    <TableCell className={`font-medium tabular-nums ${RISK_TEXT[tone]}`}>
+                      {score !== null ? score.toFixed(1) : '—'}
+                    </TableCell>
+                    <TableCell>{t.cluster_name ?? '—'}</TableCell>
+                    <TableCell>
+                      {t.tx_hash ? <TruncatedAddress address={t.tx_hash} chars={6} /> : '—'}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground whitespace-nowrap">
+                      {formatDateTime(t.registered_at)}
+                    </TableCell>
+                  </TableRow>
                 );
               })
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

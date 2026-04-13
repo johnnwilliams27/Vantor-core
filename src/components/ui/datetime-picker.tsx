@@ -154,7 +154,7 @@ export function DateTimePicker({ value, onChange, placeholder = 'Select date & t
       <div
         className={cn(
           'absolute z-50 mt-1 w-[280px] rounded-md border bg-popover text-popover-foreground shadow-lg overflow-hidden',
-          'transition-all duration-200 origin-top',
+          'transition-[opacity,transform] duration-200 origin-top',
           open
             ? 'opacity-100 scale-y-100 translate-y-0 pointer-events-auto'
             : 'opacity-0 scale-y-[0.97] -translate-y-0.5 pointer-events-none',
@@ -185,7 +185,7 @@ export function DateTimePicker({ value, onChange, placeholder = 'Select date & t
           {/* Day names */}
           <div className="grid grid-cols-7 mb-1">
             {DAY_NAMES.map((d) => (
-              <div key={d} className="text-center text-[11px] font-medium text-muted-foreground py-1">
+              <div key={d} className="text-center text-2xs font-medium text-muted-foreground py-1">
                 {d}
               </div>
             ))}

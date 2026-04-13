@@ -44,7 +44,7 @@ export function QuotePanel({
         </div>
       ))}
       <div className="mt-3 pt-3 border-t border-teal-500/15">
-        <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+        <div className="text-3xs uppercase tracking-wider text-muted-foreground font-semibold mb-1">
           {youReceiveLabel}
         </div>
         <div className="text-lg font-bold text-teal-400 tabular-nums tracking-tight">

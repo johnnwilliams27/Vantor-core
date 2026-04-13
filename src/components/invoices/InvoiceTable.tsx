@@ -51,12 +51,12 @@ const createInvoiceSchema = z.object({
 
 type CreateInvoiceForm = z.infer<typeof createInvoiceSchema>;
 
-const STATUS_VARIANTS: Record<InvoiceStatus, 'default' | 'success' | 'warning' | 'destructive' | 'secondary'> = {
-  unpaid: 'warning',
-  paid: 'success',
-  partially_paid: 'info' as any,
-  overdue: 'destructive',
-  cancelled: 'secondary',
+const STATUS_VARIANTS: Record<InvoiceStatus, 'active' | 'pending' | 'failed' | 'info-blue' | 'inactive'> = {
+  unpaid: 'pending',
+  paid: 'active',
+  partially_paid: 'info-blue',
+  overdue: 'failed',
+  cancelled: 'inactive',
 };
 
 function sourceLabel(inv: Invoice): string {
@@ -226,7 +226,7 @@ export function InvoiceTable() {
                   <TableCell className="text-sm">{inv.invoice_number}</TableCell>
                   <TableCell className="text-sm">{inv.vendor?.name ?? inv.vendor_name ?? '—'}</TableCell>
                   <TableCell className="text-sm">
-                    <span className="font-semibold">{formatCurrency(inv.amount)}</span>
+                    <span className="font-semibold tabular-nums">{formatCurrency(inv.amount)}</span>
                   </TableCell>
                   <TableCell className="text-sm">
                     <Badge variant="outline">{inv.currency ?? inv.token}</Badge>
@@ -254,7 +254,7 @@ export function InvoiceTable() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-7 text-xs px-3 bg-[#19595b] text-white hover:bg-[#134849] border-0"
+                        className="h-7 text-xs px-3 bg-primary text-white hover:bg-[#134849] border-0"
                         onClick={(e) => { e.stopPropagation(); setPayInvoice(inv); }}
                       >
                         <CreditCard className="h-3 w-3 mr-1" />
@@ -388,7 +388,7 @@ export function InvoiceTable() {
 
             {/* Description / Memo */}
             {selectedInvoice.description && (
-              <div className="border-l-2 border-[#19595b] pl-3 text-sm text-muted-foreground">
+              <div className="border-l-2 border-primary pl-3 text-sm text-muted-foreground">
                 {selectedInvoice.description}
               </div>
             )}
@@ -418,7 +418,7 @@ export function InvoiceTable() {
           <div className="space-y-2">
             <Label>Invoice Number</Label>
             <Input placeholder="INV-001" {...registerCreate('invoiceNumber')} />
-            {createErrors.invoiceNumber && <p className="text-xs text-red-500">{createErrors.invoiceNumber.message}</p>}
+            {createErrors.invoiceNumber && <p className="text-xs text-destructive">{createErrors.invoiceNumber.message}</p>}
           </div>
 
           <div className="space-y-2">
@@ -435,7 +435,7 @@ export function InvoiceTable() {
             <div className="space-y-2">
               <Label>Amount</Label>
               <Input placeholder="1000.00" {...registerCreate('amount')} />
-              {createErrors.amount && <p className="text-xs text-red-500">{createErrors.amount.message}</p>}
+              {createErrors.amount && <p className="text-xs text-destructive">{createErrors.amount.message}</p>}
             </div>
             <div className="space-y-2">
               <Label>Currency</Label>

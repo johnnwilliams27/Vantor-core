@@ -36,7 +36,7 @@ export function SwapsSection({ data }: { data: Swap[] }) {
         <div className="flex flex-wrap gap-3">
           <div className="rounded-lg border bg-muted/30 px-3 py-2">
             <div className="text-xs text-muted-foreground">Total Volume</div>
-            <div className="text-sm font-bold">{formatCurrency(String(summary.totalVolume))}</div>
+            <div className="text-sm font-bold tabular-nums">{formatCurrency(String(summary.totalVolume))}</div>
           </div>
           {Object.entries(summary.pairs).map(([pair, count]) => (
             <div key={pair} className="rounded-lg border bg-muted/30 px-3 py-2">
@@ -72,8 +72,8 @@ export function SwapsSection({ data }: { data: Swap[] }) {
               {filter.pagedData.map((s, i) => (
                 <tr key={s.id} className={`border-b ${i % 2 === 0 ? '' : 'bg-muted/20'}`}>
                   <td className="px-3 py-2 font-mono">{s.created_at.split('T')[0]}</td>
-                  <td className="px-3 py-2">{formatCurrency(s.from_amount)} {s.from_token}</td>
-                  <td className="px-3 py-2">{formatCurrency(s.to_amount ?? s.from_amount)} {s.to_token}</td>
+                  <td className="px-3 py-2 tabular-nums">{formatCurrency(s.from_amount)} {s.from_token}</td>
+                  <td className="px-3 py-2 tabular-nums">{formatCurrency(s.to_amount ?? s.from_amount)} {s.to_token}</td>
                   <td className="px-3 py-2 capitalize">{s.chain}</td>
                   <td className="px-3 py-2 capitalize">{s.status}</td>
                 </tr>

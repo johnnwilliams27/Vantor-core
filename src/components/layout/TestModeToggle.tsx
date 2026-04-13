@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useTestMode } from '@/hooks/useTestMode';
 import { useToast } from '@/components/ui/toast';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { HoverTooltip } from '@/components/ui/hover-tooltip';
 import { FlaskConical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -23,7 +24,7 @@ export function TestModeToggle() {
         <button
           disabled
           className={cn(
-            'flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all border opacity-50 cursor-not-allowed',
+            'flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors border opacity-50 cursor-not-allowed',
             'bg-amber-500/8 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20'
           )}
         >
@@ -69,32 +70,33 @@ export function TestModeToggle() {
 
   return (
     <>
-      <button
-        onClick={handleToggleClick}
-        className={cn(
-          'flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all border',
-          testMode
-            ? 'bg-amber-500/8 text-amber-700 border-amber-200 hover:bg-amber-500/15 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20'
-            : 'bg-green-500/8 text-green-700 border-green-200 hover:bg-green-500/15 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20'
-        )}
-        title={testMode ? 'Currently in Test Mode — click to switch' : 'Currently Live — click to switch to Test Mode'}
-      >
-        <FlaskConical className="h-3.5 w-3.5" />
-        <span>{testMode ? 'Test' : 'Live'}</span>
-        <div
+      <HoverTooltip label={testMode ? 'Currently in Test Mode — click to switch' : 'Currently Live — click to switch to Test Mode'} side="bottom">
+        <button
+          onClick={handleToggleClick}
           className={cn(
-            'relative w-7 h-4 rounded-full transition-colors',
-            testMode ? 'bg-amber-500' : 'bg-green-500'
+            'flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors border',
+            testMode
+              ? 'bg-amber-500/8 text-amber-700 border-amber-200 hover:bg-amber-500/15 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20'
+              : 'bg-green-500/8 text-green-700 border-green-200 hover:bg-green-500/15 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20'
           )}
         >
+          <FlaskConical className="h-3.5 w-3.5" />
+          <span>{testMode ? 'Test' : 'Live'}</span>
           <div
             className={cn(
-              'absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform',
-              testMode ? 'translate-x-3.5' : 'translate-x-0.5'
+              'relative w-7 h-4 rounded-full transition-colors',
+              testMode ? 'bg-amber-500' : 'bg-green-500'
             )}
-          />
-        </div>
-      </button>
+          >
+            <div
+              className={cn(
+                'absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform',
+                testMode ? 'translate-x-3.5' : 'translate-x-0.5'
+              )}
+            />
+          </div>
+        </button>
+      </HoverTooltip>
 
       <ConfirmDialog
         open={showConfirm}

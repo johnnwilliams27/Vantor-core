@@ -40,7 +40,7 @@ export function TablePagination({
                 className={cn(
                   'px-1.5 py-0.5 rounded transition-colors',
                   pageSize === size
-                    ? 'bg-[#19595b] text-white font-medium'
+                    ? 'bg-primary text-white font-medium'
                     : 'hover:bg-muted',
                 )}
               >
@@ -78,7 +78,7 @@ export function TablePagination({
                   className={cn(
                     'h-7 min-w-[28px] px-1.5 flex items-center justify-center rounded-md text-xs transition-colors',
                     page === item
-                      ? 'bg-[#19595b] text-white font-medium'
+                      ? 'bg-primary text-white font-medium'
                       : 'border border-input bg-background hover:bg-accent',
                   )}
                 >

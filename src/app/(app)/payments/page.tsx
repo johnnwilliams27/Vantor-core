@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FilterBar } from '@/components/ui/filter-bar';
+import { HoverTooltip } from '@/components/ui/hover-tooltip';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { useTableFilter } from '@/hooks/useTableFilter';
 import { formatCurrency, formatDateTime, formatRelativeOrDate, capitalize, sanitizeErrorMessage } from '@/lib/utils';
@@ -26,6 +27,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Check, Clock, XCircle, Building2 } from 'lucide-react';
+import { ComingSoonPanel } from '@/components/ui/coming-soon-panel';
 import { useAppStore } from '@/store/appStore';
 import { useSession } from 'next-auth/react';
 
@@ -177,7 +179,7 @@ function PaymentHistory() {
                       aria-sort={filter.sortKey === 'amount' ? (filter.sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
                     >
                       Amount
-                      <span className={`text-[10px] ${filter.sortKey === 'amount' ? 'text-teal-400' : 'opacity-0 group-hover:opacity-40'}`}>
+                      <span className={`text-3xs ${filter.sortKey === 'amount' ? 'text-teal-400' : 'opacity-0 group-hover:opacity-40'}`}>
                         {filter.sortKey === 'amount' ? (filter.sortDir === 'asc' ? '↑' : '↓') : '↕'}
                       </span>
                     </button>
@@ -194,7 +196,7 @@ function PaymentHistory() {
                       aria-sort={filter.sortKey === 'date' ? (filter.sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
                     >
                       Date
-                      <span className={`text-[10px] ${filter.sortKey === 'date' ? 'text-teal-400' : 'opacity-0 group-hover:opacity-40'}`}>
+                      <span className={`text-3xs ${filter.sortKey === 'date' ? 'text-teal-400' : 'opacity-0 group-hover:opacity-40'}`}>
                         {filter.sortKey === 'date' ? (filter.sortDir === 'asc' ? '↑' : '↓') : '↕'}
                       </span>
                     </button>
@@ -222,8 +224,8 @@ function PaymentHistory() {
                       <TableCell><Badge variant="outline">{p.currency}</Badge></TableCell>
                       <TableCell>
                         <Badge variant={getStatusVariant(p) as any}>
-                          {getStatusVariant(p) === 'success' ? <Check className="h-3 w-3 mr-1" /> :
-                           getStatusVariant(p) === 'destructive' ? <XCircle className="h-3 w-3 mr-1" /> :
+                          {getStatusVariant(p) === 'active' ? <Check className="h-3 w-3 mr-1" /> :
+                           getStatusVariant(p) === 'failed' ? <XCircle className="h-3 w-3 mr-1" /> :
                            <Clock className="h-3 w-3 mr-1" />}
                           {getPaymentStatus(p)}
                         </Badge>
@@ -234,8 +236,10 @@ function PaymentHistory() {
                       <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                         {p.settled_at ? formatDateTime(p.settled_at) : '—'}
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground whitespace-nowrap" title={formatRelativeOrDate(p.created_at).full}>
-                        {formatRelativeOrDate(p.created_at).text}
+                      <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                        <HoverTooltip label={formatRelativeOrDate(p.created_at).full}>
+                          <span>{formatRelativeOrDate(p.created_at).text}</span>
+                        </HoverTooltip>
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         {canCancel(p) && (
@@ -403,19 +407,10 @@ export default function PaymentsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="rounded-lg border border-dashed border-border bg-muted/20 p-12 text-center">
-              <Clock className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
-              <p className="text-base font-semibold mb-2">Coming soon</p>
-              <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
-                Bank-to-bank payments are being rewired through a new payment
-                provider to support real ACH, wire, and international rails.
-                We&apos;ll open this back up once the integration is complete.
-              </p>
-              <p className="text-xs text-muted-foreground mt-4 max-w-md mx-auto">
-                In the meantime, you can still view balances from your connected
-                bank accounts and use on-chain transfers from your wallets.
-              </p>
-            </div>
+            <ComingSoonPanel
+              description="Bank-to-bank payments are being rewired through a new payment provider to support real ACH, wire, and international rails. We'll open this back up once the integration is complete."
+              secondary="In the meantime, you can still view balances from your connected bank accounts and use on-chain transfers from your wallets."
+            />
           </CardContent>
         </Card>
       </div>

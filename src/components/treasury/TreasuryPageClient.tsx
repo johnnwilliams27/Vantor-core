@@ -1,13 +1,18 @@
 'use client';
 import { useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { TreasuryRulesForm } from './TreasuryRulesForm';
 import { RecommendationList } from './RecommendationList';
 import { ForecastingPageClient } from './ForecastingPageClient';
 import { TreasuryHealthCard } from './TreasuryHealthCard';
 import { InsightFeed } from './InsightFeed';
 import { TabNav } from '@/components/ui/tab-nav';
-import { ReviewRecommendationModal } from './ReviewRecommendationModal';
+
+const ReviewRecommendationModal = dynamic(
+  () => import('./ReviewRecommendationModal').then((m) => m.ReviewRecommendationModal),
+  { ssr: false }
+);
 
 type Tab = 'overview' | 'rules' | 'forecasting';
 

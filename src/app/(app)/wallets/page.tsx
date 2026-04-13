@@ -107,8 +107,8 @@ function CryptoWalletsTab() {
           <CardContent className="space-y-4 relative">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <span>Supports</span>
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0">USDC</Badge>
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0">USDT</Badge>
+              <Badge variant="outline" className="text-3xs px-1.5 py-0">USDC</Badge>
+              <Badge variant="outline" className="text-3xs px-1.5 py-0">USDT</Badge>
             </div>
             <div className="h-px bg-white/[0.06]" />
             <EthWalletConnect />
@@ -137,8 +137,8 @@ function CryptoWalletsTab() {
           <CardContent className="space-y-4 relative">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <span>Supports</span>
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0">USDC</Badge>
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0">USDT</Badge>
+              <Badge variant="outline" className="text-3xs px-1.5 py-0">USDC</Badge>
+              <Badge variant="outline" className="text-3xs px-1.5 py-0">USDT</Badge>
             </div>
             <div className="h-px bg-white/[0.06]" />
             <SolWalletConnect />

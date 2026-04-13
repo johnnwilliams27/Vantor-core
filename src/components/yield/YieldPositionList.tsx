@@ -179,7 +179,7 @@ export function YieldPositionList() {
               </div>
 
               {pos.last_refreshed_at && (
-                <p className="text-[11px] text-muted-foreground/60">
+                <p className="text-2xs text-muted-foreground/60">
                   Refreshed {formatRelativeTime(pos.last_refreshed_at)}
                 </p>
               )}

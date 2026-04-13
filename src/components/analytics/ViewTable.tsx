@@ -48,7 +48,7 @@ export function ViewTable({ result, pageSize = 25 }: ViewTableProps) {
             {pageRows.map((row, i) => (
               <tr key={i} className="border-b border-white/[0.04] last:border-0">
                 {columns.map((col) => (
-                  <td key={col} className="px-3 py-2 text-muted-foreground">
+                  <td key={col} className="px-3 py-2 text-muted-foreground tabular-nums">
                     {formatCell(row[col])}
                   </td>
                 ))}

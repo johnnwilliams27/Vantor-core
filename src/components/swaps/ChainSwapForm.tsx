@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
+import { FormDivider } from '@/components/ui/form-divider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
 import { useWallets } from '@/hooks/useWallets';
@@ -329,7 +330,7 @@ export function ChainSwapForm() {
               <div key={label} className="flex items-center gap-1.5">
                 {i > 0 && <div className={`w-6 h-px ${i <= step ? 'bg-teal-500/60' : 'bg-white/10'}`} />}
                 <div className={`flex items-center gap-1 ${i <= step ? 'text-teal-400' : 'text-white/25'}`}>
-                  <span className={`w-4.5 h-4.5 rounded-full flex items-center justify-center text-[10px] font-bold ${i < step ? 'bg-teal-500/20 text-teal-400' : i === step ? 'bg-teal-500 text-white' : 'bg-white/5 text-white/25'}`}>
+                  <span className={`w-4.5 h-4.5 rounded-full flex items-center justify-center text-3xs font-bold ${i < step ? 'bg-teal-500/20 text-teal-400' : i === step ? 'bg-teal-500 text-white' : 'bg-white/5 text-white/25'}`}>
                     {i + 1}
                   </span>
                   <span className="font-medium">{label}</span>
@@ -463,7 +464,7 @@ export function ChainSwapForm() {
 
           return (
           <div className="mt-4 rounded-xl border border-teal-500/20 bg-[#0a2a2a] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="h-0.5 bg-gradient-to-r from-teal-500/60 to-cyan-500/40" />
+          <FormDivider />
           <div className="p-4 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm font-semibold text-white">Bridge Quote</span>

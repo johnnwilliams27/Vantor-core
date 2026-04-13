@@ -117,7 +117,7 @@ function CompactScheduledOp({
     <div className="py-3 border-b border-border/50 last:border-b-0">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
-          <span className="text-[11px] font-medium text-muted-foreground shrink-0 w-10">{typeLabel}</span>
+          <span className="text-2xs font-medium text-muted-foreground shrink-0 w-10">{typeLabel}</span>
           <p className="text-sm text-foreground truncate">
             {scheduledOpSummary(op)}
           </p>
@@ -325,7 +325,7 @@ function CompactRec({ rec }: { rec: AiRecommendation }) {
               </div>
             )}
 
-            <div className="text-[10px] text-muted-foreground">
+            <div className="text-3xs text-muted-foreground">
               {new Date(rec.created_at).toLocaleDateString()} {new Date(rec.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' })}
             </div>
           </div>

@@ -10,7 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, CheckCircle, XCircle, ExternalLink, Copy, Check } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, ExternalLink, AlertTriangle } from 'lucide-react';
+import { CopyButton } from '@/components/ui/copy-button';
 import { SlackLogo } from '@/components/ui/icons/slack-logo';
 import { PasswordField } from '@/components/ui/password-field';
 import {
@@ -72,7 +73,7 @@ function ComingSoonCard({ integration }: { integration: ComingSoonIntegration })
               </CardDescription>
             </div>
           </div>
-          <Badge variant="pending" className="shrink-0 text-[10px]">Coming soon</Badge>
+          <Badge variant="pending" className="shrink-0 text-3xs">Coming soon</Badge>
         </div>
       </CardHeader>
     </Card>
@@ -106,7 +107,6 @@ export default function IntegrationsPage() {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [disconnecting, setDisconnecting] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   const callbackUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/api/integrations/slack/callback`
@@ -180,12 +180,6 @@ export default function IntegrationsPage() {
     }
   };
 
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(callbackUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   return (
     <div className="space-y-6 max-w-4xl">
         {/* Slack Integration Card */}
@@ -243,11 +237,10 @@ export default function IntegrationsPage() {
                   </Button>
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="destructive-outline"
                     size="sm"
                     onClick={handleDisconnect}
                     disabled={disconnecting}
-                    className="dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950"
                   >
                     {disconnecting ? <><Loader2 className="mr-2 h-3 w-3 animate-spin" />Disconnecting…</> : 'Disconnect'}
                   </Button>
@@ -290,24 +283,18 @@ export default function IntegrationsPage() {
                       </div>
                       {/* Field-shaped read-only URL with inline copy button */}
                       <div className="relative mt-2">
-                        <code className="block bg-muted/50 border border-input rounded-md pl-3 pr-20 py-2 font-mono text-xs break-all text-foreground">
+                        <code className="block bg-muted/50 border border-input rounded-md pl-3 pr-12 py-2 font-mono text-xs break-all text-foreground">
                           {callbackUrl}
                         </code>
-                        <button
-                          type="button"
-                          onClick={handleCopy}
-                          className="absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors text-muted-foreground hover:text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40"
-                          aria-label="Copy callback URL to clipboard"
-                        >
-                          {copied ? (
-                            <><Check className="h-3 w-3 text-emerald-500" />Copied</>
-                          ) : (
-                            <><Copy className="h-3 w-3" />Copy</>
-                          )}
-                        </button>
+                        <CopyButton
+                          value={callbackUrl}
+                          tooltip="Copy callback URL"
+                          className="absolute right-1.5 top-1/2 -translate-y-1/2"
+                        />
                       </div>
                       <p className="text-xs text-amber-600 dark:text-amber-400 mt-1.5">
-                        ⚠️ This URL must be publicly reachable. Use your production URL or an ngrok tunnel in dev.
+                        <AlertTriangle className="h-3.5 w-3.5 inline-block mr-1 -mt-0.5" />
+                        This URL must be publicly reachable. Use your production URL or an ngrok tunnel in dev.
                       </p>
                     </li>
                   </ol>
@@ -318,13 +305,13 @@ export default function IntegrationsPage() {
                   <div className="space-y-2">
                     <Label>Bot User OAuth Token</Label>
                     <PasswordField placeholder="xoxb-…" {...register('botToken')} />
-                    {errors.botToken && <p className="text-sm text-red-500">{errors.botToken.message}</p>}
+                    {errors.botToken && <p className="text-sm text-destructive">{errors.botToken.message}</p>}
                   </div>
 
                   <div className="space-y-2">
                     <Label>Signing Secret</Label>
                     <PasswordField placeholder="••••••••••••" {...register('signingSecret')} />
-                    {errors.signingSecret && <p className="text-sm text-red-500">{errors.signingSecret.message}</p>}
+                    {errors.signingSecret && <p className="text-sm text-destructive">{errors.signingSecret.message}</p>}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -332,7 +319,7 @@ export default function IntegrationsPage() {
                       <Label>Channel ID</Label>
                       <Input placeholder="C0123456789" {...register('channelId')} />
                       <p className="text-xs text-muted-foreground">Right-click the channel → Copy link, the ID is the last segment</p>
-                      {errors.channelId && <p className="text-sm text-red-500">{errors.channelId.message}</p>}
+                      {errors.channelId && <p className="text-sm text-destructive">{errors.channelId.message}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label>Channel Name <span className="text-muted-foreground">(optional)</span></Label>

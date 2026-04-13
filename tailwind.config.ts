@@ -62,6 +62,10 @@ const config: Config = {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      fontSize: {
+        '2xs': ['11px', '16px'],
+        '3xs': ['10px', '14px'],
+      },
       fontFamily: {
         sans: [
           "Satoshi",

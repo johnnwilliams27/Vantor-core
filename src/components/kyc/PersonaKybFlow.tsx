@@ -89,7 +89,7 @@ export function PersonaKybFlow({ onComplete, onError }: PersonaKybFlowProps) {
         <p className="text-red-400 text-sm mb-4">{error}</p>
         <button
           onClick={loadAndStart}
-          className="px-4 py-2 rounded-lg bg-[#19595b] hover:bg-[#134849] text-white text-sm transition-colors"
+          className="px-4 py-2 rounded-lg bg-primary hover:bg-[#134849] text-white text-sm transition-colors"
         >
           Retry
         </button>
@@ -122,7 +122,7 @@ export function PersonaKybFlow({ onComplete, onError }: PersonaKybFlowProps) {
       </p>
       <button
         onClick={loadAndStart}
-        className="px-6 py-2.5 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 text-white text-sm font-semibold shadow-[0_0_12px_rgba(45,212,191,0.2)] hover:shadow-[0_0_20px_rgba(45,212,191,0.35)] transition-all"
+        className="btn-gradient px-6 py-2.5 text-sm"
       >
         Begin Verification
       </button>

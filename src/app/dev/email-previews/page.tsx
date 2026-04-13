@@ -395,7 +395,7 @@ export default function EmailPreviewsPage() {
                 className={cn(
                   'w-full text-left px-4 py-2 text-sm transition-colors border-b border-border/30',
                   selected === p.id
-                    ? 'bg-[#19595b]/10 text-[#19595b] font-medium dark:bg-teal-500/20 dark:text-teal-300'
+                    ? 'bg-primary/10 text-primary font-medium dark:bg-teal-500/20 dark:text-teal-300'
                     : 'text-foreground hover:bg-muted/40'
                 )}
               >
