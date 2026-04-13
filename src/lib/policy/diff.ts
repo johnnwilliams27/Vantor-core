@@ -55,7 +55,7 @@ function normalizeForCompare<T extends Record<string, unknown>>(obj: T): Record<
  *  "changed fields" summary. */
 function changedFields(a: Record<string, unknown>, b: Record<string, unknown>): string[] {
   const out: string[] = [];
-  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  const keys = Array.from(new Set([...Object.keys(a), ...Object.keys(b)]));
   for (const k of keys) {
     const av = JSON.stringify(a[k] ?? null);
     const bv = JSON.stringify(b[k] ?? null);
@@ -64,7 +64,7 @@ function changedFields(a: Record<string, unknown>, b: Record<string, unknown>): 
   return out;
 }
 
-function diffSection<T extends { id: string } & Record<string, unknown>>(
+function diffSection<T extends { id: string }>(
   before: T[],
   after: T[],
   labelOf: (x: T) => string,
@@ -78,7 +78,10 @@ function diffSection<T extends { id: string } & Record<string, unknown>>(
   let unchanged = 0;
 
   // iterate union of ids; stable order helps UI
-  const allIds = Array.from(new Set([...beforeMap.keys(), ...afterMap.keys()])).sort();
+  const allIds = Array.from(new Set([
+    ...Array.from(beforeMap.keys()),
+    ...Array.from(afterMap.keys()),
+  ])).sort();
   for (const id of allIds) {
     const b = beforeMap.get(id);
     const a = afterMap.get(id);
@@ -87,8 +90,8 @@ function diffSection<T extends { id: string } & Record<string, unknown>>(
     } else if (b && !a) {
       removed.push({ id, label: labelOf(b), before: b });
     } else if (b && a) {
-      const bn = normalizeForCompare(b);
-      const an = normalizeForCompare(a);
+      const bn = normalizeForCompare(b as unknown as Record<string, unknown>);
+      const an = normalizeForCompare(a as unknown as Record<string, unknown>);
       if (JSON.stringify(bn) === JSON.stringify(an)) {
         unchanged += 1;
       } else {
