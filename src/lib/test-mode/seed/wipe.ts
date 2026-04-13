@@ -25,6 +25,17 @@ export async function wipeTestEnterprise(
     return { success: true }; // Already wiped — idempotent
   }
 
+  // policy_approval_requests has a rewrite rule (policy_approval_requests_no_delete)
+  // that blocks plain DELETEs. Use the SECURITY DEFINER RPC from migration 0056
+  // which scopes strictly to is_test_enterprise=true.
+  const { error: approvalsErr } = await supabase.rpc(
+    'fn_admin_wipe_test_approvals',
+    { p_enterprise_id: testEnterpriseId }
+  );
+  if (approvalsErr) {
+    console.error('[wipe] fn_admin_wipe_test_approvals failed', approvalsErr);
+  }
+
   const tables = [
     'notifications',
     'audit_logs',

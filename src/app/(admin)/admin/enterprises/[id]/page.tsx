@@ -22,6 +22,7 @@ import {
   X,
   AlertCircle,
   Shield,
+  RotateCcw,
 } from 'lucide-react';
 
 // Migrated to semantic Badge variants (style guide Stage 3e).
@@ -64,6 +65,31 @@ export default function EnterpriseDetailPage() {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [reseeding, setReseeding] = useState(false);
+  const [reseedResult, setReseedResult] = useState<'idle' | 'ok' | 'err'>('idle');
+
+  const handleReseed = async () => {
+    if (!confirm('Wipe and re-seed this enterprise\'s test data? This clears all seeded demo rows and generates fresh ones.')) {
+      return;
+    }
+    setReseeding(true);
+    setReseedResult('idle');
+    try {
+      const res = await fetch(`/api/admin/enterprises/${id}/reseed-test`, { method: 'POST' });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        console.error('[reseed] failed', body);
+        setReseedResult('err');
+        return;
+      }
+      setReseedResult('ok');
+    } catch (e) {
+      console.error('[reseed] error', e);
+      setReseedResult('err');
+    } finally {
+      setReseeding(false);
+    }
+  };
 
   const startEdit = () => {
     if (!enterprise) return;
@@ -241,6 +267,47 @@ export default function EnterpriseDetailPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Test Data Management */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <RotateCcw className="h-5 w-5" />
+              Test Data
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              {reseedResult === 'ok' && (
+                <span className="text-sm text-green-400">Reseeded successfully</span>
+              )}
+              {reseedResult === 'err' && (
+                <span className="text-sm text-red-400">Reseed failed — check console</span>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleReseed}
+                disabled={reseeding}
+              >
+                {reseeding ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Reseeding…
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Reset Test Data
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Wipes this enterprise's test-mode demo data and re-seeds with fresh rows across wallets, banking, ERP, transactions, yield positions, policy, approvals, analytics, insights, and notifications.
+            </p>
+          </CardContent>
+        </Card>
 
         {/* Audit Logs */}
         <Card>
