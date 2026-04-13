@@ -13,7 +13,7 @@ export function Hero() {
         <h1
           className="font-extrabold leading-[1.06] landing-fade-in landing-delay-1 text-white text-balance"
           style={{
-            fontFamily: 'var(--font-display), Inter, sans-serif',
+            fontFamily: 'var(--font-display), Satoshi, sans-serif',
             fontSize: 'clamp(2.25rem, 1.5rem + 3.5vw, 4rem)',
             letterSpacing: '-0.032em',
           }}
