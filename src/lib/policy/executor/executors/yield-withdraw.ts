@@ -11,6 +11,8 @@ import { getYieldAdapter } from '@/lib/yield/factory';
 import { applyWithdrawal } from '@/lib/yield/position-accounting';
 import type { YieldProtocolId } from '@/lib/yield/interface';
 import type { TokenSymbol } from '@/types/database';
+import { markPolicyEvaluationExecuted } from '@/lib/policy/persistence/persist-evaluation';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 const TERMINAL_STATUSES = new Set(['completed', 'failed', 'denied', 'cancelled']);
 
@@ -146,6 +148,12 @@ export const yieldWithdrawExecutor: Executor = {
         })
         .eq('id', tx.id)
         .eq('enterprise_id', request.enterprise_id);
+
+      markPolicyEvaluationExecuted(supabase as SupabaseClient, {
+        movementId: movement.id,
+        enterpriseId: request.enterprise_id,
+        executionRef: result.txHash,
+      }).catch(() => {});
 
       return {
         status: 'completed',

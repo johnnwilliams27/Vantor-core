@@ -13,6 +13,7 @@ import { z } from 'zod';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 import { requirePaidTier, tierGateResponse, TierGateError } from '@/lib/auth/tier-gate';
 import { fireInlineInsights } from '@/lib/insights/inline';
+import { markPolicyEvaluationExecuted } from '@/lib/policy/persistence/persist-evaluation';
 
 const schema = z.object({
   transferId: z.string().uuid(),
@@ -161,6 +162,16 @@ export async function POST(req: NextRequest) {
     status: 'completed',
     tx_hash: parsed.data.txHash,
   });
+
+  // Mark the policy_evaluations row as executed so the aggregate
+  // detector's trailing-window queries include this transfer. Best-effort.
+  if (enterpriseId) {
+    markPolicyEvaluationExecuted(supabase, {
+      movementId: transfer.id,
+      enterpriseId,
+      executionRef: parsed.data.txHash,
+    }).catch(() => {});
+  }
 
   // Mark linked invoice paid
   if (transfer.invoice_id) {

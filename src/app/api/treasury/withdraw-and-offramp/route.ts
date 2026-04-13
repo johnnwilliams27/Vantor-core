@@ -20,6 +20,7 @@ import {
 } from '@/lib/policy/gate';
 import { buildProductionEvaluate } from '@/lib/policy/gate/production-wiring';
 import { ApprovalWorkflowService } from '@/lib/policy/approvals';
+import { markPolicyEvaluationExecuted } from '@/lib/policy/persistence/persist-evaluation';
 
 const schema = z.object({
   positionId: z.string().uuid(),
@@ -317,6 +318,14 @@ export async function POST(req: NextRequest) {
         fiatTxId: fiatTx.id,
       },
     });
+
+    // Mark the policy_evaluations row executed. Single gate movement
+    // covered both legs; the movement.id === fiatTx.id by construction.
+    markPolicyEvaluationExecuted(supabase, {
+      movementId: fiatTx.id,
+      enterpriseId: enterpriseId as string,
+      executionRef: rampResult.providerTransactionId ?? withdrawResult.txHash ?? null,
+    }).catch(() => {});
 
     return NextResponse.json({
       data: {

@@ -9,6 +9,8 @@ import type { ProposedMovement } from '../../types/movement';
 import type { ApprovalRequest } from '../../approvals/types';
 import { getBankingAdapter } from '@/lib/banking/factory';
 import { getIntegrationMode } from '@/lib/env/integration-mode';
+import { markPolicyEvaluationExecuted } from '@/lib/policy/persistence/persist-evaluation';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 const TERMINAL_STATUSES = new Set(['completed', 'failed', 'denied', 'cancelled']);
 
@@ -84,6 +86,12 @@ export const fiatRampExecutor: Executor = {
         })
         .eq('id', tx.id)
         .eq('enterprise_id', request.enterprise_id);
+
+      markPolicyEvaluationExecuted(supabase as SupabaseClient, {
+        movementId: movement.id,
+        enterpriseId: request.enterprise_id,
+        executionRef: result.providerTransactionId ?? null,
+      }).catch(() => {});
 
       return {
         status: result.status === 'completed' ? 'completed' : 'pending',

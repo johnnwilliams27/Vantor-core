@@ -41,6 +41,7 @@ import { fetchStablecoinPricesWithTimestamp } from '../canonicalizer/oracle-adap
 import { AggregationDetector } from '../aggregate-detector/detector';
 import type { RunAggregateQuery, AggregateQueryParams } from '../aggregate-detector/queries';
 import { RealForecastQueryFactory } from '../forecast/real';
+import { persistEvaluation } from '../persistence/persist-evaluation';
 import type { PolicyRule, ApprovalChain, PolicyVersionSnapshot } from '../types/policy-version';
 import type { HardLimit } from '../types/hard-limit';
 import type { BalanceRow } from '../context-loader/treasury-state';
@@ -86,7 +87,27 @@ export function buildProductionEvaluate(
 
   return async (movement: ProposedMovement, enterpriseId: string) => {
     const ctx = await loader.load(movement, enterpriseId);
-    return engine.evaluate(movement, ctx);
+    const result = engine.evaluate(movement, ctx);
+
+    // Persist the evaluation to policy_evaluations. This is what the
+    // aggregate detector queries on future evaluations, so persistence
+    // is what gives trailing-window rules real teeth. Without this
+    // write, policy_evaluations stays empty and every aggregate query
+    // returns zeros regardless of RPC wiring.
+    //
+    // Non-fatal: the gate decision has already been made, so losing
+    // a history row should not fail the operation. Log + swallow.
+    persistEvaluation(supabase, { movement, enterpriseId, ctx, result }).catch(
+      (err) => {
+        console.error('[policy] persistEvaluation failed', {
+          movement_id: movement.id,
+          enterprise_id: enterpriseId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      },
+    );
+
+    return result;
   };
 }
 

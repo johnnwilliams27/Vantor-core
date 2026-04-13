@@ -19,6 +19,7 @@ import {
 } from '@/lib/policy/gate';
 import { buildProductionEvaluate } from '@/lib/policy/gate/production-wiring';
 import { ApprovalWorkflowService } from '@/lib/policy/approvals';
+import { markPolicyEvaluationExecuted } from '@/lib/policy/persistence/persist-evaluation';
 
 const depositSchema = z.object({
   protocol: z.enum(['aave_v3', 'morpho_reservoir', 'morpho_steakhouse', 'kamino', 'kamino_multiply', 'ondo_usdy', 'sky', 'ethena']),
@@ -289,6 +290,12 @@ export async function POST(req: NextRequest) {
       entityId: positionId,
       details: { protocol, token, amount, txHash: result.txHash },
     });
+
+    markPolicyEvaluationExecuted(supabase, {
+      movementId: tx.id,
+      enterpriseId: enterpriseId as string,
+      executionRef: result.txHash,
+    }).catch(() => {});
 
     return NextResponse.json({
       data: {
