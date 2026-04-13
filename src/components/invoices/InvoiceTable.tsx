@@ -20,6 +20,7 @@ import { exportCsv, exportPdf } from '@/lib/export';
 import type { ExportColumn } from '@/lib/export';
 import { RefreshCw, Loader2, CreditCard, Plus } from 'lucide-react';
 import { TruncatedAddress } from '@/components/ui/truncated-address';
+import { ChainBadge } from '@/components/ui/icons/chain-logos';
 import { TableRowsSkeleton } from '@/components/ui/operations-skeletons';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -232,9 +233,7 @@ export function InvoiceTable() {
                   </TableCell>
                   <TableCell className="text-sm">
                     {inv.chain ? (
-                      <Badge variant={inv.chain === 'ethereum' ? 'ethereum' : 'solana'}>
-                        {capitalize(inv.chain)}
-                      </Badge>
+                      <ChainBadge chain={inv.chain} />
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}

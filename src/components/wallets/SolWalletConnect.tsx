@@ -76,7 +76,7 @@ export function SolWalletConnect() {
   return (
     <div className="space-y-4">
       {!connected && !linked && (
-        <Button onClick={() => setVisible(true)} className="btn-gradient w-full">
+        <Button onClick={() => setVisible(true)} className="w-full">
           Link Wallet
         </Button>
       )}
@@ -110,7 +110,7 @@ export function SolWalletConnect() {
               placeholder="e.g. Solana Treasury"
             />
           </div>
-          <Button onClick={handleLink} disabled={linking} className="btn-gradient w-full">
+          <Button onClick={handleLink} disabled={linking} className="w-full">
             {linking ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

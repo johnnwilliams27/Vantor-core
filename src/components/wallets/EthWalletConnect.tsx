@@ -66,7 +66,7 @@ export function EthWalletConnect() {
           {({ openConnectModal, mounted }) => {
             if (!mounted) return null;
             return (
-              <Button onClick={openConnectModal} className="btn-gradient w-full">
+              <Button onClick={openConnectModal} className="w-full">
                 Link Wallet
               </Button>
             );
@@ -98,7 +98,7 @@ export function EthWalletConnect() {
               placeholder="e.g. Main Treasury ETH"
             />
           </div>
-          <Button onClick={handleLink} disabled={linking} className="btn-gradient w-full">
+          <Button onClick={handleLink} disabled={linking} className="w-full">
             {linking ? (
               <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Connecting…</>
             ) : (

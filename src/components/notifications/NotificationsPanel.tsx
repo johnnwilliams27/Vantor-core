@@ -66,8 +66,8 @@ export function NotificationsPanel() {
     }
     if (notif.link) {
       router.push(notif.link);
-      setOpen(false);
     }
+    setOpen(false);
   }, [markRead, router]);
 
   return (

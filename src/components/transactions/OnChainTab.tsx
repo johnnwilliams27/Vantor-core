@@ -10,6 +10,7 @@ import { formatCurrency, formatDateTime, truncateAddress, capitalize } from '@/l
 import type { Transaction } from '@/types/database';
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { TableRowsSkeleton } from '@/components/ui/operations-skeletons';
+import { TruncatedAddress } from '@/components/ui/truncated-address';
 
 const ONCHAIN_FILTER_CONFIG = {
   searchFields: [
@@ -91,14 +92,14 @@ export function OnChainTab() {
                       <ArrowUpRight className="h-4 w-4 text-red-500" />
                     )}
                   </TableCell>
-                  <TableCell className="font-mono text-xs">
-                    {truncateAddress(tx.tx_hash, 8)}
+                  <TableCell>
+                    <TruncatedAddress address={tx.tx_hash} chars={8} />
                   </TableCell>
-                  <TableCell className="font-mono text-xs">
-                    {truncateAddress(tx.from_address, 6)}
+                  <TableCell>
+                    <TruncatedAddress address={tx.from_address} chars={6} />
                   </TableCell>
-                  <TableCell className="font-mono text-xs">
-                    {truncateAddress(tx.to_address, 6)}
+                  <TableCell>
+                    <TruncatedAddress address={tx.to_address} chars={6} />
                   </TableCell>
                   <TableCell>
                     {tx.amount ? (

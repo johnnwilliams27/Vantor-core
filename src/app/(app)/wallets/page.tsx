@@ -216,14 +216,20 @@ function CryptoWalletsTab() {
                               ariaLabel="Verified wallet"
                               content={`Verified — ownership confirmed via on-chain signature on ${formatDate(wallet.verified_at)}.`}
                             >
-                              <CheckCircle className="h-4 w-4 text-green-500" />
+                              <Badge variant="active" className="text-xs">
+                                <CheckCircle className="mr-1 h-3 w-3" />
+                                Verified
+                              </Badge>
                             </InfoTooltip>
                           ) : (
                             <InfoTooltip
                               ariaLabel="Pending verification"
                               content="Pending — we're waiting for an on-chain signature to confirm you control this wallet. This usually takes 1–2 minutes after linking."
                             >
-                              <Clock className="h-4 w-4 text-yellow-500" />
+                              <Badge variant="pending" className="text-xs">
+                                <Clock className="mr-1 h-3 w-3" />
+                                Pending
+                              </Badge>
                             </InfoTooltip>
                           )}
                         </TableCell>
