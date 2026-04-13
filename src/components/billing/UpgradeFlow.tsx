@@ -143,7 +143,7 @@ export function UpgradeFlow({ targetTier, onCancel }: UpgradeFlowProps) {
                 </div>
                 <div>
                   <h2 className="text-base font-semibold text-white">Upgrade to {tierDef.name}</h2>
-                  <p className="text-[11px] text-white/50">{tierDef.displayPrice}</p>
+                  <p className="text-2xs text-white/50">{tierDef.displayPrice}</p>
                 </div>
               </div>
               <button
@@ -181,7 +181,7 @@ export function UpgradeFlow({ targetTier, onCancel }: UpgradeFlowProps) {
                         ) : (
                           <SIcon className={`w-3 h-3 flex-shrink-0 ${isActive ? 'text-white' : 'text-white/30'}`} />
                         )}
-                        <span className={`text-[10px] font-medium ${isActive ? 'text-white' : isDone ? 'text-white/60' : 'text-white/30'}`}>
+                        <span className={`text-3xs font-medium ${isActive ? 'text-white' : isDone ? 'text-white/60' : 'text-white/30'}`}>
                           {s.label}
                         </span>
                       </div>

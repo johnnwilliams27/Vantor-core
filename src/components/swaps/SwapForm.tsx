@@ -285,7 +285,7 @@ export function SwapForm() {
               <div key={label} className="flex items-center gap-1.5">
                 {i > 0 && <div className={`w-6 h-px ${i <= step ? 'bg-teal-500/60' : 'bg-white/10'}`} />}
                 <div className={`flex items-center gap-1 ${i <= step ? 'text-teal-400' : 'text-white/25'}`}>
-                  <span className={`w-4.5 h-4.5 rounded-full flex items-center justify-center text-[10px] font-bold ${i < step ? 'bg-teal-500/20 text-teal-400' : i === step ? 'bg-teal-500 text-white' : 'bg-white/5 text-white/25'}`}>
+                  <span className={`w-4.5 h-4.5 rounded-full flex items-center justify-center text-3xs font-bold ${i < step ? 'bg-teal-500/20 text-teal-400' : i === step ? 'bg-teal-500 text-white' : 'bg-white/5 text-white/25'}`}>
                     {i + 1}
                   </span>
                   <span className="font-medium">{label}</span>

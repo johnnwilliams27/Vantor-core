@@ -182,7 +182,7 @@ export function DatePickerDropdown({
 
           <div className="mb-1 grid grid-cols-7">
             {DAY_NAMES.map((d) => (
-              <div key={d} className="py-1 text-center text-[11px] font-medium text-muted-foreground">
+              <div key={d} className="py-1 text-center text-2xs font-medium text-muted-foreground">
                 {d}
               </div>
             ))}

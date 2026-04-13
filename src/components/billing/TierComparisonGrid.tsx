@@ -69,7 +69,7 @@ export function TierComparisonGrid({ currentTier, onSelectTier, pendingDowngrade
           >
             {/* Popular badge */}
             {config.popular && !isCurrent && (
-              <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-teal-500 to-cyan-400 text-white text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
+              <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-teal-500 to-cyan-400 text-white text-3xs font-bold uppercase tracking-wider whitespace-nowrap">
                 Popular
               </div>
             )}

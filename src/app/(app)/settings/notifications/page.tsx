@@ -120,7 +120,7 @@ function CategorySection({
             expanded && 'rotate-180'
           )} />
           <span className="text-sm font-semibold text-foreground">{CATEGORY_LABELS[category]}</span>
-          <span className="text-[10px] text-muted-foreground font-medium ml-1">({events.length})</span>
+          <span className="text-3xs text-muted-foreground font-medium ml-1">({events.length})</span>
         </div>
       </button>
 
@@ -245,15 +245,15 @@ export default function NotificationsSettingsPage() {
           <div className="flex items-center gap-8">
             <div className="w-12 flex flex-col items-center gap-0.5">
               <Bell className="h-4 w-4 text-muted-foreground" />
-              <span className="text-[10px] text-muted-foreground font-medium">In-App</span>
+              <span className="text-3xs text-muted-foreground font-medium">In-App</span>
             </div>
             <div className="w-12 flex flex-col items-center gap-0.5">
               <Mail className="h-4 w-4 text-muted-foreground" />
-              <span className="text-[10px] text-muted-foreground font-medium">Email</span>
+              <span className="text-3xs text-muted-foreground font-medium">Email</span>
             </div>
             <div className="w-12 flex flex-col items-center gap-0.5 relative">
               <MessageSquare className="h-4 w-4 text-muted-foreground" />
-              <span className="text-[10px] text-muted-foreground font-medium">Slack</span>
+              <span className="text-3xs text-muted-foreground font-medium">Slack</span>
               {!slackConnected && (
                 <span className="absolute -top-1 -right-2.5">
                   <InfoTooltip content="Connect Slack in Settings > Integrations to enable Slack notifications." />

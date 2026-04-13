@@ -162,19 +162,19 @@ export function InsightCard({ insight }: { insight: TreasuryInsightRow }) {
           <div className="grid grid-cols-3 gap-3 rounded-lg border border-border/50 p-3">
             {insight.impact_dollar_value != null && (
               <div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider">Impact</div>
+                <div className="text-2xs text-muted-foreground uppercase tracking-wider">Impact</div>
                 <div className="text-sm font-semibold tabular-nums mt-0.5">{fmtCurrency(insight.impact_dollar_value)}</div>
               </div>
             )}
             {insight.impact_apy_delta_bps != null && (
               <div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider">APY Delta</div>
+                <div className="text-2xs text-muted-foreground uppercase tracking-wider">APY Delta</div>
                 <div className="text-sm font-semibold tabular-nums mt-0.5">{formatBps(insight.impact_apy_delta_bps)}</div>
               </div>
             )}
             {insight.impact_buffer_days != null && (
               <div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider">Buffer</div>
+                <div className="text-2xs text-muted-foreground uppercase tracking-wider">Buffer</div>
                 <div className="text-sm font-semibold tabular-nums mt-0.5">{formatDays(insight.impact_buffer_days)}</div>
               </div>
             )}

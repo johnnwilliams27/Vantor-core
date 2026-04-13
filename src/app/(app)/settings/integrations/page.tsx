@@ -73,7 +73,7 @@ function ComingSoonCard({ integration }: { integration: ComingSoonIntegration })
               </CardDescription>
             </div>
           </div>
-          <Badge variant="pending" className="shrink-0 text-[10px]">Coming soon</Badge>
+          <Badge variant="pending" className="shrink-0 text-3xs">Coming soon</Badge>
         </div>
       </CardHeader>
     </Card>

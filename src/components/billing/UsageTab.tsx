@@ -68,7 +68,7 @@ export function UsageTab() {
       <div className="rounded-xl border-2 border-primary/30 p-6 bg-primary/5">
         <div className="flex justify-between items-center">
           <span className="font-semibold">Estimated Total</span>
-          <span className="text-2xl font-bold">${totalEstimated.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+          <span className="text-2xl font-bold tabular-nums">${totalEstimated.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
         </div>
       </div>
     </div>

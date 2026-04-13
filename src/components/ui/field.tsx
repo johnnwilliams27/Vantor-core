@@ -53,7 +53,7 @@ export function Field({
             </span>
           )}
           {optional && !required && (
-            <span className="text-muted-foreground text-[10px] font-normal">
+            <span className="text-muted-foreground text-3xs font-normal">
               (optional)
             </span>
           )}
@@ -64,7 +64,7 @@ export function Field({
         <p
           id={errorId}
           role="alert"
-          className="text-[11px] text-red-400 flex items-center gap-1"
+          className="text-2xs text-red-400 flex items-center gap-1"
         >
           <svg
             viewBox="0 0 24 24"
@@ -83,7 +83,7 @@ export function Field({
           {error}
         </p>
       ) : helper ? (
-        <p id={helperId} className="text-[11px] text-muted-foreground">
+        <p id={helperId} className="text-2xs text-muted-foreground">
           {helper}
         </p>
       ) : null}

@@ -67,21 +67,21 @@ export function SlippageWarning({ estimate, onConfirm, onCancel, isExecuting }: 
       {/* Metrics */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="rounded-md border bg-background/50 px-3 py-2">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Est. Slippage</div>
+          <div className="text-3xs uppercase tracking-wider text-muted-foreground">Est. Slippage</div>
           <div className={cn('text-sm font-bold tabular-nums', estimate.severity === 'red' ? 'text-red-400' : estimate.severity === 'yellow' ? 'text-amber-400' : 'text-foreground')}>
             {estimate.estimatedSlippageBps} bps
           </div>
         </div>
         <div className="rounded-md border bg-background/50 px-3 py-2">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Est. Cost</div>
+          <div className="text-3xs uppercase tracking-wider text-muted-foreground">Est. Cost</div>
           <div className="text-sm font-bold">{fmt(estimate.estimatedSlippageCostUsd)}</div>
         </div>
         <div className="rounded-md border bg-background/50 px-3 py-2">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Pool Liquidity</div>
+          <div className="text-3xs uppercase tracking-wider text-muted-foreground">Pool Liquidity</div>
           <div className="text-sm font-bold">{fmtCompact(estimate.poolLiquidity.availableLiquidityUsd)}</div>
         </div>
         <div className="rounded-md border bg-background/50 px-3 py-2">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Utilization</div>
+          <div className="text-3xs uppercase tracking-wider text-muted-foreground">Utilization</div>
           <div className="text-sm font-bold">{(estimate.poolLiquidity.utilizationRate * 100).toFixed(1)}%</div>
         </div>
       </div>
@@ -108,7 +108,7 @@ export function SlippageWarning({ estimate, onConfirm, onCancel, isExecuting }: 
       {/* Alternatives */}
       {estimate.severity !== 'green' && (
         <div className="text-xs text-muted-foreground space-y-1">
-          <div className="font-medium text-foreground text-[10px] uppercase tracking-wider">Alternatives</div>
+          <div className="font-medium text-foreground text-3xs uppercase tracking-wider">Alternatives</div>
           <ul className="list-disc list-inside space-y-0.5">
             <li>Split into smaller tranches to reduce impact</li>
             <li>Delay execution until pool liquidity increases</li>

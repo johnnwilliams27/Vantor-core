@@ -56,7 +56,7 @@ export function InvoicesSection({ data }: { data: Invoice[] }) {
         <div className="flex flex-wrap gap-3">
           <div className="rounded-lg border bg-muted/30 px-3 py-2">
             <div className="text-xs text-muted-foreground">Outstanding</div>
-            <div className="text-sm font-bold">{formatCurrency(String(summary.totalOutstanding))}</div>
+            <div className="text-sm font-bold tabular-nums">{formatCurrency(String(summary.totalOutstanding))}</div>
           </div>
           {Object.entries(summary.byStatus).map(([status, count]) => (
             <div key={status} className="rounded-lg border bg-muted/30 px-3 py-2">
@@ -108,7 +108,7 @@ export function InvoicesSection({ data }: { data: Invoice[] }) {
                 <tr key={inv.id} className={`border-b ${i % 2 === 0 ? '' : 'bg-muted/20'}`}>
                   <td className="px-3 py-2 font-mono">{inv.invoice_number}</td>
                   <td className="px-3 py-2">{inv.vendor?.name ?? '—'}</td>
-                  <td className="px-3 py-2 font-semibold">{formatCurrency(inv.amount)}</td>
+                  <td className="px-3 py-2 font-semibold tabular-nums">{formatCurrency(inv.amount)}</td>
                   <td className="px-3 py-2">{inv.token}</td>
                   <td className="px-3 py-2 capitalize">{inv.status}</td>
                   <td className="px-3 py-2">{inv.due_date ? formatDateTime(inv.due_date) : '—'}</td>

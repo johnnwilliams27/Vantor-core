@@ -232,7 +232,7 @@ export function Sidebar() {
               {group.heading && (
                 <p
                   className={cn(
-                    'px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-white/40 whitespace-nowrap transition-[opacity,height] duration-200',
+                    'px-3 mb-1 text-2xs font-semibold uppercase tracking-wider text-white/40 whitespace-nowrap transition-[opacity,height] duration-200',
                     sidebarOpen ? 'opacity-100 h-auto' : 'opacity-0 h-0 overflow-hidden mb-0',
                   )}
                   aria-hidden={!sidebarOpen}
@@ -292,7 +292,7 @@ export function Sidebar() {
             className="group block px-4 py-3 rounded-lg border border-teal-400/30 bg-teal-500/10 hover:bg-teal-500/15 transition-colors"
           >
             <p className="text-xs font-semibold text-teal-300 mb-0.5">Upgrade Plan</p>
-            <p className="text-[11px] text-white/50">Unlock live mode and full features</p>
+            <p className="text-2xs text-white/50">Unlock live mode and full features</p>
           </Link>
         </div>
       )}

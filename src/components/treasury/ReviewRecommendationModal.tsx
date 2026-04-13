@@ -194,7 +194,7 @@ export function ReviewRecommendationModal({ recommendationId, onClose }: Props) 
             </div>
           )}
 
-          <div className="text-[10px] text-muted-foreground">
+          <div className="text-3xs text-muted-foreground">
             {new Date(rec.created_at).toLocaleDateString()} {new Date(rec.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' })}
           </div>
         </div>

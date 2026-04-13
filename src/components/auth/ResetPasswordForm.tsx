@@ -173,7 +173,7 @@ export function ResetPasswordForm() {
                 {errors.confirmPassword && <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>}
               </div>
 
-              <p className="text-[11px] text-[var(--text-400)] leading-relaxed">
+              <p className="text-2xs text-[var(--text-400)] leading-relaxed">
                 Must be at least 8 characters and include one uppercase letter and one special character.
               </p>
 

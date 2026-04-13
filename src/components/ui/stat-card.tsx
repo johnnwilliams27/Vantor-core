@@ -53,7 +53,7 @@ export function StatCard({
           </IconTile>
         )}
         <div className="flex-1 min-w-0">
-          <div className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">
+          <div className="text-2xs uppercase tracking-wider font-semibold text-muted-foreground">
             {label}
           </div>
           <div className="text-3xl font-bold text-foreground tracking-tight tabular-nums mt-2 leading-tight">

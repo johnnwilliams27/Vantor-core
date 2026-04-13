@@ -109,7 +109,7 @@ export function RegisterValueProps() {
             >
               <span className="text-xs text-[var(--text-100)] flex-1">{text}</span>
               <span
-                className="shrink-0 text-[10px] font-semibold rounded-full px-2.5 py-0.5 select-none"
+                className="shrink-0 text-3xs font-semibold rounded-full px-2.5 py-0.5 select-none"
                 style={{
                   background: 'rgba(45,212,191,0.2)',
                   border: '1px solid rgba(45,212,191,0.4)',

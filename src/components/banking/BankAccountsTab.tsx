@@ -205,7 +205,7 @@ export function BankAccountsTab({ bankingProvider = 'stripe_fc' }: { bankingProv
                               <span className="text-muted-foreground ml-1 font-mono">****{account.last4}</span>
                             )}
                           </div>
-                          <div className="flex items-center gap-1 text-[11px] text-muted-foreground mt-0.5">
+                          <div className="flex items-center gap-1 text-2xs text-muted-foreground mt-0.5">
                             <span>{PROVIDER_ATTRIBUTION[account.banking_provider]}</span>
                             <InfoTooltip
                               ariaLabel={`${PROVIDER_ATTRIBUTION[account.banking_provider]} — more info`}

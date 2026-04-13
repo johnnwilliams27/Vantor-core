@@ -183,7 +183,7 @@ function RbacSettingsCard({ sessionRole }: { sessionRole: UserRole | undefined }
               <span className="font-medium text-sm">Author-approver separation</span>
               <span
                 className={cn(
-                  'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium',
+                  'inline-flex items-center rounded-full px-2 py-0.5 text-3xs font-medium',
                   enabled
                     ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                     : 'bg-gray-500/10 text-gray-600 dark:text-gray-400',
@@ -197,7 +197,7 @@ function RbacSettingsCard({ sessionRole }: { sessionRole: UserRole | undefined }
               Recommended for production orgs. Small teams may disable for self-serve bootstrap.
             </p>
             {!canEdit && (
-              <p className="text-[11px] text-muted-foreground mt-2 italic">
+              <p className="text-2xs text-muted-foreground mt-2 italic">
                 Only enterprise admins can change this setting.
               </p>
             )}
@@ -293,7 +293,7 @@ function RolePicker({ value, onChange }: { value: UserRole; onChange: (r: UserRo
                       front so admins don't wonder why they can't approve later. */}
                   {role === 'enterprise_admin' && (
                     <HoverTooltip label="Enterprise admins cannot approve transfers — strict separation of duties">
-                      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                      <span className="inline-flex items-center gap-1 text-3xs font-medium text-amber-600 dark:text-amber-400">
                         <Shield className="h-3 w-3" />
                         no approvals
                       </span>
@@ -653,7 +653,7 @@ export default function AccountManagementPage() {
                           <Badge variant={ROLE_VARIANT[role] as any}>
                             {ROLE_LABELS[role]}
                           </Badge>
-                          <span className="text-[11px] text-muted-foreground font-normal">{count} of {CAPABILITIES.length}</span>
+                          <span className="text-2xs text-muted-foreground font-normal">{count} of {CAPABILITIES.length}</span>
                         </div>
                       </th>
                     );

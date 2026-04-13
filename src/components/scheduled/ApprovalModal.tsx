@@ -197,7 +197,7 @@ export function ApprovalModal({ op, open, onOpenChange }: Props) {
                 <span className="text-xs text-muted-foreground">Deviation</span>
                 <Badge
                   variant={withinTolerance ? 'success' : 'destructive'}
-                  className="text-[10px] px-1.5 py-0"
+                  className="text-3xs px-1.5 py-0"
                 >
                   {deviationBps} bps
                 </Badge>
