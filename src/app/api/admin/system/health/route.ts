@@ -11,23 +11,39 @@ export async function GET(_req: NextRequest) {
   const supabase = createAdminClient();
 
   try {
-    // Count enterprises — total and "real" (paid tiers, i.e. not lite).
-    // subscription_tier is a denormalized enum on enterprises:
-    //   lite = seed / self-serve test enterprise
-    //   starter | growth | scale | enterprise = paid
-    const [totalEntRes, realEntRes] = await Promise.all([
+    // Enterprises break into three disjoint buckets:
+    //   - paid      = subscription_tier != 'lite' (starter/growth/scale/enterprise)
+    //   - test      = enterprise whose id is referenced by another enterprise's
+    //                 test_enterprise_id — the sandbox sibling that seed data targets.
+    //                 seed.ts enforces test.tier = 'lite', so test ∩ paid is empty.
+    //   - real_free = everything else — real signups still on the free (lite) plan
+    const [totalEntRes, paidEntRes, testIdRes] = await Promise.all([
       supabase.from('enterprises').select('id', { count: 'exact', head: true }),
       supabase
         .from('enterprises')
         .select('id', { count: 'exact', head: true })
         .neq('subscription_tier', 'lite'),
+      supabase
+        .from('enterprises')
+        .select('test_enterprise_id')
+        .not('test_enterprise_id', 'is', null),
     ]);
 
     if (totalEntRes.error) return NextResponse.json({ error: totalEntRes.error.message }, { status: 500 });
-    if (realEntRes.error) return NextResponse.json({ error: realEntRes.error.message }, { status: 500 });
+    if (paidEntRes.error) return NextResponse.json({ error: paidEntRes.error.message }, { status: 500 });
+    if (testIdRes.error) return NextResponse.json({ error: testIdRes.error.message }, { status: 500 });
 
     const totalEnterprises = totalEntRes.count ?? 0;
-    const realEnterprises = realEntRes.count ?? 0;
+    const paidEnterprises = paidEntRes.count ?? 0;
+    const testIds = (testIdRes.data ?? [])
+      .map((r) => r.test_enterprise_id as string | null)
+      .filter((v): v is string => !!v);
+    const testEnterprises = new Set(testIds).size;
+
+    const realFreeEnterprises = Math.max(
+      0,
+      totalEnterprises - paidEnterprises - testEnterprises,
+    );
 
     // Count users
     const { count: totalUsers, error: userError } = await supabase
@@ -64,7 +80,9 @@ export async function GET(_req: NextRequest) {
     return NextResponse.json({
       data: {
         total_enterprises: totalEnterprises,
-        real_enterprises: realEnterprises,
+        paid_enterprises: paidEnterprises,
+        real_free_enterprises: realFreeEnterprises,
+        test_enterprises: testEnterprises,
         total_users: totalUsers ?? 0,
         total_transactions: totalTransactions ?? 0,
         frozen_enterprises: frozenEnterprises ?? 0,
