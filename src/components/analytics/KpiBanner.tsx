@@ -23,10 +23,6 @@ const LABELS: Record<string, string> = {
   idle_cash_usd: 'Idle Cash',
   coverage_ratio: 'Coverage',
   obligation_total_usd: 'Obligations',
-  // Deprecated aliases (kept while consumers migrate in Phase C-1.5b)
-  fiat_balance_usd: 'Bank',
-  stablecoin_balance_usd: 'Stablecoins',
-  defi_balance_usd: 'DeFi',
 };
 
 function formatValue(key: string, value: number): string {

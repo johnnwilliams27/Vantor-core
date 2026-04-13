@@ -49,8 +49,9 @@ describe('measures registry', () => {
 
   it('getMeasures returns all measures', () => {
     expect(getMeasures()).toEqual(MEASURES);
-    // 26 baseline + 6 L3 leaves + 3 rollups (Phase C-1.5a) = 35
-    expect(getMeasures().length).toBe(35);
+    // 23 baseline + 6 L3 leaves + 3 rollups. The 3 legacy balance
+    // measures (fiat/stablecoin/defi) were removed in Phase C-1.5b.
+    expect(getMeasures().length).toBe(32);
   });
 
   it('every measure has at least one dimension', () => {

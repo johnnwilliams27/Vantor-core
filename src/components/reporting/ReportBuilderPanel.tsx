@@ -31,8 +31,8 @@ function toTreasuryOverview(result: ViewResult, from: string, to: string): Repor
   return {
     period: { from, to },
     summary: {
-      avgBankBalanceUsd: s.fiat_balance_usd ?? 0,
-      avgCryptoBalanceUsd: s.stablecoin_balance_usd ?? 0,
+      avgBankBalanceUsd: s.bank_balance_usd ?? 0,
+      avgCryptoBalanceUsd: s.stablecoin_idle_balance_usd ?? 0,
       totalOnrampUsd: s.total_onramp_usd ?? 0,
       totalOfframpUsd: s.total_offramp_usd ?? 0,
       netRampUsd: (s.total_onramp_usd ?? 0) - (s.total_offramp_usd ?? 0),

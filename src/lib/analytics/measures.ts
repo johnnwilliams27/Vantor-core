@@ -16,52 +16,6 @@ export const MEASURES: MeasureDefinition[] = [
     },
     dimensions: ['time'],
   },
-  // ─── Legacy balance measures (Phase C-1.5 dual-write window) ───
-  // Kept for backwards-compat while 10 other consumers migrate.
-  // Scheduled for deletion in Phase C-1.5b along with their source columns.
-  {
-    slug: 'fiat_balance_usd',
-    label: 'Fiat Balance',
-    description: 'DEPRECATED: use bank_balance_usd. Legacy fiat aggregate from pre-C-1.5 schema.',
-    unit: 'usd',
-    source: {
-      table: 'treasury_state_snapshots',
-      valueColumn: 'total_fiat_base_usd',
-      dateColumn: 'taken_at',
-      enterpriseColumn: 'enterprise_id',
-      aggregation: 'latest',
-    },
-    dimensions: ['time'],
-  },
-  {
-    slug: 'stablecoin_balance_usd',
-    label: 'Stablecoin Balance',
-    description: 'DEPRECATED: use stablecoin_idle_balance_usd. Legacy wallet aggregate.',
-    unit: 'usd',
-    source: {
-      table: 'treasury_state_snapshots',
-      valueColumn: 'total_stablecoin_base_usd',
-      dateColumn: 'taken_at',
-      enterpriseColumn: 'enterprise_id',
-      aggregation: 'latest',
-    },
-    dimensions: ['time'],
-  },
-  {
-    slug: 'defi_balance_usd',
-    label: 'DeFi Balance',
-    description: 'DEPRECATED: use defi_vault_balance_usd + defi_lending_balance_usd. Legacy DeFi aggregate included MMFs by mistake.',
-    unit: 'usd',
-    source: {
-      table: 'treasury_state_snapshots',
-      valueColumn: 'total_defi_base_usd',
-      dateColumn: 'taken_at',
-      enterpriseColumn: 'enterprise_id',
-      aggregation: 'latest',
-    },
-    dimensions: ['time'],
-  },
-
   // ─── Phase C-1.5a — canonical L3-leaf balance measures ────────────
   // See docs/architecture/forecast-analytics.md for the full taxonomy.
   {

@@ -2,16 +2,14 @@ import type { ResolverContext, ViewResult } from '../types';
 import { parseNumeric, round2, groupByTime } from '../utils';
 
 /**
- * Shape of the per-row shim consumed by `groupByTime`. The resolver computes
- * both legacy and new-taxonomy values per snapshot before bucketing so the
- * caller can pull whichever measures they asked for out of the series map.
+ * Shape of the per-row shim consumed by `groupByTime`. Built from the
+ * canonical L3 leaves (Phase C-1.5a). Legacy `total_fiat_base_usd` is
+ * still SELECTed as a NULL-fallback source for `cash_and_equivalents_usd`
+ * on pre-migration snapshots — drop it once 0051 removes the columns.
  */
 type EnrichedSnapshotRow = {
   taken_at: string;
   total_value_base_usd: number;
-  total_fiat_base_usd: number;
-  total_stablecoin_base_usd: number;
-  total_defi_base_usd: number;
   total_bank_base_usd: number;
   total_stablecoin_idle_base_usd: number;
   total_mmf_base_usd: number;
@@ -30,19 +28,21 @@ function enrich(r: Record<string, unknown>): EnrichedSnapshotRow {
   const mmf = parseNumeric(r.total_mmf_base_usd);
   const vault = parseNumeric(r.total_defi_vault_base_usd);
   const lending = parseNumeric(r.total_defi_lending_base_usd);
+  // Pre-migration snapshot fallback: if the new leaves are NULL (0),
+  // derive Cash & Equivalents from the legacy total_fiat_base_usd so
+  // coverage views don't flash $0 on historical rows.
+  const newLeafCash = bank + stable;
+  const cashAndEquivalents = newLeafCash || parseNumeric(r.total_fiat_base_usd);
   return {
     taken_at: String(r.taken_at),
     total_value_base_usd: parseNumeric(r.total_value_base_usd),
-    total_fiat_base_usd: parseNumeric(r.total_fiat_base_usd),
-    total_stablecoin_base_usd: parseNumeric(r.total_stablecoin_base_usd),
-    total_defi_base_usd: parseNumeric(r.total_defi_base_usd),
     total_bank_base_usd: bank,
     total_stablecoin_idle_base_usd: stable,
     total_mmf_base_usd: mmf,
     total_defi_vault_base_usd: vault,
     total_defi_lending_base_usd: lending,
     total_other_base_usd: parseNumeric(r.total_other_base_usd),
-    cash_and_equivalents_usd: bank + stable,
+    cash_and_equivalents_usd: cashAndEquivalents,
     defi_protocols_usd: vault + lending,
     yield_positions_usd: mmf + vault + lending,
   };
@@ -52,19 +52,18 @@ function enrich(r: Record<string, unknown>): EnrichedSnapshotRow {
  * KPI view: key treasury balance metrics.
  *
  * Fetches the latest treasury_state_snapshot as of `to` plus confirmed
- * outgoing obligations in the window. Emits scalars for every legacy and
- * new-taxonomy measure so the standard-view config can pick which ones
- * to display.
+ * outgoing obligations in the window. Emits scalars for the canonical
+ * taxonomy (Phase C-1.5) — L1 rollups, L3 leaves, and derived coverage.
  *
  * Coverage ratio is Cash & Equivalents ÷ obligations (what the treasurer
- * can actually deploy to settle). Falls back to legacy total_fiat_base_usd
- * when the new leaves are NULL (pre-migration snapshots).
+ * can actually deploy to settle). `enrich()` handles the pre-migration
+ * snapshot fallback so the scalar here is always populated.
  */
 export async function resolveTreasurySummary(ctx: ResolverContext): Promise<ViewResult> {
   const { data: snapRow } = await ctx.supabase
     .from('treasury_state_snapshots')
     .select(
-      'taken_at, total_value_base_usd, total_fiat_base_usd, total_stablecoin_base_usd, total_defi_base_usd, total_bank_base_usd, total_stablecoin_idle_base_usd, total_mmf_base_usd, total_defi_vault_base_usd, total_defi_lending_base_usd, total_other_base_usd',
+      'taken_at, total_value_base_usd, total_fiat_base_usd, total_bank_base_usd, total_stablecoin_idle_base_usd, total_mmf_base_usd, total_defi_vault_base_usd, total_defi_lending_base_usd, total_other_base_usd',
     )
     .eq('enterprise_id', ctx.enterpriseId)
     .lte('taken_at', ctx.to + 'T23:59:59Z')
@@ -86,13 +85,7 @@ export async function resolveTreasurySummary(ctx: ResolverContext): Promise<View
     ? enrich(snapRow as Record<string, unknown>)
     : null;
 
-  // Cash & Equivalents with legacy fallback: if the new columns are NULL
-  // (pre-migration snapshot), derive from the legacy total_fiat_base_usd.
-  // This ensures Coverage doesn't silently go to 0 just because a snapshot
-  // predates C-1.5.
-  const cashAndEquivalents = e
-    ? e.cash_and_equivalents_usd || e.total_fiat_base_usd
-    : 0;
+  const cashAndEquivalents = e?.cash_and_equivalents_usd ?? 0;
 
   const obligationTotal = (obligations ?? []).reduce(
     (sum: number, o: Record<string, unknown>) => sum + parseNumeric(o.amount_usd),
@@ -105,7 +98,7 @@ export async function resolveTreasurySummary(ctx: ResolverContext): Promise<View
     view: { slug: 'treasury-summary', label: 'Treasury Summary', chartType: 'kpi' },
     query: { from: ctx.from, to: ctx.to },
     scalar: {
-      // Total + rollups (primary KPI)
+      // Total + L1 rollups (primary KPI)
       total_balance_usd: round2(e?.total_value_base_usd ?? 0),
       cash_and_equivalents_usd: round2(cashAndEquivalents),
       yield_positions_usd: round2(e?.yield_positions_usd ?? 0),
@@ -117,10 +110,6 @@ export async function resolveTreasurySummary(ctx: ResolverContext): Promise<View
       defi_vault_balance_usd: round2(e?.total_defi_vault_base_usd ?? 0),
       defi_lending_balance_usd: round2(e?.total_defi_lending_base_usd ?? 0),
       other_balance_usd: round2(e?.total_other_base_usd ?? 0),
-      // Legacy (back-compat, deprecated)
-      fiat_balance_usd: round2(e?.total_fiat_base_usd ?? 0),
-      stablecoin_balance_usd: round2(e?.total_stablecoin_base_usd ?? 0),
-      defi_balance_usd: round2(e?.total_defi_base_usd ?? 0),
       // Derived
       obligation_total_usd: round2(obligationTotal),
       idle_cash_usd: round2(idleCash),
@@ -139,7 +128,7 @@ export async function resolveBalanceHistory(ctx: ResolverContext): Promise<ViewR
   const { data: snapshots } = await ctx.supabase
     .from('treasury_state_snapshots')
     .select(
-      'taken_at, total_value_base_usd, total_fiat_base_usd, total_stablecoin_base_usd, total_defi_base_usd, total_bank_base_usd, total_stablecoin_idle_base_usd, total_mmf_base_usd, total_defi_vault_base_usd, total_defi_lending_base_usd, total_other_base_usd',
+      'taken_at, total_value_base_usd, total_fiat_base_usd, total_bank_base_usd, total_stablecoin_idle_base_usd, total_mmf_base_usd, total_defi_vault_base_usd, total_defi_lending_base_usd, total_other_base_usd',
     )
     .eq('enterprise_id', ctx.enterpriseId)
     .gte('taken_at', ctx.from)
@@ -156,21 +145,17 @@ export async function resolveBalanceHistory(ctx: ResolverContext): Promise<ViewR
     view: { slug: 'balance-history', label: 'Balance History', chartType: 'line' },
     query: { from: ctx.from, to: ctx.to },
     series: {
-      // Rollups
+      // L1 rollups
       cash_and_equivalents_usd: series((r) => r.cash_and_equivalents_usd),
       yield_positions_usd: series((r) => r.yield_positions_usd),
       defi_protocols_usd: series((r) => r.defi_protocols_usd),
-      // Leaves
+      // L3 leaves
       bank_balance_usd: series((r) => r.total_bank_base_usd),
       stablecoin_idle_balance_usd: series((r) => r.total_stablecoin_idle_base_usd),
       mmf_balance_usd: series((r) => r.total_mmf_base_usd),
       defi_vault_balance_usd: series((r) => r.total_defi_vault_base_usd),
       defi_lending_balance_usd: series((r) => r.total_defi_lending_base_usd),
       other_balance_usd: series((r) => r.total_other_base_usd),
-      // Legacy (back-compat, deprecated)
-      fiat_balance_usd: series((r) => r.total_fiat_base_usd),
-      stablecoin_balance_usd: series((r) => r.total_stablecoin_base_usd),
-      defi_balance_usd: series((r) => r.total_defi_base_usd),
     },
   };
 }

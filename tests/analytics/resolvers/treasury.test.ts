@@ -66,10 +66,10 @@ describe('resolveTreasurySummary', () => {
     expect(s.obligation_total_usd).toBe(150_000);
     expect(s.idle_cash_usd).toBe(550_000); // 700k cash - 150k obligations
     expect(s.coverage_ratio).toBe(4.67); // 700k / 150k
-    // Legacy (still emitted for back-compat)
-    expect(s.fiat_balance_usd).toBe(400_000);
-    expect(s.stablecoin_balance_usd).toBe(500_000);
-    expect(s.defi_balance_usd).toBe(100_000);
+    // Legacy slugs removed in Phase C-1.5b — no longer emitted.
+    expect(s.fiat_balance_usd).toBeUndefined();
+    expect(s.stablecoin_balance_usd).toBeUndefined();
+    expect(s.defi_balance_usd).toBeUndefined();
   });
 
   it('handles no snapshot', async () => {
@@ -155,8 +155,10 @@ describe('resolveBalanceHistory', () => {
       date: '2026-04-01',
       value: 50, // 30 mmf + 15 vault + 5 lending
     });
-    // Legacy series still emitted
-    expect(result.series!.fiat_balance_usd[0]).toEqual({ date: '2026-04-01', value: 100 });
+    // Legacy series removed in Phase C-1.5b.
+    expect(result.series!.fiat_balance_usd).toBeUndefined();
+    expect(result.series!.stablecoin_balance_usd).toBeUndefined();
+    expect(result.series!.defi_balance_usd).toBeUndefined();
   });
 
   it('handles empty data', async () => {
