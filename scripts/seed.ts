@@ -19,6 +19,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { upsertObligationFromInvoice } from '../src/lib/obligations/sync-from-invoice';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -680,6 +681,28 @@ async function main() {
 
   const { data: invoices } = await sb.from('invoices').insert(invoiceRows).select();
   console.log(`✓ ${invoices?.length ?? 0} invoices (${paidInvoiceConfigs.length} paid, ${overdueConfigs.length} overdue, ${upcomingConfigs.length} upcoming)`);
+
+  // Mirror each seeded invoice into obligations so the rules engine and
+  // ForecastService find them through the canonical path. Matches the
+  // dual-write the ERP sync routes do in production.
+  let mirrored = 0;
+  for (const inv of invoices ?? []) {
+    const res = await upsertObligationFromInvoice(sb, {
+      id: inv.id as string,
+      user_id: inv.user_id as string,
+      enterprise_id: inv.enterprise_id as string | null,
+      invoice_number: inv.invoice_number as string,
+      description: (inv.description as string | null) ?? null,
+      amount: inv.amount as number | string,
+      token: inv.token as string,
+      chain: inv.chain as string,
+      direction: ((inv.direction as string) ?? 'outflow') as 'inflow' | 'outflow',
+      due_date: (inv.due_date as string | null) ?? null,
+      status: inv.status as string,
+    });
+    if (res.ok) mirrored++;
+  }
+  console.log(`✓ ${mirrored} invoice obligations mirrored`);
 
   // ════════════════════════════════════════════════════════
   // 7. TRANSACTIONS (historical — last 90 days)
