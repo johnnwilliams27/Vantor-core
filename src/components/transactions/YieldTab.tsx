@@ -91,7 +91,7 @@ export function YieldTab() {
                   </TableCell>
                   <TableCell className="text-sm">{getVenueDisplayName(tx.protocol)}</TableCell>
                   <TableCell>
-                    <span className="font-semibold">{formatCurrency(tx.amount)}</span>
+                    <span className="font-semibold tabular-nums">{formatCurrency(tx.amount)}</span>
                   </TableCell>
                   <TableCell><Badge variant="outline">{tx.underlying_token}</Badge></TableCell>
                   <TableCell>

@@ -3,6 +3,7 @@
 import { TIERS, TIER_ORDER, TierSlug } from '@/lib/billing/tiers';
 import { Check, X, Sparkles, Zap, TrendingUp, Rocket, Building2, ArrowRight, MessageSquare } from 'lucide-react';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
+import { Badge } from '@/components/ui/badge';
 
 const TRANSACTION_TOOLTIP =
   'A transaction is any on-chain or off-chain movement of funds billed through Vantor: Payments, Transfers, Swaps, Bridges, and Ramps. The 0.25% fee applies per event.';
@@ -81,7 +82,7 @@ export function TierComparisonGrid({ currentTier, onSelectTier, pendingDowngrade
             </div>
 
             <h3 className="font-semibold text-base">{tier.name}</h3>
-            <p className="text-xl font-bold mt-1">{tier.displayPrice}</p>
+            <p className="text-xl font-bold mt-1 tabular-nums">{tier.displayPrice}</p>
 
             <ul className="mt-3 space-y-1.5 flex-1 text-xs">
               <FeatureRow enabled={true} label="Test mode" />
@@ -100,9 +101,9 @@ export function TierComparisonGrid({ currentTier, onSelectTier, pendingDowngrade
 
             <div className="mt-3">
               {isCurrent ? (
-                <div className="text-center text-xs font-semibold text-primary py-2 px-3 rounded-lg bg-primary/10 border border-primary/20">
+                <Badge variant="active" className="w-full justify-center py-1.5 text-xs font-semibold">
                   Current Plan
-                </div>
+                </Badge>
               ) : slug === 'enterprise' ? (
                 <a
                   href="mailto:sales@vantor.xyz?subject=Enterprise%20Plan%20Inquiry"

@@ -317,16 +317,16 @@ export function FiatTransactionTable() {
                     <td className="py-2 pr-4">
                       <DirectionBadge direction={row.direction} />
                     </td>
-                    <td className="py-2 pr-4 text-sm text-right">
+                    <td className="py-2 pr-4 text-sm text-right tabular-nums">
                       {parseFloat(row.crypto_amount).toLocaleString(undefined, { maximumFractionDigits: 2 })} {row.crypto_token}
                     </td>
-                    <td className="py-2 pr-4 text-sm text-right">
+                    <td className="py-2 pr-4 text-sm text-right tabular-nums">
                       {parseFloat(row.fiat_amount).toLocaleString(undefined, { style: 'currency', currency: row.fiat_currency })}
                     </td>
-                    <td className="hidden lg:table-cell py-2 pr-4 text-right text-muted-foreground">
+                    <td className="hidden lg:table-cell py-2 pr-4 text-right text-muted-foreground tabular-nums">
                       {row.exchange_rate ? parseFloat(row.exchange_rate).toFixed(4) : '—'}
                     </td>
-                    <td className="hidden lg:table-cell py-2 pr-4 text-right text-muted-foreground">
+                    <td className="hidden lg:table-cell py-2 pr-4 text-right text-muted-foreground tabular-nums">
                       {row.fee_amount
                         ? parseFloat(row.fee_amount).toLocaleString(undefined, { style: 'currency', currency: row.fiat_currency })
                         : '—'}

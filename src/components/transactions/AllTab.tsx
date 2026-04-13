@@ -381,7 +381,7 @@ export function AllTab() {
                     {row.toAddress ? <TruncatedAddress address={row.toAddress} /> : row.to}
                   </TableCell>
                   <TableCell className="text-sm">
-                    <span className="font-semibold">{formatCurrency(row.amount)}</span>
+                    <span className="font-semibold tabular-nums">{formatCurrency(row.amount)}</span>
                   </TableCell>
                   <TableCell className="text-sm">
                     <Badge variant="outline">{row.currency}</Badge>

@@ -103,7 +103,7 @@ export function OnChainTab() {
                   </TableCell>
                   <TableCell>
                     {tx.amount ? (
-                      <span className="font-semibold">{formatCurrency(tx.amount)}</span>
+                      <span className="font-semibold tabular-nums">{formatCurrency(tx.amount)}</span>
                     ) : '—'}
                     {tx.token && <Badge variant="outline" className="ml-1">{tx.token}</Badge>}
                   </TableCell>

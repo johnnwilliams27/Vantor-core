@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { EmptyStateCard } from '@/components/ui/empty-state-card';
+import { HoverTooltip } from '@/components/ui/hover-tooltip';
 import { cn } from '@/lib/utils';
 import { Building2, Coins, Info, Landmark, TrendingUp } from 'lucide-react';
 import { useTreasuryOverview } from '@/hooks/useTreasury';
@@ -189,10 +190,12 @@ function TotalTreasuryCard({
           </div>
         )}
 
-        <div className="flex items-center gap-1 text-[11px] text-white/50 mt-2">
-          <Info className="h-3 w-3 shrink-0" />
-          <span>{[freshness, ...sources].filter(Boolean).join(' · ')}</span>
-        </div>
+        <HoverTooltip label="Shown data: FX rates from Open Exchange · on-chain balances from wallet RPCs · bank balances from provider APIs">
+          <div className="flex items-center gap-1 text-[11px] text-white/50 mt-2 cursor-help">
+            <Info className="h-3 w-3 shrink-0" />
+            <span>{[freshness, ...sources].filter(Boolean).join(' · ')}</span>
+          </div>
+        </HoverTooltip>
         </>
         )}
       </CardContent>

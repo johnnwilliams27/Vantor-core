@@ -237,11 +237,10 @@ export default function IntegrationsPage() {
                   </Button>
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="destructive-outline"
                     size="sm"
                     onClick={handleDisconnect}
                     disabled={disconnecting}
-                    className="dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950"
                   >
                     {disconnecting ? <><Loader2 className="mr-2 h-3 w-3 animate-spin" />Disconnecting…</> : 'Disconnect'}
                   </Button>

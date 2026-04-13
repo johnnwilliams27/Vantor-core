@@ -119,7 +119,7 @@ export function TransfersTab() {
                   <TableCell><DirectionCell transfer={p} /></TableCell>
                   <TableCell><CounterpartyCell transfer={p} /></TableCell>
                   <TableCell>
-                    <span className="font-semibold">{formatCurrency(p.amount)}</span>{' '}
+                    <span className="font-semibold tabular-nums">{formatCurrency(p.amount)}</span>{' '}
                     <Badge variant="outline">{p.token}</Badge>
                   </TableCell>
                   <TableCell><ChainBadge chain={p.chain} /></TableCell>

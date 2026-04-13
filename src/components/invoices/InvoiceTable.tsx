@@ -226,7 +226,7 @@ export function InvoiceTable() {
                   <TableCell className="text-sm">{inv.invoice_number}</TableCell>
                   <TableCell className="text-sm">{inv.vendor?.name ?? inv.vendor_name ?? '—'}</TableCell>
                   <TableCell className="text-sm">
-                    <span className="font-semibold">{formatCurrency(inv.amount)}</span>
+                    <span className="font-semibold tabular-nums">{formatCurrency(inv.amount)}</span>
                   </TableCell>
                   <TableCell className="text-sm">
                     <Badge variant="outline">{inv.currency ?? inv.token}</Badge>

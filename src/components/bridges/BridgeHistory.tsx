@@ -237,7 +237,7 @@ export function BridgeHistory() {
                 filter.pagedData.map((b) => (
                   <TableRow key={b.id} className="hover:bg-white/[0.02]">
                     <TableCell><Badge variant="outline">{b.token}</Badge></TableCell>
-                    <TableCell className="text-sm font-semibold">{formatCurrency(b.amount)}</TableCell>
+                    <TableCell className="text-sm font-semibold tabular-nums">{formatCurrency(b.amount)}</TableCell>
                     <TableCell className="text-sm text-foreground">
                       {b.fromWalletAddress ? <TruncatedAddress address={b.fromWalletAddress} /> : b.fromWalletLabel}
                     </TableCell>

@@ -63,8 +63,8 @@ export function BalanceSummary() {
               <CardTitle className="text-sm font-medium text-gray-600">{token}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(total)}</div>
-              <div className="text-xs text-gray-500 mt-1">≈ ${formatCurrency(total)} USD</div>
+              <div className="text-2xl font-bold tabular-nums">{formatCurrency(total)}</div>
+              <div className="text-xs text-gray-500 mt-1 tabular-nums">≈ ${formatCurrency(total)} USD</div>
             </CardContent>
           </Card>
         ))}
@@ -88,7 +88,7 @@ export function BalanceSummary() {
                 </span>
                 <Badge variant="outline">{b.token}</Badge>
               </div>
-              <span className="font-semibold">{formatCurrency(b.balance)}</span>
+              <span className="font-semibold tabular-nums">{formatCurrency(b.balance)}</span>
             </div>
           ))}
         </div>
