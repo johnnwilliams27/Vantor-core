@@ -24,6 +24,7 @@ export {
   mapSwapToMovement,
   mapBridgeToMovement,
   mapScheduledOperationToMovement,
+  mapRecommendationToMovement,
 } from './movement-mapper';
 export type {
   TransferMovementInput,
@@ -34,6 +35,7 @@ export type {
   SwapMovementInput,
   BridgeMovementInput,
   ScheduledOperationMovementInput,
+  RecommendationMovementInput,
   MapperContext,
 } from './movement-mapper';
 

@@ -52,4 +52,19 @@ describe('gated routes — 401 smoke', () => {
     const res = await handler(req as any);
     expect(res.status).toBe(401);
   });
+
+  // Dynamic-segment route — takes { params } as a second arg, can't use
+  // the generic loop above.
+  it('POST /api/treasury/recommendations/:id/approve returns 401 without a session', async () => {
+    const mod = await import('@/app/api/treasury/recommendations/[id]/approve/route');
+    const req = new Request('http://localhost/api/treasury/recommendations/abc/approve', {
+      method: 'POST',
+    });
+    const res = await mod.POST(req as any, { params: { id: 'abc' } } as any);
+    expect(res.status).toBe(401);
+  });
+
+  // /api/integrations/slack/callback uses Slack HMAC (no NextAuth session).
+  // A full smoke there would need signing-secret mocking — deferred; gate
+  // wiring is still covered by the static coverage guardrail.
 });

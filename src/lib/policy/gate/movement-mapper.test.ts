@@ -10,6 +10,7 @@ import {
   mapSwapToMovement,
   mapBridgeToMovement,
   mapScheduledOperationToMovement,
+  mapRecommendationToMovement,
   type TransferMovementInput,
   type MapperContext,
 } from './movement-mapper';
@@ -291,5 +292,66 @@ describe('mapScheduledOperationToMovement', () => {
       scheduled_op_type: 'ramp',
       direction: 'offramp',
     });
+  });
+});
+
+describe('mapRecommendationToMovement', () => {
+  const REC_INPUT = {
+    recommendationId: 'rec-99',
+    action: 'offramp' as const,
+    cryptoToken: 'USDC' as const,
+    amountUsd: 50000,
+    fiatCurrency: 'USD',
+    bankAccountId: 'bank-7',
+  };
+
+  it('produces a fiat_ramp movement with ai_recommendation initiator', () => {
+    const m = mapRecommendationToMovement(REC_INPUT, CTX);
+
+    expect(m.kind).toBe('fiat_ramp');
+    expect(m.initiator).toEqual({
+      type: 'ai_recommendation',
+      recommendation_id: 'rec-99',
+    });
+  });
+
+  it('mirrors mapRampToMovement endpoints for the same direction + token', () => {
+    const rec = mapRecommendationToMovement(REC_INPUT, CTX);
+    const ramp = mapRampToMovement(
+      {
+        direction: 'offramp',
+        cryptoToken: 'USDC',
+        cryptoAmount: '50000',
+        fiatCurrency: 'USD',
+        fiatAmount: '50000',
+        bankAccountId: 'bank-7',
+      },
+      CTX,
+    );
+    expect(rec.source).toEqual(ramp.source);
+    expect(rec.destination).toEqual(ramp.destination);
+    expect(rec.amount).toEqual(ramp.amount);
+  });
+
+  it('stashes recommendation_id + enterprise_id in metadata', () => {
+    const m = mapRecommendationToMovement(REC_INPUT, CTX);
+    expect(m.metadata).toMatchObject({
+      enterprise_id: 'ent-1',
+      recommendation_id: 'rec-99',
+      direction: 'offramp',
+    });
+  });
+
+  it('generates a fresh movement.id (not the recommendation_id)', () => {
+    const m = mapRecommendationToMovement(REC_INPUT, CTX);
+    expect(m.id).not.toBe(REC_INPUT.recommendationId);
+    expect(m.id).toMatch(/^[0-9a-f-]{36}$/i);
+  });
+
+  it('handles onramp direction symmetrically', () => {
+    const m = mapRecommendationToMovement({ ...REC_INPUT, action: 'onramp' }, CTX);
+    expect(m.source.venue).toBe('bank');
+    expect(m.destination.venue).toBe('ethereum');
+    expect(m.metadata?.direction).toBe('onramp');
   });
 });

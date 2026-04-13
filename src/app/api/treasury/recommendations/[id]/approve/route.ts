@@ -11,6 +11,15 @@ import { updateBalancesAfterRamp } from '@/lib/balances/update-after-movement';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 import { NotificationService } from '@/lib/notifications/service';
 import { recommendationEmailHtml } from '@/lib/notifications/recommendation-email';
+import {
+  PolicyGateService,
+  mapRecommendationToMovement,
+  GateError,
+  mapGateErrorToHttp,
+  type GateActor,
+} from '@/lib/policy/gate';
+import { buildProductionEvaluate } from '@/lib/policy/gate/production-wiring';
+import { ApprovalWorkflowService } from '@/lib/policy/approvals';
 
 export async function POST(
   _req: NextRequest,
@@ -48,7 +57,79 @@ export async function POST(
     return NextResponse.json({ error: 'No action to execute' }, { status: 422 });
   }
 
-  // Mark approved
+  // ─── Policy gate ──────────────────────────────────────────────────
+  // Every human-approved AI recommendation runs through the gate before
+  // a ramp executes. Rules keyed on initiator.type='ai_recommendation'
+  // can enforce enterprise-specific approval chains (e.g. second
+  // approver over $X) even after the treasurer-level approve click.
+  const movement = mapRecommendationToMovement(
+    {
+      recommendationId: rec.id,
+      action: rec.action as 'onramp' | 'offramp',
+      cryptoToken: (rec.stablecoin_token ?? 'USDC') as 'USDC' | 'USDT',
+      amountUsd: parseFloat(rec.recommended_amount_usd),
+      fiatCurrency: 'USD',
+      bankAccountId: rec.bank_account_id,
+    },
+    {
+      userId: session.user.id,
+      enterpriseId: enterpriseId as string,
+      fromAddress: '',
+    },
+  );
+
+  const gateService = new PolicyGateService(supabase, {
+    evaluate: buildProductionEvaluate(supabase),
+    approvalService: new ApprovalWorkflowService(supabase),
+  });
+
+  const actor: GateActor = {
+    user_id: session.user.id,
+    role: session.user.role as GateActor['role'],
+    enterprise_id: enterpriseId as string,
+  };
+
+  let gateResult;
+  try {
+    gateResult = await gateService.gate(movement, actor);
+  } catch (err) {
+    if (err instanceof GateError) {
+      // Policy blocked the ramp — flip rec to 'rejected' with the gate's
+      // reason_code. 'rejected' is the existing enum terminal state; the
+      // rejection_reason column carries the code for audit/UI.
+      await supabase
+        .from('ai_recommendations')
+        .update({
+          status: 'rejected',
+          rejected_by: session.user.id,
+          rejected_at: new Date().toISOString(),
+          rejection_reason: err.reason_code,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', params.id)
+        .eq('enterprise_id', enterpriseId as string);
+
+      await writeAuditLog({
+        userId: session.user.id,
+        // Reuses the gate-blocked audit_action added for transfers.
+        // entity_type='ai_recommendation' distinguishes the subject.
+        action: 'transfer_create_blocked',
+        entityType: 'ai_recommendation',
+        entityId: params.id,
+        details: {
+          reason_code: err.reason_code,
+          ...(err.details as Record<string, unknown>),
+        },
+      });
+
+      const { status, body } = mapGateErrorToHttp(err);
+      return NextResponse.json(body, { status });
+    }
+    throw err;
+  }
+
+  // Mark approved (common to allow_auto and require_approval — this
+  // user DID approve, even if further approvals are still needed).
   await supabase
     .from('ai_recommendations')
     .update({
@@ -67,7 +148,38 @@ export async function POST(
     details: { action: rec.action, amount_usd: rec.recommended_amount_usd },
   });
 
-  // Execute ramp
+  if (gateResult.verdict === 'require_approval') {
+    // Additional approvals required by policy. The approval_request has
+    // already been created by the gate; the fiat_ramp executor (Plan 2b)
+    // will execute the ramp once the chain completes. No ramp runs here.
+    //
+    // Follow-up: the linkage between ai_recommendations.id and the
+    // approval_request is not yet persisted — the movement.id on the
+    // request won't match anything queryable on the rec. A dedicated
+    // column (pending_approval_request_id) would tighten this; out of
+    // scope for this PR.
+    await writeAuditLog({
+      userId: session.user.id,
+      // Reuses the requires-approval audit_action added for transfers.
+      action: 'transfer_create_requires_approval',
+      entityType: 'ai_recommendation',
+      entityId: params.id,
+      details: {
+        approval_request_id: gateResult.approval_request.id,
+        chain_id: gateResult.approval_request.chain_id,
+        chain_name: gateResult.evaluation.required_chain?.chain_name,
+      },
+    });
+    return NextResponse.json(
+      {
+        data: { id: rec.id, status: 'awaiting_additional_approval' },
+        approval_request: gateResult.approval_request,
+      },
+      { status: 202 },
+    );
+  }
+
+  // allow_auto — proceed with ramp execution.
   try {
     const mode = getIntegrationMode(session.user.subscription_tier);
     const adapter = getBankingAdapter(mode);
