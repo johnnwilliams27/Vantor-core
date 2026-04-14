@@ -581,12 +581,12 @@ export default function AccountManagementPage() {
 
         {/* Team Members */}
         <Card>
-          <CardHeader className="flex flex-row items-start justify-between space-y-0">
+          <CardHeader className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
             <div>
               <CardTitle>Team Members</CardTitle>
               <CardDescription className="mt-1">Manage roles and permissions for all users in your organization.</CardDescription>
             </div>
-            <Button size="sm" onClick={() => setInviteOpen(true)} className="shrink-0">
+            <Button size="sm" onClick={() => setInviteOpen(true)} className="w-full shrink-0 sm:w-auto">
               <UserPlus className="mr-2 h-4 w-4" />
               Invite User
             </Button>

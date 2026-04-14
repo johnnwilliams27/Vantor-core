@@ -161,13 +161,13 @@ export function InvoiceTable() {
     <>
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
           <CardTitle>Invoices</CardTitle>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleSync} disabled={syncing || !activeConfigId}>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Button variant="outline" size="sm" onClick={handleSync} disabled={syncing || !activeConfigId} className="w-full sm:w-auto">
               {syncing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Syncing…</> : <><RefreshCw className="mr-2 h-4 w-4" />Sync from ERP</>}
             </Button>
-            <Button size="sm" onClick={() => setShowCreate(true)}>
+            <Button size="sm" onClick={() => setShowCreate(true)} className="w-full sm:w-auto">
               <Plus className="mr-1 h-4 w-4" />Add Invoice
             </Button>
           </div>

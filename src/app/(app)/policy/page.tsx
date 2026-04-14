@@ -111,7 +111,7 @@ export default function PolicyDashboardPage() {
   return (
     <div className="space-y-6 p-4 sm:p-8">
       {/* Hero header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex items-center gap-3">
             <IconTile variant="special" size="md">
@@ -125,12 +125,12 @@ export default function PolicyDashboardPage() {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Link href="/policy/history">
-            <Button variant="outline" size="sm">History</Button>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Link href="/policy/history" className="w-full sm:w-auto">
+            <Button variant="outline" size="sm" className="w-full sm:w-auto">History</Button>
           </Link>
-          <Link href="/policy/versions">
-            <Button variant="default" size="sm">
+          <Link href="/policy/versions" className="w-full sm:w-auto">
+            <Button variant="default" size="sm" className="w-full sm:w-auto">
               Manage versions
               <ArrowRight className="w-4 h-4 ml-1.5" />
             </Button>
