@@ -10,16 +10,13 @@ import { IconTile } from '@/components/ui/icon-tile';
 import { useToast } from '@/components/ui/toast';
 import { cn, sanitizeErrorMessage } from '@/lib/utils';
 import { RULE_TEMPLATES, type RuleTemplate, type TemplateField } from '@/lib/policy/templates';
-import { Flame, ShieldOff, Users, Ban, Clock, Filter, TrendingDown, Sparkles, ArrowLeft, Check, Wrench, ArrowRight } from 'lucide-react';
+import { Flame, ShieldOff, Ban, Clock, Sparkles, ArrowLeft, Check, Wrench, ArrowRight } from 'lucide-react';
 
 const ICON_FOR_TEMPLATE: Record<string, React.ReactNode> = {
   large_amount_approval: <Flame />,
   hard_limit_block: <ShieldOff />,
-  new_counterparty_approval: <Users />,
   sanctions_block: <Ban />,
   daily_outflow_cap: <Clock />,
-  kind_specific_approval: <Filter />,
-  forecast_coverage_block: <TrendingDown />,
   ai_initiated_approval: <Sparkles />,
 };
 
