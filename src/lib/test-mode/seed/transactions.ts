@@ -145,7 +145,9 @@ export async function seedFiatPayments(ctx: SeedContext, bankAccountIds: string[
     { name: 'HSBC Business Banking', routing: '022000020' },
   ];
 
-  const currencies = ['USD', 'EUR', 'GBP', 'BRL', 'MXN'];
+  // fiat_payments.currency CHECK constraint (migration 0022) restricts to
+  // these three. LATAM currencies live on fiat_transactions only.
+  const currencies = ['USD', 'EUR', 'GBP'];
 
   const rows: any[] = [];
 
