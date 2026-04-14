@@ -74,7 +74,7 @@ export async function seedTransactions(ctx: SeedContext, walletIds: WalletIds, i
     });
   }
 
-  // 15 ad-hoc completed transfers
+  // 15 ad-hoc transfers (first is always failed to guarantee transfer_attempts has data)
   for (let i = 0; i < 15; i++) {
     const wallet = pick([...walletIds.ethWallets, ...walletIds.solWallets]);
     const isEth = walletIds.ethWallets.some(w => w.id === wallet.id);
@@ -86,7 +86,7 @@ export async function seedTransactions(ctx: SeedContext, walletIds: WalletIds, i
       chain: isEth ? 'ethereum' : 'solana',
       token: pick(['USDC', 'USDT']),
       amount: rand(3000, 80000).toFixed(2),
-      status: pick(['completed', 'completed', 'completed', 'processing', 'failed']),
+      status: i === 0 ? 'failed' : pick(['completed', 'completed', 'completed', 'processing', 'failed']),
       tx_hash: isEth ? ethHash() : solHash(),
       executed_at: daysAgo(randInt(1, 75)),
       created_at: daysAgo(randInt(5, 80)),
