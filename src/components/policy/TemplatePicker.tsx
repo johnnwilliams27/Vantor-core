@@ -66,7 +66,38 @@ export function TemplatePicker({ versionId, open, onOpenChange, onCreated, onSta
     }
     setSubmitting(true);
     try {
-      const rule = picked.build({ name: ruleName.trim(), values });
+      const rule = picked.build({ name: ruleName.trim(), values }) as Record<string, unknown> & { verdict: string };
+
+      // If the rule requires approval and the template collected a role_min,
+      // create (or reuse) a single-slot approval chain at that role and
+      // attach it to the rule. Without a chain, the authoring validator
+      // rejects require_approval rules.
+      const roleMin = values.role_min ? String(values.role_min) : null;
+      if (rule.verdict === 'require_approval' && roleMin) {
+        const chainName = `Approval — ${roleMin.replace(/_/g, ' ')}`;
+        const chainRes = await fetch(`/api/policy/versions/${versionId}/approval-chains`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: chainName,
+            slots: [{ slot_index: 0, minimum_role: roleMin }],
+            priority: 100,
+          }),
+        });
+        if (!chainRes.ok) {
+          const err = await chainRes.json().catch(() => ({}));
+          throw new Error(err.human_readable ?? err.error ?? `Chain create failed (${chainRes.status})`);
+        }
+        const { data: version } = await chainRes.json();
+        const newChain = version?.approval_chains?.find(
+          (c: { name: string }) => c.name === chainName,
+        );
+        if (!newChain?.id) {
+          throw new Error('Could not locate the approval chain we just created.');
+        }
+        rule.verdict_chain_id = newChain.id;
+      }
+
       const res = await fetch(`/api/policy/versions/${versionId}/rules`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
