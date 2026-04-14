@@ -58,7 +58,7 @@ export async function seedCompliance(ctx: SeedContext, walletIds: WalletIds, txI
 
     kytRows.push({
       user_id: userId, enterprise_id: enterpriseId,
-      external_id: `kyt-test-${String(i + 1).padStart(3, '0')}`,
+      external_id: `kyt-${ethHash().slice(0, 16)}`,
       chain: isEth ? 'ethereum' : 'solana',
       direction: isSent ? 'sent' : 'received',
       tx_hash: ethHash(),
@@ -85,7 +85,7 @@ export async function seedCompliance(ctx: SeedContext, walletIds: WalletIds, txI
   const alertRows = highRiskTransfers.map((t, i) => ({
     user_id: userId, enterprise_id: enterpriseId,
     kyt_transfer_id: t.id,
-    external_alert_id: `alert-test-${String(i + 1).padStart(3, '0')}`,
+    external_alert_id: `alert-${ethHash().slice(0, 16)}`,
     severity: t.risk_score > 60 ? 'severe' : t.risk_score > 40 ? 'high' : 'medium',
     status: alertStatuses[i % alertStatuses.length],
     category: 'suspicious_activity',
