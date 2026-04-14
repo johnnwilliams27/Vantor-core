@@ -926,9 +926,13 @@ export class PolicyAuthoringService {
       }
     }
 
-    // 6. Call the atomic PG RPC
-    const rpc = (this.supabase as { rpc: NonNullable<SupabaseLike['rpc']> }).rpc;
-    if (!rpc) {
+    // 6. Call the atomic PG RPC. Call through this.supabase so the
+    // Supabase client keeps its `this` binding — detaching the method
+    // (`const rpc = supabase.rpc`) and invoking it standalone throws
+    // "Cannot read properties of undefined (reading 'rest')" at runtime
+    // because the real client reads `this.rest` from inside rpc().
+    const supabase = this.supabase as { rpc?: NonNullable<SupabaseLike['rpc']> };
+    if (!supabase.rpc) {
       throw new AuthoringError({
         reason_code: REASON_CODES.gate_internal_error,
         human_readable: 'Activation RPC is not available in this context.',
@@ -937,7 +941,7 @@ export class PolicyAuthoringService {
       });
     }
 
-    const { error: rpcError } = await rpc('policy_activate_draft', {
+    const { error: rpcError } = await supabase.rpc('policy_activate_draft', {
       p_version_id: versionId,
       p_enterprise_id: actor.enterprise_id,
       p_activated_by: actor.user_id,
