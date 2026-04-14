@@ -43,37 +43,19 @@ export async function wipeTestEnterprise(
       if (error) throw new Error(`fn_admin_wipe_test_approvals failed: ${error.message}`);
     }
 
-    // --- Policy children: scoped by version_id, not enterprise_id ---------
-    // Resolve the set of policy versions for this enterprise, then delete
-    // hard_limits / rules / approval_chains via FK.
-    const { data: vs, error: vsErr } = await supabase
-      .from('policy_versions')
-      .select('id')
-      .eq('enterprise_id', testEnterpriseId);
-    if (vsErr) throw new Error(`policy_versions lookup failed: ${vsErr.message}`);
-    const versionIds = (vs ?? []).map((v) => v.id);
-
-    if (versionIds.length > 0) {
-      for (const child of ['policy_hard_limits', 'policy_rules', 'policy_approval_chains'] as const) {
-        const { error } = await supabase.from(child).delete().in('version_id', versionIds);
-        if (error) throw new Error(`${child} delete failed: ${error.message}`);
-      }
-    }
-
-    // Null out FK cycles so policy_versions can delete.
+    // --- Policy subtree: wiped via SECURITY DEFINER RPC (migration 0057) ---
+    // policy_rules / policy_hard_limits / policy_approval_chains all carry
+    // BEFORE UPDATE/DELETE triggers that refuse mutation when the parent
+    // version status is 'active' or 'superseded' — which is exactly the seed
+    // shape (v1+v2 superseded, v3 active). The RPC temporarily disables those
+    // triggers, deletes the whole subtree scoped to this test enterprise,
+    // re-enables them. Refuses non-test enterprises at the DB layer.
     {
-      const { error } = await supabase
-        .from('policy_policies')
-        .update({ active_version_id: null })
-        .eq('enterprise_id', testEnterpriseId);
-      if (error) throw new Error(`policy_policies.active_version_id reset failed: ${error.message}`);
-    }
-    if (versionIds.length > 0) {
-      const { error } = await supabase
-        .from('policy_versions')
-        .update({ superseded_by_version_id: null })
-        .in('id', versionIds);
-      if (error) throw new Error(`policy_versions.superseded_by reset failed: ${error.message}`);
+      const { error } = await supabase.rpc(
+        'fn_admin_wipe_test_policy',
+        { p_enterprise_id: testEnterpriseId }
+      );
+      if (error) throw new Error(`fn_admin_wipe_test_policy failed: ${error.message}`);
     }
 
     // Enterprise-scoped deletes (ordered to respect remaining FKs).
@@ -89,8 +71,7 @@ export async function wipeTestEnterprise(
       'treasury_insights',
       'analytics_pin_preferences',
       'treasury_state_snapshots',
-      'policy_versions',
-      'policy_policies',
+      // policy_versions + policy_policies wiped by fn_admin_wipe_test_policy above
       'simulation_runs',
       'ai_recommendations',
       'obligations',
