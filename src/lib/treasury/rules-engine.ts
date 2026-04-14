@@ -11,6 +11,7 @@ import type {
 import { getStablecoinPrices } from './oracle';
 import { TreasuryStateService } from './state/service';
 import { createForecastService } from '@/lib/forecast/service';
+import { obligationAmountToUsdPessimistic } from '@/lib/fx/obligation-fx';
 import { getHoldingCardPlacement } from './holdings-category';
 import { getVenue } from '@/lib/yield/venues';
 
@@ -196,70 +197,37 @@ export async function buildTreasurySnapshot(
  */
 export async function collectObligations(
   supabase: SupabaseClient,
-  userId: string,
+  // Historically scoped by user_id; post-0053 obligations are scoped by
+  // enterprise so the user parameter is vestigial. Kept to preserve the
+  // public signature for existing callers.
+  _userId: string,
   lookaheadDays: number,
   enterpriseId?: string | null,
 ): Promise<UpcomingObligation[]> {
-  const windowEnd = new Date();
-  windowEnd.setDate(windowEnd.getDate() + lookaheadDays);
-  const windowEndStr = windowEnd.toISOString().split('T')[0];
+  // Every obligation (manual, recurring_rule, erp_sync) now lives in the
+  // `obligations` table — migration 0053 moved ERP invoices behind the
+  // canonical table via dual-write in the ERP sync paths. So the rules
+  // engine delegates entirely to ForecastService and drops the direct
+  // invoices query that used to short-circuit this path.
+  if (!enterpriseId) return [];
 
-  // --- Invoices: still queried directly until a later phase syncs them
-  //     into the obligations table via source='erp_sync'.
-  let invoiceQuery = supabase
-    .from('invoices')
-    .select('id, invoice_number, description, amount, due_date')
-    .eq('user_id', userId)
-    .in('status', ['unpaid', 'overdue'])
-    .not('due_date', 'is', null)
-    .lte('due_date', windowEndStr);
+  const svc = createForecastService({
+    enterpriseId,
+    db: supabase,
+    consumer: 'rules_engine',
+  });
+  const expanded = await svc.getObligationsDueInWindow(lookaheadDays);
 
-  if (enterpriseId) {
-    invoiceQuery = invoiceQuery.eq('enterprise_id', enterpriseId);
-  }
-
-  const invoiceRes = await invoiceQuery;
-  if (invoiceRes.error) throw new Error(invoiceRes.error.message);
-
-  const obligations: UpcomingObligation[] = [];
-
-  for (const inv of invoiceRes.data ?? []) {
-    obligations.push({
-      id: inv.id as string,
-      source: 'erp_invoice',
-      label: (inv.description as string) || `Invoice ${inv.invoice_number}`,
-      amountUsd: parseFloat(inv.amount as string),
-      dueDate: inv.due_date as string,
-    });
-  }
-
-  // --- Manual + recurring obligations: delegated to ForecastService so
-  //     the rules engine sees the same expanded window as every other
-  //     consumer (T15 adapter, forecast API, agent tools).
-  if (enterpriseId) {
-    const svc = createForecastService({
-      enterpriseId,
-      db: supabase,
-      consumer: 'rules_engine',
-    });
-    const manual = await svc.getObligationsDueInWindow(lookaheadDays);
-    for (const o of manual) {
-      obligations.push({
-        id: o.id,
-        source: 'manual',
-        label: o.label,
-        // Currency conversion at projection time lives in the engine;
-        // the rules engine's legacy shape is USD-native and does not
-        // FX-convert, so we take the raw amount. Non-USD obligations
-        // would need a caller-side FX pass if the rules engine ever
-        // starts scoring them — out of scope for this rewire.
-        amountUsd: o.amount,
-        dueDate: o.dueDate,
-      });
-    }
-  }
-
-  return obligations;
+  return expanded.map((o) => ({
+    id: o.id,
+    source: o.source === 'erp_sync' ? 'erp_invoice' : 'manual',
+    label: o.label,
+    // Pessimistic FX: fresh lookup, shift the rate UP so the rules
+    // engine over-estimates rather than under-estimates what you owe.
+    // Stablecoins (USDC/USDT) pass through 1:1 USD without haircut.
+    amountUsd: obligationAmountToUsdPessimistic(o.amount, o.currency),
+    dueDate: o.dueDate,
+  }));
 }
 
 export async function computeRecommendation(

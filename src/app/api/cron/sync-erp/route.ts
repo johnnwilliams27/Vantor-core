@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getERPAdapter, decryptCredentials } from '@/lib/erp/factory';
+import { upsertObligationFromInvoice } from '@/lib/obligations/sync-from-invoice';
 import type { ErpProvider } from '@/types/database';
 import { fireInlineInsights } from '@/lib/insights/inline';
 
@@ -80,7 +81,7 @@ export async function GET(req: NextRequest) {
         const dueDate = inv.dueDate ?? null;
         const status = dueDate && new Date(dueDate) < new Date() ? 'overdue' : 'unpaid';
 
-        const { error: invErr } = await supabase.from('invoices').upsert(
+        const { data: invRow, error: invErr } = await supabase.from('invoices').upsert(
           {
             user_id: erpConfig.user_id,
             enterprise_id: erpConfig.enterprise_id,
@@ -96,8 +97,26 @@ export async function GET(req: NextRequest) {
             status,
           },
           { onConflict: 'user_id,erp_config_id,erp_invoice_id' }
-        );
-        if (!invErr) synced++;
+        ).select('id, user_id, enterprise_id, invoice_number, description, amount, token, chain, direction, due_date, status').maybeSingle();
+
+        if (!invErr && invRow) {
+          synced++;
+          // Dual-write: mirror into obligations so every consumer (rules
+          // engine + ForecastService + analytics) sees the same view.
+          await upsertObligationFromInvoice(supabase, {
+            id: invRow.id as string,
+            user_id: invRow.user_id as string,
+            enterprise_id: invRow.enterprise_id as string | null,
+            invoice_number: invRow.invoice_number as string,
+            description: (invRow.description as string | null) ?? null,
+            amount: invRow.amount as number | string,
+            token: invRow.token as string,
+            chain: invRow.chain as string,
+            direction: invRow.direction as 'inflow' | 'outflow',
+            due_date: (invRow.due_date as string | null) ?? null,
+            status: invRow.status as string,
+          });
+        }
       }
 
       // Update last_synced

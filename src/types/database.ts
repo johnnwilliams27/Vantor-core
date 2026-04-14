@@ -57,7 +57,8 @@ export type AuditAction =
   | 'screening_case_block' | 'screening_case_reassign' | 'screening_case_note'
   | 'screening_adhoc_lookup'
   | 'insight_create' | 'insight_view' | 'insight_dismiss' | 'insight_acted_on' | 'insight_expire'
-  | 'transfer_create_blocked' | 'transfer_create_requires_approval';
+  | 'transfer_create_blocked' | 'transfer_create_requires_approval'
+  | 'agent_planner_snapshot_failed';
 
 export interface UserProfile {
   id: string;

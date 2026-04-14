@@ -339,24 +339,28 @@ Phase B deliberately left these for later:
 - **Scheduled delivery (email/Slack)**
 - **CSV/PDF export from any view**
 
-## Phase A leftovers (still open)
+## Phase A leftovers
 
-- **Invoice sync.** Invoices don't yet flow into the `obligations`
-  table via `source='erp_sync'`. Until they do, the rules engine
-  queries `invoices` directly in `collectObligations`.
-- **Native FX conversion on the legacy rules-engine path.** The
-  shape still treats obligation amounts as USD-native. Multi-currency
-  obligations route correctly through ForecastService, but the
-  legacy `UpcomingObligation.amountUsd` field doesn't FX-convert.
-- **Treasury AI UI native consumption.** The Forecasting tab still
-  reads the legacy `TreasuryForecast` shape via an adapter. A Phase B
-  rewrite will have it consume the raw `Projection` shape directly
-  from `forecast_snapshots`, unlocking per-day drill-down and scenario
-  comparison views.
-- **Agent planner persistence.** `hypothetical()` supports persisting
-  but no current consumer turns it on. Phase C agent work will need
-  hypothetical forecasts to leave an audit trail via
-  `forecast_snapshots.is_hypothetical`.
+Three of four closed in feature/analytics-polish (2026-04-12):
+
+- ✅ **Invoice sync.** Migration 0053 adds `invoices.direction` +
+  `obligations.source_ref_id` FK. ERP sync routes and seed script
+  dual-write via `upsertObligationFromInvoice`. `collectObligations`
+  drops its direct invoices query and delegates entirely to
+  ForecastService.
+- ✅ **Native FX on the rules-engine path.** New
+  `obligationAmountToUsdPessimistic` helper converts non-USD
+  obligations UP (conservative for liabilities) with fresh rate
+  lookup. Stablecoins + USD pass through 1:1.
+- ✅ **Agent planner persistence.** AI recommendation generator
+  persists a hypothetical forecast snapshot tied to each rec via
+  `correlation_id` (consumer='agent_planner', is_hypothetical=true,
+  both-leg hypothetical_actions).
+- **Treasury AI UI native consumption** (still open). The Forecasting
+  tab still reads the legacy `TreasuryForecast` shape via an adapter
+  (`src/lib/treasury/predictions.ts`). A Phase B rewrite will have it
+  consume the raw `Projection` shape directly from `forecast_snapshots`,
+  unlocking per-day drill-down and scenario comparison views.
 
 ## Phase C-1 — Custom Views + Export
 

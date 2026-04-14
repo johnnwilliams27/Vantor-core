@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { getActiveTreasuryRule, computeRecommendation } from '@/lib/treasury/rules-engine';
+import { persistAgentPlannerForecast } from '@/lib/forecast/agent-planner';
 import { generateTreasuryReasoning } from '@/lib/treasury/claude';
 import { checkRateLimit } from '@/lib/api/rate-limit';
 import { decryptSlackCredentials, postRecommendationToSlack } from '@/lib/integrations/slack';
@@ -83,6 +84,34 @@ export async function POST(_req: NextRequest) {
     .single();
 
   if (insertErr) return NextResponse.json({ error: insertErr.message }, { status: 500 });
+
+  // Persist an agent_planner forecast snapshot tied to this recommendation
+  // (is_hypothetical=true, hypothetical_actions carrying the proposed ramp).
+  // Non-blocking: recommendation generation must not fail on snapshot issues.
+  if (enterpriseId) (async () => {
+    try {
+      const snapResult = await persistAgentPlannerForecast({
+        supabase,
+        enterpriseId,
+        recommendationId: rec.id,
+        result,
+        actorId: session.user.id,
+      });
+      if (!snapResult.persisted && snapResult.reason === 'error') {
+        // Surface the failure in the audit log so we can notice silently-broken
+        // audit trails, without 500'ing the recommendation request.
+        await writeAuditLog({
+          userId: session.user.id,
+          action: 'agent_planner_snapshot_failed',
+          entityType: 'ai_recommendation',
+          entityId: rec.id,
+          details: { error: snapResult.error },
+        });
+      }
+    } catch {
+      // Swallow — the helper already wraps errors, but belt-and-suspenders here.
+    }
+  })();
 
   // Non-blocking Slack notification — never fail the request if Slack is down
   if (requiresApproval) {
