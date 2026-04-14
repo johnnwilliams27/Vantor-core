@@ -100,6 +100,7 @@ interface UserProfileRow {
 // ─── Query builder helpers ──────────────────────────────────────────────────
 
 type SelectBuilder<T> = {
+  select: (cols?: string) => SelectBuilder<T>;
   eq: (col: string, val: unknown) => SelectBuilder<T>;
   in: (col: string, vals: unknown[]) => SelectBuilder<T>;
   order: (col: string, opts?: { ascending?: boolean }) => SelectBuilder<T>;
@@ -185,7 +186,8 @@ export class PolicyAuthoringService {
 
   private async fetchChildren<T>(table: string, versionId: string): Promise<T[]> {
     const q = tableFrom<T>(this.supabase, table);
-    const result = await (q.eq('version_id', versionId) as unknown as Promise<{
+    // Real Supabase v2 requires .select() before filter methods.
+    const result = await (q.select('*').eq('version_id', versionId) as unknown as Promise<{
       data: T[] | null;
       error: unknown;
     }>);
@@ -208,6 +210,7 @@ export class PolicyAuthoringService {
       this.supabase,
       'policy_versions',
     )
+      .select('*')
       .eq('id', versionId)
       .eq('enterprise_id', enterpriseId)
       .maybeSingle();
@@ -261,6 +264,7 @@ export class PolicyAuthoringService {
     const q = tableFrom<PolicyVersionRow>(this.supabase, 'policy_versions');
     const result = await (
       q
+        .select('version_number')
         .eq('enterprise_id', enterpriseId)
         .order('version_number', { ascending: false })
         .limit(1) as unknown as Promise<{ data: PolicyVersionRow[] | null; error: unknown }>
@@ -285,6 +289,7 @@ export class PolicyAuthoringService {
       this.supabase,
       'policy_policies',
     )
+      .select('*')
       .eq('enterprise_id', actor.enterprise_id)
       .maybeSingle();
 
@@ -321,6 +326,7 @@ export class PolicyAuthoringService {
     const q = tableFrom<PolicyVersionRow>(this.supabase, 'policy_versions');
     const result = await (
       q
+        .select('*')
         .eq('enterprise_id', actor.enterprise_id)
         .order('version_number', { ascending: false }) as unknown as Promise<{
         data: PolicyVersionRow[] | null;
@@ -468,12 +474,6 @@ export class PolicyAuthoringService {
   async deleteDraft(actor: AuthoringActor, versionId: string): Promise<void> {
     const version = await this.requireDraftVersion(actor, versionId);
 
-    // Must be the creator
-    const versionRow = await tableFrom<PolicyVersionRow>(this.supabase, 'policy_versions')
-      .eq('id', versionId)
-      .eq('enterprise_id', actor.enterprise_id)
-      .single();
-
     // Load the raw row to check created_by
     const rawQ = tableFrom<PolicyVersionRow>(this.supabase, 'policy_versions') as unknown as {
       eq: (col: string, val: string) => unknown;
@@ -520,7 +520,6 @@ export class PolicyAuthoringService {
 
     // suppress unused variable warning
     void version;
-    void versionRow;
   }
 
   // ── Task 9: Rule CRUD ────────────────────────────────────────────────────
@@ -824,7 +823,7 @@ export class PolicyAuthoringService {
   private async fetchEnterpriseUsers(enterpriseId: string): Promise<SatisfiabilityUserRow[]> {
     const q = tableFrom<UserProfileRow>(this.supabase, 'user_profiles');
     const result = await (
-      q.eq('enterprise_id', enterpriseId) as unknown as Promise<{
+      q.select('id, role, is_policy_admin, is_app_admin').eq('enterprise_id', enterpriseId) as unknown as Promise<{
         data: UserProfileRow[] | null;
         error: unknown;
       }>
