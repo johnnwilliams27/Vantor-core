@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vantor Landing v6 — Liquid Glass Sketch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --v-bg-base: #0b1426;
+      --v-bg-deep: #060d1f;
+      --v-teal: #2dd4bf;
+      --v-cyan: #67e8f9;
+      --v-text-1: #ffffff;
+      --v-text-2: #e8edf5;
+      --v-text-3: #c7d0e0;
+      --v-text-4: #9ca3af;
+      --v-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+      /* Glass material tokens */
+      --glass-fill: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+      --glass-fill-teal: linear-gradient(135deg, rgba(45,212,191,0.20), rgba(45,212,191,0.05));
+      --glass-fill-cyan: linear-gradient(135deg, rgba(103,232,249,0.18), rgba(103,232,249,0.04));
+      --glass-border: 1px solid rgba(255,255,255,0.14);
+      --glass-border-teal: 1px solid rgba(103,232,249,0.32);
+      --glass-blur: blur(24px) saturate(180%);
+      --glass-radius: 20px;
+      --glass-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.18),
+        inset 0 -1px 0 rgba(0,0,0,0.25),
+        0 24px 48px -16px rgba(0,0,0,0.55),
+        0 4px 12px rgba(0,0,0,0.22);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* Keyboard-visible focus ring */
+    a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible {
+      outline: 2px solid rgba(103, 232, 249, 0.9);
+      outline-offset: 3px;
+      border-radius: 6px;
+    }
+
+    html, body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-feature-settings: 'cv11', 'ss01', 'ss03';
+      color: var(--v-text-2);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      line-height: 1.5;
+      overflow-x: hidden;
+      background-color: var(--v-bg-base);
+    }
+
+    /* --- Atmospheric background — fixed, refracts through glass surfaces --- */
+    .atmos {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background:
+        radial-gradient(ellipse 60% 50% at 18% 22%, rgba(45,212,191,0.22), transparent 60%),
+        radial-gradient(ellipse 55% 60% at 82% 18%, rgba(103,232,249,0.18), transparent 60%),
+        radial-gradient(ellipse 70% 60% at 50% 75%, rgba(45,212,191,0.14), transparent 65%),
+        radial-gradient(ellipse 50% 50% at 15% 90%, rgba(103,232,249,0.10), transparent 60%),
+        linear-gradient(180deg, #0b1426 0%, #060d1f 100%);
+    }
+    .atmos::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      opacity: 0.06;
+      mix-blend-mode: overlay;
+      pointer-events: none;
+    }
+    /* Slow drift on the atmosphere — adds life without distracting from glass */
+    @keyframes atmosDrift {
+      0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+      50%      { transform: translate3d(-12px, 8px, 0) scale(1.04); }
+    }
+    .atmos { animation: atmosDrift 28s ease-in-out infinite; }
+
+    /* --- Glass material primitive --- */
+    .glass {
+      background: var(--glass-fill);
+      -webkit-backdrop-filter: var(--glass-blur);
+      backdrop-filter: var(--glass-blur);
+      border: var(--glass-border);
+      border-radius: var(--glass-radius);
+      box-shadow: var(--glass-shadow);
+    }
+    .glass-teal {
+      background: var(--glass-fill-teal);
+      -webkit-backdrop-filter: var(--glass-blur);
+      backdrop-filter: var(--glass-blur);
+      border: var(--glass-border-teal);
+      border-radius: var(--glass-radius);
+      box-shadow: var(--glass-shadow);
+    }
+    .glass-cyan {
+      background: var(--glass-fill-cyan);
+      -webkit-backdrop-filter: var(--glass-blur);
+      backdrop-filter: var(--glass-blur);
+      border: 1px solid rgba(165,243,252,0.28);
+      border-radius: var(--glass-radius);
+      box-shadow: var(--glass-shadow);
+    }
+
+    /* --- Navbar --- */
+    .nav {
+      position: fixed;
+      top: 16px; left: 16px; right: 16px;
+      z-index: 50;
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1200px;
+      margin: 0 auto;
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03));
+      -webkit-backdrop-filter: blur(28px) saturate(200%);
+      backdrop-filter: blur(28px) saturate(200%);
+      border: 1px solid rgba(255,255,255,0.14);
+      box-shadow: var(--glass-shadow);
+    }
+    .nav-logo {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--v-text-1);
+    }
+    .nav-links { display: flex; gap: 32px; align-items: center; }
+    .nav-links a {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--v-text-3);
+      text-decoration: none;
+      transition: color 0.24s var(--v-ease-out);
+    }
+    .nav-links a:hover { color: var(--v-text-1); }
+    .nav-cta {
+      padding: 9px 20px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(45,212,191,0.35), rgba(103,232,249,0.25));
+      border: 1px solid rgba(103,232,249,0.45);
+      color: var(--v-text-1) !important;
+      font-weight: 600;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 0 24px rgba(45,212,191,0.25);
+    }
+
+    /* --- Hero --- */
+    .hero {
+      position: relative;
+      padding: 180px 32px 140px;
+      text-align: center;
+      overflow: hidden;
+    }
+    .hero-orb {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 520px;
+      height: 520px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 35% 30%, rgba(255,255,255,0.18), transparent 50%),
+        radial-gradient(circle at 50% 50%, rgba(45,212,191,0.30), rgba(103,232,249,0.10) 50%, transparent 75%);
+      filter: blur(40px);
+      pointer-events: none;
+      animation: orbBreath 8s ease-in-out infinite;
+    }
+    @keyframes orbBreath {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.95; }
+      50%      { transform: translate(-50%, -50%) scale(1.06); opacity: 1; }
+    }
+    .hero-inner {
+      position: relative;
+      z-index: 2;
+      max-width: 920px;
+      margin: 0 auto;
+    }
+    .hero h1 {
+      font-size: clamp(2.5rem, 5vw, 4.25rem);
+      line-height: 1.04;
+      letter-spacing: -0.03em;
+      font-weight: 700;
+      color: var(--v-text-1);
+    }
+    .hero h1 .gradient {
+      background: linear-gradient(90deg, #2dd4bf, #67e8f9);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .hero-sub {
+      max-width: 640px;
+      margin: 26px auto 0;
+      font-size: clamp(1rem, 1.2vw, 1.125rem);
+      line-height: 1.6;
+      color: var(--v-text-3);
+    }
+    .hero-cta {
+      display: flex;
+      gap: 14px;
+      justify-content: center;
+      margin-top: 40px;
+    }
+    .btn-glass-primary {
+      padding: 14px 30px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 14px;
+      text-decoration: none;
+      color: var(--v-text-1);
+      background: linear-gradient(135deg, rgba(45,212,191,0.45), rgba(103,232,249,0.30));
+      border: 1px solid rgba(103,232,249,0.55);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      backdrop-filter: blur(20px) saturate(180%);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.30),
+        inset 0 -1px 0 rgba(0,0,0,0.2),
+        0 8px 24px rgba(45,212,191,0.30),
+        0 0 48px rgba(45,212,191,0.20);
+      transition: transform 0.24s var(--v-ease-out), box-shadow 0.24s var(--v-ease-out);
+    }
+    .btn-glass-primary:hover {
+      transform: translateY(-2px);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.35),
+        inset 0 -1px 0 rgba(0,0,0,0.2),
+        0 12px 32px rgba(45,212,191,0.40),
+        0 0 64px rgba(45,212,191,0.28);
+    }
+    .btn-glass-secondary {
+      padding: 13px 26px;
+      border-radius: 999px;
+      font-weight: 500;
+      font-size: 14px;
+      text-decoration: none;
+      color: var(--v-text-2);
+      background: linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.02));
+      border: 1px solid rgba(255,255,255,0.18);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      backdrop-filter: blur(20px) saturate(180%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 4px 12px rgba(0,0,0,0.2);
+      transition: all 0.24s var(--v-ease-out);
+    }
+    .btn-glass-secondary:hover {
+      background: linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.04));
+      border-color: rgba(255,255,255,0.30);
+    }
+
+    /* --- Section defaults --- */
+    .section { padding: 120px 32px; position: relative; }
+    .section-inner { max-width: 1200px; margin: 0 auto; }
+    .section h2 {
+      font-size: clamp(2rem, 3vw, 2.75rem);
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -0.025em;
+      color: var(--v-text-1);
+      text-align: center;
+      max-width: 780px;
+      margin: 0 auto 18px;
+    }
+    .section-sub {
+      text-align: center;
+      color: var(--v-text-3);
+      max-width: 580px;
+      margin: 0 auto 72px;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    /* --- AI Flow --- */
+    .aiflow .diagram {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 56px 48px;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 56px;
+      align-items: center;
+    }
+    .chips { display: flex; flex-direction: column; gap: 14px; }
+    .chip {
+      padding: 14px 20px;
+      border-radius: 14px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--v-text-1);
+      background: var(--glass-fill-teal);
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
+      backdrop-filter: blur(16px) saturate(180%);
+      border: 1px solid rgba(103,232,249,0.30);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .chip.out {
+      background: var(--glass-fill-cyan);
+      border: 1px solid rgba(165,243,252,0.32);
+      text-align: right;
+    }
+    .ai-orb {
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--v-text-1);
+      font-weight: 700;
+      font-size: 22px;
+      background:
+        radial-gradient(circle at 35% 30%, rgba(255,255,255,0.40), transparent 55%),
+        radial-gradient(circle, rgba(45,212,191,0.55), rgba(103,232,249,0.20) 60%, transparent 80%);
+      border: 1px solid rgba(255,255,255,0.30);
+      -webkit-backdrop-filter: blur(20px) saturate(200%);
+      backdrop-filter: blur(20px) saturate(200%);
+      box-shadow:
+        inset 0 2px 0 rgba(255,255,255,0.40),
+        inset 0 -2px 0 rgba(0,0,0,0.2),
+        0 0 80px rgba(45,212,191,0.50),
+        0 0 160px rgba(103,232,249,0.30);
+      animation: aiOrbPulse 2.8s ease-in-out infinite;
+    }
+    @keyframes aiOrbPulse {
+      0%, 100% { transform: scale(1); }
+      50%      { transform: scale(1.04); }
+    }
+
+    .insight-feed {
+      max-width: 720px;
+      margin: 64px auto 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .insight {
+      padding: 18px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      background: var(--glass-fill);
+      -webkit-backdrop-filter: var(--glass-blur);
+      backdrop-filter: var(--glass-blur);
+      border: var(--glass-border);
+      border-radius: 16px;
+      box-shadow: var(--glass-shadow);
+    }
+    .insight-text {
+      font-size: 14px;
+      color: var(--v-text-2);
+      font-weight: 500;
+    }
+    .approve-pill {
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: #0a1628;
+      background: linear-gradient(135deg, #2dd4bf, #67e8f9);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.40), 0 4px 16px rgba(45,212,191,0.30);
+      cursor: pointer;
+      border: none;
+    }
+
+    .steps {
+      max-width: 980px;
+      margin: 96px auto 0;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+    .step {
+      padding: 24px 22px;
+      background: var(--glass-fill);
+      -webkit-backdrop-filter: var(--glass-blur);
+      backdrop-filter: var(--glass-blur);
+      border: var(--glass-border);
+      border-radius: 16px;
+      box-shadow: var(--glass-shadow);
+    }
+    .step-num {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      color: var(--v-cyan);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .step-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--v-text-1);
+      margin-bottom: 6px;
+    }
+    .step-body {
+      font-size: 13px;
+      line-height: 1.55;
+      color: var(--v-text-3);
+    }
+
+    /* --- Capability Grid --- */
+    .cap-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    .cap-card {
+      padding: 32px 28px;
+      background: var(--glass-fill);
+      -webkit-backdrop-filter: var(--glass-blur);
+      backdrop-filter: var(--glass-blur);
+      border: var(--glass-border);
+      border-radius: var(--glass-radius);
+      box-shadow: var(--glass-shadow);
+      transition: transform 0.32s var(--v-ease-out), border-color 0.32s var(--v-ease-out);
+    }
+    .cap-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(103,232,249,0.40);
+    }
+    .cap-card h3 {
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: var(--v-text-1);
+      margin-bottom: 16px;
+    }
+    .cap-card ul { list-style: none; }
+    .cap-card li {
+      padding: 8px 0;
+      font-size: 13.5px;
+      color: var(--v-text-3);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .cap-card li::before {
+      content: '';
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--v-cyan);
+      box-shadow: 0 0 8px rgba(103,232,249,0.7);
+      flex-shrink: 0;
+    }
+
+    /* --- Carousel (simplified glass card) --- */
+    .carousel-stage {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 56px;
+      background: var(--glass-fill);
+      -webkit-backdrop-filter: var(--glass-blur);
+      backdrop-filter: var(--glass-blur);
+      border: var(--glass-border);
+      border-radius: 24px;
+      box-shadow: var(--glass-shadow);
+      display: grid;
+      grid-template-columns: 1fr 1.2fr;
+      gap: 56px;
+      align-items: center;
+    }
+    .carousel-copy h3 {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--v-text-1);
+      letter-spacing: -0.02em;
+      margin-bottom: 14px;
+    }
+    .carousel-copy p {
+      font-size: 15px;
+      color: var(--v-text-3);
+      line-height: 1.65;
+      margin-bottom: 24px;
+    }
+    .carousel-screenshot {
+      aspect-ratio: 4/3;
+      border-radius: 16px;
+      background:
+        radial-gradient(circle at 30% 25%, rgba(45,212,191,0.20), transparent 60%),
+        linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.01));
+      border: 1px solid rgba(255,255,255,0.10);
+      box-shadow: 0 24px 48px -16px rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--v-text-4);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .slide-dots {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 32px;
+    }
+    .slide-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.18);
+      border: none;
+      cursor: pointer;
+    }
+    .slide-dot.active {
+      background: var(--v-cyan);
+      box-shadow: 0 0 12px rgba(103,232,249,0.6);
+    }
+
+    /* --- Trust band --- */
+    .trust .trust-grid {
+      max-width: 960px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+    .trust-card {
+      padding: 28px 24px;
+      background: var(--glass-fill);
+      -webkit-backdrop-filter: var(--glass-blur);
+      backdrop-filter: var(--glass-blur);
+      border: var(--glass-border);
+      border-radius: 18px;
+      box-shadow: var(--glass-shadow);
+    }
+    .trust-card h4 {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--v-text-1);
+      margin-bottom: 8px;
+    }
+    .trust-card p {
+      font-size: 13px;
+      color: var(--v-text-3);
+      line-height: 1.55;
+    }
+
+    /* --- Contact --- */
+    .contact-form {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 40px 36px;
+      background: var(--glass-fill);
+      -webkit-backdrop-filter: var(--glass-blur);
+      backdrop-filter: var(--glass-blur);
+      border: var(--glass-border);
+      border-radius: var(--glass-radius);
+      box-shadow: var(--glass-shadow);
+    }
+    .form-group { margin-bottom: 18px; }
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--v-text-4);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .form-input {
+      width: 100%;
+      padding: 13px 16px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      color: var(--v-text-1);
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color 0.24s var(--v-ease-out);
+    }
+    .form-input:focus { border-color: rgba(103,232,249,0.5); }
+    .form-input:focus-visible { outline: 2px solid rgba(103,232,249,0.85); outline-offset: 2px; }
+    .form-submit {
+      width: 100%;
+      padding: 14px;
+      margin-top: 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(103,232,249,0.55);
+      background: linear-gradient(135deg, rgba(45,212,191,0.50), rgba(103,232,249,0.35));
+      color: var(--v-text-1);
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.30),
+        0 8px 24px rgba(45,212,191,0.30);
+      transition: transform 0.24s var(--v-ease-out);
+    }
+    .form-submit:hover { transform: translateY(-1px); }
+
+    /* --- Footer --- */
+    .footer {
+      padding: 56px 32px 80px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .footer-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--v-text-4);
+    }
+    .footer-inner > div { display: flex; gap: 24px; }
+    .footer a {
+      color: var(--v-text-4);
+      text-decoration: none;
+      transition: color 0.24s var(--v-ease-out);
+    }
+    .footer a:hover { color: var(--v-text-2); }
+
+    /* --- Compare bar --- */
+    .compare-bar {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      z-index: 100;
+      padding: 14px 20px;
+      background: var(--glass-fill);
+      -webkit-backdrop-filter: var(--glass-blur);
+      backdrop-filter: var(--glass-blur);
+      border: var(--glass-border);
+      border-radius: 14px;
+      box-shadow: var(--glass-shadow);
+      font-size: 11px;
+      color: var(--v-text-3);
+      max-width: 340px;
+      line-height: 1.6;
+    }
+    .compare-bar strong {
+      display: block;
+      color: var(--v-cyan);
+      margin-bottom: 6px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      .atmos, .hero-orb, .ai-orb { animation: none; }
+    }
+
+    /* Mobile */
+    @media (max-width: 900px) {
+      .nav { padding: 12px 20px; }
+      .nav-links a:not(.nav-cta) { display: none; }
+      .hero { padding: 140px 22px 100px; }
+      .section { padding: 80px 22px; }
+      .aiflow .diagram { grid-template-columns: 1fr; gap: 32px; padding: 36px 24px; }
+      .chip.out { text-align: left; }
+      .ai-orb { width: 160px; height: 160px; font-size: 18px; margin: 0 auto; }
+      .steps { grid-template-columns: 1fr; }
+      .cap-grid { grid-template-columns: 1fr; }
+      .carousel-stage { grid-template-columns: 1fr; padding: 36px 28px; gap: 32px; }
+      .trust .trust-grid { grid-template-columns: 1fr; }
+      .footer-inner { flex-direction: column; gap: 14px; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="atmos" aria-hidden="true"></div>
+
+<!-- NAVBAR -->
+<nav class="nav">
+  <div class="nav-logo">Vantor</div>
+  <div class="nav-links">
+    <a href="#platform">Platform</a>
+    <a href="#ai-flow">AI Flow</a>
+    <a href="#security">Security</a>
+    <a href="#contact">Contact</a>
+    <a href="#" class="nav-cta">Get Started</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-orb" aria-hidden="true"></div>
+  <div class="hero-inner">
+    <h1>
+      Put Your Idle Treasury<br>
+      <span class="gradient">Reserves to Work</span>
+    </h1>
+    <p class="hero-sub">
+      Vantor provides full visibility across your cash and stablecoin reserves. Powerful AI insights assess upcoming obligations while surfacing yield opportunities and hedging FX exposure — always with a human in the loop.
+    </p>
+    <div class="hero-cta">
+      <a href="#" class="btn-glass-primary">Get Started Free</a>
+      <a href="#platform" class="btn-glass-secondary">Explore Platform</a>
+    </div>
+  </div>
+</section>
+
+<!-- AI FLOW -->
+<section class="section aiflow" id="ai-flow">
+  <div class="section-inner">
+    <h2>Agentic intelligence, human control</h2>
+    <p class="section-sub">Vantor's AI orchestration layer monitors your treasury in real-time and queues actions for your review. You control what executes and when.</p>
+
+    <div class="diagram glass">
+      <div class="chips">
+        <div class="chip">Upcoming AR / AP</div>
+        <div class="chip">Cash · Banks + Wallets</div>
+        <div class="chip">Treasury Policy</div>
+        <div class="chip">FX Exposure</div>
+      </div>
+      <div class="ai-orb">Vantor<br>AI</div>
+      <div class="chips">
+        <div class="chip out">Spiko USD</div>
+        <div class="chip out">Circle USYC</div>
+        <div class="chip out">FX Rebalance</div>
+        <div class="chip out">Payments</div>
+      </div>
+    </div>
+
+    <div class="insight-feed">
+      <div class="insight">
+        <span class="insight-text">$2.3M idle USDC → Spiko USD · +4.9% APY</span>
+        <button class="approve-pill">Approve?</button>
+      </div>
+      <div class="insight">
+        <span class="insight-text">€1.8M payroll due → convert USD to EUR</span>
+        <button class="approve-pill">Approve?</button>
+      </div>
+      <div class="insight">
+        <span class="insight-text">$500K vendor payment → withdraw Circle USYC</span>
+        <button class="approve-pill">Approve?</button>
+      </div>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01 · Analyze</div>
+        <div class="step-title">Continuous monitoring</div>
+        <div class="step-body">Real-time reads across cash, wallets, AR/AP, and FX exposure.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">02 · Propose</div>
+        <div class="step-title">Insights queued</div>
+        <div class="step-body">AI surfaces yield, hedging, and payment actions with reasoning.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">03 · Approve</div>
+        <div class="step-title">Human in the loop</div>
+        <div class="step-body">Every action requires explicit approval — no auto-execution.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">04 · Execute</div>
+        <div class="step-title">Full audit trail</div>
+        <div class="step-body">Execute actions with full audit trail on every step.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CAPABILITY GRID -->
+<section class="section" id="platform">
+  <div class="section-inner">
+    <h2>Modern treasury management — powered by AI</h2>
+    <p class="section-sub">Six surfaces. One platform. Built for institutional teams managing stablecoin reserves alongside cash.</p>
+
+    <div class="cap-grid">
+      <div class="cap-card">
+        <h3>Command Center</h3>
+        <ul>
+          <li>Cash Visibility</li>
+          <li>AI Insights</li>
+          <li>Asset Management</li>
+          <li>AI Agent Chat</li>
+        </ul>
+      </div>
+      <div class="cap-card">
+        <h3>Treasury</h3>
+        <ul>
+          <li>AI Treasury Rules</li>
+          <li>Payments Operations</li>
+          <li>Approval Workflows</li>
+          <li>FX Rebalancing</li>
+        </ul>
+      </div>
+      <div class="cap-card">
+        <h3>Yield</h3>
+        <ul>
+          <li>Tokenized MMFs</li>
+          <li>DeFi Yield Protocols</li>
+          <li>AI Risk Management</li>
+          <li>AI Yield Insights</li>
+        </ul>
+      </div>
+      <div class="cap-card">
+        <h3>Compliance</h3>
+        <ul>
+          <li>Sanctions Screening</li>
+          <li>Transaction Monitoring</li>
+          <li>Know Your Transaction</li>
+          <li>Travel Rule Enforcement</li>
+        </ul>
+      </div>
+      <div class="cap-card">
+        <h3>Connect</h3>
+        <ul>
+          <li>Bank Integrations</li>
+          <li>Wallet Integrations</li>
+          <li>ERP Integrations</li>
+          <li>Slack Connector</li>
+        </ul>
+      </div>
+      <div class="cap-card">
+        <h3>Data</h3>
+        <ul>
+          <li>AI Forecasting</li>
+          <li>Advanced Analytics</li>
+          <li>Audit Trail</li>
+          <li>Detailed Reporting</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CAROUSEL -->
+<section class="section">
+  <div class="section-inner">
+    <h2>See it in action</h2>
+    <p class="section-sub">A glance at Command Center, Treasury, and Yield — the surfaces your team will live in.</p>
+
+    <div class="carousel-stage">
+      <div class="carousel-copy">
+        <h3>Command Center</h3>
+        <p>One screen for cash visibility, AI insights, and asset management — across every bank, wallet, and chain you operate on.</p>
+        <a href="#" class="btn-glass-secondary">Explore Command Center →</a>
+      </div>
+      <div class="carousel-screenshot">command-center · screenshot</div>
+    </div>
+    <div class="slide-dots">
+      <button class="slide-dot active" aria-label="Slide 1"></button>
+      <button class="slide-dot" aria-label="Slide 2"></button>
+      <button class="slide-dot" aria-label="Slide 3"></button>
+    </div>
+  </div>
+</section>
+
+<!-- TRUST BAND -->
+<section class="section trust" id="security">
+  <div class="section-inner" style="max-width: 960px;">
+    <h2>Built for institutional treasury teams</h2>
+    <p class="section-sub">The security posture and audit trail your finance, compliance, and security teams expect.</p>
+
+    <div class="trust-grid">
+      <div class="trust-card">
+        <h4>AML & Sanctions Screening</h4>
+        <p>Continuous screening of every counterparty against global watchlists.</p>
+      </div>
+      <div class="trust-card">
+        <h4>Transaction Monitoring</h4>
+        <p>Real-time anomaly detection on every payment, swap, and transfer.</p>
+      </div>
+      <div class="trust-card">
+        <h4>Audit Logging & Explainability</h4>
+        <p>Every AI insight, approval, and execution captured with full reasoning.</p>
+      </div>
+      <div class="trust-card">
+        <h4>Role-Based Permissions</h4>
+        <p>Fine-grained roles for treasury, compliance, and finance operators.</p>
+      </div>
+      <div class="trust-card">
+        <h4>Approval Workflows</h4>
+        <p>Multi-party approval for payments, withdrawals, and policy changes.</p>
+      </div>
+      <div class="trust-card">
+        <h4>Enterprise-Grade Security</h4>
+        <p>End-to-end encryption, hardened infrastructure, and continuous monitoring.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section class="section" id="contact">
+  <div class="section-inner">
+    <h2>Get in touch</h2>
+    <p class="section-sub">Talk to the team about bringing Vantor to your treasury operations.</p>
+
+    <form class="contact-form">
+      <div class="form-group">
+        <label class="form-label" for="name">Name</label>
+        <input class="form-input" id="name" type="text" placeholder="Your name">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="email">Work email</label>
+        <input class="form-input" id="email" type="email" placeholder="you@company.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="msg">Message</label>
+        <input class="form-input" id="msg" type="text" placeholder="What are you trying to do with Vantor?">
+      </div>
+      <button class="form-submit" type="button">Talk to the team</button>
+    </form>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div>© 2026 Vantor Treasury, Inc.</div>
+    <div>
+      <a href="#">Privacy</a>
+      <a href="#">Terms</a>
+      <a href="#">Docs</a>
+    </div>
+  </div>
+</footer>
+
+<!-- COMPARE BAR -->
+<div class="compare-bar">
+  <strong>v6 — Liquid Glass sketch</strong>
+  • CSS-only glass-inspired aesthetic<br>
+  • backdrop-filter blur+saturate surfaces<br>
+  • Atmospheric teal/cyan background<br>
+  • All cards/nav/buttons frosted glass<br>
+  • Same locked copy as v5.5<br>
+  • For comparison only — not committed
+</div>
+
+</body>
+</html>

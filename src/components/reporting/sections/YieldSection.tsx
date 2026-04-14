@@ -40,11 +40,11 @@ export function YieldSection({ data }: { data: YieldTransaction[] }) {
         <div className="flex flex-wrap gap-3">
           <div className="rounded-lg border bg-muted/30 px-3 py-2">
             <div className="text-xs text-muted-foreground">Total Deposited</div>
-            <div className="text-sm font-bold">{formatCurrency(String(summary.totalDeposited))}</div>
+            <div className="text-sm font-bold tabular-nums">{formatCurrency(String(summary.totalDeposited))}</div>
           </div>
           <div className="rounded-lg border bg-muted/30 px-3 py-2">
             <div className="text-xs text-muted-foreground">Total Withdrawn</div>
-            <div className="text-sm font-bold">{formatCurrency(String(summary.totalWithdrawn))}</div>
+            <div className="text-sm font-bold tabular-nums">{formatCurrency(String(summary.totalWithdrawn))}</div>
           </div>
           {Object.entries(summary.byProtocol).map(([protocol, count]) => (
             <div key={protocol} className="rounded-lg border bg-muted/30 px-3 py-2">
@@ -85,7 +85,7 @@ export function YieldSection({ data }: { data: YieldTransaction[] }) {
                   <td className="px-3 py-2 font-mono">{(tx.executed_at ?? tx.created_at).split('T')[0]}</td>
                   <td className="px-3 py-2 capitalize">{tx.tx_type}</td>
                   <td className="px-3 py-2">{getVenueDisplayName(tx.protocol)}</td>
-                  <td className="px-3 py-2 font-semibold">{formatCurrency(tx.amount)}</td>
+                  <td className="px-3 py-2 font-semibold tabular-nums">{formatCurrency(tx.amount)}</td>
                   <td className="px-3 py-2">{tx.underlying_token}</td>
                   <td className="px-3 py-2 capitalize">{tx.chain}</td>
                   <td className="px-3 py-2 capitalize">{tx.status}</td>

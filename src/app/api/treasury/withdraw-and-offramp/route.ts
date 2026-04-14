@@ -12,14 +12,12 @@ import { z } from 'zod';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 import type { YieldProtocolId } from '@/lib/yield/interface';
 import {
-  PolicyGateService,
+  buildGateService,
   mapRampToMovement,
   GateError,
   mapGateErrorToHttp,
   type GateActor,
 } from '@/lib/policy/gate';
-import { buildProductionEvaluate } from '@/lib/policy/gate/production-wiring';
-import { ApprovalWorkflowService } from '@/lib/policy/approvals';
 import { markPolicyEvaluationExecuted } from '@/lib/policy/persistence/persist-evaluation';
 
 const schema = z.object({
@@ -132,10 +130,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: fiatInsertErr.message }, { status: 500 });
   }
 
-  const gateService = new PolicyGateService(supabase, {
-    evaluate: buildProductionEvaluate(supabase),
-    approvalService: new ApprovalWorkflowService(supabase),
-  });
+  const gateService = buildGateService(supabase);
   const actor: GateActor = {
     user_id: session.user.id,
     role: session.user.role as GateActor['role'],

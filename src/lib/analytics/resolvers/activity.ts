@@ -33,7 +33,7 @@ export async function resolveRampActivity(ctx: ResolverContext): Promise<ViewRes
 export async function resolveTransferVolume(ctx: ResolverContext): Promise<ViewResult> {
   let query = ctx.supabase
     .from('transfers')
-    .select('*')
+    .select('id, wallet_id, chain, amount_usd, status, tx_hash, created_at, direction, from_address, to_address')
     .eq('enterprise_id', ctx.enterpriseId)
     .gte('created_at', ctx.from)
     .lte('created_at', ctx.to + 'T23:59:59Z')
@@ -69,7 +69,7 @@ export async function resolveTransferVolume(ctx: ResolverContext): Promise<ViewR
 export async function resolveSwapActivity(ctx: ResolverContext): Promise<ViewResult> {
   let query = ctx.supabase
     .from('bridge_transfers')
-    .select('*')
+    .select('id, wallet_id, source_chain, destination_chain, token_in, token_out, amount_usd, status, tx_hash, created_at')
     .eq('enterprise_id', ctx.enterpriseId)
     .gte('created_at', ctx.from)
     .lte('created_at', ctx.to + 'T23:59:59Z')
@@ -81,7 +81,7 @@ export async function resolveSwapActivity(ctx: ResolverContext): Promise<ViewRes
   }
   if (ctx.filters.chain) {
     const chain = Array.isArray(ctx.filters.chain) ? ctx.filters.chain : [ctx.filters.chain];
-    query = query.in('chain', chain);
+    query = query.in('source_chain', chain).in('destination_chain', chain);
   }
 
   const { data } = await query;

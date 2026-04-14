@@ -69,11 +69,22 @@ export async function GET(
     const transactionCount =
       (stablecoinRes.count ?? 0) + (fiatRes.count ?? 0) + (yieldRes.count ?? 0);
 
+    // Fetch admin email
+    const { data: admins, error: adminError } = await supabase
+      .from('user_profiles')
+      .select('email')
+      .eq('enterprise_id', id)
+      .eq('role', 'enterprise_admin')
+      .limit(1);
+
+    const adminEmail = adminError ? undefined : (admins?.[0]?.email);
+
     return NextResponse.json({
       data: {
         ...enterprise,
         user_count: userCount ?? 0,
         transaction_count: transactionCount ?? 0,
+        admin_email: adminEmail,
       },
     });
   } catch (err) {

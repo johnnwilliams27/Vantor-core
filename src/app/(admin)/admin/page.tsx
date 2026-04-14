@@ -18,40 +18,38 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { CardSpinner } from '@/components/ui/spinner';
+import { Badge } from '@/components/ui/badge';
 import { InviteUserForm } from '@/components/admin/InviteUserForm';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { useTableFilter } from '@/hooks/useTableFilter';
 
+// Migrated to semantic Badge variants (style guide Stage 3e).
 function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    active: 'bg-emerald-500/15 text-emerald-400',
-    frozen: 'bg-blue-500/15 text-blue-400',
-    suspended: 'bg-red-500/15 text-red-400',
-    pending_kyc: 'bg-amber-500/15 text-amber-400',
+  const variants: Record<string, string> = {
+    active: 'active',
+    frozen: 'info-blue',
+    suspended: 'failed',
+    pending_kyc: 'pending',
   };
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${colors[status] ?? 'bg-gray-500/15 text-gray-400'}`}
-    >
+    <Badge variant={(variants[status] ?? 'inactive') as any}>
       {status.replace('_', ' ')}
-    </span>
+    </Badge>
   );
 }
 
 function KycBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    verified: 'bg-emerald-500/15 text-emerald-400',
-    pending: 'bg-amber-500/15 text-amber-400',
-    rejected: 'bg-red-500/15 text-red-400',
-    none: 'bg-gray-500/15 text-gray-400',
+  const variants: Record<string, string> = {
+    verified: 'active',
+    pending: 'pending',
+    rejected: 'failed',
+    none: 'inactive',
   };
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${colors[status] ?? 'bg-gray-500/15 text-gray-400'}`}
-    >
+    <Badge variant={(variants[status] ?? 'inactive') as any}>
       {status}
-    </span>
+    </Badge>
   );
 }
 
@@ -155,6 +153,8 @@ function EnterprisesTable({ data }: { data: EnterpriseRow[] }) {
                 <th className="pb-3 pr-4 font-medium">Name</th>
                 <th className="pb-3 pr-4 font-medium">Status</th>
                 <th className="pb-3 pr-4 font-medium">KYC</th>
+                <th className="pb-3 pr-4 font-medium">KYB</th>
+                <th className="pb-3 pr-4 font-medium">Admin Email</th>
                 <th className="pb-3 pr-4 font-medium">Users</th>
                 <th className="pb-3 pr-4 font-medium">Created</th>
                 <th className="pb-3 font-medium"></th>
@@ -169,6 +169,14 @@ function EnterprisesTable({ data }: { data: EnterpriseRow[] }) {
                   </td>
                   <td className="py-3 pr-4">
                     <KycBadge status={ent.kyc_status} />
+                  </td>
+                  <td className="py-3 pr-4">
+                    <Badge variant={ent.kyc_status === 'verified' ? 'active' : 'inactive'}>
+                      {ent.kyc_status === 'verified' ? 'Yes' : 'No'}
+                    </Badge>
+                  </td>
+                  <td className="py-3 pr-4 text-sm text-muted-foreground">
+                    {ent.admin_email ?? '—'}
                   </td>
                   <td className="py-3 pr-4">{ent.user_count}</td>
                   <td className="py-3 pr-4 text-muted-foreground">

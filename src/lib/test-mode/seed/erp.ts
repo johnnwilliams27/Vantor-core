@@ -34,14 +34,14 @@ export async function seedErp(ctx: SeedContext): Promise<ErpIds> {
   })).toString('base64');
 
   // Insert 2 ERP configs
-  const { data: erps } = await supabase
+  const { data: erps, error: ecErr } = await supabase
     .from('erp_configurations')
     .insert([
       { user_id: userId, enterprise_id: enterpriseId, provider: 'sap', label: 'SAP S/4HANA', credentials: erpCreds, is_active: true, last_synced: now },
       { user_id: userId, enterprise_id: enterpriseId, provider: 'oracle', label: 'Oracle NetSuite', credentials: erpCreds, is_active: true, last_synced: now },
     ])
     .select('id, provider');
-
+  if (ecErr) throw new Error(`seedErp: erp_configurations insert failed: ${ecErr.message}`);
   if (!erps?.length) return { erpConfigIds: [], vendorIds: [], invoiceIds: [] };
 
   const sapId = erps.find(e => e.provider === 'sap')!.id;
@@ -59,11 +59,11 @@ export async function seedErp(ctx: SeedContext): Promise<ErpIds> {
     synced_at: now,
   }));
 
-  const { data: vendors } = await supabase
+  const { data: vendors, error: evErr } = await supabase
     .from('erp_vendors')
     .insert(vendorRows)
     .select('id, external_id, erp_config_id');
-
+  if (evErr) throw new Error(`seedErp: erp_vendors insert failed: ${evErr.message}`);
   if (!vendors?.length) return { erpConfigIds: erps.map(e => e.id), vendorIds: [], invoiceIds: [] };
 
   // Generate 18 invoices across 90-day span
@@ -145,28 +145,32 @@ export async function seedErp(ctx: SeedContext): Promise<ErpIds> {
     };
   });
 
-  const { data: invoices } = await supabase
+  const { data: invoices, error: invErr } = await supabase
     .from('invoices')
     .insert([...invoiceRows, ...latamInvoiceRows])
     .select('id, erp_config_id, amount, token, status');
+  if (invErr) throw new Error(`seedErp: invoices insert failed: ${invErr.message}`);
 
-  // GL postings for paid invoices
+  // Bill payments for paid invoices
   const paidInvoices = invoices?.filter(inv => inv.status === 'paid') || [];
   if (paidInvoices.length) {
-    const glRows = paidInvoices.map(inv => ({
+    const paymentRows = paidInvoices.map((inv, i) => ({
       user_id: userId,
       enterprise_id: enterpriseId,
       erp_config_id: inv.erp_config_id,
-      invoice_id: inv.id,
-      external_gl_id: `GL-TEST-${inv.id.slice(0, 8)}`,
+      invoice_id: `SEED-BILL-${inv.id.slice(0, 8)}`,
+      external_payment_id: `SEED-PMT-${inv.id.slice(0, 8)}`,
+      external_tx_hash: `0xseed${i.toString().padStart(60, '0')}`,
       amount: inv.amount,
-      token: inv.token,
-      gl_account: pick(['2000-AP', '5000-OPEX', '6000-SGA', '7000-COGS']),
-      posted_at: daysAgo(Math.floor(rand(5, 80))),
-      status: 'posted',
+      currency: 'USD',
+      payment_date: daysAgo(Math.floor(rand(5, 80))).slice(0, 10),
+      reference: `seed-${i}`,
+      status: 'recorded',
+      response_data: { seeded: true },
     }));
 
-    await supabase.from('gl_postings').insert(glRows);
+    const { error } = await supabase.from('bill_payments').insert(paymentRows);
+    if (error) throw new Error(`seedErp: bill_payments insert failed: ${error.message}`);
   }
 
   return {

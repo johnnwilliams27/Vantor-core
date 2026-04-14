@@ -1,7 +1,10 @@
 'use client';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { EmptyStateCard } from '@/components/ui/empty-state-card';
+import { cn } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
@@ -19,6 +22,7 @@ import { usePendingApprovals } from '@/hooks/useScheduledOperations';
 import { useSession } from 'next-auth/react';
 import { hasRole } from '@/lib/auth/rbac';
 import { CardError, CardSkeleton } from '@/components/ui/spinner';
+import { StatusDot } from '@/components/ui/status-dot';
 import {
   BrainCircuit,
   ArrowUpFromLine,
@@ -113,7 +117,7 @@ function CompactScheduledOp({
     <div className="py-3 border-b border-border/50 last:border-b-0">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
-          <span className="text-[11px] font-medium text-muted-foreground shrink-0 w-10">{typeLabel}</span>
+          <span className="text-2xs font-medium text-muted-foreground shrink-0 w-10">{typeLabel}</span>
           <p className="text-sm text-foreground truncate">
             {scheduledOpSummary(op)}
           </p>
@@ -126,11 +130,14 @@ function CompactScheduledOp({
               : op.status === 'cancelled' ? 'text-red-600 dark:text-red-400'
               : 'text-muted-foreground'
             }`}>
-              <span className={`h-1.5 w-1.5 rounded-full ${
-                op.status === 'completed' ? 'bg-green-500'
-                : op.status === 'cancelled' ? 'bg-red-500'
-                : 'bg-gray-400'
-              }`} />
+              <StatusDot
+                variant={
+                  op.status === 'completed' ? 'active'
+                  : op.status === 'cancelled' ? 'failed'
+                  : 'inactive'
+                }
+                size="xs"
+              />
               {op.status === 'completed'
                 ? 'Approved'
                 : op.status === 'cancelled'
@@ -242,15 +249,18 @@ function CompactRec({ rec }: { rec: AiRecommendation }) {
                       ? 'text-muted-foreground'
                       : 'text-amber-600 dark:text-amber-400'
               }`}>
-                <span className={`h-1.5 w-1.5 rounded-full ${
-                  rec.status === 'approved' || rec.status === 'executed' || rec.status === 'auto_executed'
-                    ? 'bg-green-500'
-                    : rec.status === 'rejected'
-                      ? 'bg-red-500'
-                      : rec.status === 'expired'
-                        ? 'bg-gray-400'
-                        : 'bg-amber-500'
-                }`} />
+                <StatusDot
+                  variant={
+                    rec.status === 'approved' || rec.status === 'executed' || rec.status === 'auto_executed'
+                      ? 'active'
+                      : rec.status === 'rejected'
+                        ? 'failed'
+                        : rec.status === 'expired'
+                          ? 'inactive'
+                          : 'pending'
+                  }
+                  size="xs"
+                />
                 {rec.status === 'pending_approval' ? 'Pending' : rec.status.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
               </span>
             )}
@@ -315,7 +325,7 @@ function CompactRec({ rec }: { rec: AiRecommendation }) {
               </div>
             )}
 
-            <div className="text-[10px] text-muted-foreground">
+            <div className="text-3xs text-muted-foreground">
               {new Date(rec.created_at).toLocaleDateString()} {new Date(rec.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' })}
             </div>
           </div>
@@ -448,9 +458,18 @@ export function RecommendationsCard() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">
-            No AI insights yet. <a href="/treasury?tab=rules" className="text-primary hover:underline">Configure treasury rules →</a>
-          </div>
+          <EmptyStateCard
+            icon={<BrainCircuit />}
+            iconVariant="special"
+            title="No AI insights yet"
+            helper="Configure a policy and Vantor AI will start surfacing rebalancing opportunities."
+            cta={
+              <Link href="/policy" className={cn(buttonVariants({ size: 'sm' }))}>
+                Configure policy
+              </Link>
+            }
+            className="h-48 border-0 shadow-none bg-transparent"
+          />
         </CardContent>
       </Card>
     );

@@ -44,10 +44,11 @@ export async function seedTransactions(ctx: SeedContext, walletIds: WalletIds, i
     }
   }
 
-  const { data: txns } = await supabase
+  const { data: txns, error: txErr } = await supabase
     .from('transactions')
     .insert(txnRows)
     .select('id, wallet_id, chain, direction');
+  if (txErr) throw new Error(`seedTransactions: transactions insert failed: ${txErr.message}`);
 
   // Generate transfers
   const transferRows: any[] = [];
@@ -73,7 +74,7 @@ export async function seedTransactions(ctx: SeedContext, walletIds: WalletIds, i
     });
   }
 
-  // 15 ad-hoc completed transfers
+  // 15 ad-hoc transfers (first is always failed to guarantee transfer_attempts has data)
   for (let i = 0; i < 15; i++) {
     const wallet = pick([...walletIds.ethWallets, ...walletIds.solWallets]);
     const isEth = walletIds.ethWallets.some(w => w.id === wallet.id);
@@ -85,7 +86,7 @@ export async function seedTransactions(ctx: SeedContext, walletIds: WalletIds, i
       chain: isEth ? 'ethereum' : 'solana',
       token: pick(['USDC', 'USDT']),
       amount: rand(3000, 80000).toFixed(2),
-      status: pick(['completed', 'completed', 'completed', 'processing', 'failed']),
+      status: i === 0 ? 'failed' : pick(['completed', 'completed', 'completed', 'processing', 'failed']),
       tx_hash: isEth ? ethHash() : solHash(),
       executed_at: daysAgo(randInt(1, 75)),
       created_at: daysAgo(randInt(5, 80)),
@@ -109,24 +110,44 @@ export async function seedTransactions(ctx: SeedContext, walletIds: WalletIds, i
     });
   }
 
-  const { data: transfers } = await supabase
+  const { error: trErr } = await supabase
     .from('transfers')
-    .insert(transferRows)
-    .select('id, status');
+    .insert(transferRows);
+  if (trErr) throw new Error(`seedTransactions: transfers insert failed: ${trErr.message}`);
 
   // Transfer attempts for failed transfers
-  const failedTransfers = transfers?.filter(p => p.status === 'failed') || [];
-  if (failedTransfers.length) {
+  // Verify transfers were inserted
+  const { count: totalTxfers } = await supabase
+    .from('transfers')
+    .select('*', { count: 'exact', head: true })
+    .eq('enterprise_id', ctx.enterpriseId);
+
+  // Query failed transfers directly from table
+  const { data: failedTransfers, error: ftErr } = await supabase
+    .from('transfers')
+    .select('id, status')
+    .eq('enterprise_id', ctx.enterpriseId)
+    .eq('status', 'failed');
+  if (ftErr) throw new Error(`seedTransactions: failed transfers query failed: ${ftErr.message}`);
+
+  if (failedTransfers && failedTransfers.length > 0) {
     const attemptRows = failedTransfers.flatMap(p => [
-      { transfer_id: p.id, attempt_no: 1, status: 'failed', error: 'Insufficient gas', attempted_at: daysAgo(randInt(2, 10)) },
-      { transfer_id: p.id, attempt_no: 2, status: 'failed', error: 'Nonce too low', attempted_at: daysAgo(randInt(1, 5)) },
+      { transfer_id: p.id, enterprise_id: ctx.enterpriseId, attempt_no: 1, status: 'failed', error: 'Insufficient gas', attempted_at: daysAgo(randInt(2, 10)) },
+      { transfer_id: p.id, enterprise_id: ctx.enterpriseId, attempt_no: 2, status: 'failed', error: 'Nonce too low', attempted_at: daysAgo(randInt(1, 5)) },
     ]);
-    await supabase.from('transfer_attempts').insert(attemptRows);
+    const { error: taErr } = await supabase.from('transfer_attempts').insert(attemptRows);
+    if (taErr) throw new Error(`seedTransactions: transfer_attempts insert failed: ${taErr.message}`);
   }
+
+  // Get all transfer IDs for return value
+  const { data: allTransfers } = await supabase
+    .from('transfers')
+    .select('id')
+    .eq('enterprise_id', ctx.enterpriseId);
 
   return {
     transactionIds: txns?.map(t => t.id) || [],
-    transferIds: transfers?.map(p => p.id) || [],
+    transferIds: allTransfers?.map(p => p.id) || [],
   };
 }
 
@@ -142,7 +163,9 @@ export async function seedFiatPayments(ctx: SeedContext, bankAccountIds: string[
     { name: 'HSBC Business Banking', routing: '022000020' },
   ];
 
-  const currencies = ['USD', 'EUR', 'GBP', 'BRL', 'MXN'];
+  // fiat_payments.currency CHECK constraint (migration 0022) restricts to
+  // these three. LATAM currencies live on fiat_transactions only.
+  const currencies = ['USD', 'EUR', 'GBP'];
 
   const rows: any[] = [];
 
@@ -216,5 +239,6 @@ export async function seedFiatPayments(ctx: SeedContext, bankAccountIds: string[
     });
   }
 
-  await supabase.from('fiat_payments').insert(rows);
+  const { error: fpErr } = await supabase.from('fiat_payments').insert(rows);
+  if (fpErr) throw new Error(`seedFiatPayments: fiat_payments insert failed: ${fpErr.message}`);
 }

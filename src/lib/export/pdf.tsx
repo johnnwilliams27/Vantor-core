@@ -1,72 +1,7 @@
 import React from 'react';
-import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import { Document, Image, Page, Text, View } from '@react-pdf/renderer';
+import { PDF_COLORS, PDF_LOGO_SRC, PDF_STYLES } from './pdf-tokens';
 import type { ExportColumn } from './index';
-
-const styles = StyleSheet.create({
-  page: {
-    fontFamily: 'Helvetica',
-    fontSize: 9,
-    padding: 32,
-    color: '#1a1a2e',
-  },
-  header: {
-    marginBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-    paddingBottom: 8,
-  },
-  title: {
-    fontSize: 16,
-    fontFamily: 'Helvetica-Bold',
-    color: '#0f172a',
-    marginBottom: 2,
-  },
-  subtitle: {
-    fontSize: 9,
-    color: '#64748b',
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    backgroundColor: '#f8fafc',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-    paddingVertical: 5,
-    paddingHorizontal: 4,
-  },
-  tableHeaderCell: {
-    fontSize: 8,
-    fontFamily: 'Helvetica-Bold',
-    color: '#64748b',
-    textTransform: 'uppercase',
-  },
-  tableRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-    paddingVertical: 4,
-    paddingHorizontal: 4,
-  },
-  tableRowAlt: {
-    backgroundColor: '#fafbfc',
-  },
-  tableCell: {
-    fontSize: 8,
-    color: '#334155',
-  },
-  footer: {
-    position: 'absolute',
-    bottom: 20,
-    left: 32,
-    right: 32,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    fontSize: 7,
-    color: '#94a3b8',
-    borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
-    paddingTop: 4,
-  },
-});
 
 interface TableExportPdfProps {
   title: string;
@@ -81,34 +16,37 @@ function TableExportPdf({ title, columns, rows, generatedAt, orientation = 'port
   const truncated = rows.length > 500;
 
   return (
-    <Document>
-      <Page size="A4" orientation={orientation} style={styles.page}>
-        <View style={styles.header}>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.subtitle}>
-            Vantor Treasury · Generated {generatedAt} · {rows.length} record{rows.length !== 1 ? 's' : ''}
-          </Text>
+    <Document title={title} author="Vantor">
+      <Page size="A4" orientation={orientation} style={PDF_STYLES.page}>
+        <View style={PDF_STYLES.header}>
+          <View style={PDF_STYLES.headerRow}>
+            <View>
+              <Image src={PDF_LOGO_SRC} style={PDF_STYLES.logo} />
+              <Text style={PDF_STYLES.title}>{title}</Text>
+            </View>
+            <Text style={PDF_STYLES.subtitle}>
+              {rows.length} record{rows.length !== 1 ? 's' : ''} · Generated {generatedAt}
+            </Text>
+          </View>
         </View>
 
-        {/* Table header */}
-        <View style={styles.tableHeader}>
+        <View style={PDF_STYLES.tableHeader}>
           {columns.map((col, i) => (
-            <Text key={i} style={[styles.tableHeaderCell, { width: col.width }]}>
+            <Text key={i} style={[PDF_STYLES.th, { width: col.width }]}>
               {col.header}
             </Text>
           ))}
         </View>
 
-        {/* Table rows */}
         {displayRows.map((row, ri) => (
           <View
             key={ri}
-            style={[styles.tableRow, ri % 2 === 1 ? styles.tableRowAlt : {}]}
+            style={[PDF_STYLES.tableRow, ri % 2 === 1 ? PDF_STYLES.tableRowAlt : {}]}
           >
             {row.map((cell, ci) => (
               <Text
                 key={ci}
-                style={[styles.tableCell, { width: columns[ci].width }]}
+                style={[PDF_STYLES.td, { width: columns[ci].width }]}
               >
                 {cell}
               </Text>
@@ -117,14 +55,17 @@ function TableExportPdf({ title, columns, rows, generatedAt, orientation = 'port
         ))}
 
         {truncated && (
-          <Text style={{ fontSize: 8, color: '#94a3b8', marginTop: 8 }}>
-            …and {rows.length - 500} more rows (not shown in PDF)
+          <Text style={PDF_STYLES.emptyNote}>
+            …and {rows.length - 500} more rows (not shown in PDF — export CSV for the full dataset)
           </Text>
         )}
 
-        <View style={styles.footer} fixed>
-          <Text>Vantor</Text>
-          <Text render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
+        <View style={PDF_STYLES.footer} fixed>
+          <Image src={PDF_LOGO_SRC} style={PDF_STYLES.logoFooter} />
+          <Text
+            style={PDF_STYLES.footerText}
+            render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`}
+          />
         </View>
       </Page>
     </Document>
@@ -172,3 +113,6 @@ export async function exportPdf<T>(
   a.click();
   URL.revokeObjectURL(url);
 }
+
+export { TableExportPdf };
+export { PDF_COLORS };

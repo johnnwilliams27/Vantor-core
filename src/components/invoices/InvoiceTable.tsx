@@ -20,6 +20,7 @@ import { exportCsv, exportPdf } from '@/lib/export';
 import type { ExportColumn } from '@/lib/export';
 import { RefreshCw, Loader2, CreditCard, Plus } from 'lucide-react';
 import { TruncatedAddress } from '@/components/ui/truncated-address';
+import { ChainBadge } from '@/components/ui/icons/chain-logos';
 import { TableRowsSkeleton } from '@/components/ui/operations-skeletons';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -50,12 +51,12 @@ const createInvoiceSchema = z.object({
 
 type CreateInvoiceForm = z.infer<typeof createInvoiceSchema>;
 
-const STATUS_VARIANTS: Record<InvoiceStatus, 'default' | 'success' | 'warning' | 'destructive' | 'secondary'> = {
-  unpaid: 'warning',
-  paid: 'success',
-  partially_paid: 'info' as any,
-  overdue: 'destructive',
-  cancelled: 'secondary',
+const STATUS_VARIANTS: Record<InvoiceStatus, 'active' | 'pending' | 'failed' | 'info-blue' | 'inactive'> = {
+  unpaid: 'pending',
+  paid: 'active',
+  partially_paid: 'info-blue',
+  overdue: 'failed',
+  cancelled: 'inactive',
 };
 
 function sourceLabel(inv: Invoice): string {
@@ -160,13 +161,13 @@ export function InvoiceTable() {
     <>
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
           <CardTitle>Invoices</CardTitle>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleSync} disabled={syncing || !activeConfigId}>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Button variant="outline" size="sm" onClick={handleSync} disabled={syncing || !activeConfigId} className="w-full sm:w-auto">
               {syncing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Syncing…</> : <><RefreshCw className="mr-2 h-4 w-4" />Sync from ERP</>}
             </Button>
-            <Button size="sm" onClick={() => setShowCreate(true)}>
+            <Button size="sm" onClick={() => setShowCreate(true)} className="w-full sm:w-auto">
               <Plus className="mr-1 h-4 w-4" />Add Invoice
             </Button>
           </div>
@@ -225,16 +226,14 @@ export function InvoiceTable() {
                   <TableCell className="text-sm">{inv.invoice_number}</TableCell>
                   <TableCell className="text-sm">{inv.vendor?.name ?? inv.vendor_name ?? '—'}</TableCell>
                   <TableCell className="text-sm">
-                    <span className="font-semibold">{formatCurrency(inv.amount)}</span>
+                    <span className="font-semibold tabular-nums">{formatCurrency(inv.amount)}</span>
                   </TableCell>
                   <TableCell className="text-sm">
                     <Badge variant="outline">{inv.currency ?? inv.token}</Badge>
                   </TableCell>
                   <TableCell className="text-sm">
                     {inv.chain ? (
-                      <Badge variant={inv.chain === 'ethereum' ? 'ethereum' : 'solana'}>
-                        {capitalize(inv.chain)}
-                      </Badge>
+                      <ChainBadge chain={inv.chain} />
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
@@ -255,7 +254,7 @@ export function InvoiceTable() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-7 text-xs px-3 bg-[#19595b] text-white hover:bg-[#134849] border-0"
+                        className="h-7 text-xs px-3 bg-primary text-white hover:bg-[#134849] border-0"
                         onClick={(e) => { e.stopPropagation(); setPayInvoice(inv); }}
                       >
                         <CreditCard className="h-3 w-3 mr-1" />
@@ -389,7 +388,7 @@ export function InvoiceTable() {
 
             {/* Description / Memo */}
             {selectedInvoice.description && (
-              <div className="border-l-2 border-[#19595b] pl-3 text-sm text-muted-foreground">
+              <div className="border-l-2 border-primary pl-3 text-sm text-muted-foreground">
                 {selectedInvoice.description}
               </div>
             )}
@@ -419,7 +418,7 @@ export function InvoiceTable() {
           <div className="space-y-2">
             <Label>Invoice Number</Label>
             <Input placeholder="INV-001" {...registerCreate('invoiceNumber')} />
-            {createErrors.invoiceNumber && <p className="text-xs text-red-500">{createErrors.invoiceNumber.message}</p>}
+            {createErrors.invoiceNumber && <p className="text-xs text-destructive">{createErrors.invoiceNumber.message}</p>}
           </div>
 
           <div className="space-y-2">
@@ -436,7 +435,7 @@ export function InvoiceTable() {
             <div className="space-y-2">
               <Label>Amount</Label>
               <Input placeholder="1000.00" {...registerCreate('amount')} />
-              {createErrors.amount && <p className="text-xs text-red-500">{createErrors.amount.message}</p>}
+              {createErrors.amount && <p className="text-xs text-destructive">{createErrors.amount.message}</p>}
             </div>
             <div className="space-y-2">
               <Label>Currency</Label>

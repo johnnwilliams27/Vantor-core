@@ -26,27 +26,38 @@
  * Roles eligible to fill approval chain slots, ordered lowest rank
  * (least power) to highest rank (most power). Preserve this order —
  * `ROLE_RANK` derives rank from array index.
+ *
+ * `auditor` is NOT in this list — auditors are read-only reviewers
+ * who observe evaluations and transfers but cannot approve them. A
+ * chain that still references minimum_role='auditor' in the DB (from
+ * before this exclusion) can be filled by any higher rank (accountant+)
+ * but never by an auditor.
  */
 export const APPROVER_ROLES = [
-  'auditor',
   'accountant',
   'treasury_manager',
   'executive',
 ] as const;
 
 /**
- * All roles in the system. `enterprise_admin` is the highest by rank
- * but strictly excluded from approval by `canFillSlot`.
+ * All roles in the system. Two exclusions apply in `canFillSlot`:
+ *   - `auditor` — read-only reviewer; cannot approve.
+ *   - `enterprise_admin` — highest rank, strictly excluded (policy
+ *     author cannot also approve under the policy).
  */
-export const ALL_ROLES = [...APPROVER_ROLES, 'enterprise_admin'] as const;
+export const ALL_ROLES = [
+  'auditor',
+  ...APPROVER_ROLES,
+  'enterprise_admin',
+] as const;
 
 export type ApproverRole = (typeof APPROVER_ROLES)[number];
 export type UserRole = (typeof ALL_ROLES)[number];
 
 /**
- * Monotonic rank. Higher rank = broader approval coverage.
- * `enterprise_admin` has the highest numeric rank purely for UI
- * ordering; `canFillSlot` excludes it regardless of rank.
+ * Monotonic rank. Higher rank = broader approval coverage. Auditor
+ * and enterprise_admin have ranks only for UI ordering — both are
+ * excluded from approval by `canFillSlot`.
  */
 export const ROLE_RANK: Record<UserRole, number> = {
   auditor: 1,
@@ -60,11 +71,14 @@ export const ROLE_RANK: Record<UserRole, number> = {
  * Whether a user with the given role can fill an approval slot that
  * requires `slotMinimumRole` or higher.
  *
- * Two rules, in order:
- *   1. `enterprise_admin` can NEVER fill a slot (strict separation).
- *   2. Otherwise, user rank must be >= slot's minimum rank.
+ * Three rules, in order:
+ *   1. `auditor` can NEVER fill a slot (read-only reviewer).
+ *   2. `enterprise_admin` can NEVER fill a slot (strict separation —
+ *      authoring role must not also approve).
+ *   3. Otherwise, user rank must be >= slot's minimum rank.
  */
 export function canFillSlot(userRole: UserRole, slotMinimumRole: ApproverRole): boolean {
+  if (userRole === 'auditor') return false;
   if (userRole === 'enterprise_admin') return false;
   return ROLE_RANK[userRole] >= ROLE_RANK[slotMinimumRole];
 }
@@ -75,12 +89,13 @@ export function canFillSlot(userRole: UserRole, slotMinimumRole: ApproverRole): 
  * affordances.
  */
 export function isApproverRole(role: UserRole): role is ApproverRole {
-  return role !== 'enterprise_admin';
+  return role !== 'auditor' && role !== 'enterprise_admin';
 }
 
 /**
- * Reason code constant for the explicit `enterprise_admin` exclusion.
- * Kept here (not buried in sod.ts) so UI layers can surface a
- * consistent string without importing from the policy module.
+ * Reason-code constants for explicit role exclusions. Kept here so UI
+ * layers can surface a consistent string without importing from the
+ * policy module.
  */
 export const ENTERPRISE_ADMIN_CANNOT_APPROVE = 'enterprise_admin_cannot_approve' as const;
+export const AUDITOR_CANNOT_APPROVE = 'auditor_cannot_approve' as const;

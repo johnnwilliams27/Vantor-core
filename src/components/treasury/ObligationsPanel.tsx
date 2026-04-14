@@ -146,7 +146,7 @@ export function ObligationsPanel() {
                 onClick={() => setTab(t)}
                 className={`px-3 py-1 text-xs rounded-full font-medium transition-colors ${
                   tab === t
-                    ? 'bg-[#19595b] text-white'
+                    ? 'bg-primary text-white'
                     : 'bg-muted text-muted-foreground hover:bg-muted/80'
                 }`}
               >
@@ -269,7 +269,7 @@ export function ObligationsPanel() {
                 {...register('label')}
               />
               {errors.label && (
-                <p className="text-xs text-red-500 mt-1">{errors.label.message}</p>
+                <p className="text-xs text-destructive mt-1">{errors.label.message}</p>
               )}
             </div>
 
@@ -289,14 +289,14 @@ export function ObligationsPanel() {
                   {...register('amount_usd')}
                 />
                 {errors.amount_usd && (
-                  <p className="text-xs text-red-500 mt-1">{errors.amount_usd.message}</p>
+                  <p className="text-xs text-destructive mt-1">{errors.amount_usd.message}</p>
                 )}
               </div>
               <div>
                 <Label htmlFor="ob-date">Due Date</Label>
                 <Input id="ob-date" type="date" {...register('due_date')} />
                 {errors.due_date && (
-                  <p className="text-xs text-red-500 mt-1">{errors.due_date.message}</p>
+                  <p className="text-xs text-destructive mt-1">{errors.due_date.message}</p>
                 )}
               </div>
             </div>

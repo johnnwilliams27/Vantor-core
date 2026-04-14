@@ -3,8 +3,8 @@ import type {
   ERPCredentials,
   ERPVendorRaw,
   ERPInvoiceRaw,
-  ERPGLPostPayload,
-  ERPGLPostResult,
+  ERPBillPaymentPayload,
+  ERPBillPaymentResult,
 } from '@/types/erp';
 
 export class XeroMockAdapter implements IERPAdapter {
@@ -87,12 +87,12 @@ export class XeroMockAdapter implements IERPAdapter {
     ];
   }
 
-  async postGLEntry(payload: ERPGLPostPayload): Promise<ERPGLPostResult> {
+  async recordBillPayment(payload: ERPBillPaymentPayload): Promise<ERPBillPaymentResult> {
     await delay(400);
     return {
-      externalGlId: `XERO-GL-${Date.now()}`,
-      status: 'posted',
-      message: `GL entry posted to Xero account ${payload.glAccount} (mock)`,
+      externalPaymentId: `XERO-PMT-${Date.now()}`,
+      status: 'recorded',
+      message: `Payment of ${payload.amount} ${payload.currency} recorded against Xero bill ${payload.invoiceId} (mock), ref: ${payload.reference} tx:${payload.externalTxHash}`,
     };
   }
 }

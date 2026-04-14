@@ -23,19 +23,19 @@ export function ComplianceOverviewCard() {
       label: 'Screenings (24h)',
       value: data.screenings24h,
       icon: ShieldCheck,
-      color: 'text-blue-500',
+      color: 'text-blue-400',
     },
     {
       label: 'Sanctioned Hits',
       value: data.sanctionedHits24h,
       icon: ShieldAlert,
-      color: data.sanctionedHits24h > 0 ? 'text-red-500' : 'text-green-500',
+      color: data.sanctionedHits24h > 0 ? 'text-red-400' : 'text-teal-400',
     },
     {
       label: 'Open KYT Alerts',
       value: data.totalOpenAlerts,
       icon: Eye,
-      color: data.totalOpenAlerts > 0 ? 'text-amber-500' : 'text-green-500',
+      color: data.totalOpenAlerts > 0 ? 'text-amber-400' : 'text-teal-400',
     },
   ];
 
@@ -50,7 +50,7 @@ export function ComplianceOverviewCard() {
           >
             <card.icon className={`h-5 w-5 mt-0.5 ${card.color}`} />
             <div>
-              <p className="text-2xl font-bold">{card.value}</p>
+              <p className="text-2xl font-bold tabular-nums">{card.value}</p>
               <p className="text-xs text-muted-foreground">{card.label}</p>
             </div>
           </div>
@@ -58,7 +58,7 @@ export function ComplianceOverviewCard() {
       </div>
 
       {data.openAlerts.high + data.openAlerts.severe > 0 && (
-        <div className="mt-3 p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 text-sm text-red-700 dark:text-red-400">
+        <div className="mt-3 p-3 rounded-lg bg-red-500/8 border border-red-500/20 text-sm text-red-400">
           {data.openAlerts.severe > 0 && (
             <span className="font-medium">{data.openAlerts.severe} severe</span>
           )}

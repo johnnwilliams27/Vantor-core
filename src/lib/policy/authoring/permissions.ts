@@ -17,8 +17,19 @@ type SupabaseLike = {
 };
 
 export interface PolicyAdminResolution {
-  source: 'enterprise_admin' | 'vantor_staff';
+  source: 'enterprise_admin' | 'executive' | 'vantor_staff';
 }
+
+/**
+ * Roles allowed to author and activate policy versions. `executive`
+ * is included alongside `enterprise_admin` so CFOs/treasurers can
+ * draft rules and chains. Separation of duties is enforced at
+ * approval time via `sod_rule_editor_conflict` — a user who authored
+ * a triggering rule can't approve the resulting request when the
+ * per-enterprise `author_approver_separation_enabled` flag is on
+ * (default).
+ */
+const AUTHOR_ROLES = new Set<UserRole>(['enterprise_admin', 'executive']);
 
 /**
  * Read access to the currently active policy version. Any role,
@@ -30,34 +41,30 @@ export function canViewActivePolicy(role: UserRole): boolean {
 }
 
 /**
- * Creating a new draft policy version. Authoring is now gated on
- * role === 'enterprise_admin' (pure role check). The legacy
- * `is_policy_admin` flag has been retired — migration 0049 upgraded
- * any user who relied on it to enterprise_admin, and the column
- * itself is dropped in a follow-up migration.
- *
- * Pre-RBAC hierarchy: treasury_manager + is_policy_admin=true. Any
- * current treasury_manager without the flag silently lost authoring
- * access when this landed (per product direction to ship and let
- * users discover).
+ * Creating a new draft policy version. Gated on author roles. The
+ * legacy `is_policy_admin` flag was retired in migration 0049.
  */
 export function canCreateDraft(role: UserRole): boolean {
-  return role === 'enterprise_admin';
+  return AUTHOR_ROLES.has(role);
 }
 
 export function canEditDraftRules(role: UserRole): boolean {
-  return role === 'enterprise_admin';
+  return AUTHOR_ROLES.has(role);
 }
 
 export function canEditDraftChains(role: UserRole): boolean {
-  return role === 'enterprise_admin';
+  return AUTHOR_ROLES.has(role);
 }
 
 /**
  * High-privilege gate used for policy activation and hard-limit
- * editing. Role is the primary gate; is_app_admin (Vantor staff)
- * is a bypass for platform-level elevation. The legacy
- * `is_policy_admin` column is no longer consulted.
+ * editing. Role is the primary gate; `is_app_admin` (Vantor staff)
+ * is a bypass for platform-level elevation.
+ *
+ * Allowed:
+ *   - enterprise_admin (authoring role)
+ *   - executive (CFO/treasurer tier; may author + activate)
+ *   - any user with is_app_admin=true (Vantor staff bypass)
  */
 export async function requirePolicyAdmin(
   supabase: SupabaseLike,
@@ -86,12 +93,16 @@ export async function requirePolicyAdmin(
     return { source: 'enterprise_admin' };
   }
 
+  if (data.role === 'executive') {
+    return { source: 'executive' };
+  }
+
   throw new AuthoringError({
     reason_code: REASON_CODES.requires_policy_admin,
     human_readable:
-      'This action requires the enterprise_admin role. Only enterprise admins may edit hard limits or activate policy versions.',
+      'This action requires the enterprise_admin or executive role. Only those roles may edit hard limits or activate policy versions.',
     user_action:
-      'Ask an existing enterprise admin to grant you the enterprise_admin role in Settings → Team, or request a Vantor staff elevation.',
+      'Ask an existing enterprise admin to grant you the enterprise_admin or executive role in Settings → Team, or request a Vantor staff elevation.',
     details: { user_id: userId },
   });
 }

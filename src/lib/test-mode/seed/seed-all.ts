@@ -10,6 +10,11 @@ import { seedTreasury } from './treasury';
 import { seedYield } from './yield';
 import { seedCompliance } from './compliance';
 import { seedAudit } from './audit';
+import { seedPolicy } from './policy';
+import { seedApprovals } from './approvals';
+import { seedAnalytics } from './analytics';
+import { seedInsights } from './insights';
+import { seedNotifications } from './notifications';
 
 /**
  * Seeds a test enterprise with comprehensive demo data across all domains.
@@ -29,7 +34,13 @@ export async function seedAll(
     .limit(1);
 
   const userId = users?.[0]?.id;
-  if (!userId) return;
+  if (!userId) {
+    throw new Error(
+      `seedAll: no user found for sourceEnterpriseId=${sourceEnterpriseId}. ` +
+        `user_profiles.enterprise_id lookup returned zero rows — aborting before wipe leaves the ` +
+        `test enterprise empty. (Past incident: reseed from test-enterprise page collapsed source → test id.)`,
+    );
+  }
 
   const ctx: SeedContext = { supabase, enterpriseId: testEnterpriseId, userId };
 
@@ -59,4 +70,17 @@ export async function seedAll(
 
   // Phase 5: Depend on everything
   await seedAudit(ctx);
+
+  // Phase 6: Policy + approvals + analytics + insights + notifications.
+  // Ordering:
+  //   - policy first (approvals reference active version + chain)
+  //   - analytics + insights can run in parallel (no deps on each other)
+  //   - notifications last (references state that's now fully seeded)
+  const policyIds = await seedPolicy(ctx);
+  await seedApprovals(ctx, policyIds.v3Id, policyIds.chainId);
+  await Promise.all([
+    seedAnalytics(ctx),
+    seedInsights(ctx),
+  ]);
+  await seedNotifications(ctx);
 }

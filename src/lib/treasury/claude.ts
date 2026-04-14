@@ -30,16 +30,16 @@ function mockReasoning(input: RecommendationInput): string {
   const surplus = formatUsd(Math.abs(surplusUsd));
 
   if (action === 'no_action') {
-    return `📊 **Current Position**\nBank balance of ${bankBal} is within the ${target} safety buffer target.\n\n📋 **Obligations**\n${obligations} in obligations due over the next ${lookaheadDays} days are fully covered.\n\n✅ **Recommendation**\nNo action required.`;
+    return `**Current Position**\nBank balance of ${bankBal} is within the ${target} safety buffer target.\n\n**Obligations**\n${obligations} in obligations due over the next ${lookaheadDays} days are fully covered.\n\n**Recommendation**\nNo action required.`;
   }
 
   if (action === 'onramp') {
     // Excess fiat → deploy to stablecoin (fiat → crypto)
-    return `📊 **Current Position**\nBank balance of ${bankBal} exceeds the ${target} safety buffer by ${surplus}.\n\n💡 **Reasoning**\nOnly ${obligations} in obligations are due within ${lookaheadDays} days, leaving excess fiat that can earn yield.\n\n✅ **Recommendation**\nOn-ramp ${formatUsd(recommendedAmountUsd ?? 0)} USD to ${input.targetStablecoinToken} on ${input.targetChain}.`;
+    return `**Current Position**\nBank balance of ${bankBal} exceeds the ${target} safety buffer by ${surplus}.\n\n**Reasoning**\nOnly ${obligations} in obligations are due within ${lookaheadDays} days, leaving excess fiat that can earn yield.\n\n**Recommendation**\nOn-ramp ${formatUsd(recommendedAmountUsd ?? 0)} USD to ${input.targetStablecoinToken} on ${input.targetChain}.`;
   }
 
   // offramp — stablecoin to fiat (user needs fiat, liquidate crypto)
-  return `📊 **Current Position**\nBank balance of ${bankBal} is ${surplus} below the ${target} safety buffer.\n\n⚠️ **Reasoning**\n${obligations} in obligations are due within ${lookaheadDays} days and current fiat reserves are insufficient. Crypto treasury holds ${cryptoBal}.\n\n✅ **Recommendation**\nOff-ramp ${formatUsd(recommendedAmountUsd ?? 0)} ${input.targetStablecoinToken} to USD.`;
+  return `**Current Position**\nBank balance of ${bankBal} is ${surplus} below the ${target} safety buffer.\n\n**Reasoning (shortfall)**\n${obligations} in obligations are due within ${lookaheadDays} days and current fiat reserves are insufficient. Crypto treasury holds ${cryptoBal}.\n\n**Recommendation**\nOff-ramp ${formatUsd(recommendedAmountUsd ?? 0)} ${input.targetStablecoinToken} to USD.`;
 }
 
 export interface ForecastSummaryInput {
@@ -175,9 +175,9 @@ export async function generateTreasuryReasoning(
     max_tokens: 512,
     system:
       'You are a treasury AI assistant. Explain the recommended action using exactly 3 sections with this format:\n\n' +
-      '📊 **Current Position**\nOne sentence about balances and safety buffer.\n\n' +
-      '💡 **Reasoning**\nOne sentence explaining why this action makes sense. Use ⚠️ instead of 💡 if there is a liquidity shortfall.\n\n' +
-      '✅ **Recommendation**\nOne sentence with the specific action and dollar amount.\n\n' +
+      '**Current Position**\nOne sentence about balances and safety buffer.\n\n' +
+      '**Reasoning**\nOne sentence explaining why this action makes sense. If there is a liquidity shortfall, use the heading **Reasoning (shortfall)** instead.\n\n' +
+      '**Recommendation**\nOne sentence with the specific action and dollar amount.\n\n' +
       'Keep each section to exactly 1 sentence. Use specific dollar amounts. No other formatting.',
     messages: [
       {

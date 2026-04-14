@@ -2,7 +2,11 @@
 import {
   BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { buttonVariants } from '@/components/ui/button';
+import { EmptyStateCard } from '@/components/ui/empty-state-card';
+import { cn } from '@/lib/utils';
 import { useYieldPositions, useYieldTransactions } from '@/hooks/useYield';
 import { TrendingUp } from 'lucide-react';
 import { CardError, ChartSkeleton } from '@/components/ui/spinner';
@@ -148,9 +152,18 @@ export function YieldEarned() {
       <Card>
         <CardHeader><CardTitle>Yield Earned</CardTitle></CardHeader>
         <CardContent>
-          <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">
-            No yield positions yet. <a href="/yield" className="text-primary hover:underline">Explore yield opportunities →</a>
-          </div>
+          <EmptyStateCard
+            icon={<TrendingUp />}
+            iconVariant="active"
+            title="No yield positions yet"
+            helper="Start earning on idle stablecoins via Aave, Compound, and MMF partners."
+            cta={
+              <Link href="/yield" className={cn(buttonVariants({ size: 'sm' }))}>
+                Explore yield
+              </Link>
+            }
+            className="h-48 border-0 shadow-none bg-transparent"
+          />
         </CardContent>
       </Card>
     );

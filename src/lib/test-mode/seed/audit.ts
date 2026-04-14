@@ -44,5 +44,5 @@ export async function seedAudit(ctx: SeedContext): Promise<void> {
   }));
 
   const { error } = await supabase.from('audit_logs').insert(auditRows);
-  if (error) console.error('seedAudit insert failed:', error.message);
+  if (error) throw new Error(`seedAudit: audit_logs insert failed: ${error.message}`);
 }

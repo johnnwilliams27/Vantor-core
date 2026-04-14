@@ -1,0 +1,317 @@
+<h2>Analytics Page Layout</h2>
+<p class="subtitle">How should views be organized on the dedicated Analytics page?</p>
+
+<div class="cards">
+  <!-- Option A: Dashboard Grid -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#0f1219;border-radius:12px;padding:16px;font-family:system-ui;color:#e2e8f0;min-height:320px;">
+        <!-- Top bar -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <div>
+            <div style="font-size:18px;font-weight:600;">Analytics</div>
+            <div style="font-size:12px;color:#94a3b8;">12 standard views + 2 custom</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.08);padding:4px 12px;border-radius:8px;font-size:11px;">Last 30 days</div>
+            <div style="background:hsl(182,58%,28%);padding:4px 12px;border-radius:8px;font-size:11px;">+ New View</div>
+            <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.08);padding:4px 12px;border-radius:8px;font-size:11px;">Export All</div>
+          </div>
+        </div>
+        <!-- Grid of view cards -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+          <!-- KPI row -->
+          <div style="grid-column:span 3;background:#1e293b;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px;">
+            <div style="font-size:10px;color:#94a3b8;margin-bottom:8px;">Treasury Summary</div>
+            <div style="display:flex;gap:16px;">
+              <div><div style="font-size:9px;color:#64748b;">Total</div><div style="font-size:14px;font-weight:600;">$2.4M</div></div>
+              <div><div style="font-size:9px;color:#64748b;">Fiat</div><div style="font-size:14px;font-weight:600;">$1.2M</div></div>
+              <div><div style="font-size:9px;color:#64748b;">Stablecoin</div><div style="font-size:14px;font-weight:600;">$800K</div></div>
+              <div><div style="font-size:9px;color:#64748b;">DeFi</div><div style="font-size:14px;font-weight:600;">$400K</div></div>
+              <div><div style="font-size:9px;color:#64748b;">Idle Cash</div><div style="font-size:14px;color:hsl(182,58%,45%);">$320K</div></div>
+              <div><div style="font-size:9px;color:#64748b;">Coverage</div><div style="font-size:14px;color:#22c55e;">2.4x</div></div>
+            </div>
+          </div>
+          <!-- Chart cards -->
+          <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <div style="font-size:10px;color:#94a3b8;">Balance History</div>
+              <div style="font-size:8px;color:#475569;">CSV</div>
+            </div>
+            <div style="height:60px;background:linear-gradient(180deg,rgba(45,212,191,0.15),transparent);border-radius:6px;display:flex;align-items:flex-end;padding:4px;">
+              <svg viewBox="0 0 100 40" style="width:100%;height:40px;"><path d="M0,30 Q25,10 50,20 T100,15" fill="none" stroke="hsl(182,58%,45%)" stroke-width="1.5"/></svg>
+            </div>
+          </div>
+          <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <div style="font-size:10px;color:#94a3b8;">Obligation Coverage</div>
+              <div style="font-size:8px;color:#475569;">CSV</div>
+            </div>
+            <div style="height:60px;display:flex;align-items:flex-end;gap:3px;padding:4px;">
+              <div style="flex:1;background:hsl(182,58%,28%);height:70%;border-radius:3px;"></div>
+              <div style="flex:1;background:hsl(182,58%,28%);height:85%;border-radius:3px;"></div>
+              <div style="flex:1;background:hsl(182,58%,28%);height:60%;border-radius:3px;"></div>
+              <div style="flex:1;background:hsl(182,58%,28%);height:90%;border-radius:3px;"></div>
+              <div style="flex:1;background:hsl(182,58%,28%);height:75%;border-radius:3px;"></div>
+            </div>
+          </div>
+          <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <div style="font-size:10px;color:#94a3b8;">Forecast vs Actuals</div>
+              <div style="font-size:8px;color:#475569;">CSV</div>
+            </div>
+            <div style="height:60px;background:linear-gradient(180deg,rgba(45,212,191,0.08),transparent);border-radius:6px;display:flex;align-items:flex-end;padding:4px;">
+              <svg viewBox="0 0 100 40" style="width:100%;height:40px;">
+                <path d="M0,25 Q25,15 50,18 T100,10" fill="none" stroke="hsl(182,58%,45%)" stroke-width="1.5"/>
+                <path d="M0,25 Q25,18 50,22 T100,14" fill="none" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,3"/>
+              </svg>
+            </div>
+          </div>
+          <!-- Table cards -->
+          <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px;">
+            <div style="font-size:10px;color:#94a3b8;margin-bottom:6px;">Ramp Activity</div>
+            <div style="display:flex;gap:4px;height:50px;align-items:flex-end;">
+              <div style="flex:1;text-align:center;">
+                <div style="background:hsl(182,58%,28%);height:40px;border-radius:3px;"></div>
+                <div style="font-size:7px;color:#64748b;margin-top:2px;">On</div>
+              </div>
+              <div style="flex:1;text-align:center;">
+                <div style="background:#f59e0b;height:25px;border-radius:3px;"></div>
+                <div style="font-size:7px;color:#64748b;margin-top:2px;">Off</div>
+              </div>
+            </div>
+          </div>
+          <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px;">
+            <div style="font-size:10px;color:#94a3b8;margin-bottom:6px;">Idle Cash Trend</div>
+            <div style="height:50px;display:flex;align-items:flex-end;padding:4px;">
+              <svg viewBox="0 0 100 35" style="width:100%;height:35px;">
+                <path d="M0,20 Q20,25 40,15 T80,18 T100,12" fill="rgba(45,212,191,0.1)" stroke="hsl(182,58%,45%)" stroke-width="1.5"/>
+              </svg>
+            </div>
+          </div>
+          <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px;">
+            <div style="font-size:10px;color:#94a3b8;margin-bottom:6px;">Invoice Aging</div>
+            <div style="display:flex;gap:3px;height:50px;align-items:flex-end;">
+              <div style="flex:1;background:hsl(182,58%,28%);height:60%;border-radius:3px;"></div>
+              <div style="flex:1;background:#f59e0b;height:35%;border-radius:3px;"></div>
+              <div style="flex:1;background:#ef4444;height:20%;border-radius:3px;"></div>
+              <div style="flex:1;background:#dc2626;height:10%;border-radius:3px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. Dashboard Grid</h3>
+      <p>All views visible at once in a responsive grid. KPI banner at top, charts and tables below. Each card has inline export. Dense but scannable — the "command center" feel.</p>
+    </div>
+  </div>
+
+  <!-- Option B: List + Drill-in -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#0f1219;border-radius:12px;padding:16px;font-family:system-ui;color:#e2e8f0;min-height:320px;">
+        <!-- Top bar -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <div>
+            <div style="font-size:18px;font-weight:600;">Analytics</div>
+            <div style="font-size:12px;color:#94a3b8;">Browse and customize your views</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.08);padding:4px 12px;border-radius:8px;font-size:11px;">Last 30 days</div>
+            <div style="background:hsl(182,58%,28%);padding:4px 12px;border-radius:8px;font-size:11px;">+ New View</div>
+          </div>
+        </div>
+        <!-- Category sections -->
+        <div style="margin-bottom:14px;">
+          <div style="font-size:11px;color:#64748b;font-weight:500;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em;">Treasury</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:28px;height:28px;background:rgba(45,212,191,0.15);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;">$</div>
+                <div>
+                  <div style="font-size:12px;font-weight:500;">Treasury Summary</div>
+                  <div style="font-size:9px;color:#64748b;">6 KPIs — balance, idle cash, coverage</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <div style="font-size:9px;padding:2px 6px;background:rgba(45,212,191,0.1);color:hsl(182,58%,55%);border-radius:4px;">standard</div>
+                <div style="color:#475569;font-size:14px;">›</div>
+              </div>
+            </div>
+            <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:28px;height:28px;background:rgba(45,212,191,0.15);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;">~</div>
+                <div>
+                  <div style="font-size:12px;font-weight:500;">Balance History</div>
+                  <div style="font-size:9px;color:#64748b;">Line chart — daily fiat, stablecoin, DeFi</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <div style="font-size:9px;padding:2px 6px;background:rgba(45,212,191,0.1);color:hsl(182,58%,55%);border-radius:4px;">standard</div>
+                <div style="color:#475569;font-size:14px;">›</div>
+              </div>
+            </div>
+            <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:28px;height:28px;background:rgba(45,212,191,0.15);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;">|</div>
+                <div>
+                  <div style="font-size:12px;font-weight:500;">Obligation Coverage</div>
+                  <div style="font-size:9px;color:#64748b;">Bar chart — weekly obligations vs balance</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <div style="font-size:9px;padding:2px 6px;background:rgba(45,212,191,0.1);color:hsl(182,58%,55%);border-radius:4px;">standard</div>
+                <div style="color:#475569;font-size:14px;">›</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-bottom:14px;">
+          <div style="font-size:11px;color:#64748b;font-weight:500;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em;">Activity</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:28px;height:28px;background:rgba(251,191,36,0.15);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;">↕</div>
+                <div>
+                  <div style="font-size:12px;font-weight:500;">Ramp Activity</div>
+                  <div style="font-size:9px;color:#64748b;">Bar — on/off-ramp volume by direction</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <div style="font-size:9px;padding:2px 6px;background:rgba(45,212,191,0.1);color:hsl(182,58%,55%);border-radius:4px;">standard</div>
+                <div style="color:#475569;font-size:14px;">›</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:#64748b;font-weight:500;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em;">My Custom Views</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div style="background:#1e293b;border:1px solid rgba(251,191,36,0.2);border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:28px;height:28px;background:rgba(251,191,36,0.15);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;">*</div>
+                <div>
+                  <div style="font-size:12px;font-weight:500;">Weekly USDC Coverage</div>
+                  <div style="font-size:9px;color:#64748b;">Custom — forked from Obligation Coverage</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <div style="font-size:9px;padding:2px 6px;background:rgba(251,191,36,0.1);color:#fbbf24;border-radius:4px;">custom</div>
+                <div style="color:#475569;font-size:14px;">›</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. Categorized List + Drill-in</h3>
+      <p>Views listed by category (Treasury, Activity, Compliance, Yield, Custom). Click to drill into a full-screen view with chart, filters, and export. Cleaner overview, more room per view. Custom views get their own section with a distinct accent.</p>
+    </div>
+  </div>
+
+  <!-- Option C: Hybrid -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#0f1219;border-radius:12px;padding:16px;font-family:system-ui;color:#e2e8f0;min-height:320px;">
+        <!-- Top bar -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div style="font-size:18px;font-weight:600;">Analytics</div>
+          <div style="display:flex;gap:8px;">
+            <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.08);padding:4px 12px;border-radius:8px;font-size:11px;">Last 30 days</div>
+            <div style="background:hsl(182,58%,28%);padding:4px 12px;border-radius:8px;font-size:11px;">+ New View</div>
+            <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.08);padding:4px 12px;border-radius:8px;font-size:11px;">Generate Report</div>
+          </div>
+        </div>
+        <!-- Pinned KPIs -->
+        <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px;margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <div style="font-size:10px;color:#94a3b8;">Treasury Summary</div>
+            <div style="font-size:8px;color:#475569;">pinned</div>
+          </div>
+          <div style="display:flex;gap:20px;">
+            <div><div style="font-size:9px;color:#64748b;">Total</div><div style="font-size:15px;font-weight:600;">$2.4M</div></div>
+            <div><div style="font-size:9px;color:#64748b;">Fiat</div><div style="font-size:15px;font-weight:600;">$1.2M</div></div>
+            <div><div style="font-size:9px;color:#64748b;">Stablecoin</div><div style="font-size:15px;font-weight:600;">$800K</div></div>
+            <div><div style="font-size:9px;color:#64748b;">Idle Cash</div><div style="font-size:15px;color:hsl(182,58%,45%);">$320K</div></div>
+            <div><div style="font-size:9px;color:#64748b;">Coverage</div><div style="font-size:15px;color:#22c55e;">2.4x</div></div>
+          </div>
+        </div>
+        <!-- Pinned charts row -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+          <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px;cursor:pointer;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+              <div style="font-size:10px;color:#94a3b8;">Balance History</div>
+              <div style="font-size:8px;color:#475569;">pinned · CSV</div>
+            </div>
+            <div style="height:50px;"><svg viewBox="0 0 100 35" style="width:100%;height:35px;"><path d="M0,25 Q25,10 50,18 T100,12" fill="rgba(45,212,191,0.1)" stroke="hsl(182,58%,45%)" stroke-width="1.5"/></svg></div>
+          </div>
+          <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px;cursor:pointer;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+              <div style="font-size:10px;color:#94a3b8;">Forecast vs Actuals</div>
+              <div style="font-size:8px;color:#475569;">pinned · CSV</div>
+            </div>
+            <div style="height:50px;"><svg viewBox="0 0 100 35" style="width:100%;height:35px;"><path d="M0,22 Q25,12 50,16 T100,8" fill="none" stroke="hsl(182,58%,45%)" stroke-width="1.5"/><path d="M0,22 Q25,16 50,20 T100,12" fill="none" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,3"/></svg></div>
+          </div>
+        </div>
+        <!-- All views list -->
+        <div style="font-size:11px;color:#64748b;font-weight:500;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em;">All Views</div>
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="font-size:10px;">|</div>
+              <div style="font-size:11px;">Obligation Coverage</div>
+              <div style="font-size:8px;color:#475569;">bar</div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <div style="font-size:8px;color:#475569;">fork</div>
+              <div style="font-size:8px;color:#475569;">CSV</div>
+              <div style="color:#475569;font-size:12px;">›</div>
+            </div>
+          </div>
+          <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="font-size:10px;">↕</div>
+              <div style="font-size:11px;">Ramp Activity</div>
+              <div style="font-size:8px;color:#475569;">bar</div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <div style="font-size:8px;color:#475569;">fork</div>
+              <div style="font-size:8px;color:#475569;">CSV</div>
+              <div style="color:#475569;font-size:12px;">›</div>
+            </div>
+          </div>
+          <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="font-size:10px;">⇄</div>
+              <div style="font-size:11px;">Transfer Volume</div>
+              <div style="font-size:8px;color:#475569;">table</div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <div style="font-size:8px;color:#475569;">fork</div>
+              <div style="font-size:8px;color:#475569;">CSV</div>
+              <div style="color:#475569;font-size:12px;">›</div>
+            </div>
+          </div>
+          <div style="background:#1e293b;border:1px solid rgba(251,191,36,0.15);border-radius:8px;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="font-size:10px;">*</div>
+              <div style="font-size:11px;">Weekly USDC Coverage</div>
+              <div style="font-size:8px;color:#fbbf24;">custom</div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <div style="font-size:8px;color:#475569;">edit</div>
+              <div style="font-size:8px;color:#475569;">CSV</div>
+              <div style="color:#475569;font-size:12px;">›</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C. Pinned + Browse Hybrid</h3>
+      <p>Top section shows pinned views (KPI banner + 2-3 favorite charts rendered inline). Below, a compact list of all views with quick actions (fork, export, drill-in). Users pin their most-used views for at-a-glance monitoring, browse the rest in the list. "Generate Report" composes pinned views into a PDF.</p>
+    </div>
+  </div>
+</div>

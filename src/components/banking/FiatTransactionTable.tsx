@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CancelScheduledDialog } from '@/components/ui/cancel-scheduled-dialog';
 import { FilterBar } from '@/components/ui/filter-bar';
+import { HoverTooltip } from '@/components/ui/hover-tooltip';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { useTableFilter } from '@/hooks/useTableFilter';
 import { useToast } from '@/components/ui/toast';
@@ -278,14 +279,18 @@ export function FiatTransactionTable() {
                       aria-sort={filter.sortKey === 'amount' ? (filter.sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
                     >
                       Stablecoin
-                      <span className={`text-[10px] ${filter.sortKey === 'amount' ? 'text-teal-400' : 'opacity-0 group-hover:opacity-40'}`}>
+                      <span className={`text-3xs ${filter.sortKey === 'amount' ? 'text-teal-400' : 'opacity-0 group-hover:opacity-40'}`}>
                         {filter.sortKey === 'amount' ? (filter.sortDir === 'asc' ? '↑' : '↓') : '↕'}
                       </span>
                     </button>
                   </th>
                   <th scope="col" className="text-right py-2 pr-4">Bank</th>
                   <th scope="col" className="hidden lg:table-cell text-right py-2 pr-4">Rate</th>
-                  <th scope="col" className="hidden lg:table-cell text-right py-2 pr-4"><span title="Includes Vantor fee (0.25%) + provider fee">Total Fee</span></th>
+                  <th scope="col" className="hidden lg:table-cell text-right py-2 pr-4">
+                    <HoverTooltip label="Includes Vantor fee (0.25%) + provider fee">
+                      <span className="cursor-help underline decoration-dotted decoration-muted-foreground/50 underline-offset-2">Total Fee</span>
+                    </HoverTooltip>
+                  </th>
                   <th scope="col" className="text-left py-2 pr-4">From</th>
                   <th scope="col" className="text-left py-2 pr-4">To</th>
                   <th scope="col" className="text-left py-2 pr-4">Status</th>
@@ -298,7 +303,7 @@ export function FiatTransactionTable() {
                       aria-sort={filter.sortKey === 'date' ? (filter.sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
                     >
                       Date
-                      <span className={`text-[10px] ${filter.sortKey === 'date' ? 'text-teal-400' : 'opacity-0 group-hover:opacity-40'}`}>
+                      <span className={`text-3xs ${filter.sortKey === 'date' ? 'text-teal-400' : 'opacity-0 group-hover:opacity-40'}`}>
                         {filter.sortKey === 'date' ? (filter.sortDir === 'asc' ? '↑' : '↓') : '↕'}
                       </span>
                     </button>
@@ -312,16 +317,16 @@ export function FiatTransactionTable() {
                     <td className="py-2 pr-4">
                       <DirectionBadge direction={row.direction} />
                     </td>
-                    <td className="py-2 pr-4 text-sm text-right">
+                    <td className="py-2 pr-4 text-sm text-right tabular-nums">
                       {parseFloat(row.crypto_amount).toLocaleString(undefined, { maximumFractionDigits: 2 })} {row.crypto_token}
                     </td>
-                    <td className="py-2 pr-4 text-sm text-right">
+                    <td className="py-2 pr-4 text-sm text-right tabular-nums">
                       {parseFloat(row.fiat_amount).toLocaleString(undefined, { style: 'currency', currency: row.fiat_currency })}
                     </td>
-                    <td className="hidden lg:table-cell py-2 pr-4 text-right text-muted-foreground">
+                    <td className="hidden lg:table-cell py-2 pr-4 text-right text-muted-foreground tabular-nums">
                       {row.exchange_rate ? parseFloat(row.exchange_rate).toFixed(4) : '—'}
                     </td>
-                    <td className="hidden lg:table-cell py-2 pr-4 text-right text-muted-foreground">
+                    <td className="hidden lg:table-cell py-2 pr-4 text-right text-muted-foreground tabular-nums">
                       {row.fee_amount
                         ? parseFloat(row.fee_amount).toLocaleString(undefined, { style: 'currency', currency: row.fiat_currency })
                         : '—'}
@@ -338,8 +343,10 @@ export function FiatTransactionTable() {
                     <td className="py-2 pr-4 text-sm text-muted-foreground whitespace-nowrap">
                       {row.scheduled_for ? formatDateTime(row.scheduled_for) : '—'}
                     </td>
-                    <td className="py-2 pr-4 text-sm text-muted-foreground whitespace-nowrap" title={formatRelativeOrDate(row.created_at).full}>
-                      {formatRelativeOrDate(row.created_at).text}
+                    <td className="py-2 pr-4 text-sm text-muted-foreground whitespace-nowrap">
+                      <HoverTooltip label={formatRelativeOrDate(row.created_at).full}>
+                        <span>{formatRelativeOrDate(row.created_at).text}</span>
+                      </HoverTooltip>
                     </td>
                     <td className="py-2">
                       {canCancel(row) && (

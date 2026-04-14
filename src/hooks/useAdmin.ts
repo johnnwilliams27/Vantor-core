@@ -20,6 +20,7 @@ export interface EnterpriseRow {
   kyc_status: string;
   created_at: string;
   user_count: number;
+  admin_email?: string;
 }
 
 export interface EnterpriseDetail {
@@ -34,6 +35,7 @@ export interface EnterpriseDetail {
   updated_at: string;
   user_count: number;
   transaction_count: number;
+  admin_email?: string;
   recent_audit_logs: Array<{
     id: string;
     user_id: string | null;

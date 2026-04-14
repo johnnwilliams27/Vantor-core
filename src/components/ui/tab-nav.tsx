@@ -48,7 +48,7 @@ export function TabNav<T extends string>({ tabs, value, onChange, className }: T
     >
       {/* Sliding indicator */}
       <div
-        className="absolute top-1 bottom-1 rounded-md bg-background shadow-sm ring-1 ring-border/50 transition-all duration-200 ease-out"
+        className="absolute top-1 bottom-1 rounded-md bg-background shadow-sm ring-1 ring-border/50 transition-[left,width] duration-200 ease-out"
         style={{ left: indicator.left, width: indicator.width }}
       />
 

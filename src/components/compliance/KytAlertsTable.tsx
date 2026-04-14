@@ -1,28 +1,32 @@
 'use client';
 import { useState } from 'react';
 import { useKytAlerts, useUpdateKytAlert } from '@/hooks/useCompliance';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { RoleGate } from '@/components/auth/RoleGate';
 import { useToast } from '@/components/ui/toast';
 import type { KytAlertStatus, KytAlertSeverity } from '@/types/database';
-import { capitalize } from '@/lib/utils';
+import { capitalize, formatDateTime } from '@/lib/utils';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { TableRowsSkeleton } from '@/components/ui/operations-skeletons';
 
-const SEVERITY_COLORS: Record<string, string> = {
-  low: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  medium: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  high: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-  severe: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+// Migrated to semantic Badge variants (style guide Stage 3d).
+// Severity escalates: info-blue → pending → urgent → failed.
+const SEVERITY_VARIANT: Record<string, string> = {
+  low: 'info-blue',
+  medium: 'pending',
+  high: 'urgent',
+  severe: 'failed',
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  open: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  under_review: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  dismissed: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
-  escalated: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-  resolved: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+const STATUS_VARIANT: Record<string, string> = {
+  open: 'failed',
+  under_review: 'pending',
+  dismissed: 'inactive',
+  escalated: 'special',
+  resolved: 'active',
 };
 
 type AlertAction = 'under_review' | 'dismissed' | 'escalated' | 'resolved';
@@ -95,52 +99,52 @@ export function KytAlertsTable() {
 
       <div className="rounded-lg border bg-card">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left text-muted-foreground">
-                <th className="px-4 py-2 font-medium">Severity</th>
-                <th className="px-4 py-2 font-medium">Category</th>
-                <th className="px-4 py-2 font-medium">Description</th>
-                <th className="px-4 py-2 font-medium">Status</th>
-                <th className="px-4 py-2 font-medium">Created</th>
-                <th className="px-4 py-2 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Severity</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {isLoading ? (
                 <TableRowsSkeleton columns={6} rows={4} />
               ) : !alerts?.length ? (
-                <tr>
-                  <td colSpan={6} className="p-8 text-center text-sm text-muted-foreground">
+                <TableRow>
+                  <TableCell colSpan={6} className="p-8 text-center text-sm text-muted-foreground">
                     No alerts found
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : (
                 alerts.map((alert) => (
-                  <tr key={alert.id} className="border-b last:border-0 hover:bg-muted/30">
-                    <td className="px-4 py-2">
-                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${SEVERITY_COLORS[alert.severity]}`}>
+                  <TableRow key={alert.id}>
+                    <TableCell>
+                      <Badge variant={SEVERITY_VARIANT[alert.severity] as any}>
                         {capitalize(alert.severity)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2">{alert.category ?? '-'}</td>
-                    <td
-                      className="px-4 py-2 cursor-pointer"
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{alert.category ?? '—'}</TableCell>
+                    <TableCell
+                      className="cursor-pointer"
                       onClick={() => setExpandedId(expandedId === alert.id ? null : alert.id)}
                     >
                       <p className={expandedId === alert.id ? 'text-sm' : 'text-sm truncate max-w-xs'}>
-                        {alert.description ?? '-'}
+                        {alert.description ?? '—'}
                       </p>
-                    </td>
-                    <td className="px-4 py-2">
-                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[alert.status]}`}>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={STATUS_VARIANT[alert.status] as any}>
                         {capitalize(alert.status)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2 text-muted-foreground">
-                      {new Date(alert.created_at).toLocaleString()}
-                    </td>
-                    <td className="px-4 py-2">
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground whitespace-nowrap">
+                      {formatDateTime(alert.created_at)}
+                    </TableCell>
+                    <TableCell>
                       {(alert.status === 'open' || alert.status === 'under_review') && (
                         <RoleGate requiredRole="treasury_manager">
                           <div className="flex gap-1">
@@ -176,12 +180,12 @@ export function KytAlertsTable() {
                           </div>
                         </RoleGate>
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </div>
 

@@ -205,7 +205,7 @@ export function BankAccountsTab({ bankingProvider = 'stripe_fc' }: { bankingProv
                               <span className="text-muted-foreground ml-1 font-mono">****{account.last4}</span>
                             )}
                           </div>
-                          <div className="flex items-center gap-1 text-[11px] text-muted-foreground mt-0.5">
+                          <div className="flex items-center gap-1 text-2xs text-muted-foreground mt-0.5">
                             <span>{PROVIDER_ATTRIBUTION[account.banking_provider]}</span>
                             <InfoTooltip
                               ariaLabel={`${PROVIDER_ATTRIBUTION[account.banking_provider]} — more info`}
@@ -225,7 +225,7 @@ export function BankAccountsTab({ bankingProvider = 'stripe_fc' }: { bankingProv
                               ariaLabel="Verified bank account"
                               content={`Verified — ownership confirmed via the banking provider on ${formatDate(account.verified_at)}. Balance sync active.`}
                             >
-                              <Badge variant="success" className="text-xs">
+                              <Badge variant="active" className="text-xs">
                                 <CheckCircle className="mr-1 h-3 w-3" />
                                 Verified
                               </Badge>
@@ -235,7 +235,7 @@ export function BankAccountsTab({ bankingProvider = 'stripe_fc' }: { bankingProv
                               ariaLabel="Manual bank account"
                               content="Manual — entered by you for reference. Vantor cannot sync balances or initiate transfers on manual accounts."
                             >
-                              <Badge variant="warning" className="text-xs">Manual</Badge>
+                              <Badge variant="pending" className="text-xs">Manual</Badge>
                             </InfoTooltip>
                           )}
                         </TableCell>

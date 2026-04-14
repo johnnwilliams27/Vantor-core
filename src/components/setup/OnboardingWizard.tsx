@@ -117,17 +117,17 @@ export function OnboardingWizard() {
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-500 ${
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-[background-color,backdrop-filter] duration-500 ${
         mounted ? 'bg-black/60 backdrop-blur-sm' : 'bg-black/0 backdrop-blur-0'
       }`}
     >
       <div
-        className={`w-full max-w-md rounded-xl border border-border bg-card shadow-2xl overflow-hidden transition-all duration-500 ${
+        className={`w-full max-w-md rounded-xl border border-border bg-card shadow-2xl overflow-hidden transition-[opacity,transform] duration-500 ${
           mounted ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'
         }`}
       >
         {/* Teal header with subtle shimmer */}
-        <div className="bg-[#19595b] px-6 py-5 relative overflow-hidden">
+        <div className="bg-primary px-6 py-5 relative overflow-hidden">
           {/* Animated gradient accent */}
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.05] to-transparent animate-[shimmer_8s_ease-in-out_infinite]" />
 
@@ -140,7 +140,7 @@ export function OnboardingWizard() {
                   className="h-1.5 flex-1 rounded-full bg-white/20 overflow-hidden"
                 >
                   <div
-                    className="h-full rounded-full bg-white transition-all duration-500 ease-out"
+                    className="h-full rounded-full bg-white transition-[width] duration-500 ease-out"
                     style={{ width: i <= step ? '100%' : '0%' }}
                   />
                 </div>
@@ -149,7 +149,7 @@ export function OnboardingWizard() {
 
             {/* Icon + title with transition */}
             <div
-              className={`flex items-center gap-3 transition-all duration-300 ${
+              className={`flex items-center gap-3 transition-[opacity,transform] duration-300 ${
                 transitioning ? 'opacity-0 translate-x-2' : 'opacity-100 translate-x-0'
               }`}
             >
@@ -162,7 +162,7 @@ export function OnboardingWizard() {
               </div>
             </div>
             <p
-              className={`mt-3 text-sm text-white/80 leading-relaxed transition-all duration-300 delay-75 ${
+              className={`mt-3 text-sm text-white/80 leading-relaxed transition-[opacity,transform] duration-300 delay-75 ${
                 transitioning ? 'opacity-0 translate-x-2' : 'opacity-100 translate-x-0'
               }`}
             >
@@ -174,7 +174,7 @@ export function OnboardingWizard() {
         {/* Content with step transitions */}
         <div className="px-6 py-5">
           <div
-            className={`transition-all duration-300 ${
+            className={`transition-[opacity,transform] duration-300 ${
               transitioning
                 ? direction === 'forward'
                   ? 'opacity-0 -translate-x-4'
@@ -193,8 +193,8 @@ export function OnboardingWizard() {
                       animation: !transitioning ? `fadeSlideIn 0.4s ease-out ${i * 60}ms both` : undefined,
                     }}
                   >
-                    <div className="w-8 h-8 rounded-md bg-[#19595b]/10 flex items-center justify-center flex-shrink-0">
-                      <FIcon className="h-4 w-4 text-[#19595b]" />
+                    <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <FIcon className="h-4 w-4 text-primary" />
                     </div>
                     <span className="text-sm text-foreground">{label}</span>
                   </div>
@@ -214,7 +214,7 @@ export function OnboardingWizard() {
                   </p>
                 </div>
                 <div
-                  className="p-4 rounded-lg border border-[#19595b]/20 bg-[#19595b]/5"
+                  className="p-4 rounded-lg border border-primary/20 bg-primary/5"
                   style={{ animation: 'fadeSlideIn 0.4s ease-out 100ms both' }}
                 >
                   <p className="text-xs text-muted-foreground">
@@ -236,7 +236,7 @@ export function OnboardingWizard() {
                   </p>
                 </div>
                 <div
-                  className="p-4 rounded-lg border border-[#19595b]/20 bg-[#19595b]/5"
+                  className="p-4 rounded-lg border border-primary/20 bg-primary/5"
                   style={{ animation: 'fadeSlideIn 0.4s ease-out 100ms both' }}
                 >
                   <p className="text-xs text-muted-foreground">
@@ -288,7 +288,7 @@ export function OnboardingWizard() {
               size="sm"
               onClick={handleNext}
               disabled={completing || transitioning}
-              className="bg-[#19595b] hover:bg-[#134849] text-white gap-1.5 transition-all duration-200 hover:shadow-[0_0_20px_rgba(25,89,91,0.3)]"
+              className="gap-1.5"
             >
               {isLast ? (completing ? 'Setting up...' : 'Go to Dashboard') : 'Continue'}
               {!isLast && <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />}

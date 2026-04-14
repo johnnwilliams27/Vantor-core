@@ -52,10 +52,9 @@ export function CancelScheduledDialog({
           <p className="text-xs text-muted-foreground">This action cannot be undone.</p>
         </div>
         <DialogFooter className="gap-2">
-          <Button onClick={() => onOpenChange(false)}>Go Back</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Go Back</Button>
           <Button
-            variant="outline"
-            className="text-red-400 border-red-500/20 hover:bg-red-500/10"
+            variant="destructive-outline"
             onClick={onConfirm}
             disabled={isPending}
           >

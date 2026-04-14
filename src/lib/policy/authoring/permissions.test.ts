@@ -19,17 +19,20 @@ describe('canViewActivePolicy', () => {
 });
 
 describe('canCreateDraft / canEditDraftRules / canEditDraftChains', () => {
-  it('returns true only for enterprise_admin (authoring is strict-role gated)', () => {
-    // Non-author roles — all false, including the new executive
-    for (const role of ['auditor', 'accountant', 'treasury_manager', 'executive'] as const) {
+  it('returns true for enterprise_admin and executive (both are author roles)', () => {
+    for (const role of ['enterprise_admin', 'executive'] as const) {
+      expect(canCreateDraft(role)).toBe(true);
+      expect(canEditDraftRules(role)).toBe(true);
+      expect(canEditDraftChains(role)).toBe(true);
+    }
+  });
+
+  it('returns false for non-author roles (auditor, accountant, treasury_manager)', () => {
+    for (const role of ['auditor', 'accountant', 'treasury_manager'] as const) {
       expect(canCreateDraft(role)).toBe(false);
       expect(canEditDraftRules(role)).toBe(false);
       expect(canEditDraftChains(role)).toBe(false);
     }
-    // Author role
-    expect(canCreateDraft('enterprise_admin')).toBe(true);
-    expect(canEditDraftRules('enterprise_admin')).toBe(true);
-    expect(canEditDraftChains('enterprise_admin')).toBe(true);
   });
 });
 
@@ -38,6 +41,13 @@ describe('requirePolicyAdmin', () => {
     const supabase = mkSupabase({ role: 'enterprise_admin', is_app_admin: false });
     await expect(requirePolicyAdmin(supabase, 'user-1')).resolves.toMatchObject({
       source: 'enterprise_admin',
+    });
+  });
+
+  it('resolves when the user has role=executive', async () => {
+    const supabase = mkSupabase({ role: 'executive', is_app_admin: false });
+    await expect(requirePolicyAdmin(supabase, 'user-1')).resolves.toMatchObject({
+      source: 'executive',
     });
   });
 
@@ -50,11 +60,13 @@ describe('requirePolicyAdmin', () => {
     });
   });
 
-  it('throws requires_policy_admin when role is not enterprise_admin and not app admin', async () => {
-    const supabase = mkSupabase({ role: 'treasury_manager', is_app_admin: false });
-    await expect(requirePolicyAdmin(supabase, 'user-1')).rejects.toMatchObject({
-      reason_code: 'requires_policy_admin',
-    });
+  it('throws requires_policy_admin when role is auditor/accountant/treasury_manager and not app admin', async () => {
+    for (const role of ['auditor', 'accountant', 'treasury_manager'] as const) {
+      const supabase = mkSupabase({ role, is_app_admin: false });
+      await expect(requirePolicyAdmin(supabase, 'user-1')).rejects.toMatchObject({
+        reason_code: 'requires_policy_admin',
+      });
+    }
   });
 
   it('throws when the user profile lookup returns no row', async () => {

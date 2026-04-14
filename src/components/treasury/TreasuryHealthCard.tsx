@@ -1,5 +1,6 @@
 'use client';
 import { Card, CardContent } from '@/components/ui/card';
+import { StatusDot } from '@/components/ui/status-dot';
 import { useTreasuryOverview } from '@/hooks/useTreasury';
 import { useYieldPositions } from '@/hooks/useYield';
 import { CardSkeleton, CardError } from '@/components/ui/spinner';
@@ -73,10 +74,14 @@ export function TreasuryHealthCard() {
   // stablecoin total.
   const totalAum = cashUsd + stablecoinUsd + defiUsd;
 
-  const statusConfig = {
-    healthy: { icon: ShieldCheck, label: 'Healthy', dot: 'bg-green-500' },
-    warning: { icon: AlertTriangle, label: 'Attention', dot: 'bg-amber-500' },
-    critical: { icon: AlertOctagon, label: 'Action Required', dot: 'bg-red-500' },
+  const statusConfig: Record<'healthy' | 'warning' | 'critical', {
+    icon: typeof ShieldCheck;
+    label: string;
+    dotVariant: 'active' | 'pending' | 'failed';
+  }> = {
+    healthy: { icon: ShieldCheck, label: 'Healthy', dotVariant: 'active' },
+    warning: { icon: AlertTriangle, label: 'Attention', dotVariant: 'pending' },
+    critical: { icon: AlertOctagon, label: 'Action Required', dotVariant: 'failed' },
   };
 
   const cfg = health ? statusConfig[health.status] : statusConfig.healthy;
@@ -92,7 +97,7 @@ export function TreasuryHealthCard() {
               <p className="text-3xl font-bold tabular-nums tracking-tight mt-0.5 whitespace-nowrap">≈{fmt(totalAum)} <span className="text-lg font-semibold text-muted-foreground">{dc} equiv.</span></p>
             </div>
             <div className="flex items-center gap-1.5 pl-3 border-l border-border">
-              <span className={`h-2 w-2 rounded-full ${cfg.dot}`} />
+              <StatusDot variant={cfg.dotVariant} size="sm" />
               <p className="text-sm font-medium text-foreground">{cfg.label}</p>
               {health && health.signal !== 'balanced' && (
                 <p className="text-xs text-muted-foreground">
@@ -166,7 +171,7 @@ export function TreasuryHealthCard() {
         {/* Pending actions banner */}
         {overview.pendingRecommendations.length > 0 && (
           <div className="mt-3 pt-3 border-t border-border flex items-center gap-2 text-xs">
-            <div className="h-2 w-2 rounded-full bg-amber-500" />
+            <StatusDot variant="pending" size="sm" />
             <span className="text-muted-foreground">
               {overview.pendingRecommendations.length} pending{' '}
               {overview.pendingRecommendations.length === 1 ? 'action' : 'actions'}{' '}

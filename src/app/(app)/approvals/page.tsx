@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { FilterBar } from '@/components/ui/filter-bar';
+import { HoverTooltip } from '@/components/ui/hover-tooltip';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { TableCardSkeleton } from '@/components/ui/operations-skeletons';
 import { useTableFilter } from '@/hooks/useTableFilter';
@@ -85,7 +86,7 @@ export default function ApprovalsPage() {
     <div className="space-y-6 p-4 sm:p-8">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">Approvals</h1>
+          <h2 className="text-2xl font-semibold">Pending approvals</h2>
           <p className="text-sm text-muted-foreground mt-1">
             Money movements that policy required a human to sign off on before execution.
           </p>
@@ -134,34 +135,34 @@ export default function ApprovalsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead scope="col">Kind</TableHead>
-                  <TableHead scope="col">Movement</TableHead>
-                  <TableHead scope="col" className="text-right">
+                  <TableHead scope="col" className="font-semibold text-xs uppercase tracking-wide">Kind</TableHead>
+                  <TableHead scope="col" className="font-semibold text-xs uppercase tracking-wide">Movement</TableHead>
+                  <TableHead scope="col" className="text-right font-semibold text-xs uppercase tracking-wide">
                     <button
                       type="button"
                       onClick={() => filter.toggleSort('amount')}
                       className="flex items-center gap-1 ml-auto hover:text-white transition-colors group"
                     >
                       Amount
-                      <span className={`text-[10px] ${filter.sortKey === 'amount' ? 'text-teal-400' : 'opacity-0 group-hover:opacity-40'}`}>
+                      <span className={`text-3xs ${filter.sortKey === 'amount' ? 'text-teal-400' : 'opacity-0 group-hover:opacity-40'}`}>
                         {filter.sortKey === 'amount' ? (filter.sortDir === 'asc' ? '↑' : '↓') : '↕'}
                       </span>
                     </button>
                   </TableHead>
-                  <TableHead scope="col">Progress</TableHead>
-                  <TableHead scope="col">
+                  <TableHead scope="col" className="font-semibold text-xs uppercase tracking-wide">Progress</TableHead>
+                  <TableHead scope="col" className="font-semibold text-xs uppercase tracking-wide">
                     <button
                       type="button"
                       onClick={() => filter.toggleSort('date')}
                       className="flex items-center gap-1 hover:text-white transition-colors group"
                     >
                       Age
-                      <span className={`text-[10px] ${filter.sortKey === 'date' ? 'text-teal-400' : 'opacity-0 group-hover:opacity-40'}`}>
+                      <span className={`text-3xs ${filter.sortKey === 'date' ? 'text-teal-400' : 'opacity-0 group-hover:opacity-40'}`}>
                         {filter.sortKey === 'date' ? (filter.sortDir === 'asc' ? '↑' : '↓') : '↕'}
                       </span>
                     </button>
                   </TableHead>
-                  <TableHead scope="col">Status</TableHead>
+                  <TableHead scope="col" className="font-semibold text-xs uppercase tracking-wide">Status</TableHead>
                   <TableHead scope="col" className="w-16" />
                 </TableRow>
               </TableHeader>
@@ -186,19 +187,21 @@ export default function ApprovalsPage() {
                       <TableRow
                         key={r.id}
                         onClick={() => setSelectedId(r.id)}
-                        className="cursor-pointer hover:bg-white/[0.02]"
+                        className="cursor-pointer hover:bg-white/[0.04] transition-colors"
                       >
-                        <TableCell className="font-mono text-xs">{r.proposed_movement.kind}</TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground uppercase">{r.proposed_movement.kind}</TableCell>
                         <TableCell className="text-sm">{movementSummary(r)}</TableCell>
-                        <TableCell className="text-right font-mono text-sm">
+                        <TableCell className="text-right font-mono text-sm font-medium">
                           {formatCurrency(r.proposed_movement.amount.amount)}{' '}
-                          <span className="text-muted-foreground">{r.proposed_movement.amount.asset}</span>
+                          <span className="text-muted-foreground font-normal">{r.proposed_movement.amount.asset}</span>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {filled}/{total}
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground" title={age.full}>
-                          {age.text}
+                        <TableCell className="text-sm text-muted-foreground">
+                          <HoverTooltip label={age.full}>
+                            <span>{age.text}</span>
+                          </HoverTooltip>
                         </TableCell>
                         <TableCell>
                           <Badge variant={(STATUS_COLORS[r.status] ?? 'secondary') as any}>

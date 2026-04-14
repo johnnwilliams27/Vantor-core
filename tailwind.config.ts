@@ -62,6 +62,33 @@ const config: Config = {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      fontSize: {
+        '2xs': ['11px', '16px'],
+        '3xs': ['10px', '14px'],
+      },
+      fontFamily: {
+        sans: [
+          "Satoshi",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          '"Segoe UI"',
+          "Roboto",
+          "sans-serif",
+        ],
+        mono: [
+          '"SF Mono"',
+          "Menlo",
+          "Consolas",
+          '"Liberation Mono"',
+          "monospace",
+        ],
+      },
+      boxShadow: {
+        btn: "0 1px 2px rgba(0,0,0,0.25)",
+        card: "0 2px 6px rgba(0,0,0,0.25)",
+        elevated:
+          "0 12px 32px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.3)",
+      },
       keyframes: {
         "accordion-down": {
           from: { height: "0" },

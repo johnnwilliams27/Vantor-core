@@ -100,6 +100,7 @@ interface UserProfileRow {
 // ─── Query builder helpers ──────────────────────────────────────────────────
 
 type SelectBuilder<T> = {
+  select: (cols?: string) => SelectBuilder<T>;
   eq: (col: string, val: unknown) => SelectBuilder<T>;
   in: (col: string, vals: unknown[]) => SelectBuilder<T>;
   order: (col: string, opts?: { ascending?: boolean }) => SelectBuilder<T>;
@@ -185,7 +186,8 @@ export class PolicyAuthoringService {
 
   private async fetchChildren<T>(table: string, versionId: string): Promise<T[]> {
     const q = tableFrom<T>(this.supabase, table);
-    const result = await (q.eq('version_id', versionId) as unknown as Promise<{
+    // Real Supabase v2 requires .select() before filter methods.
+    const result = await (q.select('*').eq('version_id', versionId) as unknown as Promise<{
       data: T[] | null;
       error: unknown;
     }>);
@@ -208,6 +210,7 @@ export class PolicyAuthoringService {
       this.supabase,
       'policy_versions',
     )
+      .select('*')
       .eq('id', versionId)
       .eq('enterprise_id', enterpriseId)
       .maybeSingle();
@@ -261,6 +264,7 @@ export class PolicyAuthoringService {
     const q = tableFrom<PolicyVersionRow>(this.supabase, 'policy_versions');
     const result = await (
       q
+        .select('version_number')
         .eq('enterprise_id', enterpriseId)
         .order('version_number', { ascending: false })
         .limit(1) as unknown as Promise<{ data: PolicyVersionRow[] | null; error: unknown }>
@@ -285,6 +289,7 @@ export class PolicyAuthoringService {
       this.supabase,
       'policy_policies',
     )
+      .select('*')
       .eq('enterprise_id', actor.enterprise_id)
       .maybeSingle();
 
@@ -321,6 +326,7 @@ export class PolicyAuthoringService {
     const q = tableFrom<PolicyVersionRow>(this.supabase, 'policy_versions');
     const result = await (
       q
+        .select('*')
         .eq('enterprise_id', actor.enterprise_id)
         .order('version_number', { ascending: false }) as unknown as Promise<{
         data: PolicyVersionRow[] | null;
@@ -358,16 +364,23 @@ export class PolicyAuthoringService {
     const nextNumber = await this.fetchNextVersionNumber(actor.enterprise_id);
 
     const insertQ = tableFrom<PolicyVersionRow>(this.supabase, 'policy_versions') as unknown as {
-      insert: (row: Record<string, unknown>) => Promise<{ data: PolicyVersionRow | null; error: unknown }>;
+      insert: (row: Record<string, unknown>) => {
+        select: () => {
+          single: () => Promise<{ data: PolicyVersionRow | null; error: unknown }>;
+        };
+      };
     };
 
-    const { data: newRow, error: insertError } = await insertQ.insert({
-      enterprise_id: actor.enterprise_id,
-      version_number: nextNumber,
-      status: 'draft',
-      name: req.name,
-      created_by: actor.user_id,
-    });
+    const { data: newRow, error: insertError } = await insertQ
+      .insert({
+        enterprise_id: actor.enterprise_id,
+        version_number: nextNumber,
+        status: 'draft',
+        name: req.name,
+        created_by: actor.user_id,
+      })
+      .select()
+      .single();
 
     if (insertError || !newRow) {
       throw new AuthoringError({
@@ -393,31 +406,44 @@ export class PolicyAuthoringService {
           insert: (rows: Record<string, unknown>[]) => Promise<{ data: unknown[] | null; error: unknown }>;
         };
 
+      const throwIfCopyFailed = (table: string, error: unknown) => {
+        if (!error) return;
+        throw new AuthoringError({
+          reason_code: REASON_CODES.gate_internal_error,
+          human_readable: `Draft created but failed to copy ${table} from source version.`,
+          user_action: 'Delete the partial draft and try again, or contact support.',
+          details: { table, version_id: versionId, error },
+        });
+      };
+
       if (sourceRules.length > 0) {
-        await copyQ('policy_rules').insert(
+        const { error } = await copyQ('policy_rules').insert(
           sourceRules.map(({ id: _id, version_id: _vid, created_at: _cat, ...rest }) => ({
             ...rest,
             version_id: versionId,
             created_by: actor.user_id,
           })),
         );
+        throwIfCopyFailed('policy_rules', error);
       }
       if (sourceLimits.length > 0) {
-        await copyQ('policy_hard_limits').insert(
+        const { error } = await copyQ('policy_hard_limits').insert(
           sourceLimits.map(({ id: _id, version_id: _vid, ...rest }) => ({
             ...rest,
             version_id: versionId,
           })),
         );
+        throwIfCopyFailed('policy_hard_limits', error);
       }
       if (sourceChains.length > 0) {
-        await copyQ('policy_approval_chains').insert(
+        const { error } = await copyQ('policy_approval_chains').insert(
           sourceChains.map(({ id: _id, version_id: _vid, created_at: _cat, ...rest }) => ({
             ...rest,
             version_id: versionId,
             created_by: actor.user_id,
           })),
         );
+        throwIfCopyFailed('policy_approval_chains', error);
       }
     }
 
@@ -447,12 +473,6 @@ export class PolicyAuthoringService {
 
   async deleteDraft(actor: AuthoringActor, versionId: string): Promise<void> {
     const version = await this.requireDraftVersion(actor, versionId);
-
-    // Must be the creator
-    const versionRow = await tableFrom<PolicyVersionRow>(this.supabase, 'policy_versions')
-      .eq('id', versionId)
-      .eq('enterprise_id', actor.enterprise_id)
-      .single();
 
     // Load the raw row to check created_by
     const rawQ = tableFrom<PolicyVersionRow>(this.supabase, 'policy_versions') as unknown as {
@@ -500,7 +520,6 @@ export class PolicyAuthoringService {
 
     // suppress unused variable warning
     void version;
-    void versionRow;
   }
 
   // ── Task 9: Rule CRUD ────────────────────────────────────────────────────
@@ -804,7 +823,7 @@ export class PolicyAuthoringService {
   private async fetchEnterpriseUsers(enterpriseId: string): Promise<SatisfiabilityUserRow[]> {
     const q = tableFrom<UserProfileRow>(this.supabase, 'user_profiles');
     const result = await (
-      q.eq('enterprise_id', enterpriseId) as unknown as Promise<{
+      q.select('id, role, is_policy_admin, is_app_admin').eq('enterprise_id', enterpriseId) as unknown as Promise<{
         data: UserProfileRow[] | null;
         error: unknown;
       }>
@@ -907,9 +926,19 @@ export class PolicyAuthoringService {
       }
     }
 
-    // 6. Call the atomic PG RPC
-    const rpc = (this.supabase as { rpc: NonNullable<SupabaseLike['rpc']> }).rpc;
-    if (!rpc) {
+    // 6. Call the atomic PG RPC. Real Supabase v2 `.rpc()` reads
+    // `this.rest` internally, so the method MUST be invoked on the
+    // client object. Prior attempts that used `supabase.rpc(fn, args)`
+    // still 500'd on Vercel ("Cannot read properties of undefined
+    // (reading 'rest')") — the prod minifier appears to strip the
+    // binding in async/await member-call sequences. Using .call()
+    // with an explicit receiver is bulletproof regardless of how the
+    // build pipeline transforms the call expression.
+    const rpcFn = (this.supabase as { rpc?: unknown }).rpc as
+      | ((fn: string, params: Record<string, unknown>) =>
+          Promise<{ data: unknown; error: { code?: string; message?: string } | null }>)
+      | undefined;
+    if (typeof rpcFn !== 'function') {
       throw new AuthoringError({
         reason_code: REASON_CODES.gate_internal_error,
         human_readable: 'Activation RPC is not available in this context.',
@@ -918,7 +947,7 @@ export class PolicyAuthoringService {
       });
     }
 
-    const { error: rpcError } = await rpc('policy_activate_draft', {
+    const { error: rpcError } = await rpcFn.call(this.supabase, 'policy_activate_draft', {
       p_version_id: versionId,
       p_enterprise_id: actor.enterprise_id,
       p_activated_by: actor.user_id,

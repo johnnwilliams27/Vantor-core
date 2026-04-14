@@ -9,6 +9,7 @@ import {
   useUnfreezeEnterprise,
 } from '@/hooks/useAdmin';
 import { Spinner } from '@/components/ui/spinner';
+import { Badge } from '@/components/ui/badge';
 import {
   ArrowLeft,
   Loader2,
@@ -21,37 +22,35 @@ import {
   X,
   AlertCircle,
   Shield,
+  RotateCcw,
 } from 'lucide-react';
 
+// Migrated to semantic Badge variants (style guide Stage 3e).
 function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    active: 'bg-emerald-500/15 text-emerald-400',
-    frozen: 'bg-blue-500/15 text-blue-400',
-    suspended: 'bg-red-500/15 text-red-400',
-    pending_kyc: 'bg-amber-500/15 text-amber-400',
+  const variants: Record<string, string> = {
+    active: 'active',
+    frozen: 'info-blue',
+    suspended: 'failed',
+    pending_kyc: 'pending',
   };
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${colors[status] ?? 'bg-gray-500/15 text-gray-400'}`}
-    >
+    <Badge variant={(variants[status] ?? 'inactive') as any}>
       {status.replace('_', ' ')}
-    </span>
+    </Badge>
   );
 }
 
 function KycBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    verified: 'bg-emerald-500/15 text-emerald-400',
-    pending: 'bg-amber-500/15 text-amber-400',
-    rejected: 'bg-red-500/15 text-red-400',
-    none: 'bg-gray-500/15 text-gray-400',
+  const variants: Record<string, string> = {
+    verified: 'active',
+    pending: 'pending',
+    rejected: 'failed',
+    none: 'inactive',
   };
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${colors[status] ?? 'bg-gray-500/15 text-gray-400'}`}
-    >
+    <Badge variant={(variants[status] ?? 'inactive') as any}>
       {status}
-    </span>
+    </Badge>
   );
 }
 
@@ -66,6 +65,31 @@ export default function EnterpriseDetailPage() {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [reseeding, setReseeding] = useState(false);
+  const [reseedResult, setReseedResult] = useState<'idle' | 'ok' | 'err'>('idle');
+
+  const handleReseed = async () => {
+    if (!confirm('Wipe and re-seed this enterprise\'s test data? This clears all seeded demo rows and generates fresh ones.')) {
+      return;
+    }
+    setReseeding(true);
+    setReseedResult('idle');
+    try {
+      const res = await fetch(`/api/admin/enterprises/${id}/reseed-test`, { method: 'POST' });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        console.error('[reseed] failed', body);
+        setReseedResult('err');
+        return;
+      }
+      setReseedResult('ok');
+    } catch (e) {
+      console.error('[reseed] error', e);
+      setReseedResult('err');
+    } finally {
+      setReseeding(false);
+    }
+  };
 
   const startEdit = () => {
     if (!enterprise) return;
@@ -145,7 +169,7 @@ export default function EnterpriseDetailPage() {
                 </Button>
               ) : (
                 <Button
-                  variant="destructive"
+                  variant="destructive-outline"
                   size="sm"
                   onClick={() => freeze.mutate(id)}
                   disabled={freeze.isPending}
@@ -243,6 +267,47 @@ export default function EnterpriseDetailPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Test Data Management */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <RotateCcw className="h-5 w-5" />
+              Test Data
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              {reseedResult === 'ok' && (
+                <span className="text-sm text-green-400">Reseeded successfully</span>
+              )}
+              {reseedResult === 'err' && (
+                <span className="text-sm text-red-400">Reseed failed — check console</span>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleReseed}
+                disabled={reseeding}
+              >
+                {reseeding ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Reseeding…
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Reset Test Data
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Wipes this enterprise's test-mode demo data and re-seeds with fresh rows across wallets, banking, ERP, transactions, yield positions, policy, approvals, analytics, insights, and notifications.
+            </p>
+          </CardContent>
+        </Card>
 
         {/* Audit Logs */}
         <Card>

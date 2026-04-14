@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { formatCurrency, formatRelativeOrDate, capitalize, sanitizeErrorMessage } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
 import { useToast } from '@/components/ui/toast';
@@ -104,13 +105,13 @@ export function ApprovalDetailDialog({ request, onClose, onActionComplete }: Pro
                     className={cn(
                       'flex items-center justify-between rounded-md border px-3 py-2',
                       slot.filled_by
-                        ? 'border-emerald-500/20 bg-emerald-500/5'
+                        ? 'border-teal-500/20 bg-teal-500/8'
                         : 'border-white/[0.08]',
                     )}
                   >
                     <div className="flex items-center gap-3">
                       {slot.filled_by ? (
-                        <Check className="h-4 w-4 text-emerald-400" />
+                        <Check className="h-4 w-4 text-teal-400" />
                       ) : (
                         <CircleSlash className="h-4 w-4 text-muted-foreground" />
                       )}
@@ -153,11 +154,11 @@ export function ApprovalDetailDialog({ request, onClose, onActionComplete }: Pro
             <Label htmlFor="justification">
               {mode === 'cancel' ? 'Cancellation reason (optional)' : 'Justification'}
             </Label>
-            <textarea
+            <Textarea
               id="justification"
               value={justification}
               onChange={(e) => setJustification(e.target.value)}
-              className="w-full rounded-md border border-white/[0.08] bg-background px-3 py-2 text-sm min-h-[100px]"
+              className="min-h-[100px]"
               placeholder={
                 mode === 'approve'
                   ? 'e.g., Confirmed with treasury team; within quarterly budget.'
@@ -181,11 +182,7 @@ export function ApprovalDetailDialog({ request, onClose, onActionComplete }: Pro
                 </Button>
               )}
               {canDeny && (
-                <Button
-                  variant="outline"
-                  className="text-red-400 border-red-500/20 hover:bg-red-500/10"
-                  onClick={() => setMode('deny')}
-                >
+                <Button variant="destructive-outline" onClick={() => setMode('deny')}>
                   <X className="h-4 w-4 mr-1" /> Deny
                 </Button>
               )}

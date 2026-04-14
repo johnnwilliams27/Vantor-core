@@ -131,7 +131,7 @@ export function ContactForm() {
             </p>
           )}
           {status === 'error' && (
-            <p role="alert" className="text-red-400 text-sm">Something went wrong. Please email contact@vantor.xyz directly.</p>
+            <p role="alert" className="text-destructive text-sm">Something went wrong. Please email contact@vantor.xyz directly.</p>
           )}
         </form>
       </div>

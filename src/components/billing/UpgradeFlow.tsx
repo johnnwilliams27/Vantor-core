@@ -120,17 +120,17 @@ export function UpgradeFlow({ targetTier, onCancel }: UpgradeFlowProps) {
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-400 ${
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-[background-color,backdrop-filter] duration-400 ${
         mounted ? 'bg-black/40 backdrop-blur-[3px]' : 'bg-black/0 backdrop-blur-0'
       }`}
     >
       <div
-        className={`bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden transition-all duration-500 ${
+        className={`bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden transition-[opacity,transform] duration-500 ${
           mounted ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-6'
         }`}
       >
         {/* Teal header */}
-        <div className="bg-[#19595b] px-6 pt-5 pb-6 relative overflow-hidden">
+        <div className="bg-primary px-6 pt-5 pb-6 relative overflow-hidden">
           {/* Shimmer */}
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.04] to-transparent animate-[shimmer_8s_ease-in-out_infinite]" />
 
@@ -143,12 +143,12 @@ export function UpgradeFlow({ targetTier, onCancel }: UpgradeFlowProps) {
                 </div>
                 <div>
                   <h2 className="text-base font-semibold text-white">Upgrade to {tierDef.name}</h2>
-                  <p className="text-[11px] text-white/50">{tierDef.displayPrice}</p>
+                  <p className="text-2xs text-white/50">{tierDef.displayPrice}</p>
                 </div>
               </div>
               <button
                 onClick={onCancel}
-                className="text-white/40 hover:text-white/70 text-xs font-medium px-2 py-1 rounded-md hover:bg-white/10 transition-all"
+                className="text-white/40 hover:text-white/70 text-xs font-medium px-2 py-1 rounded-md hover:bg-white/10 transition-colors"
               >
                 Cancel
               </button>
@@ -166,7 +166,7 @@ export function UpgradeFlow({ targetTier, onCancel }: UpgradeFlowProps) {
                     <div className="flex-1">
                       <div className="h-1 rounded-full bg-white/15 overflow-hidden mb-2">
                         <div
-                          className="h-full rounded-full transition-all duration-700 ease-out"
+                          className="h-full rounded-full transition-[width] duration-700 ease-out"
                           style={{
                             width: isDone ? '100%' : isActive ? '50%' : '0%',
                             background: isDone
@@ -181,7 +181,7 @@ export function UpgradeFlow({ targetTier, onCancel }: UpgradeFlowProps) {
                         ) : (
                           <SIcon className={`w-3 h-3 flex-shrink-0 ${isActive ? 'text-white' : 'text-white/30'}`} />
                         )}
-                        <span className={`text-[10px] font-medium ${isActive ? 'text-white' : isDone ? 'text-white/60' : 'text-white/30'}`}>
+                        <span className={`text-3xs font-medium ${isActive ? 'text-white' : isDone ? 'text-white/60' : 'text-white/30'}`}>
                           {s.label}
                         </span>
                       </div>
@@ -199,7 +199,7 @@ export function UpgradeFlow({ targetTier, onCancel }: UpgradeFlowProps) {
         {/* Content with step transitions */}
         <div className="p-6">
           <div
-            className={`transition-all duration-300 ${
+            className={`transition-[opacity,transform] duration-300 ${
               transitioning ? 'opacity-0 translate-y-3' : 'opacity-100 translate-y-0'
             }`}
           >
@@ -228,7 +228,7 @@ export function UpgradeFlow({ targetTier, onCancel }: UpgradeFlowProps) {
                     <p className="text-red-400 text-sm mb-4">{checkoutError}</p>
                     <button
                       onClick={handleCheckout}
-                      className="px-5 py-2.5 rounded-lg bg-[#19595b] hover:bg-[#134849] text-white text-sm font-medium transition-colors"
+                      className="px-5 py-2.5 rounded-lg bg-primary hover:bg-[#134849] text-white text-sm font-medium transition-colors"
                     >
                       Retry
                     </button>

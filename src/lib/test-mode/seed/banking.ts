@@ -57,11 +57,11 @@ export async function seedBanking(ctx: SeedContext): Promise<BankIds> {
     banking_provider: b.banking_provider,
   }));
 
-  const { data: banks } = await supabase
+  const { data: banks, error: baErr } = await supabase
     .from('bank_accounts')
     .insert([...bankRows, ...latamBankRows])
     .select('id, institution_name, currency');
-
+  if (baErr) throw new Error(`seedBanking: bank_accounts insert failed: ${baErr.message}`);
   if (!banks?.length) return { bankAccountIds: [] };
 
   // Seed 20 fiat transactions over 90 days
@@ -129,7 +129,8 @@ export async function seedBanking(ctx: SeedContext): Promise<BankIds> {
     };
   });
 
-  await supabase.from('fiat_transactions').insert([...fiatTxns, ...latamTxns]);
+  const { error: ftErr } = await supabase.from('fiat_transactions').insert([...fiatTxns, ...latamTxns]);
+  if (ftErr) throw new Error(`seedBanking: fiat_transactions insert failed: ${ftErr.message}`);
 
   return { bankAccountIds: banks.map(b => b.id) };
 }

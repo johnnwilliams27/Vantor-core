@@ -20,14 +20,19 @@ import { TableCardSkeleton } from '@/components/ui/operations-skeletons';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
 import { CancelScheduledDialog } from '@/components/ui/cancel-scheduled-dialog';
+import { HoverTooltip } from '@/components/ui/hover-tooltip';
 import { Check, Clock, XCircle } from 'lucide-react';
 
+// Migrated to semantic badge variants (style guide Stage 3b).
+// pending/processing → pending (amber, user waits) · completed → active
+// (teal, matches STATUS_BADGE.executed) · failed → failed (red) ·
+// cancelled → inactive (gray).
 const STATUS_COLORS: Record<string, string> = {
-  pending: 'warning',
-  processing: 'info',
-  completed: 'success',
-  failed: 'destructive',
-  cancelled: 'secondary',
+  pending: 'pending',
+  processing: 'pending',
+  completed: 'active',
+  failed: 'failed',
+  cancelled: 'inactive',
 };
 
 const TRANSFER_FILTER_CONFIG = {
@@ -149,7 +154,7 @@ function TransferList() {
                   aria-sort={filter.sortKey === 'amount' ? (filter.sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
                 >
                   Amount
-                  <span className={`text-[10px] ${filter.sortKey === 'amount' ? 'text-teal-400' : 'opacity-0 group-hover:opacity-40'}`}>
+                  <span className={`text-3xs ${filter.sortKey === 'amount' ? 'text-teal-400' : 'opacity-0 group-hover:opacity-40'}`}>
                     {filter.sortKey === 'amount' ? (filter.sortDir === 'asc' ? '↑' : '↓') : '↕'}
                   </span>
                 </button>
@@ -167,7 +172,7 @@ function TransferList() {
                   aria-sort={filter.sortKey === 'date' ? (filter.sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
                 >
                   Date
-                  <span className={`text-[10px] ${filter.sortKey === 'date' ? 'text-teal-400' : 'opacity-0 group-hover:opacity-40'}`}>
+                  <span className={`text-3xs ${filter.sortKey === 'date' ? 'text-teal-400' : 'opacity-0 group-hover:opacity-40'}`}>
                     {filter.sortKey === 'date' ? (filter.sortDir === 'asc' ? '↑' : '↓') : '↕'}
                   </span>
                 </button>
@@ -211,9 +216,9 @@ function TransferList() {
                   {hasErpData && (
                     <TableCell className="text-sm">
                       {p.erp_config ? (
-                        <span title={p.erp_config.label}>
-                          {p.erp_config.provider.toUpperCase()}
-                        </span>
+                        <HoverTooltip label={p.erp_config.label}>
+                          <span>{p.erp_config.provider.toUpperCase()}</span>
+                        </HoverTooltip>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
@@ -222,8 +227,10 @@ function TransferList() {
                   <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                     {p.scheduled_for ? formatDateTime(p.scheduled_for) : '—'}
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground whitespace-nowrap" title={formatRelativeOrDate(p.created_at).full}>
-                    {formatRelativeOrDate(p.created_at).text}
+                  <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                    <HoverTooltip label={formatRelativeOrDate(p.created_at).full}>
+                      <span>{formatRelativeOrDate(p.created_at).text}</span>
+                    </HoverTooltip>
                   </TableCell>
                   <TableCell>
                     {p.status === 'pending' && (
@@ -296,7 +303,6 @@ export default function TransfersPage() {
   return (
     <>
       <div className="space-y-6 animate-in fade-in duration-200">
-        <h1 className="text-xl font-semibold text-white">Transfers</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <SendTransferForm />
           <ScheduleTransferForm />

@@ -8,6 +8,7 @@ import { z } from 'zod';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email'),
@@ -19,6 +20,8 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export function LoginForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+  const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [showPassword, setShowPassword] = useState(false);
   const {
     register,
@@ -28,6 +31,8 @@ export function LoginForm() {
 
   const onSubmit = async (data: LoginFormData) => {
     setError(null);
+    setUnverifiedEmail(null);
+    setResendState('idle');
     const result = await signIn('credentials', {
       email: data.email,
       password: data.password,
@@ -43,7 +48,7 @@ export function LoginForm() {
         if (checkRes.ok) {
           const checkData = await checkRes.json();
           if (!checkData.verified) {
-            setError('Please verify your email before signing in. Check your inbox for the verification link.');
+            setUnverifiedEmail(data.email);
             return;
           }
         }
@@ -54,6 +59,21 @@ export function LoginForm() {
       return;
     }
     window.location.href = '/dashboard';
+  };
+
+  const handleResend = async () => {
+    if (!unverifiedEmail) return;
+    setResendState('sending');
+    try {
+      const res = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: unverifiedEmail }),
+      });
+      setResendState(res.ok ? 'sent' : 'error');
+    } catch {
+      setResendState('error');
+    }
   };
 
   return (
@@ -93,7 +113,7 @@ export function LoginForm() {
               {...register('email')}
               className="w-full px-4 py-3 min-h-[48px] rounded-xl bg-white/[0.05] border border-white/[0.08] text-white text-sm placeholder-[var(--text-400)] focus:outline-none focus:border-[var(--teal-400)]/50 focus:ring-1 focus:ring-[var(--teal-400)]/25 transition-[border-color,box-shadow] duration-300"
             />
-            {errors.email && <p className="text-xs text-red-400">{errors.email.message}</p>}
+            {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
           </div>
 
           <div className="space-y-1.5">
@@ -126,7 +146,7 @@ export function LoginForm() {
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
-            {errors.password && <p className="text-xs text-red-400">{errors.password.message}</p>}
+            {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
           </div>
 
           {error && (
@@ -135,17 +155,44 @@ export function LoginForm() {
             </div>
           )}
 
-          <button
+          {unverifiedEmail && (
+            <div role="alert" className="rounded-lg bg-amber-500/10 border border-amber-500/20 px-3 py-3 text-sm">
+              <p className="text-amber-300 mb-2">
+                Please verify your email before signing in. Check your inbox for the verification link.
+              </p>
+              {resendState === 'sent' ? (
+                <p className="text-[var(--text-300)] text-xs">
+                  Sent. Check your inbox (and spam folder).
+                </p>
+              ) : resendState === 'error' ? (
+                <p className="text-red-400 text-xs">
+                  Couldn&rsquo;t send. Try again in a moment.
+                </p>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={resendState === 'sending'}
+                  className="text-xs font-medium text-amber-200 hover:text-amber-100 underline underline-offset-2 disabled:opacity-60"
+                >
+                  {resendState === 'sending' ? 'Sending…' : 'Resend verification email'}
+                </button>
+              )}
+            </div>
+          )}
+
+          <Button
             type="submit"
             disabled={isSubmitting}
-            className="w-full min-h-[48px] py-3 text-sm btn-gradient disabled:opacity-60 flex items-center justify-center gap-2"
+            className="w-full min-h-[48px]"
+            size="lg"
           >
             {isSubmitting ? (
-              <><Loader2 size={14} className="animate-spin" /> Signing in…</>
+              <><Loader2 size={14} className="animate-spin mr-2" /> Signing in…</>
             ) : (
               'Sign in'
             )}
-          </button>
+          </Button>
         </form>
 
         <div className="mt-6 space-y-2 text-center text-sm">

@@ -6,6 +6,7 @@ import { ListSkeleton } from '@/components/ui/operations-skeletons';
 import { cn } from '@/lib/utils';
 import { useNotifications, useMarkNotificationsRead, useClearNotifications } from '@/hooks/useNotifications';
 import { useRouter } from 'next/navigation';
+import { HoverTooltip } from '@/components/ui/hover-tooltip';
 import type { Notification } from '@/types/notifications';
 
 const CATEGORY_DOT: Record<string, string> = {
@@ -65,34 +66,35 @@ export function NotificationsPanel() {
     }
     if (notif.link) {
       router.push(notif.link);
-      setOpen(false);
     }
+    setOpen(false);
   }, [markRead, router]);
 
   return (
     <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className={cn(
-          'relative p-2 rounded-lg transition-colors',
-          open
-            ? 'bg-[#19595b]/10 text-[#19595b] dark:bg-teal-500/20 dark:text-teal-300'
-            : 'hover:bg-black/5 dark:hover:bg-white/10 text-muted-foreground'
-        )}
-        aria-label="Open notifications"
-        aria-expanded={open}
-        title="Notifications"
-      >
-        <Bell className="h-5 w-5" />
-        {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white leading-none">
-            {unreadCount > 9 ? '9+' : unreadCount}
-          </span>
-        )}
-      </button>
+      <HoverTooltip label="Notifications" side="bottom">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className={cn(
+            'relative p-2 rounded-lg transition-colors',
+            open
+              ? 'bg-primary/10 text-primary dark:bg-teal-500/20 dark:text-teal-300'
+              : 'hover:bg-black/5 dark:hover:bg-white/10 text-muted-foreground'
+          )}
+          aria-label="Open notifications"
+          aria-expanded={open}
+        >
+          <Bell className="h-5 w-5" />
+          {unreadCount > 0 && (
+            <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-3xs font-bold text-white leading-none">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </button>
+      </HoverTooltip>
 
       {open && (
-        <div className="animate-dropdown absolute -right-2 sm:right-0 top-full mt-2 w-[calc(100vw-1.5rem)] sm:w-80 z-50 rounded-xl border border-border bg-popover shadow-xl overflow-hidden">
+        <div className="animate-dropdown absolute right-0 top-full mt-2 w-[min(22rem,calc(100vw-1rem))] sm:w-80 z-50 rounded-xl border border-border bg-popover shadow-xl overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
             <span className="text-sm font-semibold text-foreground">Notifications</span>
             <div className="flex items-center gap-3">
@@ -131,7 +133,7 @@ export function NotificationsPanel() {
                   onClick={() => handleClickNotification(notif)}
                   className={cn(
                     'flex items-start gap-3 px-4 py-3 transition-colors w-full text-left',
-                    !notif.read ? 'bg-[#19595b]/5' : 'hover:bg-black/[0.03] dark:hover:bg-white/[0.03]'
+                    !notif.read ? 'bg-primary/5' : 'hover:bg-black/[0.03] dark:hover:bg-white/[0.03]'
                   )}
                 >
                   <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', !notif.read ? (CATEGORY_DOT[notif.category] ?? 'bg-muted-foreground') : 'bg-transparent')} />

@@ -1,11 +1,13 @@
 'use client';
 
-import { Suspense, useEffect, useCallback } from 'react';
+import { Suspense, useEffect, useCallback, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { CheckCircle2, XCircle, Clock, Mail } from 'lucide-react';
 import { LoginBackground } from '@/components/auth/LoginBackground';
+import { buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 const statusConfig = {
   success: {
@@ -60,6 +62,22 @@ function VerifyEmailContent() {
   const email = searchParams.get('email');
   const config = statusConfig[status] || statusConfig.pending;
   const Icon = config.icon;
+  const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+
+  const handleResend = async () => {
+    if (!email) return;
+    setResendState('sending');
+    try {
+      const res = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      setResendState(res.ok ? 'sent' : 'error');
+    } catch {
+      setResendState('error');
+    }
+  };
 
   const checkVerification = useCallback(async () => {
     if (!email) return false;
@@ -108,28 +126,47 @@ function VerifyEmailContent() {
         {/* Body */}
         <div className="px-8 py-8 text-center">
           <Icon className={`w-12 h-12 mx-auto mb-4 ${config.iconColor}`} />
-          <h2 className="text-lg font-semibold text-white mb-2">{config.title}</h2>
+          <h1 className="text-lg font-semibold text-white mb-2">{config.title}</h1>
           <p className="text-sm text-[var(--text-300)] leading-relaxed">{config.message}</p>
 
           {config.showLogin && (
             <Link
               href="/login"
-              className="inline-block mt-6 min-h-[44px] px-6 py-2.5 text-sm btn-gradient"
+              className={cn(buttonVariants({ size: 'lg' }), 'mt-6 min-h-[44px]')}
             >
               Sign in
             </Link>
           )}
 
           {status === 'pending' && email && (
-            <p className="text-xs text-[var(--text-400)] mt-4 animate-pulse">
-              This page will update automatically once verified.
-            </p>
+            <>
+              <p className="text-xs text-[var(--text-400)] mt-4 animate-pulse">
+                This page will update automatically once verified.
+              </p>
+              <div className="mt-4 text-xs text-[var(--text-400)]">
+                Didn&rsquo;t get it?{' '}
+                {resendState === 'sent' ? (
+                  <span className="text-[var(--teal-400)]">Sent — check your inbox.</span>
+                ) : resendState === 'error' ? (
+                  <span className="text-red-400">Couldn&rsquo;t send. Try again in a moment.</span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={resendState === 'sending'}
+                    className="font-medium text-[var(--teal-400)] hover:text-[var(--teal-300)] underline underline-offset-2 disabled:opacity-60"
+                  >
+                    {resendState === 'sending' ? 'Sending…' : 'Resend verification email'}
+                  </button>
+                )}
+              </div>
+            </>
           )}
 
           {status === 'expired' && (
             <Link
               href="/register"
-              className="inline-block mt-6 min-h-[44px] px-6 py-2.5 text-sm btn-gradient"
+              className={cn(buttonVariants({ size: 'lg' }), 'mt-6 min-h-[44px]')}
             >
               Register again
             </Link>

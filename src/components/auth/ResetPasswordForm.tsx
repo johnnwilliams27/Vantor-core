@@ -7,6 +7,8 @@ import { z } from 'zod';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Loader2, CheckCircle2, XCircle, Eye, EyeOff } from 'lucide-react';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 const schema = z
   .object({
@@ -99,7 +101,7 @@ export function ResetPasswordForm() {
             </p>
             <Link
               href="/forgot-password"
-              className="inline-block mt-5 min-h-[44px] px-6 py-2.5 text-sm btn-gradient"
+              className={cn(buttonVariants({ size: 'lg' }), 'mt-5 min-h-[44px]')}
             >
               Request new link
             </Link>
@@ -113,7 +115,7 @@ export function ResetPasswordForm() {
             </p>
             <Link
               href="/login"
-              className="inline-block mt-5 min-h-[44px] px-6 py-2.5 text-sm btn-gradient"
+              className={cn(buttonVariants({ size: 'lg' }), 'mt-5 min-h-[44px]')}
             >
               Sign in
             </Link>
@@ -145,7 +147,7 @@ export function ResetPasswordForm() {
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
-                {errors.password && <p className="text-xs text-red-400">{errors.password.message}</p>}
+                {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
               </div>
 
               <div className="space-y-1.5">
@@ -168,10 +170,10 @@ export function ResetPasswordForm() {
                     {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
-                {errors.confirmPassword && <p className="text-xs text-red-400">{errors.confirmPassword.message}</p>}
+                {errors.confirmPassword && <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>}
               </div>
 
-              <p className="text-[11px] text-[var(--text-400)] leading-relaxed">
+              <p className="text-2xs text-[var(--text-400)] leading-relaxed">
                 Must be at least 8 characters and include one uppercase letter and one special character.
               </p>
 
@@ -181,17 +183,18 @@ export function ResetPasswordForm() {
                 </div>
               )}
 
-              <button
+              <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full min-h-[48px] py-3 text-sm btn-gradient disabled:opacity-60 flex items-center justify-center gap-2"
+                className="w-full min-h-[48px]"
+                size="lg"
               >
                 {isSubmitting ? (
-                  <><Loader2 size={14} className="animate-spin" /> Updating…</>
+                  <><Loader2 size={14} className="animate-spin mr-2" /> Updating…</>
                 ) : (
                   'Update password'
                 )}
-              </button>
+              </Button>
             </form>
 
             <p className="mt-5 text-center text-sm text-[var(--text-300)]">

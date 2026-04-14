@@ -43,7 +43,8 @@ export async function seedCompliance(ctx: SeedContext, walletIds: WalletIds, txI
     };
   });
 
-  await supabase.from('sanctions_screenings').insert(screeningRows);
+  const ssErr = (await supabase.from('sanctions_screenings').insert(screeningRows)).error;
+  if (ssErr) throw new Error(`seedCompliance: sanctions_screenings insert failed: ${ssErr.message}`);
 
   // KYT transfers
   const kytRows: any[] = [];
@@ -57,7 +58,7 @@ export async function seedCompliance(ctx: SeedContext, walletIds: WalletIds, txI
 
     kytRows.push({
       user_id: userId, enterprise_id: enterpriseId,
-      external_id: `kyt-test-${String(i + 1).padStart(3, '0')}`,
+      external_id: `kyt-${ethHash().slice(0, 16)}`,
       chain: isEth ? 'ethereum' : 'solana',
       direction: isSent ? 'sent' : 'received',
       tx_hash: ethHash(),
@@ -74,7 +75,9 @@ export async function seedCompliance(ctx: SeedContext, walletIds: WalletIds, txI
     });
   }
 
-  const { data: kytTransfers } = await supabase.from('kyt_transfers').insert(kytRows).select('id, risk_score');
+  const kytRes = await supabase.from('kyt_transfers').insert(kytRows).select('id, risk_score');
+  if (kytRes.error) throw new Error(`seedCompliance: kyt_transfers insert failed: ${kytRes.error.message}`);
+  const kytTransfers = kytRes.data;
 
   // KYT alerts for high-risk transfers
   const highRiskTransfers = kytTransfers?.filter(t => t.risk_score > 20) || [];
@@ -82,7 +85,7 @@ export async function seedCompliance(ctx: SeedContext, walletIds: WalletIds, txI
   const alertRows = highRiskTransfers.map((t, i) => ({
     user_id: userId, enterprise_id: enterpriseId,
     kyt_transfer_id: t.id,
-    external_alert_id: `alert-test-${String(i + 1).padStart(3, '0')}`,
+    external_alert_id: `alert-${ethHash().slice(0, 16)}`,
     severity: t.risk_score > 60 ? 'severe' : t.risk_score > 40 ? 'high' : 'medium',
     status: alertStatuses[i % alertStatuses.length],
     category: 'suspicious_activity',
@@ -95,7 +98,8 @@ export async function seedCompliance(ctx: SeedContext, walletIds: WalletIds, txI
   }));
 
   if (alertRows.length) {
-    await supabase.from('kyt_alerts').insert(alertRows);
+    const { error } = await supabase.from('kyt_alerts').insert(alertRows);
+    if (error) throw new Error(`seedCompliance: kyt_alerts insert failed: ${error.message}`);
   }
 
 }

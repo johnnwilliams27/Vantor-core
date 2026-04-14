@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Image from 'next/image';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const registerSchema = z.object({
   fullName: z.string().min(2, 'Name must be at least 2 characters'),
@@ -118,7 +119,7 @@ export function RegisterForm() {
               {...register('fullName')}
               className={inputClass}
             />
-            {errors.fullName && <p className="text-xs text-red-400">{errors.fullName.message}</p>}
+            {errors.fullName && <p className="text-xs text-destructive">{errors.fullName.message}</p>}
           </div>
 
           <div className="space-y-1.5">
@@ -130,7 +131,7 @@ export function RegisterForm() {
               {...register('companyName')}
               className={inputClass}
             />
-            {errors.companyName && <p className="text-xs text-red-400">{errors.companyName.message}</p>}
+            {errors.companyName && <p className="text-xs text-destructive">{errors.companyName.message}</p>}
           </div>
 
           <div className="space-y-1.5">
@@ -145,7 +146,7 @@ export function RegisterForm() {
               readOnly={!!inviteEmail}
               className={`${inputClass} ${inviteEmail ? 'opacity-60 cursor-not-allowed' : ''}`}
             />
-            {errors.email && <p className="text-xs text-red-400">{errors.email.message}</p>}
+            {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
           </div>
 
           <div className="space-y-1.5">
@@ -168,7 +169,7 @@ export function RegisterForm() {
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
-            {errors.password && <p className="text-xs text-red-400">{errors.password.message}</p>}
+            {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
           </div>
 
           <div className="space-y-1.5">
@@ -191,7 +192,7 @@ export function RegisterForm() {
                 {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
-            {errors.confirmPassword && <p className="text-xs text-red-400">{errors.confirmPassword.message}</p>}
+            {errors.confirmPassword && <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>}
           </div>
 
           {error && (
@@ -200,17 +201,18 @@ export function RegisterForm() {
             </div>
           )}
 
-          <button
+          <Button
             type="submit"
             disabled={isSubmitting}
-            className="w-full min-h-[48px] py-3 text-sm btn-gradient disabled:opacity-60 flex items-center justify-center gap-2"
+            className="w-full min-h-[48px]"
+            size="lg"
           >
             {isSubmitting ? (
-              <><Loader2 size={14} className="animate-spin" /> Creating account…</>
+              <><Loader2 size={14} className="animate-spin mr-2" /> Creating account…</>
             ) : (
               'Create account'
             )}
-          </button>
+          </Button>
         </form>
 
         <p className="mt-5 text-center text-sm text-[var(--text-300)]">

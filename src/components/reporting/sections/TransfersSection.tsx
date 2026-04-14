@@ -37,7 +37,7 @@ export function TransfersSection({ data }: { data: Transfer[] }) {
         <div className="flex flex-wrap gap-3">
           <div className="rounded-lg border bg-muted/30 px-3 py-2">
             <div className="text-xs text-muted-foreground">Total Volume</div>
-            <div className="text-sm font-bold">{formatCurrency(String(summary.totalVolume))}</div>
+            <div className="text-sm font-bold tabular-nums">{formatCurrency(String(summary.totalVolume))}</div>
           </div>
           {Object.entries(summary.byStatus).map(([status, count]) => (
             <div key={status} className="rounded-lg border bg-muted/30 px-3 py-2">
@@ -75,7 +75,7 @@ export function TransfersSection({ data }: { data: Transfer[] }) {
                 <tr key={p.id} className={`border-b ${i % 2 === 0 ? '' : 'bg-muted/20'}`}>
                   <td className="px-3 py-2 font-mono">{p.created_at.split('T')[0]}</td>
                   <td className="px-3 py-2 font-mono">{truncateAddress(p.to_address, 6)}</td>
-                  <td className="px-3 py-2 font-semibold">{formatCurrency(p.amount)}</td>
+                  <td className="px-3 py-2 font-semibold tabular-nums">{formatCurrency(p.amount)}</td>
                   <td className="px-3 py-2">{p.token}</td>
                   <td className="px-3 py-2 capitalize">{p.chain}</td>
                   <td className="px-3 py-2 capitalize">{p.status}</td>

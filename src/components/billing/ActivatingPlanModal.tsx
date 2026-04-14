@@ -17,16 +17,16 @@ export function ActivatingPlanModal({ status }: ActivatingPlanModalProps) {
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-400 ${
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-[background-color,backdrop-filter] duration-400 ${
         mounted ? 'bg-black/40 backdrop-blur-[3px]' : 'bg-black/0 backdrop-blur-0'
       }`}
     >
       <div
-        className={`bg-card border border-border rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transition-all duration-500 ${
+        className={`bg-card border border-border rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transition-[opacity,transform] duration-500 ${
           mounted ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-6'
         }`}
       >
-        <div className="bg-[#19595b] px-6 py-5 relative overflow-hidden">
+        <div className="bg-primary px-6 py-5 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.04] to-transparent animate-[shimmer_8s_ease-in-out_infinite]" />
           <div className="relative flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center">
@@ -72,7 +72,7 @@ export function ActivatingPlanModal({ status }: ActivatingPlanModalProps) {
               </div>
               <button
                 onClick={() => window.location.href = '/settings/billing'}
-                className="px-5 py-2 rounded-lg bg-[#19595b] hover:bg-[#134849] text-white text-sm font-medium transition-colors"
+                className="px-5 py-2 rounded-lg bg-primary hover:bg-[#134849] text-white text-sm font-medium transition-colors"
               >
                 Refresh
               </button>

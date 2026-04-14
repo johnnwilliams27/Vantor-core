@@ -1,1 +1,1 @@
-export type { IERPAdapter, ERPCredentials, ERPVendorRaw, ERPInvoiceRaw, ERPGLPostPayload, ERPGLPostResult } from '@/types/erp';
+export type { IERPAdapter, ERPCredentials, ERPVendorRaw, ERPInvoiceRaw, ERPBillPaymentPayload, ERPBillPaymentResult } from '@/types/erp';

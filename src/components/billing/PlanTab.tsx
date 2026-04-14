@@ -8,10 +8,12 @@ import { TierComparisonGrid } from './TierComparisonGrid';
 import { UpgradeFlow } from './UpgradeFlow';
 import { DowngradeConfirmModal } from './DowngradeConfirmModal';
 import { TierSlug, TIERS, isUpgrade as isUpgradeFn } from '@/lib/billing/tiers';
+import { useToast } from '@/components/ui/toast';
 
 export function PlanTab() {
   const { data: session, update: updateSession } = useSession();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const tier = (session?.user?.subscription_tier || 'lite') as TierSlug;
   const [upgradeTier, setUpgradeTier] = useState<TierSlug | null>(null);
   const [downgradeTier, setDowngradeTier] = useState<TierSlug | null>(null);
@@ -101,7 +103,7 @@ export function PlanTab() {
         setDowngradeBanner(`Downgrade to ${targetName} scheduled for end of billing period.`);
       }
     } else {
-      alert(data.error || 'Downgrade failed');
+      toast({ title: 'Downgrade failed', description: data.error || 'Please try again or contact support.', variant: 'destructive' });
     }
   };
 
@@ -114,7 +116,7 @@ export function PlanTab() {
         setDowngradeBanner(null);
       } else {
         const data = await res.json().catch(() => ({}));
-        alert(data.error || 'Failed to cancel downgrade');
+        toast({ title: 'Could not cancel downgrade', description: data.error || 'Please try again or contact support.', variant: 'destructive' });
       }
     } finally {
       setCancelingDowngrade(false);
@@ -168,7 +170,7 @@ export function PlanTab() {
           {tier === 'lite' && (
             <button
               onClick={() => setUpgradeTier('starter')}
-              className="relative px-5 py-2.5 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 text-white text-sm font-semibold shadow-[0_0_12px_rgba(45,212,191,0.2)] hover:shadow-[0_0_20px_rgba(45,212,191,0.35)] transition-all overflow-hidden"
+              className="btn-gradient relative px-5 py-2.5 text-sm overflow-hidden"
             >
               <span className="relative z-10">Upgrade to unlock live mode</span>
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-[shimmer_3s_ease-in-out_infinite]" />
@@ -188,7 +190,7 @@ export function PlanTab() {
             </div>
             <div className="h-2 bg-muted rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all ${
+                className={`h-full rounded-full transition-[width,background-color] ${
                   assetCap.atCap ? 'bg-red-500' : 'bg-primary'
                 }`}
                 style={{ width: `${Math.min(100, assetCap.utilizationPercent)}%` }}
@@ -209,7 +211,7 @@ export function PlanTab() {
           </div>
           <button
             onClick={() => setUpgradeTier('starter')}
-            className="px-4 py-2 rounded-lg bg-[#19595b] hover:bg-[#134849] text-white text-sm font-medium transition-colors flex-shrink-0"
+            className="px-4 py-2 rounded-lg bg-primary hover:bg-[#134849] text-white text-sm font-medium transition-colors flex-shrink-0"
           >
             {resumeCta}
           </button>

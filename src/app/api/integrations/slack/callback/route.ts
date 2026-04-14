@@ -11,13 +11,11 @@ import {
 import { getBankingAdapter } from '@/lib/banking/factory';
 import { updateBalancesAfterRamp } from '@/lib/balances/update-after-movement';
 import {
-  PolicyGateService,
+  buildGateService,
   mapRecommendationToMovement,
   GateError,
   type GateActor,
 } from '@/lib/policy/gate';
-import { buildProductionEvaluate } from '@/lib/policy/gate/production-wiring';
-import { ApprovalWorkflowService } from '@/lib/policy/approvals';
 // No session available in Slack callback — authenticated via HMAC; always use live mode
 
 // No session auth — authenticated via Slack HMAC signature verification
@@ -199,10 +197,7 @@ export async function POST(req: NextRequest) {
       { userId: ownerId, enterpriseId, fromAddress: '' },
     );
 
-    const gateService = new PolicyGateService(supabase, {
-      evaluate: buildProductionEvaluate(supabase),
-      approvalService: new ApprovalWorkflowService(supabase),
-    });
+    const gateService = buildGateService(supabase);
 
     const actor: GateActor = {
       user_id: ownerId,
@@ -269,6 +264,17 @@ export async function POST(req: NextRequest) {
     });
 
     if (gateResult.verdict === 'require_approval') {
+      // Link the rec to the pending approval request so UI can resolve
+      // the in-between state (approved-by-Slack, awaiting-CFO, etc.).
+      await supabase
+        .from('ai_recommendations')
+        .update({
+          pending_approval_request_id: gateResult.approval_request.id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', recId)
+        .eq('enterprise_id', enterpriseId);
+
       await writeAuditLog({
         userId: ownerId,
         action: 'transfer_create_requires_approval',

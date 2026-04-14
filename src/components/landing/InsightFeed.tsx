@@ -137,7 +137,7 @@ export function InsightFeed() {
                 </span>
                 <span
                   aria-hidden="true"
-                  className="shrink-0 rounded-full text-[11px] font-semibold whitespace-nowrap select-none"
+                  className="shrink-0 rounded-full text-2xs font-semibold whitespace-nowrap select-none"
                   style={{
                     background: 'rgba(45,212,191,0.2)',
                     border: '1px solid rgba(45,212,191,0.5)',

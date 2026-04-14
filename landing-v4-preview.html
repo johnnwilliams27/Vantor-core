@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vantor Landing v4 — Preview</title>
+  <link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #040a18;
+      font-family: 'General Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #e5e7eb;
+      -webkit-font-smoothing: antialiased;
+    }
+    body { padding: 48px 20px 24px; }
+    h2 {
+      color: #ffffff;
+      font-size: 24px;
+      font-weight: 700;
+      text-align: center;
+      margin: 0 auto 10px;
+      max-width: 720px;
+      letter-spacing: -0.01em;
+    }
+    .subtitle {
+      color: #9ca3af;
+      font-size: 13px;
+      text-align: center;
+      max-width: 680px;
+      margin: 0 auto 32px;
+      line-height: 1.6;
+    }
+    .mockup-header {
+      background: #0a1628;
+      color: #9ca3af;
+      font-size: 10px;
+      padding: 10px 18px;
+      letter-spacing: 0.06em;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+    .mockup {
+      box-shadow: 0 20px 80px rgba(0,0,0,0.5);
+    }
+  </style>
+</head>
+<body>
+
+<h2>Complete layout v4 — all decisions locked</h2>
+<p class="subtitle">Full end-to-end mockup. Geometric-editorial direction, General Sans typography, three tonal registers. Scroll through to verify the density rhythm before we move to code.</p>
+
+<div class="mockup" style="max-width: 720px; margin: 0 auto; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; overflow: hidden;">
+  <div class="mockup-header">Vantor landing page — v4 complete</div>
+  <div class="mockup-body" style="padding: 0;">
+
+    <!-- NAVBAR -->
+    <div style="height: 48px; background: rgba(6,13,31,0.95); border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; font-size: 11px;">
+      <span style="color: #ffffff; font-weight: 600; letter-spacing: 0.02em;">Vantor</span>
+      <div style="display: flex; align-items: center; gap: 18px;">
+        <span style="color: #9ca3af;">Platform</span>
+        <span style="color: #9ca3af;">Pricing</span>
+        <span style="color: #9ca3af;">Docs</span>
+        <span style="color: #d1d5db;">Login</span>
+        <span style="background: linear-gradient(90deg, #2dd4bf, #67e8f9); color: #060d1f; padding: 5px 12px; border-radius: 999px; font-weight: 600;">Get Started</span>
+      </div>
+    </div>
+
+    <!-- HERO -->
+    <div style="padding: 80px 32px 88px; background: linear-gradient(180deg, #060d1f 0%, #0a1628 100%); position: relative; text-align: center;">
+      <div style="position: absolute; inset: 0; background: radial-gradient(ellipse 60% 40% at 50% 40%, rgba(45,212,191,0.08), transparent 70%); pointer-events: none;"></div>
+      <div style="position: relative;">
+        <div style="font-size: 32px; color: #ffffff; font-weight: 700; line-height: 1.08; letter-spacing: -0.02em;">Put Your Idle Treasury</div>
+        <div style="font-size: 32px; background: linear-gradient(90deg, #2dd4bf, #67e8f9); -webkit-background-clip: text; color: transparent; font-weight: 700; line-height: 1.08; letter-spacing: -0.02em; margin-bottom: 22px;">Reserves to Work</div>
+        <div style="font-size: 13px; color: #9ca3af; max-width: 520px; margin: 0 auto; line-height: 1.6;">
+          Vantor provides full visibility across your cash and stablecoin reserves. Powerful AI insights assess upcoming obligations while surfacing yield opportunities and hedging FX exposure — always with a human in the loop.
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: center; margin-top: 28px;">
+          <div style="background: linear-gradient(90deg, #2dd4bf, #67e8f9); color: #060d1f; font-size: 11px; padding: 9px 20px; border-radius: 999px; font-weight: 600; box-shadow: 0 0 24px rgba(45,212,191,0.25);">Get Started Free</div>
+          <div style="border: 1px solid rgba(255,255,255,0.15); color: #d1d5db; font-size: 11px; padding: 9px 20px; border-radius: 999px; font-weight: 500;">Explore Platform</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI FLOW SECTION -->
+    <div style="padding: 88px 32px; background: radial-gradient(ellipse 70% 60% at 50% 40%, rgba(45,212,191,0.09), transparent 70%), #060d1f; border-top: 1px solid rgba(45,212,191,0.12); border-bottom: 1px solid rgba(45,212,191,0.12);">
+      <div style="text-align: center; margin-bottom: 48px;">
+        <div style="font-size: 22px; color: #ffffff; font-weight: 700; line-height: 1.15; margin-bottom: 10px;">Agentic intelligence, human control</div>
+        <div style="font-size: 12px; color: #9ca3af; max-width: 500px; margin: 0 auto; line-height: 1.55;">Vantor's AI orchestration layer monitors your treasury in real-time and queues actions for your review. You control what executes and when.</div>
+      </div>
+
+      <!-- Diagram -->
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 18px; max-width: 600px; margin: 0 auto;">
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 7px;">
+          <div style="height: 24px; background: rgba(45,212,191,0.12); border: 1px solid rgba(45,212,191,0.25); border-radius: 5px; font-size: 10px; color: #67e8f9; padding: 0 11px; display: flex; align-items: center;">Upcoming AR/AP</div>
+          <div style="height: 24px; background: rgba(45,212,191,0.12); border: 1px solid rgba(45,212,191,0.25); border-radius: 5px; font-size: 10px; color: #67e8f9; padding: 0 11px; display: flex; align-items: center;">Cash · Banks + Wallets</div>
+          <div style="height: 24px; background: rgba(45,212,191,0.12); border: 1px solid rgba(45,212,191,0.25); border-radius: 5px; font-size: 10px; color: #67e8f9; padding: 0 11px; display: flex; align-items: center;">Treasury Policy</div>
+          <div style="height: 24px; background: rgba(45,212,191,0.12); border: 1px solid rgba(45,212,191,0.25); border-radius: 5px; font-size: 10px; color: #67e8f9; padding: 0 11px; display: flex; align-items: center;">FX Exposure</div>
+        </div>
+        <div style="width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(circle, rgba(45,212,191,0.6), rgba(45,212,191,0.08) 70%); display: flex; align-items: center; justify-content: center; color: #ffffff; font-size: 14px; font-weight: 700; border: 2px solid rgba(45,212,191,0.7); box-shadow: 0 0 52px rgba(45,212,191,0.5), inset 0 0 22px rgba(45,212,191,0.25); text-align: center; line-height: 1.1; flex-shrink: 0;">Vantor<br>AI</div>
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 7px;">
+          <div style="height: 24px; background: rgba(103,232,249,0.12); border: 1px solid rgba(103,232,249,0.25); border-radius: 5px; font-size: 10px; color: #a5f3fc; padding: 0 11px; display: flex; align-items: center; justify-content: flex-end;">Spiko USD →</div>
+          <div style="height: 24px; background: rgba(103,232,249,0.12); border: 1px solid rgba(103,232,249,0.25); border-radius: 5px; font-size: 10px; color: #a5f3fc; padding: 0 11px; display: flex; align-items: center; justify-content: flex-end;">Circle USYC →</div>
+          <div style="height: 24px; background: rgba(103,232,249,0.12); border: 1px solid rgba(103,232,249,0.25); border-radius: 5px; font-size: 10px; color: #a5f3fc; padding: 0 11px; display: flex; align-items: center; justify-content: flex-end;">FX Rebalance →</div>
+          <div style="height: 24px; background: rgba(103,232,249,0.12); border: 1px solid rgba(103,232,249,0.25); border-radius: 5px; font-size: 10px; color: #a5f3fc; padding: 0 11px; display: flex; align-items: center; justify-content: flex-end;">Payments →</div>
+        </div>
+      </div>
+
+      <!-- Insight feed -->
+      <div style="margin: 42px auto 0; max-width: 500px;">
+        <div style="background: rgba(255,255,255,0.06); border: 1px solid rgba(45,212,191,0.45); border-radius: 8px; padding: 11px 15px; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 7px; box-shadow: 0 0 22px rgba(45,212,191,0.14);">
+          <div style="font-size: 11px; color: #e5e7eb; font-weight: 500;">$2.3M idle USDC → <strong style="color: #67e8f9;">Spiko USD</strong> · <strong style="color: #2dd4bf;">+4.9% APY</strong></div>
+          <div style="background: rgba(45,212,191,0.2); border: 1px solid rgba(45,212,191,0.5); color: #2dd4bf; font-size: 9px; padding: 3px 11px; border-radius: 999px; font-weight: 600; white-space: nowrap;">Approve?</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(45,212,191,0.28); border-radius: 8px; padding: 11px 15px; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 7px; opacity: 0.85;">
+          <div style="font-size: 11px; color: #e5e7eb; font-weight: 500;">€1.8M payroll due → <strong style="color: #67e8f9;">convert USD to EUR</strong></div>
+          <div style="background: rgba(45,212,191,0.15); border: 1px solid rgba(45,212,191,0.35); color: #67e8f9; font-size: 9px; padding: 3px 11px; border-radius: 999px; font-weight: 600; white-space: nowrap;">Approve?</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(45,212,191,0.18); border-radius: 8px; padding: 11px 15px; display: flex; align-items: center; justify-content: space-between; gap: 12px; opacity: 0.6;">
+          <div style="font-size: 11px; color: #d1d5db; font-weight: 500;">$500K vendor payment → <strong style="color: #67e8f9;">withdraw Circle USYC</strong></div>
+          <div style="background: rgba(45,212,191,0.1); border: 1px solid rgba(45,212,191,0.25); color: #67e8f9; font-size: 9px; padding: 3px 11px; border-radius: 999px; font-weight: 600; white-space: nowrap;">Approve?</div>
+        </div>
+      </div>
+
+      <!-- 4-step narrative -->
+      <div style="margin: 96px auto 0; max-width: 640px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px;">
+          <div style="padding: 14px 12px; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; background: rgba(255,255,255,0.025);">
+            <div style="width: 24px; height: 24px; border-radius: 6px; background: rgba(45,212,191,0.12); color: #2dd4bf; font-size: 9px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">01</div>
+            <div style="font-size: 11px; color: #ffffff; font-weight: 600; margin-bottom: 4px;">Analyze</div>
+            <div style="font-size: 8px; color: #9ca3af; line-height: 1.5;">Continuously monitors balances, obligations, and market conditions.</div>
+          </div>
+          <div style="padding: 14px 12px; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; background: rgba(255,255,255,0.025);">
+            <div style="width: 24px; height: 24px; border-radius: 6px; background: rgba(45,212,191,0.12); color: #2dd4bf; font-size: 9px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">02</div>
+            <div style="font-size: 11px; color: #ffffff; font-weight: 600; margin-bottom: 4px;">Propose</div>
+            <div style="font-size: 8px; color: #9ca3af; line-height: 1.5;">Generates risk-scored proposals with full reasoning.</div>
+          </div>
+          <div style="padding: 14px 12px; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; background: rgba(255,255,255,0.025);">
+            <div style="width: 24px; height: 24px; border-radius: 6px; background: rgba(45,212,191,0.12); color: #2dd4bf; font-size: 9px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">03</div>
+            <div style="font-size: 11px; color: #ffffff; font-weight: 600; margin-bottom: 4px;">Approve</div>
+            <div style="font-size: 8px; color: #9ca3af; line-height: 1.5;">Humans evaluate via role-based workflows. Multi-sig on high value.</div>
+          </div>
+          <div style="padding: 14px 12px; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; background: rgba(255,255,255,0.025);">
+            <div style="width: 24px; height: 24px; border-radius: 6px; background: rgba(45,212,191,0.12); color: #2dd4bf; font-size: 9px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">04</div>
+            <div style="font-size: 11px; color: #ffffff; font-weight: 600; margin-bottom: 4px;">Execute</div>
+            <div style="font-size: 8px; color: #9ca3af; line-height: 1.5;">Execute actions with full audit trail on every step.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CAPABILITY GRID -->
+    <div style="padding: 88px 32px; background: #060d1f;">
+      <div style="text-align: center; margin-bottom: 48px;">
+        <div style="font-size: 22px; color: #ffffff; font-weight: 700; line-height: 1.15; margin-bottom: 10px;">Modern treasury management — powered by AI</div>
+        <div style="font-size: 12px; color: #9ca3af; max-width: 520px; margin: 0 auto; line-height: 1.55;">Everything your treasury team needs — from real-time cash visibility to automated yield insights, compliance, and reporting.</div>
+      </div>
+      <div style="max-width: 680px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+        <div style="padding: 16px 14px; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; background: rgba(255,255,255,0.025);">
+          <div style="width: 26px; height: 26px; border-radius: 7px; background: rgba(45,212,191,0.12); display: flex; align-items: center; justify-content: center; margin-bottom: 10px; color: #2dd4bf; font-size: 13px; font-weight: 700;">▦</div>
+          <div style="font-size: 12px; color: #ffffff; font-weight: 600; margin-bottom: 7px;">Command Center</div>
+          <div style="font-size: 8.5px; color: #9ca3af; line-height: 1.65;">Cash Visibility<br>AI Insights<br>Asset Management<br>AI Agent Chat</div>
+        </div>
+        <div style="padding: 16px 14px; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; background: rgba(255,255,255,0.025);">
+          <div style="width: 26px; height: 26px; border-radius: 7px; background: rgba(45,212,191,0.12); display: flex; align-items: center; justify-content: center; margin-bottom: 10px; color: #2dd4bf; font-size: 13px; font-weight: 700;">◈</div>
+          <div style="font-size: 12px; color: #ffffff; font-weight: 600; margin-bottom: 7px;">Treasury</div>
+          <div style="font-size: 8.5px; color: #9ca3af; line-height: 1.65;">AI Treasury Rules<br>Payments Operations<br>Approval Workflows<br>FX Rebalancing</div>
+        </div>
+        <div style="padding: 16px 14px; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; background: rgba(255,255,255,0.025);">
+          <div style="width: 26px; height: 26px; border-radius: 7px; background: rgba(45,212,191,0.12); display: flex; align-items: center; justify-content: center; margin-bottom: 10px; color: #2dd4bf; font-size: 13px; font-weight: 700;">↗</div>
+          <div style="font-size: 12px; color: #ffffff; font-weight: 600; margin-bottom: 7px;">Yield</div>
+          <div style="font-size: 8.5px; color: #9ca3af; line-height: 1.65;">Tokenized MMFs<br>DeFi Yield Protocols<br>AI Risk Management<br>AI Yield Insights</div>
+        </div>
+        <div style="padding: 16px 14px; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; background: rgba(255,255,255,0.025);">
+          <div style="width: 26px; height: 26px; border-radius: 7px; background: rgba(45,212,191,0.12); display: flex; align-items: center; justify-content: center; margin-bottom: 10px; color: #2dd4bf; font-size: 13px; font-weight: 700;">✓</div>
+          <div style="font-size: 12px; color: #ffffff; font-weight: 600; margin-bottom: 7px;">Compliance</div>
+          <div style="font-size: 8.5px; color: #9ca3af; line-height: 1.65;">Sanctions Screening<br>Transaction Monitoring<br>Know Your Transaction<br>Travel Rule Enforcement</div>
+        </div>
+        <div style="padding: 16px 14px; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; background: rgba(255,255,255,0.025);">
+          <div style="width: 26px; height: 26px; border-radius: 7px; background: rgba(45,212,191,0.12); display: flex; align-items: center; justify-content: center; margin-bottom: 10px; color: #2dd4bf; font-size: 13px; font-weight: 700;">⌂</div>
+          <div style="font-size: 12px; color: #ffffff; font-weight: 600; margin-bottom: 7px;">Connect</div>
+          <div style="font-size: 8.5px; color: #9ca3af; line-height: 1.65;">Bank Integrations<br>Wallet Integrations<br>ERP Integrations<br>Slack Connector</div>
+        </div>
+        <div style="padding: 16px 14px; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; background: rgba(255,255,255,0.025);">
+          <div style="width: 26px; height: 26px; border-radius: 7px; background: rgba(45,212,191,0.12); display: flex; align-items: center; justify-content: center; margin-bottom: 10px; color: #2dd4bf; font-size: 13px; font-weight: 700;">▢</div>
+          <div style="font-size: 12px; color: #ffffff; font-weight: 600; margin-bottom: 7px;">Data</div>
+          <div style="font-size: 8.5px; color: #9ca3af; line-height: 1.65;">AI Forecasting<br>Advanced Analytics<br>Audit Trail<br>Detailed Reporting</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FEATURE CAROUSEL -->
+    <div style="padding: 88px 32px; background: #040a18;">
+      <div style="text-align: center; margin-bottom: 48px;">
+        <div style="font-size: 22px; color: #ffffff; font-weight: 700; line-height: 1.15; margin-bottom: 10px;">Built for treasury, designed for everyone</div>
+        <div style="font-size: 12px; color: #9ca3af; max-width: 500px; margin: 0 auto; line-height: 1.55;">Three products. One platform. Total treasury visibility.</div>
+      </div>
+      <div style="max-width: 680px; margin: 0 auto; display: grid; grid-template-columns: 58% 42%; gap: 22px; align-items: center;">
+        <div style="position: relative;">
+          <div style="position: absolute; inset: -24px; background: radial-gradient(ellipse at center, rgba(45,212,191,0.18), transparent 70%); pointer-events: none;"></div>
+          <div style="position: relative; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); background: #0a1628;">
+            <div style="height: 220px; padding: 14px; display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <div style="width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.15);"></div>
+                <div style="width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.15);"></div>
+                <div style="width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.15);"></div>
+                <div style="margin-left: 8px; font-size: 8px; color: #6b7280;">Command Center</div>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;">
+                <div style="padding: 8px; border: 1px solid rgba(255,255,255,0.06); border-radius: 4px;">
+                  <div style="font-size: 6px; color: #6b7280;">TOTAL AUM</div>
+                  <div style="font-size: 11px; color: #ffffff; font-weight: 700;">$24.8M</div>
+                </div>
+                <div style="padding: 8px; border: 1px solid rgba(45,212,191,0.2); border-radius: 4px; background: rgba(45,212,191,0.04);">
+                  <div style="font-size: 6px; color: #6b7280;">IDLE CASH</div>
+                  <div style="font-size: 11px; color: #2dd4bf; font-weight: 700;">$2.3M</div>
+                </div>
+                <div style="padding: 8px; border: 1px solid rgba(255,255,255,0.06); border-radius: 4px;">
+                  <div style="font-size: 6px; color: #6b7280;">YIELD EARNED</div>
+                  <div style="font-size: 11px; color: #ffffff; font-weight: 700;">$127K</div>
+                </div>
+              </div>
+              <div style="padding: 9px; border: 1px solid rgba(45,212,191,0.3); border-radius: 4px; background: rgba(45,212,191,0.06); display: flex; align-items: center; gap: 6px;">
+                <div style="width: 14px; height: 14px; border-radius: 50%; background: rgba(45,212,191,0.25); flex-shrink: 0;"></div>
+                <div style="flex: 1; font-size: 7.5px; color: #e5e7eb;"><strong style="color: #2dd4bf;">AI:</strong> $2.3M idle → Spiko USD · +4.9% APY</div>
+                <div style="font-size: 6px; color: #2dd4bf; border: 1px solid rgba(45,212,191,0.4); padding: 2px 6px; border-radius: 999px; font-weight: 600;">Approve?</div>
+              </div>
+              <div style="flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                <div style="border: 1px solid rgba(255,255,255,0.06); border-radius: 4px; padding: 6px;">
+                  <div style="font-size: 6px; color: #6b7280; margin-bottom: 4px;">BALANCES</div>
+                  <div style="height: 4px; background: rgba(45,212,191,0.4); border-radius: 2px; margin-bottom: 3px;"></div>
+                  <div style="height: 4px; background: rgba(45,212,191,0.25); border-radius: 2px; margin-bottom: 3px; width: 70%;"></div>
+                  <div style="height: 4px; background: rgba(45,212,191,0.15); border-radius: 2px; width: 45%;"></div>
+                </div>
+                <div style="border: 1px solid rgba(255,255,255,0.06); border-radius: 4px; padding: 6px;">
+                  <div style="font-size: 6px; color: #6b7280; margin-bottom: 4px;">FLOWS</div>
+                  <div style="display: flex; gap: 2px; align-items: flex-end; height: 28px;">
+                    <div style="flex: 1; background: rgba(45,212,191,0.3); height: 60%;"></div>
+                    <div style="flex: 1; background: rgba(45,212,191,0.3); height: 80%;"></div>
+                    <div style="flex: 1; background: rgba(45,212,191,0.3); height: 45%;"></div>
+                    <div style="flex: 1; background: rgba(45,212,191,0.3); height: 90%;"></div>
+                    <div style="flex: 1; background: rgba(45,212,191,0.3); height: 70%;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size: 15px; color: #ffffff; font-weight: 700; margin-bottom: 6px;">Command Center</div>
+          <div style="font-size: 10px; color: #9ca3af; line-height: 1.55; margin-bottom: 14px;">Real-time visibility across every bank, wallet, and protocol — with AI insights surfaced the moment they matter.</div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <div style="font-size: 10px; color: #d1d5db; display: flex; gap: 7px; align-items: center;"><span style="color: #2dd4bf; font-weight: 700;">✓</span>Cash Visibility</div>
+            <div style="font-size: 10px; color: #d1d5db; display: flex; gap: 7px; align-items: center;"><span style="color: #2dd4bf; font-weight: 700;">✓</span>AI Insights</div>
+            <div style="font-size: 10px; color: #d1d5db; display: flex; gap: 7px; align-items: center;"><span style="color: #2dd4bf; font-weight: 700;">✓</span>Asset Management</div>
+            <div style="font-size: 10px; color: #d1d5db; display: flex; gap: 7px; align-items: center;"><span style="color: #2dd4bf; font-weight: 700;">✓</span>AI Agent Chat</div>
+          </div>
+          <div style="margin-top: 14px; font-size: 10px; color: #2dd4bf; font-weight: 600;">Read more →</div>
+        </div>
+      </div>
+      <div style="display: flex; justify-content: center; gap: 8px; margin-top: 32px;">
+        <div style="width: 24px; height: 4px; border-radius: 999px; background: #2dd4bf;"></div>
+        <div style="width: 4px; height: 4px; border-radius: 999px; background: rgba(255,255,255,0.2);"></div>
+        <div style="width: 4px; height: 4px; border-radius: 999px; background: rgba(255,255,255,0.2);"></div>
+      </div>
+      <div style="text-align: center; font-size: 9px; color: #6b7280; margin-top: 10px; letter-spacing: 0.08em;">SLIDE 1 OF 3 · COMMAND CENTER · TREASURY · YIELD</div>
+    </div>
+
+    <!-- INSTITUTIONAL GRADE BAND -->
+    <div style="padding: 80px 32px; background: #060d1f; position: relative;">
+      <div style="position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 420px; height: 200px; background: radial-gradient(ellipse at center, rgba(45,212,191,0.06), transparent 70%); pointer-events: none;"></div>
+      <div style="max-width: 600px; margin: 0 auto; position: relative;">
+        <div style="text-align: center; margin-bottom: 36px;">
+          <div style="font-size: 20px; color: #ffffff; font-weight: 700; line-height: 1.15; margin-bottom: 10px;">Institutional-grade from day one</div>
+          <div style="font-size: 11px; color: #9ca3af; max-width: 460px; margin: 0 auto; line-height: 1.55;">Every layer — from wallet onboarding to AI-proposed actions — is designed with compliance, auditability, and security at its core.</div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+          <div style="padding: 14px 12px; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; background: rgba(255,255,255,0.025);">
+            <div style="width: 22px; height: 22px; border-radius: 6px; background: rgba(45,212,191,0.12); display: flex; align-items: center; justify-content: center; color: #2dd4bf; font-size: 12px; font-weight: 700; margin-bottom: 8px;">⊘</div>
+            <div style="font-size: 10px; color: #ffffff; font-weight: 600; margin-bottom: 4px;">AML & Sanctions Screening</div>
+            <div style="font-size: 7.5px; color: #9ca3af; line-height: 1.55;">Automated AML checks and real-time screening against OFAC, EU, and UN lists on every transaction.</div>
+          </div>
+          <div style="padding: 14px 12px; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; background: rgba(255,255,255,0.025);">
+            <div style="width: 22px; height: 22px; border-radius: 6px; background: rgba(45,212,191,0.12); display: flex; align-items: center; justify-content: center; color: #2dd4bf; font-size: 12px; font-weight: 700; margin-bottom: 8px;">◎</div>
+            <div style="font-size: 10px; color: #ffffff; font-weight: 600; margin-bottom: 4px;">Transaction Monitoring</div>
+            <div style="font-size: 7.5px; color: #9ca3af; line-height: 1.55;">Continuous monitoring of on-chain and off-chain activity. Pattern detection and anomaly alerting.</div>
+          </div>
+          <div style="padding: 14px 12px; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; background: rgba(255,255,255,0.025);">
+            <div style="width: 22px; height: 22px; border-radius: 6px; background: rgba(45,212,191,0.12); display: flex; align-items: center; justify-content: center; color: #2dd4bf; font-size: 12px; font-weight: 700; margin-bottom: 8px;">◉</div>
+            <div style="font-size: 10px; color: #ffffff; font-weight: 600; margin-bottom: 4px;">Audit Logging & Explainability</div>
+            <div style="font-size: 7.5px; color: #9ca3af; line-height: 1.55;">Immutable trail for every action — human and AI. Full decision provenance on every call.</div>
+          </div>
+          <div style="padding: 14px 12px; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; background: rgba(255,255,255,0.025);">
+            <div style="width: 22px; height: 22px; border-radius: 6px; background: rgba(45,212,191,0.12); display: flex; align-items: center; justify-content: center; color: #2dd4bf; font-size: 12px; font-weight: 700; margin-bottom: 8px;">◆</div>
+            <div style="font-size: 10px; color: #ffffff; font-weight: 600; margin-bottom: 4px;">Role-Based Permissions</div>
+            <div style="font-size: 7.5px; color: #9ca3af; line-height: 1.55;">Granular RBAC — treasury manager, analyst, viewer, admin. Least-privilege enforced org-wide.</div>
+          </div>
+          <div style="padding: 14px 12px; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; background: rgba(255,255,255,0.025);">
+            <div style="width: 22px; height: 22px; border-radius: 6px; background: rgba(45,212,191,0.12); display: flex; align-items: center; justify-content: center; color: #2dd4bf; font-size: 12px; font-weight: 700; margin-bottom: 8px;">⬡</div>
+            <div style="font-size: 10px; color: #ffffff; font-weight: 600; margin-bottom: 4px;">Approval Workflows</div>
+            <div style="font-size: 7.5px; color: #9ca3af; line-height: 1.55;">Configurable multi-level chains. High-value transactions require multiple authorized signers.</div>
+          </div>
+          <div style="padding: 14px 12px; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; background: rgba(255,255,255,0.025);">
+            <div style="width: 22px; height: 22px; border-radius: 6px; background: rgba(45,212,191,0.12); display: flex; align-items: center; justify-content: center; color: #2dd4bf; font-size: 12px; font-weight: 700; margin-bottom: 8px;">✦</div>
+            <div style="font-size: 10px; color: #ffffff; font-weight: 600; margin-bottom: 4px;">Enterprise-Grade Security</div>
+            <div style="font-size: 7.5px; color: #9ca3af; line-height: 1.55;">End-to-end encryption, hardened infrastructure, and continuous monitoring — the security posture enterprise treasury teams expect.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTACT FORM -->
+    <div style="padding: 72px 32px 80px; background: #040a18; border-top: 1px solid rgba(255,255,255,0.04);">
+      <div style="max-width: 440px; margin: 0 auto; text-align: center;">
+        <div style="font-size: 20px; color: #ffffff; font-weight: 700; line-height: 1.15; margin-bottom: 10px;">Ready to modernize your treasury?</div>
+        <div style="font-size: 11px; color: #9ca3af; max-width: 380px; margin: 0 auto 24px; line-height: 1.55;">Talk to our team or start your free trial.</div>
+        <div style="display: flex; flex-direction: column; gap: 8px; text-align: left;">
+          <div style="height: 34px; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; background: rgba(255,255,255,0.02); padding: 0 12px; display: flex; align-items: center; font-size: 10px; color: #6b7280;">Name</div>
+          <div style="height: 34px; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; background: rgba(255,255,255,0.02); padding: 0 12px; display: flex; align-items: center; font-size: 10px; color: #6b7280;">Work email</div>
+          <div style="height: 34px; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; background: rgba(255,255,255,0.02); padding: 0 12px; display: flex; align-items: center; font-size: 10px; color: #6b7280;">Company</div>
+          <div style="height: 68px; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; background: rgba(255,255,255,0.02); padding: 10px 12px; font-size: 10px; color: #6b7280;">Message</div>
+          <div style="background: linear-gradient(90deg, #2dd4bf, #67e8f9); color: #060d1f; font-size: 11px; padding: 11px 20px; border-radius: 999px; font-weight: 700; margin-top: 8px; text-align: center; box-shadow: 0 0 24px rgba(45,212,191,0.25);">Submit</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div style="padding: 24px 32px; background: #040a18; border-top: 1px solid rgba(255,255,255,0.04); display: flex; justify-content: space-between; align-items: center; font-size: 9px; color: #6b7280;">
+      <div>© 2026 Vantor</div>
+      <div style="display: flex; gap: 16px;">
+        <span>Privacy</span>
+        <span>Terms</span>
+        <span>Docs</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p style="color: #9ca3af; font-size: 12px; text-align: center; margin: 24px auto 40px; max-width: 680px; line-height: 1.6;">
+  <strong style="color: #d1d5db;">v4 complete.</strong> Density rhythm: low → <strong style="color: #ffffff;">HIGH</strong> → medium → <strong style="color: #ffffff;">HIGH</strong> → medium → low. Three tonal registers: hero + glow · teal bloom · pure void · deep navy · void. Capability card glyphs (▦ ◈ ↗ ✓ ⌂ ▢) are placeholders — real build uses Lucide icons. Carousel shows slide 1 of 3 — slides 2/3 cycle to Treasury and Yield. Trust band is intentionally narrower to read as a "footnote beat". All motion is suppressed in this static mockup — in the real build, the orb pulses, particles flow along SVG paths, and the insight feed rotates every 5s.
+</p>
+
+</body>
+</html>

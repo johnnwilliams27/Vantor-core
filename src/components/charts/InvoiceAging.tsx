@@ -61,7 +61,7 @@ export function InvoiceAging() {
               ))}
             </Pie>
             <Tooltip />
-            <Legend />
+            <Legend wrapperStyle={{ fontSize: 11 }} iconSize={10} />
           </PieChart>
         </ResponsiveContainer>
       </CardContent>

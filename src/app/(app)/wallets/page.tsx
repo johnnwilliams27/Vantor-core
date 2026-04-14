@@ -107,8 +107,8 @@ function CryptoWalletsTab() {
           <CardContent className="space-y-4 relative">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <span>Supports</span>
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0">USDC</Badge>
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0">USDT</Badge>
+              <Badge variant="outline" className="text-3xs px-1.5 py-0">USDC</Badge>
+              <Badge variant="outline" className="text-3xs px-1.5 py-0">USDT</Badge>
             </div>
             <div className="h-px bg-white/[0.06]" />
             <EthWalletConnect />
@@ -137,8 +137,8 @@ function CryptoWalletsTab() {
           <CardContent className="space-y-4 relative">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <span>Supports</span>
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0">USDC</Badge>
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0">USDT</Badge>
+              <Badge variant="outline" className="text-3xs px-1.5 py-0">USDC</Badge>
+              <Badge variant="outline" className="text-3xs px-1.5 py-0">USDT</Badge>
             </div>
             <div className="h-px bg-white/[0.06]" />
             <SolWalletConnect />
@@ -216,14 +216,20 @@ function CryptoWalletsTab() {
                               ariaLabel="Verified wallet"
                               content={`Verified — ownership confirmed via on-chain signature on ${formatDate(wallet.verified_at)}.`}
                             >
-                              <CheckCircle className="h-4 w-4 text-green-500" />
+                              <Badge variant="active" className="text-xs">
+                                <CheckCircle className="mr-1 h-3 w-3" />
+                                Verified
+                              </Badge>
                             </InfoTooltip>
                           ) : (
                             <InfoTooltip
                               ariaLabel="Pending verification"
                               content="Pending — we're waiting for an on-chain signature to confirm you control this wallet. This usually takes 1–2 minutes after linking."
                             >
-                              <Clock className="h-4 w-4 text-yellow-500" />
+                              <Badge variant="pending" className="text-xs">
+                                <Clock className="mr-1 h-3 w-3" />
+                                Pending
+                              </Badge>
                             </InfoTooltip>
                           )}
                         </TableCell>

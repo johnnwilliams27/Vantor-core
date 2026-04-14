@@ -1,6 +1,8 @@
 'use client';
 
 import { X } from 'lucide-react';
+import { formatDateTime } from '@/lib/utils';
+import { HoverTooltip } from '@/components/ui/hover-tooltip';
 
 interface TransactionDetail {
   id: string;
@@ -35,15 +37,22 @@ export function TransactionDetailModal({ transaction, onClose }: TransactionDeta
       <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Transaction Details</h3>
-          <button onClick={onClose} className="p-1 hover:bg-muted rounded">
-            <X className="w-5 h-5" />
-          </button>
+          <HoverTooltip label="Close">
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/40"
+              aria-label="Close transaction details"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </HoverTooltip>
         </div>
 
         <div className="space-y-3">
           <Row label="Type" value={transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)} />
           <Row label="Status" value={transaction.status} />
-          <Row label="Date" value={new Date(transaction.timestamp).toLocaleString()} />
+          <Row label="Date" value={formatDateTime(transaction.timestamp)} />
           <Row label="From" value={transaction.from} />
           <Row label="To" value={transaction.to} />
 

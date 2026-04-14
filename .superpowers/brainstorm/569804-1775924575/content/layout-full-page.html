@@ -1,0 +1,216 @@
+<h2>Full-page layout — hero compression × AI flow × capability grid</h2>
+<p class="subtitle">Same A/B/C fork as before, now with the 6-card capability section shown below each option so you can judge the layout in context. The capability grid is identical across all three options.</p>
+
+<div class="cards">
+
+  <!-- OPTION A -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">Option A — Slot in place of marquee</div>
+        <div class="mockup-body" style="padding: 0;">
+          <div style="height: 32px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; padding: 0 12px; font-size: 9px; color: #9ca3af;">Vantor · · · Get Started</div>
+
+          <!-- hero FULL, background network preserved -->
+          <div style="height: 180px; background: radial-gradient(ellipse at center, rgba(45,212,191,0.10), transparent 70%); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; position: relative;">
+            <div style="position: absolute; inset: 0; background-image: radial-gradient(circle at 20% 30%, rgba(45,212,191,0.08) 1px, transparent 2px), radial-gradient(circle at 70% 60%, rgba(45,212,191,0.08) 1px, transparent 2px), radial-gradient(circle at 40% 80%, rgba(45,212,191,0.08) 1px, transparent 2px); opacity: 0.5;"></div>
+            <div style="font-size: 14px; color: white; font-weight: 600; z-index: 1;">Put Your Idle Treasury</div>
+            <div style="font-size: 14px; background: linear-gradient(90deg, #2dd4bf, #67e8f9); -webkit-background-clip: text; color: transparent; font-weight: 600; z-index: 1;">Reserves to Work</div>
+            <div style="display: flex; gap: 6px; margin-top: 8px; z-index: 1;">
+              <div style="background: linear-gradient(90deg, #14b8a6, #06b6d4); color: white; font-size: 8px; padding: 4px 10px; border-radius: 999px;">Get Started</div>
+              <div style="border: 1px solid rgba(255,255,255,0.15); color: #d1d5db; font-size: 8px; padding: 4px 10px; border-radius: 999px;">Explore</div>
+            </div>
+          </div>
+
+          <!-- AI flow section (smaller — just where marquee was) -->
+          <div style="border-top: 1px solid rgba(255,255,255,0.08); border-bottom: 1px solid rgba(255,255,255,0.08); padding: 14px 12px; background: rgba(255,255,255,0.02);">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+              <div style="flex: 1; display: flex; flex-direction: column; gap: 3px;">
+                <div style="height: 10px; background: rgba(45,212,191,0.15); border-radius: 2px; font-size: 6px; color: #67e8f9; padding: 0 4px; line-height: 10px;">AR/AP</div>
+                <div style="height: 10px; background: rgba(45,212,191,0.15); border-radius: 2px; font-size: 6px; color: #67e8f9; padding: 0 4px; line-height: 10px;">Cash</div>
+                <div style="height: 10px; background: rgba(45,212,191,0.15); border-radius: 2px; font-size: 6px; color: #67e8f9; padding: 0 4px; line-height: 10px;">Policy</div>
+              </div>
+              <div style="width: 44px; height: 44px; border-radius: 50%; background: radial-gradient(circle, rgba(45,212,191,0.4), rgba(45,212,191,0.05)); display: flex; align-items: center; justify-content: center; color: white; font-size: 7px; font-weight: 600; border: 1px solid rgba(45,212,191,0.5);">Vantor<br>Agent</div>
+              <div style="flex: 1; display: flex; flex-direction: column; gap: 3px;">
+                <div style="height: 10px; background: rgba(103,232,249,0.15); border-radius: 2px; font-size: 6px; color: #a5f3fc; padding: 0 4px; line-height: 10px; text-align: right;">Spiko USD</div>
+                <div style="height: 10px; background: rgba(103,232,249,0.15); border-radius: 2px; font-size: 6px; color: #a5f3fc; padding: 0 4px; line-height: 10px; text-align: right;">USYC</div>
+                <div style="height: 10px; background: rgba(103,232,249,0.15); border-radius: 2px; font-size: 6px; color: #a5f3fc; padding: 0 4px; line-height: 10px; text-align: right;">FX</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CAPABILITY GRID -->
+          <div style="padding: 14px 12px;">
+            <div style="text-align: center; margin-bottom: 10px;">
+              <div style="font-size: 10px; color: white; font-weight: 600;">Built on six pillars</div>
+              <div style="font-size: 7px; color: #9ca3af;">Everything a modern treasury team needs</div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;">
+              <div style="border: 1px solid rgba(45,212,191,0.2); border-radius: 4px; padding: 6px 4px; font-size: 6px; color: #a5f3fc; text-align: center;">Command Center</div>
+              <div style="border: 1px solid rgba(45,212,191,0.2); border-radius: 4px; padding: 6px 4px; font-size: 6px; color: #a5f3fc; text-align: center;">Treasury</div>
+              <div style="border: 1px solid rgba(45,212,191,0.2); border-radius: 4px; padding: 6px 4px; font-size: 6px; color: #a5f3fc; text-align: center;">Yield</div>
+              <div style="border: 1px solid rgba(45,212,191,0.2); border-radius: 4px; padding: 6px 4px; font-size: 6px; color: #a5f3fc; text-align: center;">Compliance</div>
+              <div style="border: 1px solid rgba(45,212,191,0.2); border-radius: 4px; padding: 6px 4px; font-size: 6px; color: #a5f3fc; text-align: center;">Connect</div>
+              <div style="border: 1px solid rgba(45,212,191,0.2); border-radius: 4px; padding: 6px 4px; font-size: 6px; color: #a5f3fc; text-align: center;">Data</div>
+            </div>
+          </div>
+
+          <!-- features / footer ghost -->
+          <div style="padding: 10px 12px; display: flex; gap: 6px;">
+            <div style="flex: 1; height: 24px; border: 1px solid rgba(255,255,255,0.06); border-radius: 4px;"></div>
+            <div style="flex: 1; height: 24px; border: 1px solid rgba(255,255,255,0.06); border-radius: 4px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Slot in place of marquee</h3>
+      <p>Hero stays full-size, background network preserved. AI flow sits where the marquee was. Safest path, smallest blast radius, but the animation is below the fold for most visitors.</p>
+      <p style="font-size: 12px; color: #9ca3af; margin-top: 6px;"><strong>Cost:</strong> low · <strong>Hero:</strong> preserved · <strong>Anim visibility:</strong> partial</p>
+    </div>
+  </div>
+
+  <!-- OPTION B -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">Option B — Compress hero, AI flow gets full spotlight</div>
+        <div class="mockup-body" style="padding: 0;">
+          <div style="height: 32px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; padding: 0 12px; font-size: 9px; color: #9ca3af;">Vantor · · · Get Started</div>
+
+          <!-- hero COMPRESSED, no background -->
+          <div style="height: 100px; background: linear-gradient(180deg, rgba(6,13,31,1), rgba(6,13,31,0.9)); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;">
+            <div style="font-size: 13px; color: white; font-weight: 600;">Put Your Idle Treasury</div>
+            <div style="font-size: 13px; background: linear-gradient(90deg, #2dd4bf, #67e8f9); -webkit-background-clip: text; color: transparent; font-weight: 600;">Reserves to Work</div>
+            <div style="display: flex; gap: 6px; margin-top: 6px;">
+              <div style="background: linear-gradient(90deg, #14b8a6, #06b6d4); color: white; font-size: 8px; padding: 4px 10px; border-radius: 999px;">Get Started</div>
+              <div style="border: 1px solid rgba(255,255,255,0.15); color: #d1d5db; font-size: 8px; padding: 4px 10px; border-radius: 999px;">Explore</div>
+            </div>
+          </div>
+
+          <!-- AI flow — bigger, centered, with insight bubble -->
+          <div style="padding: 20px 12px; background: radial-gradient(ellipse at center, rgba(45,212,191,0.08), transparent 70%); border-top: 1px solid rgba(45,212,191,0.1); border-bottom: 1px solid rgba(45,212,191,0.1);">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+              <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+                <div style="height: 12px; background: rgba(45,212,191,0.18); border-radius: 3px; font-size: 7px; color: #67e8f9; padding: 0 5px; line-height: 12px;">📥 AR/AP</div>
+                <div style="height: 12px; background: rgba(45,212,191,0.18); border-radius: 3px; font-size: 7px; color: #67e8f9; padding: 0 5px; line-height: 12px;">📥 Cash</div>
+                <div style="height: 12px; background: rgba(45,212,191,0.18); border-radius: 3px; font-size: 7px; color: #67e8f9; padding: 0 5px; line-height: 12px;">📥 Policy</div>
+                <div style="height: 12px; background: rgba(45,212,191,0.18); border-radius: 3px; font-size: 7px; color: #67e8f9; padding: 0 5px; line-height: 12px;">📥 FX Exp.</div>
+              </div>
+              <div style="width: 68px; height: 68px; border-radius: 50%; background: radial-gradient(circle, rgba(45,212,191,0.5), rgba(45,212,191,0.08)); display: flex; align-items: center; justify-content: center; color: white; font-size: 9px; font-weight: 600; border: 2px solid rgba(45,212,191,0.6); box-shadow: 0 0 24px rgba(45,212,191,0.35);">Vantor<br>Agent</div>
+              <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+                <div style="height: 12px; background: rgba(103,232,249,0.18); border-radius: 3px; font-size: 7px; color: #a5f3fc; padding: 0 5px; line-height: 12px; text-align: right;">Spiko USD →</div>
+                <div style="height: 12px; background: rgba(103,232,249,0.18); border-radius: 3px; font-size: 7px; color: #a5f3fc; padding: 0 5px; line-height: 12px; text-align: right;">USYC →</div>
+                <div style="height: 12px; background: rgba(103,232,249,0.18); border-radius: 3px; font-size: 7px; color: #a5f3fc; padding: 0 5px; line-height: 12px; text-align: right;">FX Reb. →</div>
+                <div style="height: 12px; background: rgba(103,232,249,0.18); border-radius: 3px; font-size: 7px; color: #a5f3fc; padding: 0 5px; line-height: 12px; text-align: right;">Sweep →</div>
+              </div>
+            </div>
+            <div style="margin-top: 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(45,212,191,0.3); border-radius: 4px; padding: 6px 8px; font-size: 7px; color: #d1d5db;">
+              <div style="color: #2dd4bf; font-size: 6px; margin-bottom: 1px;">💡 VANTOR INSIGHT</div>
+              $2.3M idle → sweep to Spiko USD for +4.9% APY
+            </div>
+          </div>
+
+          <!-- CAPABILITY GRID -->
+          <div style="padding: 14px 12px;">
+            <div style="text-align: center; margin-bottom: 10px;">
+              <div style="font-size: 10px; color: white; font-weight: 600;">Built on six pillars</div>
+              <div style="font-size: 7px; color: #9ca3af;">Everything a modern treasury team needs</div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;">
+              <div style="border: 1px solid rgba(45,212,191,0.2); border-radius: 4px; padding: 6px 4px; font-size: 6px; color: #a5f3fc; text-align: center;">Command Center</div>
+              <div style="border: 1px solid rgba(45,212,191,0.2); border-radius: 4px; padding: 6px 4px; font-size: 6px; color: #a5f3fc; text-align: center;">Treasury</div>
+              <div style="border: 1px solid rgba(45,212,191,0.2); border-radius: 4px; padding: 6px 4px; font-size: 6px; color: #a5f3fc; text-align: center;">Yield</div>
+              <div style="border: 1px solid rgba(45,212,191,0.2); border-radius: 4px; padding: 6px 4px; font-size: 6px; color: #a5f3fc; text-align: center;">Compliance</div>
+              <div style="border: 1px solid rgba(45,212,191,0.2); border-radius: 4px; padding: 6px 4px; font-size: 6px; color: #a5f3fc; text-align: center;">Connect</div>
+              <div style="border: 1px solid rgba(45,212,191,0.2); border-radius: 4px; padding: 6px 4px; font-size: 6px; color: #a5f3fc; text-align: center;">Data</div>
+            </div>
+          </div>
+
+          <div style="padding: 10px 12px; display: flex; gap: 6px;">
+            <div style="flex: 1; height: 24px; border: 1px solid rgba(255,255,255,0.06); border-radius: 4px;"></div>
+            <div style="flex: 1; height: 24px; border: 1px solid rgba(255,255,255,0.06); border-radius: 4px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Compress hero, AI flow gets spotlight</h3>
+      <p>Tighten the hero (no background canvas, smaller headline, tighter padding). AI flow gets its own generous section with visible glow and a concrete insight bubble (<em>"$2.3M idle → sweep to Spiko USD for +4.9% APY"</em>). Hero + anim both fit above the fold on desktop.</p>
+      <p style="font-size: 12px; color: #9ca3af; margin-top: 6px;"><strong>Cost:</strong> medium · <strong>Hero:</strong> compressed · <strong>Anim visibility:</strong> full</p>
+    </div>
+  </div>
+
+  <!-- OPTION C -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">Option C — AI flow IS the hero</div>
+        <div class="mockup-body" style="padding: 0;">
+          <div style="height: 32px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; padding: 0 12px; font-size: 9px; color: #9ca3af;">Vantor · · · Get Started</div>
+
+          <!-- minimal heading -->
+          <div style="padding: 14px 12px 6px; text-align: center;">
+            <div style="font-size: 11px; color: white; font-weight: 600;">Put Your Idle Treasury <span style="background: linear-gradient(90deg, #2dd4bf, #67e8f9); -webkit-background-clip: text; color: transparent;">Reserves to Work</span></div>
+          </div>
+
+          <!-- AI flow is the hero visual -->
+          <div style="padding: 16px 12px 20px; background: radial-gradient(ellipse 80% 70% at center, rgba(45,212,191,0.12), transparent 70%);">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+              <div style="flex: 1; display: flex; flex-direction: column; gap: 3px;">
+                <div style="height: 11px; background: rgba(45,212,191,0.2); border-radius: 3px; font-size: 6px; color: #67e8f9; padding: 0 4px; line-height: 11px;">📥 AR/AP</div>
+                <div style="height: 11px; background: rgba(45,212,191,0.2); border-radius: 3px; font-size: 6px; color: #67e8f9; padding: 0 4px; line-height: 11px;">📥 Cash</div>
+                <div style="height: 11px; background: rgba(45,212,191,0.2); border-radius: 3px; font-size: 6px; color: #67e8f9; padding: 0 4px; line-height: 11px;">📥 Policy</div>
+                <div style="height: 11px; background: rgba(45,212,191,0.2); border-radius: 3px; font-size: 6px; color: #67e8f9; padding: 0 4px; line-height: 11px;">📥 FX</div>
+              </div>
+              <div style="width: 84px; height: 84px; border-radius: 50%; background: radial-gradient(circle, rgba(45,212,191,0.6), rgba(45,212,191,0.1)); display: flex; align-items: center; justify-content: center; color: white; font-size: 10px; font-weight: 700; border: 2px solid rgba(45,212,191,0.7); box-shadow: 0 0 36px rgba(45,212,191,0.5);">Vantor<br>Agent</div>
+              <div style="flex: 1; display: flex; flex-direction: column; gap: 3px;">
+                <div style="height: 11px; background: rgba(103,232,249,0.2); border-radius: 3px; font-size: 6px; color: #a5f3fc; padding: 0 4px; line-height: 11px; text-align: right;">Spiko USD →</div>
+                <div style="height: 11px; background: rgba(103,232,249,0.2); border-radius: 3px; font-size: 6px; color: #a5f3fc; padding: 0 4px; line-height: 11px; text-align: right;">USYC →</div>
+                <div style="height: 11px; background: rgba(103,232,249,0.2); border-radius: 3px; font-size: 6px; color: #a5f3fc; padding: 0 4px; line-height: 11px; text-align: right;">FX Reb. →</div>
+                <div style="height: 11px; background: rgba(103,232,249,0.2); border-radius: 3px; font-size: 6px; color: #a5f3fc; padding: 0 4px; line-height: 11px; text-align: right;">Sweep →</div>
+              </div>
+            </div>
+            <div style="margin-top: 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(45,212,191,0.3); border-radius: 4px; padding: 6px 8px; font-size: 7px; color: #d1d5db;">
+              <div style="color: #2dd4bf; font-size: 6px; margin-bottom: 1px;">💡 VANTOR INSIGHT · 8s ago</div>
+              $2.3M idle in Mercury → sweep to Spiko USD for +4.9% APY
+            </div>
+            <div style="display: flex; gap: 6px; justify-content: center; margin-top: 10px;">
+              <div style="background: linear-gradient(90deg, #14b8a6, #06b6d4); color: white; font-size: 8px; padding: 4px 10px; border-radius: 999px;">Get Started</div>
+              <div style="border: 1px solid rgba(255,255,255,0.15); color: #d1d5db; font-size: 8px; padding: 4px 10px; border-radius: 999px;">See Demo</div>
+            </div>
+          </div>
+
+          <!-- CAPABILITY GRID -->
+          <div style="padding: 14px 12px;">
+            <div style="text-align: center; margin-bottom: 10px;">
+              <div style="font-size: 10px; color: white; font-weight: 600;">Built on six pillars</div>
+              <div style="font-size: 7px; color: #9ca3af;">Everything a modern treasury team needs</div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;">
+              <div style="border: 1px solid rgba(45,212,191,0.2); border-radius: 4px; padding: 6px 4px; font-size: 6px; color: #a5f3fc; text-align: center;">Command Center</div>
+              <div style="border: 1px solid rgba(45,212,191,0.2); border-radius: 4px; padding: 6px 4px; font-size: 6px; color: #a5f3fc; text-align: center;">Treasury</div>
+              <div style="border: 1px solid rgba(45,212,191,0.2); border-radius: 4px; padding: 6px 4px; font-size: 6px; color: #a5f3fc; text-align: center;">Yield</div>
+              <div style="border: 1px solid rgba(45,212,191,0.2); border-radius: 4px; padding: 6px 4px; font-size: 6px; color: #a5f3fc; text-align: center;">Compliance</div>
+              <div style="border: 1px solid rgba(45,212,191,0.2); border-radius: 4px; padding: 6px 4px; font-size: 6px; color: #a5f3fc; text-align: center;">Connect</div>
+              <div style="border: 1px solid rgba(45,212,191,0.2); border-radius: 4px; padding: 6px 4px; font-size: 6px; color: #a5f3fc; text-align: center;">Data</div>
+            </div>
+          </div>
+
+          <div style="padding: 10px 12px; display: flex; gap: 6px;">
+            <div style="flex: 1; height: 24px; border: 1px solid rgba(255,255,255,0.06); border-radius: 4px;"></div>
+            <div style="flex: 1; height: 24px; border: 1px solid rgba(255,255,255,0.06); border-radius: 4px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — AI flow IS the hero</h3>
+      <p>Retire the current hero network/blob background entirely. A minimal headline sits above the AI flow, which becomes the hero visual. CTAs sit beneath the diagram. Most dramatic — the page becomes "about the AI", not "about Vantor." Highest implementation cost.</p>
+      <p style="font-size: 12px; color: #9ca3af; margin-top: 6px;"><strong>Cost:</strong> high · <strong>Hero:</strong> replaced · <strong>Anim visibility:</strong> dominates</p>
+    </div>
+  </div>
+
+</div>
+
+<p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 20px;">Click to select, or tell me in the terminal. Capability grid is simplified here — we'll detail the card designs separately once the layout is locked.</p>

@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -11,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
+import { HoverTooltip } from '@/components/ui/hover-tooltip';
 import { PasswordField } from '@/components/ui/password-field';
 import { NicknameEdit } from '@/components/ui/nickname-edit';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -22,6 +24,7 @@ import { useAppStore } from '@/store/appStore';
 import type { ErpConfiguration } from '@/types/database';
 import { Loader2, CheckCircle, XCircle, Settings2, Trash2, Pencil, Check, X, Download } from 'lucide-react';
 import { exportCsv, type ExportColumn } from '@/lib/export';
+import { formatDateTime } from '@/lib/utils';
 import { TableCardSkeleton } from '@/components/ui/operations-skeletons';
 
 /**
@@ -75,11 +78,8 @@ const schema = z
         );
         break;
       case 'xero':
-        required.push(
-          { key: 'clientId', label: 'Client ID' },
-          { key: 'clientSecret', label: 'Client Secret' },
-          { key: 'tenantId', label: 'Tenant ID' },
-        );
+        // Xero connects via OAuth — no form fields to validate; the Connect
+        // Xero button bypasses the form submit entirely.
         break;
       case 'quickbooks':
         required.push(
@@ -215,6 +215,8 @@ export default function ERPSettingsPage() {
   const docsUrl = PROVIDER_DOCS[selectedProvider];
   const isOAuth = USES_OAUTH[selectedProvider];
   const providerSupported = isSupported(selectedProvider);
+  const searchParams = useSearchParams();
+  const xeroConnected = searchParams.get('xero') === 'connected';
 
   const handleSetActive = async (id: string, is_active: boolean) => {
     setActionPending(true);
@@ -348,6 +350,11 @@ export default function ERPSettingsPage() {
   return (
     <>
     <div className="space-y-6">
+        {xeroConnected && (
+          <div className="rounded-md bg-green-50 dark:bg-green-950 p-3 text-sm text-green-700 dark:text-green-300">
+            Xero connected successfully.
+          </div>
+        )}
         {/* Connect new ERP */}
         <Card>
           <CardHeader>
@@ -370,13 +377,21 @@ export default function ERPSettingsPage() {
                 <div className="space-y-2">
                   <Label>Nickname</Label>
                   <Input placeholder="e.g. Production SAP" {...register('label')} />
-                  {errors.label && <p className="text-sm text-red-500">{errors.label.message}</p>}
+                  {errors.label && <p className="text-sm text-destructive">{errors.label.message}</p>}
                 </div>
               </div>
 
-              {providerSupported && isOAuth && (
-                <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-300/90 leading-relaxed">
-                  Xero uses OAuth 2.0 — hosted Connect-with-Xero flow is coming soon. In the meantime, enter the Client ID / Secret and Tenant ID from your app registration below.
+              {providerSupported && isOAuth && selectedProvider === 'xero' && (
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2">
+                  <p className="text-xs text-foreground/80 leading-relaxed">
+                    Xero uses OAuth 2.0. Click Connect Xero to authorize Vantor from your Xero account — Vantor handles the consent flow, token rotation, and tenant/bank account resolution for you.
+                  </p>
+                  <a
+                    href="/api/erp/xero/authorize"
+                    className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                  >
+                    Connect Xero
+                  </a>
                 </div>
               )}
 
@@ -388,18 +403,18 @@ export default function ERPSettingsPage() {
                   <div className="space-y-2">
                     <Label>API URL</Label>
                     <Input placeholder="https://my123456.s4hana.ondemand.com" {...register('apiUrl')} />
-                    {errors.apiUrl && <p className="text-sm text-red-500">{errors.apiUrl.message}</p>}
+                    {errors.apiUrl && <p className="text-sm text-destructive">{errors.apiUrl.message}</p>}
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Client ID</Label>
                       <Input placeholder="client-id" {...register('clientId')} autoComplete="off" />
-                      {errors.clientId && <p className="text-sm text-red-500">{errors.clientId.message}</p>}
+                      {errors.clientId && <p className="text-sm text-destructive">{errors.clientId.message}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label>Client Secret</Label>
                       <PasswordField placeholder="••••••••" {...register('clientSecret')} />
-                      {errors.clientSecret && <p className="text-sm text-red-500">{errors.clientSecret.message}</p>}
+                      {errors.clientSecret && <p className="text-sm text-destructive">{errors.clientSecret.message}</p>}
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -409,7 +424,7 @@ export default function ERPSettingsPage() {
                         <InfoTooltip content="The client/company ID in your SAP environment. Find it under System Information or ask your SAP admin." />
                       </Label>
                       <Input placeholder="1000" {...register('companyCode')} />
-                      {errors.companyCode && <p className="text-sm text-red-500">{errors.companyCode.message}</p>}
+                      {errors.companyCode && <p className="text-sm text-destructive">{errors.companyCode.message}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label className="flex items-center gap-1.5">
@@ -432,18 +447,18 @@ export default function ERPSettingsPage() {
                   <div className="space-y-2">
                     <Label>API URL</Label>
                     <Input placeholder="https://your-tenant.fa.us6.oraclecloud.com" {...register('apiUrl')} />
-                    {errors.apiUrl && <p className="text-sm text-red-500">{errors.apiUrl.message}</p>}
+                    {errors.apiUrl && <p className="text-sm text-destructive">{errors.apiUrl.message}</p>}
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Client ID</Label>
                       <Input placeholder="client-id" {...register('clientId')} autoComplete="off" />
-                      {errors.clientId && <p className="text-sm text-red-500">{errors.clientId.message}</p>}
+                      {errors.clientId && <p className="text-sm text-destructive">{errors.clientId.message}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label>Client Secret</Label>
                       <PasswordField placeholder="••••••••" {...register('clientSecret')} />
-                      {errors.clientSecret && <p className="text-sm text-red-500">{errors.clientSecret.message}</p>}
+                      {errors.clientSecret && <p className="text-sm text-destructive">{errors.clientSecret.message}</p>}
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -452,7 +467,7 @@ export default function ERPSettingsPage() {
                       <InfoTooltip content="Your Oracle Fusion tenant identifier. Find it in the Cloud console URL or under Setup & Maintenance → Tenant." />
                     </Label>
                     <Input placeholder="tenant-id" {...register('tenantId')} />
-                    {errors.tenantId && <p className="text-sm text-red-500">{errors.tenantId.message}</p>}
+                    {errors.tenantId && <p className="text-sm text-destructive">{errors.tenantId.message}</p>}
                   </div>
                 </>
               )}
@@ -466,60 +481,38 @@ export default function ERPSettingsPage() {
                       <InfoTooltip content="Your NetSuite account ID (e.g. TSTDRV123456). Visible under Setup → Company → Company Information." />
                     </Label>
                     <Input placeholder="TSTDRV123456" {...register('accountId')} />
-                    {errors.accountId && <p className="text-sm text-red-500">{errors.accountId.message}</p>}
+                    {errors.accountId && <p className="text-sm text-destructive">{errors.accountId.message}</p>}
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Consumer Key</Label>
                       <Input placeholder="consumer-key" {...register('consumerKey')} autoComplete="off" />
-                      {errors.consumerKey && <p className="text-sm text-red-500">{errors.consumerKey.message}</p>}
+                      {errors.consumerKey && <p className="text-sm text-destructive">{errors.consumerKey.message}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label>Consumer Secret</Label>
                       <PasswordField placeholder="••••••••" {...register('consumerSecret')} />
-                      {errors.consumerSecret && <p className="text-sm text-red-500">{errors.consumerSecret.message}</p>}
+                      {errors.consumerSecret && <p className="text-sm text-destructive">{errors.consumerSecret.message}</p>}
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Token ID</Label>
                       <Input placeholder="token-id" {...register('tokenId')} autoComplete="off" />
-                      {errors.tokenId && <p className="text-sm text-red-500">{errors.tokenId.message}</p>}
+                      {errors.tokenId && <p className="text-sm text-destructive">{errors.tokenId.message}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label>Token Secret</Label>
                       <PasswordField placeholder="••••••••" {...register('tokenSecret')} />
-                      {errors.tokenSecret && <p className="text-sm text-red-500">{errors.tokenSecret.message}</p>}
+                      {errors.tokenSecret && <p className="text-sm text-destructive">{errors.tokenSecret.message}</p>}
                     </div>
                   </div>
                 </>
               )}
 
-              {/* Xero fields */}
-              {selectedProvider === 'xero' && (
-                <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Client ID</Label>
-                      <Input placeholder="client-id" {...register('clientId')} autoComplete="off" />
-                      {errors.clientId && <p className="text-sm text-red-500">{errors.clientId.message}</p>}
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Client Secret</Label>
-                      <PasswordField placeholder="••••••••" {...register('clientSecret')} />
-                      {errors.clientSecret && <p className="text-sm text-red-500">{errors.clientSecret.message}</p>}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1.5">
-                      Tenant ID
-                      <InfoTooltip content="Returned by the Xero OAuth flow after you install the app. Visible in the Xero developer app connection list." />
-                    </Label>
-                    <Input placeholder="tenant-id" {...register('tenantId')} />
-                    {errors.tenantId && <p className="text-sm text-red-500">{errors.tenantId.message}</p>}
-                  </div>
-                </>
-              )}
+              {/* Xero connects via OAuth — no manual credentials form. The
+                  Connect Xero button above redirects to Xero's consent screen,
+                  which rotates tokens and persists the connection for us. */}
 
               {/* QuickBooks fields */}
               {selectedProvider === 'quickbooks' && (
@@ -528,12 +521,12 @@ export default function ERPSettingsPage() {
                     <div className="space-y-2">
                       <Label>Client ID</Label>
                       <Input placeholder="client-id" {...register('clientId')} autoComplete="off" />
-                      {errors.clientId && <p className="text-sm text-red-500">{errors.clientId.message}</p>}
+                      {errors.clientId && <p className="text-sm text-destructive">{errors.clientId.message}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label>Client Secret</Label>
                       <PasswordField placeholder="••••••••" {...register('clientSecret')} />
-                      {errors.clientSecret && <p className="text-sm text-red-500">{errors.clientSecret.message}</p>}
+                      {errors.clientSecret && <p className="text-sm text-destructive">{errors.clientSecret.message}</p>}
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -542,7 +535,7 @@ export default function ERPSettingsPage() {
                       <InfoTooltip content="Your QuickBooks Online company ID. Returned by the Intuit OAuth callback, also visible at qbo.intuit.com under Settings → Billing & Subscription." />
                     </Label>
                     <Input placeholder="1234567890123456" {...register('realmId')} />
-                    {errors.realmId && <p className="text-sm text-red-500">{errors.realmId.message}</p>}
+                    {errors.realmId && <p className="text-sm text-destructive">{errors.realmId.message}</p>}
                   </div>
                 </>
               )}
@@ -608,17 +601,29 @@ export default function ERPSettingsPage() {
                 </div>
               )}
 
-              {providerSupported && (
+              {providerSupported && selectedProvider !== 'xero' && (
                 <div className="flex items-center justify-end gap-3 pt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleTest}
-                    disabled={testing || !isValid}
-                    title={!isValid ? 'Fill required fields to enable' : undefined}
-                  >
-                    {testing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Testing…</> : 'Test Connection'}
-                  </Button>
+                  {!isValid ? (
+                    <HoverTooltip label="Fill required fields to enable">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleTest}
+                        disabled={testing || !isValid}
+                      >
+                        {testing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Testing…</> : 'Test Connection'}
+                      </Button>
+                    </HoverTooltip>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleTest}
+                      disabled={testing || !isValid}
+                    >
+                      {testing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Testing…</> : 'Test Connection'}
+                    </Button>
+                  )}
                   <Button type="submit" disabled={isSubmitting || !isValid}>
                     {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Connecting…</> : 'Save & Connect'}
                   </Button>
@@ -693,17 +698,19 @@ export default function ERPSettingsPage() {
                               {(() => {
                                 const f = syncFreshness(cfg.last_synced);
                                 return (
-                                  <Badge variant={f.variant as any} className="text-xs" title={cfg.last_synced ? new Date(cfg.last_synced).toLocaleString() : 'Never synced'}>
-                                    {f.label}
-                                  </Badge>
+                                  <HoverTooltip label={cfg.last_synced ? formatDateTime(cfg.last_synced) : 'Never synced'}>
+                                    <Badge variant={f.variant as any} className="text-xs">
+                                      {f.label}
+                                    </Badge>
+                                  </HoverTooltip>
                                 );
                               })()}
                             </TableCell>
                             <TableCell>
                               {cfg.is_active ? (
-                                <Badge variant="success">Active</Badge>
+                                <Badge variant="active">Active</Badge>
                               ) : (
-                                <Badge variant="secondary">Inactive</Badge>
+                                <Badge variant="inactive">Inactive</Badge>
                               )}
                             </TableCell>
                             <TableCell>

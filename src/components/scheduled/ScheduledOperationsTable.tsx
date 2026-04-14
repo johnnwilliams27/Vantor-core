@@ -18,14 +18,16 @@ import { useScheduledOperations, useCancelScheduledOperation } from '@/hooks/use
 import { formatDateTime, capitalize } from '@/lib/utils';
 import type { ScheduledOperationType, ScheduledOperation, SwapParams, BridgeParams, RampParams } from '@/types/scheduled-operations';
 
+// Migrated to semantic badge variants (style guide Stage 3b).
+// awaiting_authorization kept as pending (user action required).
 const STATUS_COLORS: Record<string, string> = {
-  pending: 'warning',
-  processing: 'info',
-  awaiting_authorization: 'warning',
-  completed: 'success',
-  failed: 'destructive',
-  cancelled: 'secondary',
-  expired: 'secondary',
+  pending: 'pending',
+  processing: 'pending',
+  awaiting_authorization: 'pending',
+  completed: 'active',
+  failed: 'failed',
+  cancelled: 'inactive',
+  expired: 'inactive',
 };
 
 function operationSummary(op: ScheduledOperation): string {
@@ -149,8 +151,8 @@ export function ScheduledOperationsTable({ type, title }: Props) {
                         {canCancel(op.status) && (
                           <Button
                             size="sm"
-                            variant="outline"
-                            className="h-7 text-xs px-3 text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400"
+                            variant="destructive-outline"
+                            className="h-7 text-xs px-3"
                             onClick={() => setConfirmCancelOp(op)}
                           >
                             Cancel
@@ -196,8 +198,7 @@ export function ScheduledOperationsTable({ type, title }: Props) {
               Go Back
             </Button>
             <Button
-              variant="outline"
-              className="text-red-600 border-red-300 hover:bg-red-50"
+              variant="destructive-outline"
               onClick={handleCancel}
               disabled={cancel.isPending}
             >

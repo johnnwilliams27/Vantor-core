@@ -98,12 +98,12 @@ export function SettingsMenu({ userInitial, userName, userEmail, userRole, onSig
             {userEmail && (
               <p className="text-xs text-muted-foreground truncate mt-0.5">{userEmail}</p>
             )}
-            <p className="text-[11px] text-muted-foreground mt-1">{roleLabel}</p>
+            <p className="text-2xs text-muted-foreground mt-1">{roleLabel}</p>
           </div>
 
           {/* Display currency */}
           <div className="py-1.5 border-b border-border/60">
-            <p className="px-4 py-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Display Currency</p>
+            <p className="px-4 py-1 text-2xs font-medium text-muted-foreground uppercase tracking-wider">Display Currency</p>
             {SUPPORTED_FIAT_CURRENCIES.map((cur) => (
               <button
                 key={cur}
@@ -126,7 +126,7 @@ export function SettingsMenu({ userInitial, userName, userEmail, userRole, onSig
 
           {/* Refresh */}
           <div className="py-2.5 px-4 space-y-2 border-b border-border/60">
-            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Refresh All Data</p>
+            <p className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">Refresh All Data</p>
             <div className="flex items-center justify-between gap-2">
               <label htmlFor="refresh-confirm" className="text-xs text-muted-foreground select-none">
                 Confirm
@@ -153,7 +153,7 @@ export function SettingsMenu({ userInitial, userName, userEmail, userRole, onSig
               onClick={handleRefresh}
               disabled={!confirmArmed || refreshing}
               className={cn(
-                'flex w-full items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
+                'flex w-full items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200',
                 confirmArmed && !refreshing
                   ? 'bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer'
                   : 'bg-muted text-muted-foreground cursor-not-allowed opacity-60'
@@ -163,10 +163,10 @@ export function SettingsMenu({ userInitial, userName, userEmail, userRole, onSig
               {refreshing ? 'Refreshing…' : 'Refresh Now'}
             </button>
             {refreshResult === 'success' && (
-              <p className="text-[11px] text-green-600 dark:text-green-400 text-center">All data sources refreshed.</p>
+              <p className="text-2xs text-green-600 dark:text-green-400 text-center">All data sources refreshed.</p>
             )}
             {refreshResult === 'error' && (
-              <p className="text-[11px] text-red-500 dark:text-red-400 text-center">Refresh failed. Try again later.</p>
+              <p className="text-2xs text-red-500 dark:text-red-400 text-center">Refresh failed. Try again later.</p>
             )}
           </div>
 

@@ -7,8 +7,14 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 active:scale-[0.98]',
+        // Tier 2 app primary — solid L1 teal with subtle depth
+        default: 'bg-primary text-primary-foreground shadow-btn hover:bg-primary/90 active:scale-[0.98]',
+        // Tier 1 brand primary — gradient pill (landing hero, navbar Login, contact form)
+        // Shape fix (rounded-full → rounded-lg) + halo strip happens in Stage 3 via globals.css
+        primary: 'btn-gradient',
         destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+        // Destructive outline — canonical Vantor red palette (retires 6 wrong-palette sites)
+        'destructive-outline': 'border border-red-500/20 bg-transparent text-red-400 hover:bg-red-500/10',
         outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
         secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
         ghost: 'hover:bg-accent hover:text-accent-foreground',

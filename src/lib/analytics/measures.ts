@@ -459,14 +459,58 @@ export function getMeasures(): MeasureDefinition[] {
 }
 
 /**
- * Return a human-readable label for a measure slug. Falls back to pretty-
- * printing the slug (snake_case → Title Case) when the slug isn't a
- * registered measure — useful for unknown group/row keys that come back
- * from the resolver.
+ * Map of database column names to human-readable labels for table display.
+ * Used when displaying query results that include raw database columns.
+ */
+const COLUMN_LABELS: Record<string, string> = {
+  // Transaction/activity columns
+  id: 'ID',
+  wallet_id: 'Wallet',
+  user_id: 'User',
+  enterprise_id: 'Enterprise',
+  position_id: 'Position',
+  protocol: 'Protocol',
+  chain: 'Chain',
+  source_chain: 'From Chain',
+  destination_chain: 'To Chain',
+  tx_type: 'Type',
+  action_type: 'Action',
+  underlying_token: 'Token',
+  token_in: 'Token In',
+  token_out: 'Token Out',
+  amount: 'Amount',
+  amount_usd: 'Amount (USD)',
+  tx_hash: 'Hash',
+  status: 'Status',
+  direction: 'Direction',
+  from_address: 'From',
+  to_address: 'To',
+  error_message: 'Error',
+  executed_at: 'Executed',
+  description: 'Description',
+  metadata: 'Metadata',
+  created_at: 'Created',
+  updated_at: 'Updated',
+  denial_reason: 'Denial Reason',
+  // Common columns
+  slug: 'Identifier',
+  label: 'Label',
+  kind: 'Kind',
+};
+
+/**
+ * Return a human-readable label for a measure slug or column name.
+ * Falls back to pretty-printing the slug (snake_case → Title Case) when
+ * the slug isn't a registered measure — useful for unknown group/row keys
+ * that come back from the resolver.
  */
 export function getMeasureLabel(slug: string): string {
   const measure = measureMap.get(slug);
   if (measure) return measure.label;
+
+  // Check if it's a known column name
+  if (COLUMN_LABELS[slug]) return COLUMN_LABELS[slug];
+
   // Fallback: snake_case or kebab-case → Title Case, strip "_usd" suffix
   return slug
     .replace(/_usd$/, '')

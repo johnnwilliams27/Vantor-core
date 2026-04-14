@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Copy, Check } from 'lucide-react';
 import { truncateAddress } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast';
+import { HoverTooltip } from '@/components/ui/hover-tooltip';
 import { cn } from '@/lib/utils';
 
 interface TruncatedAddressProps {
@@ -84,7 +85,7 @@ export function TruncatedAddress({
           aria-keyshortcuts={showCopy ? 'C' : undefined}
           className={cn(
             'text-left break-all transition-colors cursor-pointer',
-            'hover:text-[#19595b] dark:hover:text-teal-400',
+            'hover:text-primary dark:hover:text-teal-400',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40 rounded',
             addressClassName,
           )}
@@ -103,23 +104,24 @@ export function TruncatedAddress({
       )}
 
       {showCopy && (
-        <button
-          type="button"
-          onClick={handleCopy}
-          className={cn(
-            'shrink-0 p-1 rounded-md transition-colors',
-            'text-muted-foreground hover:text-foreground hover:bg-muted',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40',
-          )}
-          title="Copy address"
-          aria-label="Copy address to clipboard"
-        >
-          {copied ? (
-            <Check className="h-3.5 w-3.5 text-emerald-500" />
-          ) : (
-            <Copy className="h-3.5 w-3.5" />
-          )}
-        </button>
+        <HoverTooltip label={copied ? 'Copied' : 'Copy address'}>
+          <button
+            type="button"
+            onClick={handleCopy}
+            className={cn(
+              'shrink-0 p-1 rounded-md transition-colors',
+              'text-muted-foreground hover:text-foreground hover:bg-muted',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40',
+            )}
+            aria-label="Copy address to clipboard"
+          >
+            {copied ? (
+              <Check className="h-3.5 w-3.5 text-emerald-500" />
+            ) : (
+              <Copy className="h-3.5 w-3.5" />
+            )}
+          </button>
+        </HoverTooltip>
       )}
     </span>
   );

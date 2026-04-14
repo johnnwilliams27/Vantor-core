@@ -138,7 +138,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         <div
           className={cn(
             'absolute z-50 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-lg overflow-hidden',
-            'transition-all duration-300 cubic-bezier(0.4,0,0.2,1) origin-top',
+            'transition-[opacity,transform] duration-300 cubic-bezier(0.4,0,0.2,1) origin-top',
             open
               ? 'opacity-100 scale-y-100 translate-y-0 pointer-events-auto'
               : 'opacity-0 scale-y-[0.97] -translate-y-0.5 pointer-events-none',

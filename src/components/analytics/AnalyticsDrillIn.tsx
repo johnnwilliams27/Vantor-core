@@ -126,7 +126,7 @@ export function AnalyticsDrillIn() {
           </div>
         )}
         {viewDef && (
-          <span className={`rounded px-1.5 py-0.5 text-[10px] ${
+          <span className={`rounded px-1.5 py-0.5 text-3xs ${
             viewDef.kind === 'custom' ? 'bg-amber-500/10 text-amber-400' : 'bg-white/5 text-muted-foreground'
           }`}>
             {viewDef.kind}

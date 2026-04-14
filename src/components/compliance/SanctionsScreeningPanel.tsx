@@ -2,18 +2,20 @@
 import { useState } from 'react';
 import { useSanctionsScreenings, useScreenAddress } from '@/hooks/useCompliance';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/toast';
 import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { capitalize } from '@/lib/utils';
+import { capitalize, formatDateTime } from '@/lib/utils';
 import { Search, ShieldCheck, ShieldAlert, AlertTriangle } from 'lucide-react';
 import { TableRowsSkeleton } from '@/components/ui/operations-skeletons';
 
-const RESULT_BADGE: Record<string, { label: string; className: string; icon: React.ComponentType<{ className?: string }> }> = {
-  clear: { label: 'Clear', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400', icon: ShieldCheck },
-  sanctioned: { label: 'Sanctioned', className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400', icon: ShieldAlert },
-  partial_match: { label: 'Partial Match', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400', icon: AlertTriangle },
-  error: { label: 'Error', className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400', icon: AlertTriangle },
+// Migrated to semantic Badge variants (style guide Stage 3d).
+const RESULT_BADGE: Record<string, { label: string; variant: string; icon: React.ComponentType<{ className?: string }> }> = {
+  clear: { label: 'Clear', variant: 'active', icon: ShieldCheck },
+  sanctioned: { label: 'Sanctioned', variant: 'failed', icon: ShieldAlert },
+  partial_match: { label: 'Partial Match', variant: 'pending', icon: AlertTriangle },
+  error: { label: 'Error', variant: 'inactive', icon: AlertTriangle },
 };
 
 export function SanctionsScreeningPanel() {
@@ -45,12 +47,12 @@ export function SanctionsScreeningPanel() {
       <div className="rounded-lg border bg-card p-4">
         <h3 className="text-sm font-semibold mb-3">Screen Address</h3>
         <div className="flex flex-col sm:flex-row gap-2">
-          <input
+          <Input
             type="text"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            placeholder="Enter wallet address..."
-            className="flex-1 rounded-md border bg-background px-3 py-2 text-sm"
+            placeholder="Enter wallet address…"
+            className="flex-1"
           />
           <Select
             value={chain}
@@ -111,13 +113,12 @@ export function SanctionsScreeningPanel() {
                         </Badge>
                       </td>
                       <td className="px-4 py-2">
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${badge.className}`}>
-                          <Icon className="h-3 w-3" />
+                        <Badge variant={badge.variant as any} icon={<Icon />}>
                           {badge.label}
-                        </span>
+                        </Badge>
                       </td>
                       <td className="px-4 py-2 text-muted-foreground">
-                        {new Date(s.screened_at).toLocaleString()}
+                        {formatDateTime(s.screened_at)}
                       </td>
                     </tr>
                   );

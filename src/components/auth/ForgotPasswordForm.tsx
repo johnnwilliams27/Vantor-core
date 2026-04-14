@@ -6,6 +6,7 @@ import { z } from 'zod';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Loader2, Mail } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const schema = z.object({
   email: z.string().email('Invalid email'),
@@ -114,7 +115,7 @@ export function ForgotPasswordForm() {
                   className="w-full px-4 py-3 min-h-[48px] rounded-xl bg-white/[0.05] border border-white/[0.08] text-white text-sm placeholder-[var(--text-400)] focus:outline-none focus:border-[var(--teal-400)]/50 focus:ring-1 focus:ring-[var(--teal-400)]/25 transition-[border-color,box-shadow] duration-300"
                 />
                 {errors.email && (
-                  <p className="text-xs text-red-400">{errors.email.message}</p>
+                  <p className="text-xs text-destructive">{errors.email.message}</p>
                 )}
               </div>
 
@@ -124,17 +125,18 @@ export function ForgotPasswordForm() {
                 </div>
               )}
 
-              <button
+              <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full min-h-[48px] py-3 text-sm btn-gradient disabled:opacity-60 flex items-center justify-center gap-2"
+                className="w-full min-h-[48px]"
+                size="lg"
               >
                 {isSubmitting ? (
-                  <><Loader2 size={14} className="animate-spin" /> Sending…</>
+                  <><Loader2 size={14} className="animate-spin mr-2" /> Sending…</>
                 ) : (
                   'Send reset link'
                 )}
-              </button>
+              </Button>
             </form>
 
             <p className="mt-5 text-center text-sm text-[var(--text-300)]">

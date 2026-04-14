@@ -3,8 +3,8 @@ import type {
   ERPCredentials,
   ERPVendorRaw,
   ERPInvoiceRaw,
-  ERPGLPostPayload,
-  ERPGLPostResult,
+  ERPBillPaymentPayload,
+  ERPBillPaymentResult,
 } from '@/types/erp';
 
 export class OracleMockAdapter implements IERPAdapter {
@@ -77,12 +77,12 @@ export class OracleMockAdapter implements IERPAdapter {
     ];
   }
 
-  async postGLEntry(payload: ERPGLPostPayload): Promise<ERPGLPostResult> {
+  async recordBillPayment(payload: ERPBillPaymentPayload): Promise<ERPBillPaymentResult> {
     await delay(450);
     return {
-      externalGlId: `ORC-GL-${Date.now()}`,
-      status: 'posted',
-      message: `Oracle GL journal entry created for account ${payload.glAccount} (mock)`,
+      externalPaymentId: `ORC-PMT-${Date.now()}`,
+      status: 'recorded',
+      message: `Payment of ${payload.amount} ${payload.currency} recorded against Oracle bill ${payload.invoiceId} (mock), ref: ${payload.reference} tx:${payload.externalTxHash}`,
     };
   }
 }

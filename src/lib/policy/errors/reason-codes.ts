@@ -32,6 +32,7 @@ export const REASON_CODES = {
   sod_rule_editor_conflict:          'sod_rule_editor_conflict',
   sod_already_filled:                'sod_already_filled',
   enterprise_admin_cannot_approve:   'enterprise_admin_cannot_approve',
+  auditor_cannot_approve:            'auditor_cannot_approve',
   no_matching_slot:                  'no_matching_slot',
   approval_concurrent_modification:  'approval_concurrent_modification',
   stale_approval_chain_mismatch:     'stale_approval_chain_mismatch',

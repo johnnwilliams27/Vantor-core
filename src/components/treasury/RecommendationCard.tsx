@@ -74,13 +74,15 @@ const ACTION_LABELS: Record<string, string> = {
   no_action: 'No Action Needed',
 };
 
-const STATUS_DOT: Record<string, string> = {
-  pending_approval: 'bg-amber-500',
-  approved: 'bg-green-500',
-  rejected: 'bg-red-500',
-  executed: 'bg-green-500',
-  auto_executed: 'bg-green-500',
-  expired: 'bg-gray-400',
+import { StatusDot, type StatusDotVariant } from '@/components/ui/status-dot';
+
+const STATUS_VARIANT: Record<string, StatusDotVariant> = {
+  pending_approval: 'pending',
+  approved: 'active',
+  rejected: 'failed',
+  executed: 'active',
+  auto_executed: 'active',
+  expired: 'inactive',
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -162,7 +164,7 @@ export function RecommendationCard({ rec }: { rec: AiRecommendation }) {
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[rec.status] ?? 'bg-gray-400'}`} />
+                <StatusDot variant={STATUS_VARIANT[rec.status] ?? 'inactive'} size="xs" />
                 {STATUS_LABELS[rec.status] ?? rec.status}
               </span>
               <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -180,15 +182,15 @@ export function RecommendationCard({ rec }: { rec: AiRecommendation }) {
           {/* Context grid — below reasoning, matching Insights pattern */}
           <div className="grid grid-cols-3 gap-3 rounded-lg border border-border/50 p-3">
             <div>
-              <div className="text-[11px] text-muted-foreground uppercase tracking-wider">Bank Balance</div>
+              <div className="text-2xs text-muted-foreground uppercase tracking-wider">Bank Balance</div>
               <div className="text-sm font-semibold tabular-nums mt-0.5">{fmt(rec.total_bank_balance_usd)}</div>
             </div>
             <div>
-              <div className="text-[11px] text-muted-foreground uppercase tracking-wider">Obligations ({rec.obligation_lookahead_days}d)</div>
+              <div className="text-2xs text-muted-foreground uppercase tracking-wider">Obligations ({rec.obligation_lookahead_days}d)</div>
               <div className="text-sm font-semibold tabular-nums mt-0.5">{fmt(rec.obligations_in_window_usd)}</div>
             </div>
             <div>
-              <div className="text-[11px] text-muted-foreground uppercase tracking-wider">Safety Target</div>
+              <div className="text-2xs text-muted-foreground uppercase tracking-wider">Safety Target</div>
               <div className="text-sm font-semibold tabular-nums mt-0.5">{fmt(rec.safety_buffer_target_usd)}</div>
             </div>
           </div>

@@ -23,8 +23,8 @@ export function newSignupAlertHtml(params: {
   return `
 <!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><meta name="color-scheme" content="dark"></head>
-<body style="margin:0;padding:0;background:#060d1f;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#d1d5db">
+<head><meta charset="utf-8"><meta name="color-scheme" content="dark"><link rel="preconnect" href="https://api.fontshare.com"><link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap"></head>
+<body style="margin:0;padding:0;background:#060d1f;font-family:'Satoshi',Arial,Helvetica,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#d1d5db">
   <div style="max-width:560px;margin:40px auto;background:#0a1628;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,0.08)">
     <div style="background:linear-gradient(135deg,#0a1628,rgba(45,212,191,0.15));padding:24px 32px;border-bottom:1px solid rgba(255,255,255,0.08)">
       <p style="margin:0;color:#2dd4bf;font-size:12px;text-transform:uppercase;letter-spacing:0.08em;font-weight:600">Vantor &middot; New signup</p>

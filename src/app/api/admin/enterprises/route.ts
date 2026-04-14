@@ -19,7 +19,7 @@ export async function GET(_req: NextRequest) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    // Attach user counts per enterprise
+    // Attach user counts and admin emails per enterprise
     const { data: userCounts, error: ucError } = await supabase
       .from('user_profiles')
       .select('enterprise_id');
@@ -33,9 +33,25 @@ export async function GET(_req: NextRequest) {
       }
     }
 
+    // Fetch admin emails (one per enterprise)
+    const { data: admins, error: adminError } = await supabase
+      .from('user_profiles')
+      .select('enterprise_id, email')
+      .eq('role', 'enterprise_admin');
+
+    if (adminError) return NextResponse.json({ error: adminError.message }, { status: 500 });
+
+    const adminMap: Record<string, string> = {};
+    for (const row of admins ?? []) {
+      if (row.enterprise_id && row.email && !adminMap[row.enterprise_id]) {
+        adminMap[row.enterprise_id] = row.email;
+      }
+    }
+
     const result = (enterprises ?? []).map((e) => ({
       ...e,
       user_count: countMap[e.id] ?? 0,
+      admin_email: adminMap[e.id],
     }));
 
     return NextResponse.json({ data: result });

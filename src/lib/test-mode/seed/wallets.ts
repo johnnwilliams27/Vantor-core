@@ -29,11 +29,11 @@ export async function seedWallets(ctx: SeedContext): Promise<WalletIds> {
     verified_at: now,
   }));
 
-  const { data: wallets } = await supabase
+  const { data: wallets, error: wErr } = await supabase
     .from('wallets')
     .insert(walletRows)
     .select('id, chain, address');
-
+  if (wErr) throw new Error(`seedWallets: wallets insert failed: ${wErr.message}`);
   if (!wallets?.length) return { ethWallets: [], solWallets: [], allWalletIds: [] };
 
   // Insert balances
@@ -52,7 +52,8 @@ export async function seedWallets(ctx: SeedContext): Promise<WalletIds> {
     }
   }
   if (balanceRows.length) {
-    await supabase.from('wallet_balances').insert(balanceRows);
+    const { error } = await supabase.from('wallet_balances').insert(balanceRows);
+    if (error) throw new Error(`seedWallets: wallet_balances insert failed: ${error.message}`);
   }
 
   // Insert 180-day balance snapshots
@@ -79,7 +80,8 @@ export async function seedWallets(ctx: SeedContext): Promise<WalletIds> {
 
   // Batch insert snapshots in chunks of 500
   for (let i = 0; i < snapshots.length; i += 500) {
-    await supabase.from('balance_snapshots').insert(snapshots.slice(i, i + 500));
+    const { error } = await supabase.from('balance_snapshots').insert(snapshots.slice(i, i + 500));
+    if (error) throw new Error(`seedWallets: balance_snapshots insert failed (chunk ${i}): ${error.message}`);
   }
 
   const ethWallets = wallets.filter(w => w.chain === 'ethereum').map(w => ({ id: w.id, address: w.address }));

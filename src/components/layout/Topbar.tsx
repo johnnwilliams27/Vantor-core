@@ -9,6 +9,7 @@ import { TestModeToggle } from './TestModeToggle';
 import { NotificationsPanel } from '@/components/notifications/NotificationsPanel';
 import { AssetCapBanner } from '@/components/billing/AssetCapBanner';
 import { PastDueBanner } from '@/components/billing/PastDueBanner';
+import { HoverTooltip } from '@/components/ui/hover-tooltip';
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
@@ -22,13 +23,20 @@ const PAGE_TITLES: Record<string, string> = {
   '/transfers': 'Transfers',
   '/swaps': 'Swaps',
   '/bridges': 'Bridges',
-  '/ramps': 'Ramps',
+  '/ramps': 'On/Off Ramps',
   '/payments': 'Payments',
   '/transactions': 'Transactions',
   '/audit': 'Audit',
+  '/approvals': 'Approvals',
+  '/analytics': 'Analytics',
+  '/reporting': 'Reporting',
+  '/policy': 'Policy',
+  '/policy/history': 'Evaluation History',
+  '/policy/versions': 'Policy Versions',
   '/settings/accounts': 'Account Management',
   '/settings/billing': 'Billing',
   '/settings/integrations': 'External Integrations',
+  '/settings/notifications': 'Notifications',
   '/admin': 'Admin Dashboard',
 };
 
@@ -68,19 +76,20 @@ export function Topbar() {
           {!isAppAdmin && <TestModeToggle />}
         </span>
 
-        <button
-          onClick={toggleAgentPanel}
-          className={cn(
-            'relative p-2 rounded-lg transition-colors',
-            agentPanelOpen
-              ? 'bg-primary/10 text-primary dark:bg-teal-500/20 dark:text-teal-300'
-              : 'hover:bg-black/5 dark:hover:bg-white/10 text-muted-foreground'
-          )}
-          title="Toggle Vantor AI"
-          aria-label="Toggle Vantor AI assistant"
-        >
-          <Bot className="h-5 w-5" />
-        </button>
+        <HoverTooltip label="Toggle Vantor AI" side="bottom">
+          <button
+            onClick={toggleAgentPanel}
+            className={cn(
+              'relative p-2 rounded-lg transition-colors',
+              agentPanelOpen
+                ? 'bg-primary/10 text-primary dark:bg-teal-500/20 dark:text-teal-300'
+                : 'hover:bg-black/5 dark:hover:bg-white/10 text-muted-foreground'
+            )}
+            aria-label="Toggle Vantor AI assistant"
+          >
+            <Bot className="h-5 w-5" />
+          </button>
+        </HoverTooltip>
 
         <NotificationsPanel />
 

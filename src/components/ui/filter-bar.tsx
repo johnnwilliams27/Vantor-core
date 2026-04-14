@@ -100,7 +100,7 @@ function FilterDropdown({
       <div
         className={cn(
           'absolute z-50 mt-1 min-w-[140px] rounded-md border bg-popover text-popover-foreground shadow-lg overflow-hidden',
-          'transition-all duration-200 origin-top',
+          'transition-[opacity,transform] duration-200 origin-top',
           open
             ? 'opacity-100 scale-y-100 translate-y-0 pointer-events-auto'
             : 'opacity-0 scale-y-[0.97] -translate-y-0.5 pointer-events-none',
@@ -240,7 +240,7 @@ export function FilterBar({
                   }}
                   disabled={exportingCsv}
                   className="flex items-center gap-1 h-7 px-2 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-                  title="Export CSV"
+                  aria-label="Export CSV"
                 >
                   {exportingCsv ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
                   CSV
@@ -254,7 +254,7 @@ export function FilterBar({
                   }}
                   disabled={exportingPdf}
                   className="flex items-center gap-1 h-7 px-2 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-                  title="Export PDF"
+                  aria-label="Export PDF"
                 >
                   {exportingPdf ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />}
                   PDF

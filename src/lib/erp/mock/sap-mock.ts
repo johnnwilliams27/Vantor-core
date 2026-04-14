@@ -3,8 +3,8 @@ import type {
   ERPCredentials,
   ERPVendorRaw,
   ERPInvoiceRaw,
-  ERPGLPostPayload,
-  ERPGLPostResult,
+  ERPBillPaymentPayload,
+  ERPBillPaymentResult,
 } from '@/types/erp';
 
 export class SAPMockAdapter implements IERPAdapter {
@@ -105,12 +105,12 @@ export class SAPMockAdapter implements IERPAdapter {
     ];
   }
 
-  async postGLEntry(payload: ERPGLPostPayload): Promise<ERPGLPostResult> {
+  async recordBillPayment(payload: ERPBillPaymentPayload): Promise<ERPBillPaymentResult> {
     await delay(400);
     return {
-      externalGlId: `SAP-GL-${Date.now()}`,
-      status: 'posted',
-      message: `GL entry posted to account ${payload.glAccount} (mock)`,
+      externalPaymentId: `SAP-PMT-${Date.now()}`,
+      status: 'recorded',
+      message: `Payment of ${payload.amount} ${payload.currency} recorded against SAP bill ${payload.invoiceId} (mock), ref: ${payload.reference} tx:${payload.externalTxHash}`,
     };
   }
 }

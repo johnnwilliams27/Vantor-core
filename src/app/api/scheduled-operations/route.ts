@@ -11,15 +11,13 @@ import { TOLERANCE_BPS } from '@/lib/scheduled-operations/tolerances';
 import { z } from 'zod';
 import type { ScheduledOperationType } from '@/types/scheduled-operations';
 import {
-  PolicyGateService,
+  buildGateService,
   mapRampToMovement,
   mapScheduledOperationToMovement,
   GateError,
   mapGateErrorToHttp,
   type GateActor,
 } from '@/lib/policy/gate';
-import { buildProductionEvaluate } from '@/lib/policy/gate/production-wiring';
-import { ApprovalWorkflowService } from '@/lib/policy/approvals';
 import { randomUUID } from 'crypto';
 
 const VALID_TYPES: ScheduledOperationType[] = ['swap', 'bridge', 'ramp'];
@@ -274,10 +272,7 @@ export async function POST(req: NextRequest) {
 
   if (insertErr) return NextResponse.json({ error: insertErr.message }, { status: 500 });
 
-  const gateService = new PolicyGateService(supabase, {
-    evaluate: buildProductionEvaluate(supabase),
-    approvalService: new ApprovalWorkflowService(supabase),
-  });
+  const gateService = buildGateService(supabase);
   const actor: GateActor = {
     user_id: session.user.id,
     role: session.user.role as GateActor['role'],

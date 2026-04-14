@@ -127,8 +127,7 @@ export function ReviewRecommendationModal({ recommendationId, onClose }: Props) 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowReject(false)}>Back</Button>
             <Button
-              variant="outline"
-              className="text-red-600 border-red-300 hover:bg-red-50"
+              variant="destructive-outline"
               onClick={handleReject}
               disabled={reject.isPending}
             >
@@ -158,7 +157,7 @@ export function ReviewRecommendationModal({ recommendationId, onClose }: Props) 
             <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
           </div>
 
-          <div className="border-l-2 border-[#19595b] pl-3 text-sm text-foreground space-y-2">
+          <div className="border-l-2 border-primary pl-3 text-sm text-foreground space-y-2">
             <SimpleMarkdown text={rec.ai_reasoning} />
           </div>
 
@@ -195,7 +194,7 @@ export function ReviewRecommendationModal({ recommendationId, onClose }: Props) 
             </div>
           )}
 
-          <div className="text-[10px] text-muted-foreground">
+          <div className="text-3xs text-muted-foreground">
             {new Date(rec.created_at).toLocaleDateString()} {new Date(rec.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' })}
           </div>
         </div>
@@ -203,8 +202,7 @@ export function ReviewRecommendationModal({ recommendationId, onClose }: Props) 
         {canAct ? (
           <DialogFooter className="gap-2">
             <Button
-              variant="outline"
-              className="text-red-600 border-red-300 hover:bg-red-50"
+              variant="destructive-outline"
               onClick={() => setShowReject(true)}
               disabled={approve.isPending || reject.isPending}
             >
