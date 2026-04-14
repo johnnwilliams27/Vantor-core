@@ -94,7 +94,7 @@ export function NotificationsPanel() {
       </HoverTooltip>
 
       {open && (
-        <div className="animate-dropdown absolute -right-2 sm:right-0 top-full mt-2 w-[calc(100vw-1.5rem)] sm:w-80 z-50 rounded-xl border border-border bg-popover shadow-xl overflow-hidden">
+        <div className="animate-dropdown absolute right-0 top-full mt-2 w-[min(22rem,calc(100vw-1rem))] sm:w-80 z-50 rounded-xl border border-border bg-popover shadow-xl overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
             <span className="text-sm font-semibold text-foreground">Notifications</span>
             <div className="flex items-center gap-3">

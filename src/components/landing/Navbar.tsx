@@ -148,7 +148,7 @@ export function Navbar() {
 
   return (
     <nav
-      className={`fixed top-0 inset-x-0 z-50 transition-[background-color,backdrop-filter,border-color] duration-500 ${
+      className={`fixed top-0 inset-x-0 z-50 transition-[background-color,border-color] duration-500 ${
         scrolled
           ? 'bg-[var(--bg-void)]/80 backdrop-blur-xl border-b border-white/5 shadow-2xl'
           : 'bg-transparent'
