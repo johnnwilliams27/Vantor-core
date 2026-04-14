@@ -76,6 +76,7 @@ export async function seedTreasury(ctx: SeedContext): Promise<void> {
       // Batch insert: missing keys are sent as NULL (overriding the column
       // default 'once'), so one-time rows must set recurrence explicitly.
       recurrence: 'once',
+      tags: [],
       is_active: true,
     });
   }
