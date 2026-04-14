@@ -73,6 +73,9 @@ export async function seedTreasury(ctx: SeedContext): Promise<void> {
       amount: oneTimeItems[i].amount,
       amount_usd: oneTimeItems[i].amount,
       due_date: dateDaysFromNow(randInt(15, 82)),
+      // Batch insert: missing keys are sent as NULL (overriding the column
+      // default 'once'), so one-time rows must set recurrence explicitly.
+      recurrence: 'once',
       is_active: true,
     });
   }
