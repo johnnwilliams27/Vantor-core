@@ -117,14 +117,20 @@ export async function seedTransactions(ctx: SeedContext, walletIds: WalletIds, i
   if (trErr) throw new Error(`seedTransactions: transfers insert failed: ${trErr.message}`);
 
   // Transfer attempts for failed transfers
+  console.log(`[seedTransactions] inserted ${transferRows.length} transfers, select returned ${transfers?.length ?? 0} rows`);
   const failedTransfers = transfers?.filter(p => p.status === 'failed') || [];
+  console.log(`[seedTransactions] found ${failedTransfers.length} failed transfers`);
   if (failedTransfers.length) {
     const attemptRows = failedTransfers.flatMap(p => [
       { transfer_id: p.id, attempt_no: 1, status: 'failed', error: 'Insufficient gas', attempted_at: daysAgo(randInt(2, 10)) },
       { transfer_id: p.id, attempt_no: 2, status: 'failed', error: 'Nonce too low', attempted_at: daysAgo(randInt(1, 5)) },
     ]);
+    console.log(`[seedTransactions] inserting ${attemptRows.length} transfer_attempts`);
     const { error: taErr } = await supabase.from('transfer_attempts').insert(attemptRows);
     if (taErr) throw new Error(`seedTransactions: transfer_attempts insert failed: ${taErr.message}`);
+    console.log(`[seedTransactions] transfer_attempts insert succeeded`);
+  } else {
+    console.log(`[seedTransactions] WARNING: no failed transfers found, skipping transfer_attempts`);
   }
 
   return {
