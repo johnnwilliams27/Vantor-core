@@ -8,11 +8,11 @@
 // Each template:
 //   - Declares which `value-field` inputs it needs (amount, role, days…)
 //   - Compiles those values into a PolicyRule via `build()` so the
-//     route's rule-creation API receives a canonical IR.
-//   - Provides a natural-language sentence used for live preview in
-//     the editor and for the summary on rule rows.
+//     route's rule-creation API receives a canonical IR that matches
+//     schemas/ir.schema.ts. Templates that produced shapes the schema
+//     rejected were the root cause of the 2026-04-13 template-picker
+//     400s — keep the shapes here aligned with schemas/ir.schema.ts.
 
-import type { MovementKind } from './types/movement';
 import type { PolicyRule } from './types/policy-version';
 
 export type TemplateFieldKind = 'amount' | 'role_min' | 'days' | 'movement_kind' | 'text';
@@ -70,31 +70,7 @@ const ROLE_MIN_FIELD: TemplateField = {
   ],
 };
 
-const DAYS_NEW_COUNTERPARTY: TemplateField = {
-  key: 'days',
-  kind: 'days',
-  label: 'Counterparty must be newer than (days)',
-  helper: 'Counterparties first seen within this many days are treated as "new".',
-  defaultValue: 30,
-};
-
-const MOVEMENT_KIND_FIELD: TemplateField = {
-  key: 'movement_kind',
-  kind: 'movement_kind',
-  label: 'Movement kind',
-  defaultValue: 'crypto_transfer',
-  options: [
-    { value: 'crypto_transfer', label: 'Crypto transfer' },
-    { value: 'fiat_ramp',       label: 'Fiat ramp (on/off)' },
-    { value: 'yield_deposit',   label: 'Yield deposit' },
-    { value: 'yield_withdraw',  label: 'Yield withdraw' },
-    { value: 'swap',            label: 'Swap' },
-    { value: 'bridge',          label: 'Bridge' },
-    { value: 'payment',         label: 'Bank payment' },
-  ],
-};
-
-// ─── Templates ─────────────────────────────────────────────────────────
+// ─── Helpers ───────────────────────────────────────────────────────────
 
 function toAmountString(v: string | number): string {
   const n = typeof v === 'number' ? v : parseFloat(String(v).replace(/[,$]/g, ''));
@@ -107,6 +83,17 @@ function formatAmount(v: string | number): string {
   if (!isFinite(n)) return '$0';
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 }
+
+// ─── Templates ─────────────────────────────────────────────────────────
+//
+// NOTE on omitted templates:
+//   - "Require approval for new counterparties" needs a first_seen_age
+//     time attribute that the IR doesn't expose yet.
+//   - "Gate a specific movement kind" needs a movement.kind string
+//     attribute.
+//   - "Block if obligations wouldn't be covered" needs boolean forecast
+//     values; the current forecast_query shape is numeric.
+// Re-add these after the IR is extended.
 
 export const RULE_TEMPLATES: RuleTemplate[] = [
   {
@@ -122,11 +109,11 @@ export const RULE_TEMPLATES: RuleTemplate[] = [
       name,
       rationale: 'Template: large-amount approval.',
       priority: 100,
-      enabled: true,
       verdict: 'require_approval',
       condition: {
         kind: 'amount_compare',
-        op: 'gte',
+        attr: 'transfer.amount',
+        op: '>=',
         value: { currency: 'USD', amount: toAmountString(values.amount) },
       },
     } as unknown as Omit<PolicyRule, 'id' | 'version_id'>),
@@ -145,36 +132,12 @@ export const RULE_TEMPLATES: RuleTemplate[] = [
       name,
       rationale: 'Template: hard-block over ceiling.',
       priority: 50,
-      enabled: true,
       verdict: 'block',
       condition: {
         kind: 'amount_compare',
-        op: 'gte',
+        attr: 'transfer.amount',
+        op: '>=',
         value: { currency: 'USD', amount: toAmountString(values.amount) },
-      },
-    } as unknown as Omit<PolicyRule, 'id' | 'version_id'>),
-  },
-
-  {
-    id: 'new_counterparty_approval',
-    iconVariant: 'urgent',
-    title: 'Require approval for new counterparties',
-    blurb: 'Transfers to counterparties first seen recently need a human look.',
-    fields: [DAYS_NEW_COUNTERPARTY, ROLE_MIN_FIELD],
-    summary: (v) =>
-      `Transfers to counterparties first seen in the last ${v.days} days require ${String(v.role_min).replace('_', ' ')} approval.`,
-    build: ({ name, values }) => ({
-      rule_type: 'counterparty',
-      name,
-      rationale: 'Template: new counterparty approval gate.',
-      priority: 90,
-      enabled: true,
-      verdict: 'require_approval',
-      condition: {
-        kind: 'time_compare',
-        op: 'lt',
-        field: 'counterparty.first_seen_age_days',
-        value: Number(values.days),
       },
     } as unknown as Omit<PolicyRule, 'id' | 'version_id'>),
   },
@@ -192,12 +155,11 @@ export const RULE_TEMPLATES: RuleTemplate[] = [
       name,
       rationale: 'Template: sanctions block. Defense-in-depth with route-level screening.',
       priority: 10,
-      enabled: true,
       verdict: 'block',
       condition: {
         kind: 'sanctions_status',
-        op: 'eq',
-        value: 'sanctioned',
+        op: 'in',
+        values: ['sanctioned'],
       },
     } as unknown as Omit<PolicyRule, 'id' | 'version_id'>),
   },
@@ -215,78 +177,17 @@ export const RULE_TEMPLATES: RuleTemplate[] = [
       name,
       rationale: 'Template: trailing 24h outflow cap per initiator.',
       priority: 80,
-      enabled: true,
       verdict: 'require_approval',
       condition: {
         kind: 'aggregate_window',
-        window_spec: {
+        window: {
           duration_ms: 86_400_000,
           group_by: { initiator: true },
           direction: 'outflow',
         },
-        metric: 'sum_amount_usd',
-        op: 'gte',
+        attr: 'sum_amount',
+        op: '>=',
         value: { currency: 'USD', amount: toAmountString(values.amount) },
-      },
-    } as unknown as Omit<PolicyRule, 'id' | 'version_id'>),
-  },
-
-  {
-    id: 'kind_specific_approval',
-    iconVariant: 'special',
-    title: 'Gate a specific movement kind',
-    blurb: 'Require approval on one rail (e.g. only yield withdrawals).',
-    fields: [MOVEMENT_KIND_FIELD, ROLE_MIN_FIELD],
-    summary: (v) => {
-      const kindLabel = MOVEMENT_KIND_FIELD.options!.find((o) => o.value === v.movement_kind)?.label
-        ?? String(v.movement_kind);
-      return `Any ${kindLabel.toLowerCase()} requires ${String(v.role_min).replace('_', ' ')} approval.`;
-    },
-    build: ({ name, values }) => ({
-      rule_type: 'approval_threshold',
-      name,
-      rationale: 'Template: kind-specific approval gate.',
-      priority: 110,
-      enabled: true,
-      verdict: 'require_approval',
-      condition: {
-        kind: 'string_compare',
-        op: 'eq',
-        field: 'kind',
-        value: String(values.movement_kind) as MovementKind,
-      },
-    } as unknown as Omit<PolicyRule, 'id' | 'version_id'>),
-  },
-
-  {
-    id: 'forecast_coverage_block',
-    iconVariant: 'failed',
-    title: 'Block if obligations wouldn\'t be covered',
-    blurb: 'Treasury-aware safety: don\'t allow an outflow that would leave upcoming obligations uncovered.',
-    fields: [
-      {
-        key: 'days',
-        kind: 'days',
-        label: 'Forecast horizon (days)',
-        helper: 'How far ahead to look when checking obligation coverage.',
-        defaultValue: 14,
-      },
-    ],
-    summary: (v) =>
-      `Block any outflow that would leave obligations in the next ${v.days} days uncovered.`,
-    build: ({ name, values }) => ({
-      rule_type: 'lookahead',
-      name,
-      rationale: 'Template: obligation-coverage forecast gate.',
-      priority: 40,
-      enabled: true,
-      verdict: 'block',
-      condition: {
-        kind: 'forecast_query',
-        method: 'obligations_covered',
-        window_days: Number(values.days),
-        op: 'eq',
-        value: false,
       },
     } as unknown as Omit<PolicyRule, 'id' | 'version_id'>),
   },
@@ -299,17 +200,16 @@ export const RULE_TEMPLATES: RuleTemplate[] = [
     fields: [ROLE_MIN_FIELD],
     summary: (v) =>
       `All AI-initiated movements require ${String(v.role_min).replace('_', ' ')} approval.`,
-    build: ({ name, values }) => ({
+    build: ({ name }) => ({
       rule_type: 'approval_threshold',
       name,
       rationale: 'Template: AI-initiator approval floor. Redundant with system invariant; explicit for audit.',
       priority: 5,
-      enabled: true,
       verdict: 'require_approval',
       condition: {
         kind: 'string_compare',
-        op: 'eq',
-        field: 'initiator.type',
+        attr: 'transfer.initiator_type',
+        op: '==',
         value: 'ai_recommendation',
       },
     } as unknown as Omit<PolicyRule, 'id' | 'version_id'>),
