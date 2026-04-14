@@ -74,7 +74,7 @@ export async function GET(
       .from('user_profiles')
       .select('email')
       .eq('enterprise_id', id)
-      .eq('enterprise_role', 'enterprise_admin')
+      .eq('role', 'enterprise_admin')
       .limit(1);
 
     const adminEmail = adminError ? undefined : (admins?.[0]?.email);

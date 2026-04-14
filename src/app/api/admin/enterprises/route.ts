@@ -37,7 +37,7 @@ export async function GET(_req: NextRequest) {
     const { data: admins, error: adminError } = await supabase
       .from('user_profiles')
       .select('enterprise_id, email')
-      .eq('enterprise_role', 'enterprise_admin');
+      .eq('role', 'enterprise_admin');
 
     if (adminError) return NextResponse.json({ error: adminError.message }, { status: 500 });
 
