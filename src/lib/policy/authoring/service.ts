@@ -358,16 +358,23 @@ export class PolicyAuthoringService {
     const nextNumber = await this.fetchNextVersionNumber(actor.enterprise_id);
 
     const insertQ = tableFrom<PolicyVersionRow>(this.supabase, 'policy_versions') as unknown as {
-      insert: (row: Record<string, unknown>) => Promise<{ data: PolicyVersionRow | null; error: unknown }>;
+      insert: (row: Record<string, unknown>) => {
+        select: () => {
+          single: () => Promise<{ data: PolicyVersionRow | null; error: unknown }>;
+        };
+      };
     };
 
-    const { data: newRow, error: insertError } = await insertQ.insert({
-      enterprise_id: actor.enterprise_id,
-      version_number: nextNumber,
-      status: 'draft',
-      name: req.name,
-      created_by: actor.user_id,
-    });
+    const { data: newRow, error: insertError } = await insertQ
+      .insert({
+        enterprise_id: actor.enterprise_id,
+        version_number: nextNumber,
+        status: 'draft',
+        name: req.name,
+        created_by: actor.user_id,
+      })
+      .select()
+      .single();
 
     if (insertError || !newRow) {
       throw new AuthoringError({
@@ -393,31 +400,44 @@ export class PolicyAuthoringService {
           insert: (rows: Record<string, unknown>[]) => Promise<{ data: unknown[] | null; error: unknown }>;
         };
 
+      const throwIfCopyFailed = (table: string, error: unknown) => {
+        if (!error) return;
+        throw new AuthoringError({
+          reason_code: REASON_CODES.gate_internal_error,
+          human_readable: `Draft created but failed to copy ${table} from source version.`,
+          user_action: 'Delete the partial draft and try again, or contact support.',
+          details: { table, version_id: versionId, error },
+        });
+      };
+
       if (sourceRules.length > 0) {
-        await copyQ('policy_rules').insert(
+        const { error } = await copyQ('policy_rules').insert(
           sourceRules.map(({ id: _id, version_id: _vid, created_at: _cat, ...rest }) => ({
             ...rest,
             version_id: versionId,
             created_by: actor.user_id,
           })),
         );
+        throwIfCopyFailed('policy_rules', error);
       }
       if (sourceLimits.length > 0) {
-        await copyQ('policy_hard_limits').insert(
+        const { error } = await copyQ('policy_hard_limits').insert(
           sourceLimits.map(({ id: _id, version_id: _vid, ...rest }) => ({
             ...rest,
             version_id: versionId,
           })),
         );
+        throwIfCopyFailed('policy_hard_limits', error);
       }
       if (sourceChains.length > 0) {
-        await copyQ('policy_approval_chains').insert(
+        const { error } = await copyQ('policy_approval_chains').insert(
           sourceChains.map(({ id: _id, version_id: _vid, created_at: _cat, ...rest }) => ({
             ...rest,
             version_id: versionId,
             created_by: actor.user_id,
           })),
         );
+        throwIfCopyFailed('policy_approval_chains', error);
       }
     }
 
