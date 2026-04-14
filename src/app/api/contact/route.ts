@@ -61,8 +61,9 @@ export async function POST(req: NextRequest) {
       ]
         .filter(Boolean)
         .join('\n'),
-      html: `
-        <div style="font-family: sans-serif; max-width: 600px;">
+      html: `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="preconnect" href="https://api.fontshare.com"><link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap"></head><body>
+        <div style="font-family: 'Satoshi', Arial, Helvetica, sans-serif; max-width: 600px;">
           <h2 style="color: #19595b;">New Contact Form Submission</h2>
           <p><strong>Name:</strong> ${escapeHtml(name)}</p>
           <p><strong>Email:</strong> ${escapeHtml(email)}</p>
@@ -71,7 +72,7 @@ export async function POST(req: NextRequest) {
           <p><strong>Message:</strong></p>
           <p style="white-space: pre-wrap;">${escapeHtml(message)}</p>
         </div>
-      `,
+      </body></html>`,
     });
 
     return NextResponse.json({ success: true });

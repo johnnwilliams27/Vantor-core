@@ -14,16 +14,17 @@ const TEAL = '#2dd4bf';       // brand accent (teal-400)
 const CYAN = '#67e8f9';       // gradient end (cyan-300)
 const L1 = '#1A7F71';         // Tier 2 primary (L1) — solid product CTAs
 
-// Arial-led font stack. Arial is the most reliable cross-client font
-// (Outlook, Apple Mail, Gmail all render it correctly). System fonts
-// listed as fallbacks for clients that support them (Apple Mail, Gmail
-// web), but Outlook/corporate clients reliably render Arial only.
-const FONT = "Arial, Helvetica, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+// Satoshi-led font stack matching the product (Fontshare CDN, loaded via
+// <link> in <head>). Apple Mail and Gmail web honour the webfont; Outlook
+// desktop and most corporate clients strip @font-face and fall back to
+// Arial, which stays in the stack as the reliable baseline.
+const FONT = "'Satoshi', Arial, Helvetica, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+const FONT_LINK = '<link rel="preconnect" href="https://api.fontshare.com"><link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap">';
 
 export function emailLayout(content: string): string {
   return `<!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark">${FONT_LINK}</head>
 <body style="margin:0;padding:0;background:${BG};font-family:${FONT};color:${TEXT_2}">
   <div style="max-width:560px;margin:40px auto;background:${CARD};border-radius:12px;overflow:hidden;border:1px solid ${BORDER}">
     <div style="padding:28px 32px;text-align:center;border-bottom:1px solid ${BORDER}">

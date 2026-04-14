@@ -183,8 +183,9 @@ export async function fireInlineInsights(
                   ? `Critical Treasury Insight: ${detected.title}`
                   : `Treasury Insight: ${detected.title}`;
 
-              const emailHtml = `
-                <div style="font-family: system-ui, -apple-system, sans-serif; max-width: 560px; margin: 0 auto;">
+              const emailHtml = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="preconnect" href="https://api.fontshare.com"><link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap"></head><body>
+                <div style="font-family: 'Satoshi', Arial, Helvetica, system-ui, -apple-system, sans-serif; max-width: 560px; margin: 0 auto;">
                   <h2 style="color: ${detected.severity === 'critical' ? '#dc2626' : '#d97706'}; margin: 0 0 12px;">
                     ${detected.title}
                   </h2>
@@ -197,7 +198,7 @@ export async function fireInlineInsights(
                     Review in Vantor
                   </a>
                 </div>
-              `;
+              </body></html>`;
 
               NotificationService.notify({
                 eventType,

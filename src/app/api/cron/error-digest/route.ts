@@ -83,8 +83,9 @@ export async function GET(req: NextRequest) {
 
     const totalEvents = recentIssues.reduce((sum, i) => sum + Number(i.count), 0);
 
-    const html = `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 700px; margin: 0 auto;">
+    const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="preconnect" href="https://api.fontshare.com"><link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap"></head><body>
+      <div style="font-family: 'Satoshi', Arial, Helvetica, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 700px; margin: 0 auto;">
         <div style="background: linear-gradient(135deg, #19595b, #2dd4bf); padding: 24px 32px; border-radius: 12px 12px 0 0;">
           <h1 style="margin: 0; color: white; font-size: 20px;">Vantor Error Digest</h1>
           <p style="margin: 4px 0 0; color: rgba(255,255,255,0.8); font-size: 14px;">
@@ -115,7 +116,7 @@ export async function GET(req: NextRequest) {
           </a>
         </p>
       </div>
-    `;
+    </body></html>`;
 
     await sendEmail({
       to: 'john@vantor.xyz',
