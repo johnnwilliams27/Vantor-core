@@ -44,10 +44,11 @@ export async function seedTransactions(ctx: SeedContext, walletIds: WalletIds, i
     }
   }
 
-  const { data: txns } = await supabase
+  const { data: txns, error: txErr } = await supabase
     .from('transactions')
     .insert(txnRows)
     .select('id, wallet_id, chain, direction');
+  if (txErr) throw new Error(`seedTransactions: transactions insert failed: ${txErr.message}`);
 
   // Generate transfers
   const transferRows: any[] = [];
@@ -109,10 +110,11 @@ export async function seedTransactions(ctx: SeedContext, walletIds: WalletIds, i
     });
   }
 
-  const { data: transfers } = await supabase
+  const { data: transfers, error: trErr } = await supabase
     .from('transfers')
     .insert(transferRows)
     .select('id, status');
+  if (trErr) throw new Error(`seedTransactions: transfers insert failed: ${trErr.message}`);
 
   // Transfer attempts for failed transfers
   const failedTransfers = transfers?.filter(p => p.status === 'failed') || [];
@@ -121,7 +123,8 @@ export async function seedTransactions(ctx: SeedContext, walletIds: WalletIds, i
       { transfer_id: p.id, attempt_no: 1, status: 'failed', error: 'Insufficient gas', attempted_at: daysAgo(randInt(2, 10)) },
       { transfer_id: p.id, attempt_no: 2, status: 'failed', error: 'Nonce too low', attempted_at: daysAgo(randInt(1, 5)) },
     ]);
-    await supabase.from('transfer_attempts').insert(attemptRows);
+    const { error: taErr } = await supabase.from('transfer_attempts').insert(attemptRows);
+    if (taErr) throw new Error(`seedTransactions: transfer_attempts insert failed: ${taErr.message}`);
   }
 
   return {
@@ -216,5 +219,6 @@ export async function seedFiatPayments(ctx: SeedContext, bankAccountIds: string[
     });
   }
 
-  await supabase.from('fiat_payments').insert(rows);
+  const { error: fpErr } = await supabase.from('fiat_payments').insert(rows);
+  if (fpErr) throw new Error(`seedFiatPayments: fiat_payments insert failed: ${fpErr.message}`);
 }

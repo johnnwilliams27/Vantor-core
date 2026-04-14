@@ -42,6 +42,6 @@ export async function seedNotifications(ctx: SeedContext): Promise<void> {
   ];
 
   const { error } = await supabase.from('notifications').insert(rows);
-  if (error) console.error('[seed:notifications] insert failed', error);
-  else console.log('[seed:notifications] ✓ 10 notifications (5 unread, 5 read)');
+  if (error) throw new Error(`seedNotifications: notifications insert failed: ${error.message}`);
+  console.log('[seed:notifications] ✓ 10 notifications (5 unread, 5 read)');
 }

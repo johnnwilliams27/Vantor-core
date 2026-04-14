@@ -44,7 +44,7 @@ export async function seedCompliance(ctx: SeedContext, walletIds: WalletIds, txI
   });
 
   const ssErr = (await supabase.from('sanctions_screenings').insert(screeningRows)).error;
-  if (ssErr) console.error('[seed:compliance] sanctions_screenings insert failed', ssErr);
+  if (ssErr) throw new Error(`seedCompliance: sanctions_screenings insert failed: ${ssErr.message}`);
 
   // KYT transfers
   const kytRows: any[] = [];
@@ -76,7 +76,7 @@ export async function seedCompliance(ctx: SeedContext, walletIds: WalletIds, txI
   }
 
   const kytRes = await supabase.from('kyt_transfers').insert(kytRows).select('id, risk_score');
-  if (kytRes.error) console.error('[seed:compliance] kyt_transfers insert failed', kytRes.error);
+  if (kytRes.error) throw new Error(`seedCompliance: kyt_transfers insert failed: ${kytRes.error.message}`);
   const kytTransfers = kytRes.data;
 
   // KYT alerts for high-risk transfers
@@ -98,7 +98,8 @@ export async function seedCompliance(ctx: SeedContext, walletIds: WalletIds, txI
   }));
 
   if (alertRows.length) {
-    await supabase.from('kyt_alerts').insert(alertRows);
+    const { error } = await supabase.from('kyt_alerts').insert(alertRows);
+    if (error) throw new Error(`seedCompliance: kyt_alerts insert failed: ${error.message}`);
   }
 
 }

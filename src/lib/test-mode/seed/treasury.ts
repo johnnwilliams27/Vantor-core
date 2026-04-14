@@ -16,7 +16,7 @@ export async function seedTreasury(ctx: SeedContext): Promise<void> {
     target_stablecoin: 'USDC',
     target_chain: 'ethereum',
   })).error;
-  if (trErr) console.error('[seed:treasury] treasury_rules insert failed', trErr);
+  if (trErr) throw new Error(`seedTreasury: treasury_rules insert failed: ${trErr.message}`);
 
   // Manual obligations — monthly, biweekly, one-time across 90-day window
   const obligations: any[] = [];
@@ -79,7 +79,7 @@ export async function seedTreasury(ctx: SeedContext): Promise<void> {
 
   // Table renamed from manual_obligations → obligations in migration 0041.
   const oErr = (await supabase.from('obligations').insert(obligations)).error;
-  if (oErr) console.error('[seed:treasury] obligations insert failed', oErr);
+  if (oErr) throw new Error(`seedTreasury: obligations insert failed: ${oErr.message}`);
 
   // AI recommendations
   const recommendations = [
@@ -131,7 +131,7 @@ export async function seedTreasury(ctx: SeedContext): Promise<void> {
   ];
 
   const arErr = (await supabase.from('ai_recommendations').insert(recommendations)).error;
-  if (arErr) console.error('[seed:treasury] ai_recommendations insert failed', arErr);
+  if (arErr) throw new Error(`seedTreasury: ai_recommendations insert failed: ${arErr.message}`);
 
   // Treasury forecast
   // T20: treasury_forecasts seed removed. The table was dropped after
@@ -152,5 +152,5 @@ export async function seedTreasury(ctx: SeedContext): Promise<void> {
     ],
     summary: { total_scenarios: 3, scenarios_with_shortfall: 1, worst_case_min_balance: 940000, recommendation: 'Current treasury position is resilient under moderate stress. Consider increasing buffer if 40% drawdown scenario is a concern.' },
   })).error;
-  if (srErr) console.error('[seed:treasury] simulation_runs insert failed', srErr);
+  if (srErr) throw new Error(`seedTreasury: simulation_runs insert failed: ${srErr.message}`);
 }

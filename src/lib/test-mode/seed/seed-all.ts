@@ -34,7 +34,13 @@ export async function seedAll(
     .limit(1);
 
   const userId = users?.[0]?.id;
-  if (!userId) return;
+  if (!userId) {
+    throw new Error(
+      `seedAll: no user found for sourceEnterpriseId=${sourceEnterpriseId}. ` +
+        `user_profiles.enterprise_id lookup returned zero rows — aborting before wipe leaves the ` +
+        `test enterprise empty. (Past incident: reseed from test-enterprise page collapsed source → test id.)`,
+    );
+  }
 
   const ctx: SeedContext = { supabase, enterpriseId: testEnterpriseId, userId };
 
@@ -71,9 +77,7 @@ export async function seedAll(
   //   - analytics + insights can run in parallel (no deps on each other)
   //   - notifications last (references state that's now fully seeded)
   const policyIds = await seedPolicy(ctx);
-  if (policyIds) {
-    await seedApprovals(ctx, policyIds.v3Id, policyIds.chainId);
-  }
+  await seedApprovals(ctx, policyIds.v3Id, policyIds.chainId);
   await Promise.all([
     seedAnalytics(ctx),
     seedInsights(ctx),

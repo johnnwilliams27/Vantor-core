@@ -77,7 +77,7 @@ export async function seedYield(ctx: SeedContext, walletIds: WalletIds): Promise
     const accrued = (pos.deposited * (pos.apy / 100) * (daysActive / 365)).toFixed(2);
     const currentValue = (pos.deposited + parseFloat(accrued)).toFixed(2);
 
-    const { data: position } = await supabase
+    const { data: position, error: posErr } = await supabase
       .from('yield_positions')
       .insert({
         user_id: userId, enterprise_id: enterpriseId, wallet_id: wallet.id,
@@ -89,29 +89,33 @@ export async function seedYield(ctx: SeedContext, walletIds: WalletIds): Promise
       })
       .select('id')
       .single();
-
+    if (posErr) throw new Error(`seedYield: yield_positions insert failed: ${posErr.message}`);
     if (!position) continue;
 
     const isEth = pos.chain === 'ethereum';
-    await supabase.from('yield_transactions').insert({
-      user_id: userId, enterprise_id: enterpriseId, position_id: position.id,
-      protocol: pos.protocol, chain: pos.chain, tx_type: 'deposit',
-      underlying_token: pos.token, amount: pos.deposited.toFixed(2),
-      amount_usd: pos.deposited.toFixed(2), tx_hash: isEth ? ethHash() : solHash(),
-      status: 'completed', executed_at: daysAgo(daysActive), created_at: daysAgo(daysActive),
-    });
+    {
+      const { error } = await supabase.from('yield_transactions').insert({
+        user_id: userId, enterprise_id: enterpriseId, position_id: position.id,
+        protocol: pos.protocol, chain: pos.chain, tx_type: 'deposit',
+        underlying_token: pos.token, amount: pos.deposited.toFixed(2),
+        amount_usd: pos.deposited.toFixed(2), tx_hash: isEth ? ethHash() : solHash(),
+        status: 'completed', executed_at: daysAgo(daysActive), created_at: daysAgo(daysActive),
+      });
+      if (error) throw new Error(`seedYield: yield_transactions deposit insert failed: ${error.message}`);
+    }
 
     // Only the DeFi positions get random withdrawals. MMF demo positions
     // are pristine — they represent a "fresh from integration" story.
     if (!pos.daysAgoOverride && Math.random() > 0.5) {
       const withdrawAmount = rand(10_000, pos.deposited * 0.3).toFixed(2);
-      await supabase.from('yield_transactions').insert({
+      const { error } = await supabase.from('yield_transactions').insert({
         user_id: userId, enterprise_id: enterpriseId, position_id: position.id,
         protocol: pos.protocol, chain: pos.chain, tx_type: 'withdraw',
         underlying_token: pos.token, amount: withdrawAmount, amount_usd: withdrawAmount,
         tx_hash: isEth ? ethHash() : solHash(), status: 'completed',
         executed_at: daysAgo(randInt(5, daysActive - 5)), created_at: daysAgo(randInt(5, daysActive - 5)),
       });
+      if (error) throw new Error(`seedYield: yield_transactions withdraw insert failed: ${error.message}`);
     }
   }
 }

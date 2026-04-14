@@ -9,7 +9,7 @@ export interface PolicyIds {
   chainId: string;   // chain on v3, used by approvals seed
 }
 
-export async function seedPolicy(ctx: SeedContext): Promise<PolicyIds | null> {
+export async function seedPolicy(ctx: SeedContext): Promise<PolicyIds> {
   const { supabase, enterpriseId, userId } = ctx;
 
   // 1. Create the policy container
@@ -18,7 +18,7 @@ export async function seedPolicy(ctx: SeedContext): Promise<PolicyIds | null> {
     .insert({ enterprise_id: enterpriseId, name: 'Standard Policy' })
     .select('id')
     .single();
-  if (pErr || !policy) { console.error('[seed:policy] policy insert failed', pErr); return null; }
+  if (pErr || !policy) throw new Error(`seedPolicy: policy insert failed: ${pErr?.message ?? 'no row returned'}`);
 
   // 2. Create 3 versions (v1 and v2 get status='superseded'; v3 gets 'active')
   const versionRows = [
@@ -40,17 +40,26 @@ export async function seedPolicy(ctx: SeedContext): Promise<PolicyIds | null> {
   ];
   const { data: versions, error: vErr } = await supabase
     .from('policy_versions').insert(versionRows).select('id, version_number');
-  if (vErr || !versions || versions.length !== 3) { console.error('[seed:policy] versions failed', vErr); return null; }
+  if (vErr || !versions || versions.length !== 3) throw new Error(`seedPolicy: versions insert failed: ${vErr?.message ?? `expected 3, got ${versions?.length ?? 0}`}`);
   const v1 = versions.find(v => v.version_number === 1)!.id;
   const v2 = versions.find(v => v.version_number === 2)!.id;
   const v3 = versions.find(v => v.version_number === 3)!.id;
 
   // 3. Link superseded_by chain (v1 → v2 → v3)
-  await supabase.from('policy_versions').update({ superseded_by_version_id: v2 }).eq('id', v1);
-  await supabase.from('policy_versions').update({ superseded_by_version_id: v3 }).eq('id', v2);
+  {
+    const { error } = await supabase.from('policy_versions').update({ superseded_by_version_id: v2 }).eq('id', v1);
+    if (error) throw new Error(`seedPolicy: v1→v2 supersede failed: ${error.message}`);
+  }
+  {
+    const { error } = await supabase.from('policy_versions').update({ superseded_by_version_id: v3 }).eq('id', v2);
+    if (error) throw new Error(`seedPolicy: v2→v3 supersede failed: ${error.message}`);
+  }
 
   // 4. Set active pointer on the policy
-  await supabase.from('policy_policies').update({ active_version_id: v3 }).eq('id', policy.id);
+  {
+    const { error } = await supabase.from('policy_policies').update({ active_version_id: v3 }).eq('id', policy.id);
+    if (error) throw new Error(`seedPolicy: active_version_id update failed: ${error.message}`);
+  }
 
   // 5. Approval chains — one 2-slot chain per version. v3's id is returned for approvals seed.
   const chainRows = versions.map(v => ({
@@ -64,9 +73,10 @@ export async function seedPolicy(ctx: SeedContext): Promise<PolicyIds | null> {
     expiration_hours: 48,
     created_by: userId,
   }));
-  const { data: chains } = await supabase.from('policy_approval_chains').insert(chainRows).select('id, version_id');
+  const { data: chains, error: cErr } = await supabase.from('policy_approval_chains').insert(chainRows).select('id, version_id');
+  if (cErr) throw new Error(`seedPolicy: approval_chains insert failed: ${cErr.message}`);
   const v3Chain = chains?.find(c => c.version_id === v3)?.id;
-  if (!v3Chain) { console.error('[seed:policy] v3 chain missing'); return null; }
+  if (!v3Chain) throw new Error('seedPolicy: v3 chain missing after insert');
 
   // 6. Hard limits — v1 has one, v2 adds one, v3 inherits v2's set plus one more
   const v1Limits = [
@@ -81,7 +91,10 @@ export async function seedPolicy(ctx: SeedContext): Promise<PolicyIds | null> {
     { version_id: v3, limit_type: 'max_daily_outflow_usd', name: 'Daily outflow cap', limit_value: '2000000', limit_currency: 'USD', scope: {}, created_by: userId },
     { version_id: v3, limit_type: 'max_single_asset_concentration_pct', name: 'Single-asset concentration', limit_value: '60', limit_currency: null, scope: {}, created_by: userId },
   ];
-  await supabase.from('policy_hard_limits').insert([...v1Limits, ...v2Limits, ...v3Limits]);
+  {
+    const { error } = await supabase.from('policy_hard_limits').insert([...v1Limits, ...v2Limits, ...v3Limits]);
+    if (error) throw new Error(`seedPolicy: hard_limits insert failed: ${error.message}`);
+  }
 
   // 7. Rules — one approval_threshold rule per version pointing at that version's chain
   const chainByVersion: Record<string, string> = {};
@@ -116,7 +129,10 @@ export async function seedPolicy(ctx: SeedContext): Promise<PolicyIds | null> {
       },
     },
   ];
-  await supabase.from('policy_rules').insert(ruleRows);
+  {
+    const { error } = await supabase.from('policy_rules').insert(ruleRows);
+    if (error) throw new Error(`seedPolicy: rules insert failed: ${error.message}`);
+  }
 
   console.log('[seed:policy] ✓ 1 policy + 3 versions (v3 active) + chains/limits/rules');
   return { policyId: policy.id, v1Id: v1, v2Id: v2, v3Id: v3, chainId: v3Chain };

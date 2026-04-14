@@ -41,5 +41,6 @@ export async function seedBridges(ctx: SeedContext, walletIds: WalletIds): Promi
     });
   }
 
-  await supabase.from('bridge_transfers').insert(bridgeRows);
+  const { error } = await supabase.from('bridge_transfers').insert(bridgeRows);
+  if (error) throw new Error(`seedBridges: bridge_transfers insert failed: ${error.message}`);
 }

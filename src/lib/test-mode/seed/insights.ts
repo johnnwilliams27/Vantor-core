@@ -142,6 +142,6 @@ export async function seedInsights(ctx: SeedContext): Promise<void> {
   }));
 
   const { error } = await supabase.from('treasury_insights').insert(rowsWithMeta);
-  if (error) console.error('[seed:insights] insert failed', error);
-  else console.log('[seed:insights] ✓ 8 insights (2 critical w/ agent, 3 warning, 3 info)');
+  if (error) throw new Error(`seedInsights: treasury_insights insert failed: ${error.message}`);
+  console.log('[seed:insights] ✓ 8 insights (2 critical w/ agent, 3 warning, 3 info)');
 }

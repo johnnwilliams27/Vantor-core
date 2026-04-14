@@ -36,5 +36,6 @@ export async function seedSwaps(ctx: SeedContext, walletIds: WalletIds): Promise
     });
   }
 
-  await supabase.from('swaps').insert(swapRows);
+  const { error } = await supabase.from('swaps').insert(swapRows);
+  if (error) throw new Error(`seedSwaps: swaps insert failed: ${error.message}`);
 }

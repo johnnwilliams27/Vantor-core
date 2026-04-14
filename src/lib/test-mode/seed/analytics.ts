@@ -48,7 +48,7 @@ export async function seedAnalytics(ctx: SeedContext): Promise<void> {
   for (let i = 0; i < snapshotRows.length; i += 25) {
     const chunk = snapshotRows.slice(i, i + 25);
     const { error } = await supabase.from('treasury_state_snapshots').insert(chunk);
-    if (error) { console.error('[seed:analytics] snapshot chunk failed', error); break; }
+    if (error) throw new Error(`seedAnalytics: treasury_state_snapshots insert failed (chunk ${i}): ${error.message}`);
   }
 
   // ─── Part 2: analytics_pin_preferences — 3 pinned slugs ───────────────
@@ -63,7 +63,7 @@ export async function seedAnalytics(ctx: SeedContext): Promise<void> {
     enterprise_id: enterpriseId,
     pinned_slugs: pinnedSlugs,
   });
-  if (pinErr) console.error('[seed:analytics] pin preferences failed', pinErr);
+  if (pinErr) throw new Error(`seedAnalytics: analytics_pin_preferences insert failed: ${pinErr.message}`);
 
   console.log('[seed:analytics] ✓ 75 snapshots + 3 pinned views');
 }

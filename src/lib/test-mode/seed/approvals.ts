@@ -152,6 +152,6 @@ export async function seedApprovals(
   ];
 
   const { error } = await supabase.from('policy_approval_requests').insert(rows);
-  if (error) console.error('[seed:approvals] insert failed', error);
-  else console.log('[seed:approvals] ✓ 6 approval requests (2 pending, 2 approved, 2 denied)');
+  if (error) throw new Error(`seedApprovals: policy_approval_requests insert failed: ${error.message}`);
+  console.log('[seed:approvals] ✓ 6 approval requests (2 pending, 2 approved, 2 denied)');
 }
