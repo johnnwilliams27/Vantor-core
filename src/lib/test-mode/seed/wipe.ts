@@ -52,9 +52,14 @@ export async function wipeTestEnterprise(
     // Rule: every table listed must have ALL tables that FK into it listed
     // earlier. Any time a migration adds a new FK, update this order.
 
+    // audit_logs: has no_delete_audit_logs rewrite rule (migration 0001) → 0058 RPC
+    {
+      const { error } = await supabase.rpc('fn_admin_wipe_test_audit', { p_enterprise_id: testEnterpriseId });
+      if (error) throw new Error(`fn_admin_wipe_test_audit failed: ${error.message}`);
+    }
+
     // Standalone / leaf tables (no FKs back)
     await del('notifications');
-    await del('audit_logs');
     await del('travel_rule_transfers');
 
     // Compliance: kyt_alerts → kyt_transfers
