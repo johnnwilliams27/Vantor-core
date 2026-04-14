@@ -153,6 +153,8 @@ function EnterprisesTable({ data }: { data: EnterpriseRow[] }) {
                 <th className="pb-3 pr-4 font-medium">Name</th>
                 <th className="pb-3 pr-4 font-medium">Status</th>
                 <th className="pb-3 pr-4 font-medium">KYC</th>
+                <th className="pb-3 pr-4 font-medium">KYB</th>
+                <th className="pb-3 pr-4 font-medium">Admin Email</th>
                 <th className="pb-3 pr-4 font-medium">Users</th>
                 <th className="pb-3 pr-4 font-medium">Created</th>
                 <th className="pb-3 font-medium"></th>
@@ -167,6 +169,14 @@ function EnterprisesTable({ data }: { data: EnterpriseRow[] }) {
                   </td>
                   <td className="py-3 pr-4">
                     <KycBadge status={ent.kyc_status} />
+                  </td>
+                  <td className="py-3 pr-4">
+                    <Badge variant={ent.kyc_status === 'verified' ? 'active' : 'inactive'}>
+                      {ent.kyc_status === 'verified' ? 'Yes' : 'No'}
+                    </Badge>
+                  </td>
+                  <td className="py-3 pr-4 text-sm text-muted-foreground">
+                    {ent.admin_email ?? '—'}
                   </td>
                   <td className="py-3 pr-4">{ent.user_count}</td>
                   <td className="py-3 pr-4 text-muted-foreground">
