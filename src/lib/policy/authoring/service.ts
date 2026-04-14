@@ -926,13 +926,19 @@ export class PolicyAuthoringService {
       }
     }
 
-    // 6. Call the atomic PG RPC. Call through this.supabase so the
-    // Supabase client keeps its `this` binding — detaching the method
-    // (`const rpc = supabase.rpc`) and invoking it standalone throws
-    // "Cannot read properties of undefined (reading 'rest')" at runtime
-    // because the real client reads `this.rest` from inside rpc().
-    const supabase = this.supabase as { rpc?: NonNullable<SupabaseLike['rpc']> };
-    if (!supabase.rpc) {
+    // 6. Call the atomic PG RPC. Real Supabase v2 `.rpc()` reads
+    // `this.rest` internally, so the method MUST be invoked on the
+    // client object. Prior attempts that used `supabase.rpc(fn, args)`
+    // still 500'd on Vercel ("Cannot read properties of undefined
+    // (reading 'rest')") — the prod minifier appears to strip the
+    // binding in async/await member-call sequences. Using .call()
+    // with an explicit receiver is bulletproof regardless of how the
+    // build pipeline transforms the call expression.
+    const rpcFn = (this.supabase as { rpc?: unknown }).rpc as
+      | ((fn: string, params: Record<string, unknown>) =>
+          Promise<{ data: unknown; error: { code?: string; message?: string } | null }>)
+      | undefined;
+    if (typeof rpcFn !== 'function') {
       throw new AuthoringError({
         reason_code: REASON_CODES.gate_internal_error,
         human_readable: 'Activation RPC is not available in this context.',
@@ -941,7 +947,7 @@ export class PolicyAuthoringService {
       });
     }
 
-    const { error: rpcError } = await supabase.rpc('policy_activate_draft', {
+    const { error: rpcError } = await rpcFn.call(this.supabase, 'policy_activate_draft', {
       p_version_id: versionId,
       p_enterprise_id: actor.enterprise_id,
       p_activated_by: actor.user_id,
