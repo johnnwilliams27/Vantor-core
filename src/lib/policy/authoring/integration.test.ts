@@ -82,7 +82,9 @@ class QueryBuilder {
     );
   }
 
-  insert(data: Row | Row[]): Promise<{ data: Row | null; error: null }> {
+  // Match real Supabase v2: bare `await .insert()` returns { data: null },
+  // and `.insert().select().single()` returns the inserted row.
+  insert(data: Row | Row[]) {
     const rows = this.store[this.tableName];
     const row = Array.isArray(data) ? data[0] : data;
     const withId: Row = {
@@ -91,7 +93,13 @@ class QueryBuilder {
       ...row,
     };
     rows.push(withId);
-    return Promise.resolve({ data: withId, error: null });
+    return {
+      select: () => ({
+        single: () => Promise.resolve({ data: withId, error: null }),
+      }),
+      then: <T>(resolve: (v: { data: null; error: null }) => T | PromiseLike<T>) =>
+        Promise.resolve({ data: null, error: null } as const).then(resolve),
+    };
   }
 
   upsert(data: Row | Row[], _opts?: { onConflict?: string }): Promise<{ data: Row | null; error: null }> {

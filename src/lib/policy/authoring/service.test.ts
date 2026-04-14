@@ -78,7 +78,17 @@ function mockSupabase(
       writes.push({ kind: 'insert', table, data: withId });
       // Push into fixture so follow-on reads see it
       rows.push(withId);
-      return Promise.resolve({ data: withId, error: null });
+      // Match real Supabase v2: `await .insert()` alone returns { data: null },
+      // `.insert().select().single()` returns the inserted row. We return a
+      // thenable that also supports the chained form.
+      const selectBuilder = {
+        single: async () => ({ data: withId, error: null }),
+      };
+      return {
+        select: () => selectBuilder,
+        then: (resolve: (v: unknown) => unknown) =>
+          Promise.resolve({ data: null, error: null }).then(resolve),
+      };
     };
 
     qb.upsert = (data: unknown, _opts?: unknown) => {
