@@ -45,23 +45,13 @@ export async function seedPolicy(ctx: SeedContext): Promise<PolicyIds> {
   const v2 = versions.find(v => v.version_number === 2)!.id;
   const v3 = versions.find(v => v.version_number === 3)!.id;
 
-  // 3. Link superseded_by chain (v1 → v2 → v3)
-  {
-    const { error } = await supabase.from('policy_versions').update({ superseded_by_version_id: v2 }).eq('id', v1);
-    if (error) throw new Error(`seedPolicy: v1→v2 supersede failed: ${error.message}`);
-  }
-  {
-    const { error } = await supabase.from('policy_versions').update({ superseded_by_version_id: v3 }).eq('id', v2);
-    if (error) throw new Error(`seedPolicy: v2→v3 supersede failed: ${error.message}`);
-  }
-
-  // 4. Set active pointer on the policy
+  // 3. Set active pointer on the policy
   {
     const { error } = await supabase.from('policy_policies').update({ active_version_id: v3 }).eq('id', policy.id);
     if (error) throw new Error(`seedPolicy: active_version_id update failed: ${error.message}`);
   }
 
-  // 5. Approval chains — one 2-slot chain per version. v3's id is returned for approvals seed.
+  // 4. Approval chains — one 2-slot chain per version. v3's id is returned for approvals seed.
   const chainRows = versions.map(v => ({
     version_id: v.id,
     name: 'Standard 2-approver',
@@ -78,7 +68,7 @@ export async function seedPolicy(ctx: SeedContext): Promise<PolicyIds> {
   const v3Chain = chains?.find(c => c.version_id === v3)?.id;
   if (!v3Chain) throw new Error('seedPolicy: v3 chain missing after insert');
 
-  // 6. Hard limits — v1 has one, v2 adds one, v3 inherits v2's set plus one more
+  // 5. Hard limits — v1 has one, v2 adds one, v3 inherits v2's set plus one more
   const v1Limits = [
     { version_id: v1, limit_type: 'min_cash_reserve_usd', name: 'Min cash reserve', limit_value: '100000', limit_currency: 'USD', scope: {}, created_by: userId },
   ];
