@@ -3,6 +3,9 @@
 /.pnp
 .pnp.js
 
+# local scratch dir (e.g. PDF preview output from scripts/render-pdf-samples.tsx)
+/tmp
+
 # next.js
 /.next/
 /out/
