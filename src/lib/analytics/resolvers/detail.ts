@@ -60,7 +60,7 @@ export async function resolveInvoiceAging(ctx: ResolverContext): Promise<ViewRes
 export async function resolveAiActions(ctx: ResolverContext): Promise<ViewResult> {
   let query = ctx.supabase
     .from('ai_recommendations')
-    .select('*')
+    .select('id, action_type, status, description, amount_usd, created_at')
     .eq('enterprise_id', ctx.enterpriseId)
     .gte('created_at', ctx.from)
     .lte('created_at', ctx.to + 'T23:59:59Z')
@@ -134,11 +134,11 @@ export async function resolveComplianceSummary(ctx: ResolverContext): Promise<Vi
 export async function resolveYieldPerformance(ctx: ResolverContext): Promise<ViewResult> {
   let query = ctx.supabase
     .from('yield_transactions')
-    .select('*')
+    .select('id, protocol, chain, tx_type, underlying_token, amount_usd, status, error_message, executed_at, tx_hash')
     .eq('enterprise_id', ctx.enterpriseId)
-    .gte('created_at', ctx.from)
-    .lte('created_at', ctx.to + 'T23:59:59Z')
-    .order('created_at', { ascending: false });
+    .gte('executed_at', ctx.from)
+    .lte('executed_at', ctx.to + 'T23:59:59Z')
+    .order('executed_at', { ascending: false });
 
   if (ctx.filters.protocol) {
     const protocol = Array.isArray(ctx.filters.protocol) ? ctx.filters.protocol : [ctx.filters.protocol];

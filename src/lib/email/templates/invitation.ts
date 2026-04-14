@@ -10,7 +10,7 @@ export function invitationEmailHtml(params: {
       <p style="color:#9ca3af;font-size:14px;margin:0 0 28px;line-height:1.5">
         ${params.inviterName} has invited you to join Vantor, the agentic treasury management platform.
       </p>
-      ${ctaButton('Sign Up for Vantor', params.signupUrl, 'brand')}
+      ${ctaButton('Sign Up for Vantor', params.signupUrl, 'primary')}
       <p style="color:#6b7280;font-size:12px;margin:24px 0 0">
         This invitation expires in 7 days.
       </p>

@@ -135,9 +135,9 @@ export default function ApprovalsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead scope="col">Kind</TableHead>
-                  <TableHead scope="col">Movement</TableHead>
-                  <TableHead scope="col" className="text-right">
+                  <TableHead scope="col" className="font-semibold text-xs uppercase tracking-wide">Kind</TableHead>
+                  <TableHead scope="col" className="font-semibold text-xs uppercase tracking-wide">Movement</TableHead>
+                  <TableHead scope="col" className="text-right font-semibold text-xs uppercase tracking-wide">
                     <button
                       type="button"
                       onClick={() => filter.toggleSort('amount')}
@@ -149,8 +149,8 @@ export default function ApprovalsPage() {
                       </span>
                     </button>
                   </TableHead>
-                  <TableHead scope="col">Progress</TableHead>
-                  <TableHead scope="col">
+                  <TableHead scope="col" className="font-semibold text-xs uppercase tracking-wide">Progress</TableHead>
+                  <TableHead scope="col" className="font-semibold text-xs uppercase tracking-wide">
                     <button
                       type="button"
                       onClick={() => filter.toggleSort('date')}
@@ -162,7 +162,7 @@ export default function ApprovalsPage() {
                       </span>
                     </button>
                   </TableHead>
-                  <TableHead scope="col">Status</TableHead>
+                  <TableHead scope="col" className="font-semibold text-xs uppercase tracking-wide">Status</TableHead>
                   <TableHead scope="col" className="w-16" />
                 </TableRow>
               </TableHeader>
@@ -187,13 +187,13 @@ export default function ApprovalsPage() {
                       <TableRow
                         key={r.id}
                         onClick={() => setSelectedId(r.id)}
-                        className="cursor-pointer hover:bg-white/[0.02]"
+                        className="cursor-pointer hover:bg-white/[0.04] transition-colors"
                       >
-                        <TableCell className="font-mono text-xs">{r.proposed_movement.kind}</TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground uppercase">{r.proposed_movement.kind}</TableCell>
                         <TableCell className="text-sm">{movementSummary(r)}</TableCell>
-                        <TableCell className="text-right font-mono text-sm">
+                        <TableCell className="text-right font-mono text-sm font-medium">
                           {formatCurrency(r.proposed_movement.amount.amount)}{' '}
-                          <span className="text-muted-foreground">{r.proposed_movement.amount.asset}</span>
+                          <span className="text-muted-foreground font-normal">{r.proposed_movement.amount.asset}</span>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {filled}/{total}
