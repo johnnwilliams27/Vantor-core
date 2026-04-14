@@ -2,10 +2,12 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/nextauth.config';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { hasRole } from '@/lib/auth/rbac';
+import type { UserRole } from '@/types/database';
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.enterprise_id || session.user.role !== 'treasury_manager') {
+  if (!session?.user?.enterprise_id || !hasRole(session.user.role as UserRole, 'treasury_manager')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
