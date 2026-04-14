@@ -142,6 +142,7 @@ export const concentrationDetector: Detector = {
       const excessOverCap = Math.max(0, amountUsd - cap);
 
       insights.push({
+        channel: 'deterministic',
         type,
         severity,
         title: breached
@@ -216,6 +217,7 @@ export const concentrationDetector: Detector = {
         const excessUsd = excessPct * totalSatelliteUsd;
 
         insights.push({
+          channel: 'deterministic',
           type,
           severity,
           title: breached
@@ -271,6 +273,7 @@ export const concentrationDetector: Detector = {
         const excessUsd = excessPct * totalPrimaryUsd;
 
         insights.push({
+          channel: 'deterministic',
           type,
           severity,
           title: breached
@@ -330,6 +333,7 @@ export const concentrationDetector: Detector = {
       const severity = breached ? 'warning' : 'info'; // chain concentration is less critical
 
       insights.push({
+        channel: 'deterministic',
         type,
         severity,
         title: `${chain} chain concentration ${breached ? 'breach' : 'warning'}`,

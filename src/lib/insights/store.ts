@@ -119,6 +119,7 @@ export async function createInsight(
       enterprise_id: enterpriseId,
       user_id: userId,
       detector_name: detectorName,
+      channel: detected.channel,
       insight_type: detected.type,
       severity: detected.severity,
       state: 'new',

@@ -156,6 +156,7 @@ export const yieldRebalanceDetector: Detector = {
       if (moveAmount <= 0) continue;
 
       insights.push({
+        channel: 'deterministic',
         type: 'yield_drop',
         severity: 'warning',
         title: `${VENUES[position.protocol as keyof typeof VENUES]?.displayName ?? position.protocol} yield underperforming`,
@@ -216,6 +217,7 @@ export const yieldRebalanceDetector: Detector = {
 
       if (moveAmount >= MIN_IDLE_DEPLOYABLE_USD) {
         insights.push({
+          channel: 'deterministic',
           type: 'yield_idle_opportunity',
           severity: 'info',
           title: 'Idle stablecoins could earn yield',

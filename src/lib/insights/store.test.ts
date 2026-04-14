@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   DEFAULT_COOLDOWN_HOURS,
   VALID_TRANSITIONS,
+  createInsight,
   isValidTransition,
 } from './store';
-import type { InsightState, InsightType } from './types';
+import type { DetectedInsight, InsightState, InsightType } from './types';
 
 /**
  * Pure tests for the insight state machine + cooldown table.
@@ -157,5 +159,112 @@ describe('DEFAULT_COOLDOWN_HOURS', () => {
     expect(DEFAULT_COOLDOWN_HOURS.concentration_breach).toBeLessThan(
       DEFAULT_COOLDOWN_HOURS.concentration_warning,
     );
+  });
+});
+
+// ─── Fake Supabase client (captures the insert payload) ──────────────
+//
+// Mirrors the lightweight pattern from yield-universe.test.ts: a single
+// chain that resolves to a value. Here we also need to capture what
+// `createInsight` passes to `.insert(...)` so we can assert the payload
+// shape. The fake supports both the dedup `select().eq().eq().eq().order().limit().maybeSingle()`
+// chain and the create `insert().select().single()` chain.
+
+interface FakeStoreSupabase {
+  client: SupabaseClient;
+  insertPayloads: Record<string, unknown>[];
+}
+
+function makeFakeStoreSupabase(): FakeStoreSupabase {
+  const insertPayloads: Record<string, unknown>[] = [];
+
+  const client = {
+    from: (_table: string) => {
+      const builder: Record<string, unknown> = {};
+
+      // Dedup-path chain: .select().eq().eq().eq().order().limit().maybeSingle()
+      // returns no existing row so createInsight proceeds to insert.
+      builder.select = () => builder;
+      builder.eq = () => builder;
+      builder.order = () => builder;
+      builder.limit = () => builder;
+      builder.maybeSingle = async () => ({ data: null, error: null });
+
+      // Create-path chain: .insert(payload).select().single()
+      builder.insert = (payload: Record<string, unknown>) => {
+        insertPayloads.push(payload);
+        return {
+          select: () => ({
+            single: async () => ({
+              data: { id: 'fake-insight-id', ...payload },
+              error: null,
+            }),
+          }),
+        };
+      };
+
+      return builder;
+    },
+  } as unknown as SupabaseClient;
+
+  return { client, insertPayloads };
+}
+
+describe('createInsight persistence', () => {
+  it('writes the channel field to treasury_insights on persist', async () => {
+    const { client, insertPayloads } = makeFakeStoreSupabase();
+
+    const detected: DetectedInsight = {
+      channel: 'deterministic',
+      type: 'concentration_warning',
+      severity: 'warning',
+      title: 'Test insight',
+      summary: 'Test summary',
+      rationale: { reason: 'unit test' },
+      recommendedAction: null,
+      impact: { dollarValue: 1000 },
+      dedupKey: 'test:channel-persist',
+      dataFreshness: 'fresh',
+      supportingData: { foo: 'bar' },
+      confidence: 0.9,
+    };
+
+    await createInsight(
+      {
+        enterpriseId: 'ent-1',
+        userId: 'user-1',
+        detectorName: 'test-detector',
+        detected,
+        policyVerdict: null,
+        policyReason: null,
+      },
+      client,
+    );
+
+    expect(insertPayloads).toHaveLength(1);
+    expect(insertPayloads[0]).toMatchObject({ channel: 'deterministic' });
+  });
+});
+
+describe('DetectedInsight type', () => {
+  it('DetectedInsight requires channel field at the type level', () => {
+    // Type-level assertion: this object must satisfy DetectedInsight,
+    // which means `channel` is a required field. If Task 6 ever drops
+    // the field from the interface, this test won't compile.
+    const insight: DetectedInsight = {
+      channel: 'deterministic',
+      type: 'concentration_warning',
+      severity: 'info',
+      title: 'test',
+      summary: 'test',
+      rationale: {},
+      recommendedAction: null,
+      impact: {},
+      dedupKey: 'test:dedup',
+      dataFreshness: 'fresh',
+      supportingData: {},
+      confidence: 0.9,
+    };
+    expect(insight.channel).toBe('deterministic');
   });
 });
