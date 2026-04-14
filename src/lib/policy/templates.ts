@@ -61,12 +61,12 @@ const ROLE_MIN_FIELD: TemplateField = {
   key: 'role_min',
   kind: 'role_min',
   label: 'Minimum approver role',
+  helper: 'A single-slot approval chain at this role is created alongside the rule. Enterprise admins cannot approve under their own policy (SoD).',
   defaultValue: 'treasury_manager',
   options: [
     { value: 'accountant', label: 'Accountant' },
     { value: 'treasury_manager', label: 'Treasury manager' },
     { value: 'executive', label: 'Executive' },
-    { value: 'enterprise_admin', label: 'Enterprise admin' },
   ],
 };
 
