@@ -116,19 +116,24 @@ export async function seedTransactions(ctx: SeedContext, walletIds: WalletIds, i
   if (trErr) throw new Error(`seedTransactions: transfers insert failed: ${trErr.message}`);
 
   // Transfer attempts for failed transfers
-  // Note: querying transfers table directly instead of relying on insert().select()
-  // to avoid potential issues with batch select after mixed-field insert
+  // Verify transfers were inserted
+  const { count: totalTxfers } = await supabase
+    .from('transfers')
+    .select('*', { count: 'exact', head: true })
+    .eq('enterprise_id', ctx.enterpriseId);
+
+  // Query failed transfers directly from table
   const { data: failedTransfers, error: ftErr } = await supabase
     .from('transfers')
-    .select('id')
+    .select('id, status')
     .eq('enterprise_id', ctx.enterpriseId)
     .eq('status', 'failed');
   if (ftErr) throw new Error(`seedTransactions: failed transfers query failed: ${ftErr.message}`);
 
   if (failedTransfers && failedTransfers.length > 0) {
     const attemptRows = failedTransfers.flatMap(p => [
-      { transfer_id: p.id, attempt_no: 1, status: 'failed', error: 'Insufficient gas', attempted_at: daysAgo(randInt(2, 10)) },
-      { transfer_id: p.id, attempt_no: 2, status: 'failed', error: 'Nonce too low', attempted_at: daysAgo(randInt(1, 5)) },
+      { transfer_id: p.id, enterprise_id: ctx.enterpriseId, attempt_no: 1, status: 'failed', error: 'Insufficient gas', attempted_at: daysAgo(randInt(2, 10)) },
+      { transfer_id: p.id, enterprise_id: ctx.enterpriseId, attempt_no: 2, status: 'failed', error: 'Nonce too low', attempted_at: daysAgo(randInt(1, 5)) },
     ]);
     const { error: taErr } = await supabase.from('transfer_attempts').insert(attemptRows);
     if (taErr) throw new Error(`seedTransactions: transfer_attempts insert failed: ${taErr.message}`);
