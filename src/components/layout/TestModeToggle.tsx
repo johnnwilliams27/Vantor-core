@@ -108,7 +108,7 @@ export function TestModeToggle() {
             : 'Test Mode loads a separate set of demo data. Your live data will not be affected. All modules will use test data, while yield product information and market data will remain live.'
         }
         confirmLabel={testMode ? 'Go Live' : 'Enter Test Mode'}
-        variant="primary"
+        variant="default"
         isPending={isPending}
         onConfirm={handleConfirm}
       />
