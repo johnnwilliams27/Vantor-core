@@ -956,7 +956,12 @@ export class PolicyAuthoringService {
 
     // 7. Map RPC errors
     if (rpcError) {
-      const code = (rpcError as { code?: string }).code;
+      const rpcErr = rpcError as { code?: string; message?: string; hint?: string };
+      const code = rpcErr.code;
+      const msg = rpcErr.message ?? '';
+
+      console.error('[policy/activate] RPC error', { code, message: msg, hint: rpcErr.hint, versionId });
+
       if (code === 'P0001') {
         throw new AuthoringError({
           reason_code: REASON_CODES.activation_reason_too_short,
@@ -973,9 +978,27 @@ export class PolicyAuthoringService {
           details: { rpc_error: rpcError },
         });
       }
+      // 42501 = insufficient_privilege — RPC GRANT may be missing on this DB
+      if (code === '42501') {
+        throw new AuthoringError({
+          reason_code: REASON_CODES.gate_internal_error,
+          human_readable: 'Activation RPC permission denied. The database function may not be accessible.',
+          user_action: 'Contact support — the activation function needs to be re-deployed.',
+          details: { rpc_error: rpcError },
+        });
+      }
+      // 42883 = undefined_function — migration not applied
+      if (code === '42883') {
+        throw new AuthoringError({
+          reason_code: REASON_CODES.gate_internal_error,
+          human_readable: 'Activation RPC function not found. A database migration may be missing.',
+          user_action: 'Contact support — a migration needs to be applied.',
+          details: { rpc_error: rpcError },
+        });
+      }
       throw new AuthoringError({
         reason_code: REASON_CODES.activation_race_conflict,
-        human_readable: 'Activation failed — the policy may have been modified concurrently.',
+        human_readable: `Activation failed (${code ?? 'unknown'}): ${msg || 'the policy may have been modified concurrently.'}`,
         user_action: 'Reload the version and retry activation.',
         details: { rpc_error: rpcError },
       });
