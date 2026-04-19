@@ -4,11 +4,12 @@ import { authOptions } from '@/lib/auth/nextauth.config';
 import { requireRole } from '@/lib/auth/rbac';
 import { getLiquidityProvider, calculateSlippage } from '@/lib/yield/slippage';
 import type { ChainType, TokenSymbol } from '@/types/database';
+import { YIELD_PROTOCOL_IDS } from '@/types/database';
 import type { YieldProtocolId } from '@/lib/yield/interface';
 import { z } from 'zod';
 
 const schema = z.object({
-  protocol: z.enum(['aave_v3', 'morpho_reservoir', 'morpho_steakhouse', 'kamino', 'kamino_multiply', 'ondo_usdy', 'sky', 'ethena']),
+  protocol: z.enum(YIELD_PROTOCOL_IDS),
   token: z.enum(['USDC', 'USDT']),
   chain: z.enum(['ethereum', 'solana']),
   amountUsd: z.number().positive('Amount must be positive'),

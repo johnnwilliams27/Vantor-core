@@ -589,7 +589,20 @@ export interface SimulationRun {
 
 // ---- Yield Protocols ----
 
-export type YieldProtocolId = 'aave_v3' | 'morpho_reservoir' | 'kamino' | 'ondo_usdy';
+export type YieldProtocolId =
+  | 'aave_v3' | 'compound_v3'
+  | 'morpho_reservoir' | 'morpho_steakhouse'
+  | 'kamino' | 'kamino_multiply'
+  | 'ondo_usdy' | 'sky' | 'ethena'
+  | 'buidl' | 'ousg' | 'ustb' | 'benji' | 'usyc' | 'spiko_usd';
+
+export const YIELD_PROTOCOL_IDS = [
+  'aave_v3', 'compound_v3',
+  'morpho_reservoir', 'morpho_steakhouse',
+  'kamino', 'kamino_multiply',
+  'ondo_usdy', 'sky', 'ethena',
+  'buidl', 'ousg', 'ustb', 'benji', 'usyc', 'spiko_usd',
+] as const satisfies readonly YieldProtocolId[];
 export type YieldTxType = 'deposit' | 'withdraw';
 export type YieldTxStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
 

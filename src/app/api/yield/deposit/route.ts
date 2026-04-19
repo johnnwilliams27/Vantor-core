@@ -7,6 +7,7 @@ import { writeAuditLog } from '@/lib/audit/logger';
 import { getYieldAdapter } from '@/lib/yield/factory';
 import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
 import type { YieldProtocolId } from '@/lib/yield/interface';
+import { YIELD_PROTOCOL_IDS } from '@/types/database';
 import { z } from 'zod';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 import { requirePaidTier, tierGateResponse, TierGateError } from '@/lib/auth/tier-gate';
@@ -20,7 +21,7 @@ import {
 import { markPolicyEvaluationExecuted } from '@/lib/policy/persistence/persist-evaluation';
 
 const depositSchema = z.object({
-  protocol: z.enum(['aave_v3', 'morpho_reservoir', 'morpho_steakhouse', 'kamino', 'kamino_multiply', 'ondo_usdy', 'sky', 'ethena']),
+  protocol: z.enum(YIELD_PROTOCOL_IDS),
   token: z.enum(['USDC', 'USDT']),
   amount: z.string().min(1).refine((v) => parseFloat(v) > 0, 'Amount must be positive'),
   walletAddress: z.string().min(1).max(100),
