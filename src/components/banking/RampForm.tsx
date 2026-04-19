@@ -506,7 +506,7 @@ export function RampForm() {
             )}
           </div>
 
-          <Button type="button" variant="outline" className="w-full" onClick={getQuote} disabled={quoting || exceeds || !selectedWalletId || !selectedBankId || !amount}>
+          <Button type="button" className="w-full" onClick={getQuote} disabled={quoting || exceeds || !selectedWalletId || !selectedBankId || !amount}>
             {quoting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Getting Quote…</> : 'Get Quote'}
           </Button>
         </form>
@@ -574,7 +574,7 @@ export function RampForm() {
                 <span className="font-mono">{sym}{(quote.feeAmount + Number(quote.vantor_fee)).toFixed(2)}</span>
               </div>
             )}
-            <Button className="w-full mt-2 btn-gradient" onClick={() => checkHighValue(executeRamp)} disabled={executing}>
+            <Button className="w-full mt-2" onClick={() => checkHighValue(executeRamp)} disabled={executing}>
               {executing
                 ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Executing…</>
                 : `Execute ${isOfframp ? 'Off-ramp' : 'On-ramp'}`}
@@ -598,7 +598,7 @@ export function RampForm() {
             </div>
             <DialogFooter className="gap-2">
               <Button variant="outline" onClick={() => setPendingHighValue(false)}>Cancel</Button>
-              <Button className="btn-gradient" onClick={() => { setPendingHighValue(false); executeRamp(); }}>
+              <Button onClick={() => { setPendingHighValue(false); executeRamp(); }}>
                 Confirm
               </Button>
             </DialogFooter>

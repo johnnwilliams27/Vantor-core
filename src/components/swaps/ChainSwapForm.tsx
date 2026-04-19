@@ -444,7 +444,6 @@ export function ChainSwapForm() {
 
           <Button
             type="button"
-            variant="outline"
             className="w-full"
             onClick={getQuote}
             disabled={quoting || exceeds || !fromWalletId || !toWalletId || sameChain || !amount}
@@ -518,7 +517,7 @@ export function ChainSwapForm() {
 
             {!slippageEstimate && (
               <Button
-                className="w-full mt-2 btn-gradient"
+                className="w-full mt-2"
                 onClick={() => checkHighValue(exceedsTolerance ? () => setShowRateApproval(true) : handleExecuteWithSlippageCheck)}
                 disabled={executing || slippageCheck.isPending}
               >
@@ -552,7 +551,7 @@ export function ChainSwapForm() {
             </div>
             <DialogFooter className="gap-2">
               <Button onClick={() => setPendingHighValue(false)}>Cancel</Button>
-              <Button className="btn-gradient" onClick={() => { setPendingHighValue(false); pendingHighValueHandler?.(); }}>
+              <Button onClick={() => { setPendingHighValue(false); pendingHighValueHandler?.(); }}>
                 Confirm
               </Button>
             </DialogFooter>

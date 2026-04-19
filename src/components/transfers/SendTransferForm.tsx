@@ -314,7 +314,7 @@ export function SendTransferForm() {
 
           <Button
             type="submit"
-            className="w-full btn-gradient"
+            className="w-full"
             disabled={isProcessing || exceeds || !selectedWalletId || !watch('toAddress') || !amount}
           >
             {isProcessing ? (

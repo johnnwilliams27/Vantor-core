@@ -389,7 +389,7 @@ export function SwapForm() {
             )}
           </div>
 
-          <Button type="button" variant="outline" className="w-full" onClick={getQuote} disabled={quoting || exceeds || !selectedWalletId || !fromToken || !toToken || !amount}>
+          <Button type="button" className="w-full" onClick={getQuote} disabled={quoting || exceeds || !selectedWalletId || !fromToken || !toToken || !amount}>
             {quoting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Getting Quote…</> : 'Get Quote'}
           </Button>
         </form>
@@ -456,7 +456,7 @@ export function SwapForm() {
 
             {!slippageEstimate && (
               <Button
-                className="w-full mt-2 btn-gradient"
+                className="w-full mt-2"
                 onClick={() => checkHighValue(exceedsTolerance ? () => setShowRateApproval(true) : handleExecuteWithSlippageCheck)}
                 disabled={executing || slippageCheck.isPending}
               >
@@ -490,7 +490,7 @@ export function SwapForm() {
             </div>
             <DialogFooter className="gap-2">
               <Button onClick={() => setPendingHighValue(false)}>Cancel</Button>
-              <Button className="btn-gradient" onClick={() => { setPendingHighValue(false); pendingHighValueHandler?.(); }}>
+              <Button onClick={() => { setPendingHighValue(false); pendingHighValueHandler?.(); }}>
                 Confirm
               </Button>
             </DialogFooter>

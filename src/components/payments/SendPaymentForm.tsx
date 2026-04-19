@@ -355,7 +355,7 @@ export function SendPaymentForm() {
           )}
           </div>
 
-          <Button type="submit" className="w-full btn-gradient" disabled={isSubmitting || !isReady}>
+          <Button type="submit" className="w-full" disabled={isSubmitting || !isReady}>
             {isSubmitting ? (
               <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sending…</>
             ) : (
