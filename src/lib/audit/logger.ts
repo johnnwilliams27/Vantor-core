@@ -1,3 +1,4 @@
+import { headers } from 'next/headers';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { AuditAction } from '@/types/database';
 
@@ -10,6 +11,22 @@ export interface AuditLogEntry {
   details?: Record<string, unknown>;
   ipAddress?: string;
   userAgent?: string;
+}
+
+// Auto-capture client IP + user-agent when writeAuditLog is called inside a
+// request scope (route handler, server action, server component). Returns an
+// empty object outside request scope (cron, scripts) — headers() throws
+// there, and we never want audit writes to crash the caller.
+function captureRequestContext(): { ipAddress?: string; userAgent?: string } {
+  try {
+    const h = headers();
+    const xff = h.get('x-forwarded-for');
+    const ip = xff?.split(',')[0]?.trim() || h.get('x-real-ip') || undefined;
+    const ua = h.get('user-agent') || undefined;
+    return { ipAddress: ip, userAgent: ua };
+  } catch {
+    return {};
+  }
 }
 
 // In-memory cache: userId → enterpriseId (avoids repeated DB lookups)
@@ -42,6 +59,10 @@ export async function writeAuditLog(entry: AuditLogEntry): Promise<void> {
       enterpriseId = await resolveEnterpriseId(supabase, entry.userId);
     }
 
+    // Explicit ipAddress/userAgent on the entry wins; otherwise fall back
+    // to whatever we can pull from the current request's headers.
+    const ctx = captureRequestContext();
+
     await supabase.from('audit_logs').insert({
       user_id: entry.userId ?? null,
       enterprise_id: enterpriseId,
@@ -49,8 +70,8 @@ export async function writeAuditLog(entry: AuditLogEntry): Promise<void> {
       entity_type: entry.entityType ?? null,
       entity_id: entry.entityId ?? null,
       details: entry.details ?? null,
-      ip_address: entry.ipAddress ?? null,
-      user_agent: entry.userAgent ?? null,
+      ip_address: entry.ipAddress ?? ctx.ipAddress ?? null,
+      user_agent: entry.userAgent ?? ctx.userAgent ?? null,
     });
   } catch (err) {
     // Non-blocking – log to stderr but never crash the caller
