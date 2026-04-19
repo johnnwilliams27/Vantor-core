@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, CheckCircle, X } from 'lucide-react';
+import type { Wallet } from '@/types/database';
 
 export function EthWalletConnect() {
   const { address, isConnected } = useAccount();
@@ -32,17 +33,27 @@ export function EthWalletConnect() {
         body: JSON.stringify({ chain: 'ethereum', address, message, signature, label }),
       });
 
+      const json = await res.json();
       if (!res.ok) {
-        const { error } = await res.json();
-        throw new Error(error);
+        throw new Error(json.error);
       }
 
       setLinked(true);
 
+      // Optimistically append the new wallet to every ['wallets', ...] cache
+      // so it shows up immediately in Ramps / Yield / etc., without waiting
+      // on the balance-refresh -> invalidate -> refetch round trip.
+      const newWallet = json.data as Wallet;
+      queryClient.setQueriesData<Wallet[]>({ queryKey: ['wallets'] }, (old) => {
+        if (!old) return old;
+        if (old.some((w) => w.id === newWallet.id)) return old;
+        return [...old, newWallet];
+      });
+
       // Trigger an immediate balance refresh so the newly-linked wallet
       // isn't stuck showing "—" in the UI. Fire-and-forget — if it fails
       // the nightly cron will pick it up, and the user can always refresh
-      // manually.
+      // manually. Invalidation runs after to reconcile with server state.
       fetch('/api/balances/refresh', { method: 'POST' })
         .catch((err) => console.warn('[EthWalletConnect] balance refresh failed', err))
         .finally(() => {
