@@ -3,13 +3,14 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Gavel, Plus, Copy, CircleCheck, CircleDashed, Archive, ArrowRight } from 'lucide-react';
+import { Gavel, Plus, Copy, CircleCheck, CircleDashed, Archive, ArrowRight, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyStateCard } from '@/components/ui/empty-state-card';
 import { IconTile } from '@/components/ui/icon-tile';
 import { useToast } from '@/components/ui/toast';
+import { ConfirmDeleteDialog } from '@/components/policy/ConfirmDeleteDialog';
 import { formatRelativeOrDate, sanitizeErrorMessage } from '@/lib/utils';
 import type { PolicyVersionSnapshot } from '@/lib/policy/types/policy-version';
 
@@ -20,6 +21,7 @@ export default function VersionsListPage() {
   const { toast } = useToast();
   const [creating, setCreating] = useState(false);
   const [showSuperseded, setShowSuperseded] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id: string; name: string }>({ open: false, id: '', name: '' });
 
   const versions = useQuery({
     queryKey: ['policy', 'versions'],
@@ -66,6 +68,16 @@ export default function VersionsListPage() {
     } finally {
       setCreating(false);
     }
+  }
+
+  async function deleteDraft() {
+    const res = await fetch(`/api/policy/versions/${deleteConfirm.id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.human_readable ?? err.error ?? `Delete failed (${res.status})`);
+    }
+    qc.invalidateQueries({ queryKey: ['policy'] });
+    toast({ title: 'Draft deleted', variant: 'success' });
   }
 
   return (
@@ -162,7 +174,13 @@ export default function VersionsListPage() {
               </div>
             ) : (
               <div className="space-y-2">
-                {drafts.map((v) => <VersionCard key={v.id} v={v} />)}
+                {drafts.map((v) => (
+                  <VersionCard
+                    key={v.id}
+                    v={v}
+                    onDelete={() => setDeleteConfirm({ open: true, id: v.id, name: v.name })}
+                  />
+                ))}
               </div>
             )}
           </section>
@@ -187,11 +205,20 @@ export default function VersionsListPage() {
           )}
         </>
       )}
+
+      <ConfirmDeleteDialog
+        open={deleteConfirm.open}
+        onOpenChange={(open) => setDeleteConfirm((prev) => ({ ...prev, open }))}
+        title="Delete this draft version"
+        description="All rules, approval chains, and hard limits in this draft will be permanently removed."
+        itemName={deleteConfirm.name}
+        onConfirm={deleteDraft}
+      />
     </div>
   );
 }
 
-function VersionCard({ v, prominent, compact }: { v: VersionRow; prominent?: boolean; compact?: boolean }) {
+function VersionCard({ v, prominent, compact, onDelete }: { v: VersionRow; prominent?: boolean; compact?: boolean; onDelete?: () => void }) {
   const statusBadge = () => {
     if (v.status === 'active') return <Badge variant="active" size="sm" dot>Active</Badge>;
     if (v.status === 'draft')  return <Badge variant="pending" size="sm" dot>Draft</Badge>;
@@ -239,12 +266,23 @@ function VersionCard({ v, prominent, compact }: { v: VersionRow; prominent?: boo
               )}
             </div>
           </div>
-          <Link href={`/policy/versions/${v.id}`} className="shrink-0">
-            <Button variant={prominent ? 'default' : 'outline'} size="sm">
-              {v.status === 'draft' ? 'Edit' : 'View'}
-              <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
-            </Button>
-          </Link>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {onDelete && v.status === 'draft' && (
+              <button
+                onClick={onDelete}
+                className="p-1.5 rounded-md hover:bg-red-500/10 text-muted-foreground hover:text-red-400 transition-colors"
+                aria-label="Delete draft"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+            <Link href={`/policy/versions/${v.id}`}>
+              <Button variant={prominent ? 'default' : 'outline'} size="sm">
+                {v.status === 'draft' ? 'Edit' : 'View'}
+                <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+              </Button>
+            </Link>
+          </div>
         </div>
       </CardContent>
     </Card>

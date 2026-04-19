@@ -18,6 +18,7 @@ import { TemplatePicker } from '@/components/policy/TemplatePicker';
 import { ChainDesignerDialog } from '@/components/policy/ChainDesignerDialog';
 import { HardLimitDialog } from '@/components/policy/HardLimitDialog';
 import { RuleBuilderDialog } from '@/components/policy/RuleBuilderDialog';
+import { ConfirmDeleteDialog } from '@/components/policy/ConfirmDeleteDialog';
 import { Pencil } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -77,6 +78,12 @@ export default function VersionEditorPage() {
   const [activateReason, setActivateReason] = useState('');
   const [activating, setActivating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    open: boolean;
+    type: 'rule' | 'chain' | 'hard_limit' | 'draft';
+    id: string;
+    name: string;
+  }>({ open: false, type: 'rule', id: '', name: '' });
 
   const versionId = params?.id ?? '';
 
@@ -107,50 +114,44 @@ export default function VersionEditorPage() {
   const v = version.data;
   const rules = (v?.rules ?? []).slice().sort((a, b) => a.priority - b.priority);
 
-  async function deleteRule(ruleId: string) {
-    setDeletingId(ruleId);
+  function openDeleteConfirm(type: 'rule' | 'chain' | 'hard_limit' | 'draft', id: string, name: string) {
+    setDeleteConfirm({ open: true, type, id, name });
+  }
+
+  async function executeDelete() {
+    const { type, id } = deleteConfirm;
+    if (type === 'draft') {
+      const res = await fetch(`/api/policy/versions/${versionId}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.human_readable ?? err.error ?? `Delete failed (${res.status})`);
+      }
+      qc.invalidateQueries({ queryKey: ['policy'] });
+      toast({ title: 'Draft deleted', variant: 'success' });
+      router.push('/policy/versions');
+      return;
+    }
+
+    const pathMap = {
+      rule: `rules/${id}`,
+      chain: `approval-chains/${id}`,
+      hard_limit: `hard-limits/${id}`,
+    } as const;
+    const labelMap = { rule: 'Rule', chain: 'Chain', hard_limit: 'Limit' } as const;
+
+    setDeletingId(id);
     try {
-      const res = await fetch(`/api/policy/versions/${versionId}/rules/${ruleId}`, { method: 'DELETE' });
+      const res = await fetch(`/api/policy/versions/${versionId}/${pathMap[type]}`, { method: 'DELETE' });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.human_readable ?? err.error ?? `Delete failed (${res.status})`);
       }
       qc.invalidateQueries({ queryKey: ['policy', 'version', versionId] });
-      toast({ title: 'Rule removed', variant: 'success' });
+      toast({ title: `${labelMap[type]} removed`, variant: 'success' });
     } catch (err) {
-      toast({ title: 'Could not delete', description: sanitizeErrorMessage((err as Error).message), variant: 'destructive' });
+      toast({ title: `Could not delete ${type.replace('_', ' ')}`, description: sanitizeErrorMessage((err as Error).message), variant: 'destructive' });
     } finally {
       setDeletingId(null);
-    }
-  }
-
-  async function deleteChain(chainId: string) {
-    if (!confirm('Delete this approval chain? Rules referencing it will be left with a dangling reference.')) return;
-    try {
-      const res = await fetch(`/api/policy/versions/${versionId}/approval-chains/${chainId}`, { method: 'DELETE' });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.human_readable ?? err.error ?? `Delete failed (${res.status})`);
-      }
-      qc.invalidateQueries({ queryKey: ['policy', 'version', versionId] });
-      toast({ title: 'Chain removed', variant: 'success' });
-    } catch (err) {
-      toast({ title: 'Could not delete chain', description: sanitizeErrorMessage((err as Error).message), variant: 'destructive' });
-    }
-  }
-
-  async function deleteHardLimit(limitId: string) {
-    if (!confirm('Delete this hard limit?')) return;
-    try {
-      const res = await fetch(`/api/policy/versions/${versionId}/hard-limits/${limitId}`, { method: 'DELETE' });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.human_readable ?? err.error ?? `Delete failed (${res.status})`);
-      }
-      qc.invalidateQueries({ queryKey: ['policy', 'version', versionId] });
-      toast({ title: 'Limit removed', variant: 'success' });
-    } catch (err) {
-      toast({ title: 'Could not delete limit', description: sanitizeErrorMessage((err as Error).message), variant: 'destructive' });
     }
   }
 
@@ -257,10 +258,20 @@ export default function VersionEditorPage() {
               </Button>
             </Link>
             {isDraft && (
-              <Button variant="default" size="sm" onClick={() => setActivateOpen(true)}>
-                <CheckCircle2 className="w-4 h-4 mr-1.5" />
-                Activate
-              </Button>
+              <>
+                <Button
+                  variant="destructive-outline"
+                  size="sm"
+                  onClick={() => openDeleteConfirm('draft', versionId, v.name)}
+                >
+                  <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                  Delete
+                </Button>
+                <Button variant="default" size="sm" onClick={() => setActivateOpen(true)}>
+                  <CheckCircle2 className="w-4 h-4 mr-1.5" />
+                  Activate
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -306,7 +317,7 @@ export default function VersionEditorPage() {
                   canEdit={isDraft}
                   onEdit={() => setBuilderDialog({ open: true, rule: r })}
                   canDelete={isDraft}
-                  onDelete={() => deleteRule(r.id)}
+                  onDelete={() => openDeleteConfirm('rule', r.id, r.name)}
                   deleting={deletingId === r.id}
                 />
               ))}
@@ -341,7 +352,7 @@ export default function VersionEditorPage() {
                 chain={c}
                 canEdit={isDraft}
                 onEdit={() => setChainDialog({ open: true, chain: c })}
-                onDelete={() => deleteChain(c.id)}
+                onDelete={() => openDeleteConfirm('chain', c.id, c.name)}
               />
             ))}
           </div>
@@ -372,7 +383,7 @@ export default function VersionEditorPage() {
                 limit={h}
                 canEdit={isDraft}
                 onEdit={() => setLimitDialog({ open: true, limit: h })}
-                onDelete={() => deleteHardLimit(h.id)}
+                onDelete={() => openDeleteConfirm('hard_limit', h.id, h.name)}
               />
             ))}
           </div>
@@ -412,6 +423,22 @@ export default function VersionEditorPage() {
         open={limitDialog.open}
         onOpenChange={(o) => setLimitDialog({ open: o, limit: o ? limitDialog.limit : null })}
         onSaved={() => qc.invalidateQueries({ queryKey: ['policy', 'version', versionId] })}
+      />
+
+      {/* Delete confirmation */}
+      <ConfirmDeleteDialog
+        open={deleteConfirm.open}
+        onOpenChange={(open) => setDeleteConfirm((prev) => ({ ...prev, open }))}
+        title={deleteConfirm.type === 'draft' ? 'Delete this draft version' : `Delete ${deleteConfirm.type.replace('_', ' ')}`}
+        description={
+          deleteConfirm.type === 'draft'
+            ? 'All rules, approval chains, and hard limits in this draft will be permanently removed.'
+            : deleteConfirm.type === 'chain'
+            ? 'Rules referencing this chain will be left without an approval target.'
+            : `This ${deleteConfirm.type.replace('_', ' ')} will be permanently removed from the draft.`
+        }
+        itemName={deleteConfirm.name}
+        onConfirm={executeDelete}
       />
 
       {/* Activate confirmation */}
@@ -511,7 +538,7 @@ function RuleRow({ rule, index, triggerCount, canEdit, onEdit, canDelete, onDele
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                if (confirm(`Remove rule "${rule.name}"?`)) onDelete();
+                onDelete();
               }}
               disabled={deleting}
               className="p-1.5 rounded-md hover:bg-red-500/10 text-muted-foreground hover:text-red-400 transition-colors"
