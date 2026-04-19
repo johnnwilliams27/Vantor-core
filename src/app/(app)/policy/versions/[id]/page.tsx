@@ -167,15 +167,16 @@ export default function VersionEditorPage() {
         body: JSON.stringify({ reason: activateReason.trim() }),
       });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.human_readable ?? err.error ?? `Activate failed (${res.status})`);
+        const body = await res.json().catch(() => ({}));
+        console.error('[policy/activate] error response:', body);
+        throw new Error(body.user_action ?? body.human_readable ?? body.error ?? `Activate failed (${res.status})`);
       }
       toast({ title: 'Version activated', description: 'Enforcement is live.', variant: 'success' });
       qc.invalidateQueries({ queryKey: ['policy'] });
       setActivateOpen(false);
       router.push('/policy/versions');
     } catch (err) {
-      toast({ title: 'Activation failed', description: sanitizeErrorMessage((err as Error).message), variant: 'destructive' });
+      toast({ title: 'Activation failed', description: (err as Error).message, variant: 'destructive' });
     } finally {
       setActivating(false);
     }
