@@ -10,7 +10,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { BankLinkButton } from './BankLinkButton';
 import { formatDate } from '@/lib/utils';
 import { useTreasuryOverview } from '@/hooks/useTreasury';
-import { Trash2, CheckCircle, Building2, Download } from 'lucide-react';
+import { Trash2, CheckCircle, Building2, Download, RefreshCw } from 'lucide-react';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { NicknameEdit } from '@/components/ui/nickname-edit';
 import { exportCsv, type ExportColumn } from '@/lib/export';
@@ -69,6 +69,7 @@ export function BankAccountsTab({ bankingProvider = 'stripe_fc' }: { bankingProv
   const queryClient = useQueryClient();
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [refreshingId, setRefreshingId] = useState<string | null>(null);
 
   const { data: accounts, isLoading } = useQuery({
     queryKey: ['bank-accounts'],
@@ -113,6 +114,22 @@ export function BankAccountsTab({ bankingProvider = 'stripe_fc' }: { bankingProv
     }
     queryClient.invalidateQueries({ queryKey: ['bank-accounts'] });
     toast({ title: 'Nickname saved', variant: 'success' });
+  };
+
+  const handleRefreshBalance = async (accountId: string) => {
+    setRefreshingId(accountId);
+    try {
+      const res = await fetch(`/api/bank-accounts/${accountId}/refresh-balance`, { method: 'POST' });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      queryClient.invalidateQueries({ queryKey: ['bank-accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['treasury-overview'] });
+      toast({ title: 'Balance updated', variant: 'success' });
+    } catch (err) {
+      toast({ title: 'Refresh failed', description: (err as Error).message, variant: 'destructive' });
+    } finally {
+      setRefreshingId(null);
+    }
   };
 
   return (
@@ -240,16 +257,30 @@ export function BankAccountsTab({ bankingProvider = 'stripe_fc' }: { bankingProv
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          {(() => {
-                            const cur = account.currency ?? account.balance_currency ?? 'USD';
-                            if (balanceInfo != null) {
-                              return <span className="text-sm font-semibold tabular-nums">{formatCurrencyAmount(balanceInfo.currentBalanceUsd, cur)}</span>;
-                            }
-                            if (account.current_balance) {
-                              return <span className="text-sm font-semibold tabular-nums">{formatCurrencyAmount(parseFloat(account.current_balance), cur)}</span>;
-                            }
-                            return <span className="text-muted-foreground">—</span>;
-                          })()}
+                          <div className="flex items-center justify-end gap-1.5">
+                            {(() => {
+                              const cur = account.currency ?? account.balance_currency ?? 'USD';
+                              if (balanceInfo != null) {
+                                return <span className="text-sm font-semibold tabular-nums">{formatCurrencyAmount(balanceInfo.currentBalanceUsd, cur)}</span>;
+                              }
+                              if (account.current_balance) {
+                                return <span className="text-sm font-semibold tabular-nums">{formatCurrencyAmount(parseFloat(account.current_balance), cur)}</span>;
+                              }
+                              return <span className="text-muted-foreground text-sm">—</span>;
+                            })()}
+                            {account.banking_provider !== 'manual' && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => handleRefreshBalance(account.id)}
+                                disabled={refreshingId === account.id}
+                                aria-label={`Refresh balance for ${account.institution_name}`}
+                              >
+                                <RefreshCw className={`h-3 w-3 text-muted-foreground ${refreshingId === account.id ? 'animate-spin' : ''}`} />
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Button
