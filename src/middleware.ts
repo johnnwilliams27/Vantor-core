@@ -67,6 +67,18 @@ export async function middleware(req: NextRequest) {
 
   const isAppAdmin = token.is_app_admin as boolean;
 
+  // Frozen enterprise: kick already-authenticated users out. App admins
+  // bypass so they can still reach /admin to unfreeze.
+  const enterpriseStatus = token.enterprise_status as string | null | undefined;
+  if (enterpriseStatus === 'frozen' && !isAppAdmin) {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Enterprise frozen' }, { status: 403 });
+    }
+    const url = new URL('/login', req.url);
+    url.searchParams.set('error', 'EnterpriseFrozen');
+    return NextResponse.redirect(url);
+  }
+
   // App admin: redirect from root app pages to /admin
   if (isAppAdmin && (pathname === '/dashboard' || pathname === '/setup')) {
     return NextResponse.redirect(new URL('/admin', req.url));

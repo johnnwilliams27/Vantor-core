@@ -79,12 +79,43 @@ export async function GET(
 
     const adminEmail = adminError ? undefined : (admins?.[0]?.email);
 
+    // Recent audit logs for this enterprise (new behavior — previously this
+    // field was read by the UI but never populated).
+    const { data: auditRows, error: auditError } = await supabase
+      .from('audit_logs')
+      .select('id, action, entity_type, entity_id, user_id, created_at')
+      .eq('enterprise_id', id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (auditError) return NextResponse.json({ error: auditError.message }, { status: 500 });
+
+    const auditUserIds = Array.from(
+      new Set((auditRows ?? []).map((r) => r.user_id).filter((uid): uid is string => !!uid)),
+    );
+    const emailById: Record<string, string> = {};
+    if (auditUserIds.length > 0) {
+      const { data: emailRows } = await supabase
+        .from('user_profiles')
+        .select('id, email')
+        .in('id', auditUserIds);
+      for (const row of emailRows ?? []) {
+        if (row.id && row.email) emailById[row.id] = row.email;
+      }
+    }
+
+    const recentAuditLogs = (auditRows ?? []).map((r) => ({
+      ...r,
+      user_email: r.user_id ? emailById[r.user_id] ?? null : null,
+    }));
+
     return NextResponse.json({
       data: {
         ...enterprise,
         user_count: userCount ?? 0,
         transaction_count: transactionCount ?? 0,
         admin_email: adminEmail,
+        recent_audit_logs: recentAuditLogs,
       },
     });
   } catch (err) {
