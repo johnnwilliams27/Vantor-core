@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { LoginBackground } from '@/components/auth/LoginBackground';
 
@@ -8,7 +9,9 @@ export default function LoginPage() {
     <div className="relative flex min-h-screen items-center justify-center bg-[var(--bg-void)] px-4">
       <LoginBackground />
       <div className="relative z-10">
-        <LoginForm />
+        <Suspense fallback={null}>
+          <LoginForm />
+        </Suspense>
       </div>
     </div>
   );
