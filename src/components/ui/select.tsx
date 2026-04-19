@@ -1,5 +1,6 @@
 'use client';
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 import { ChevronDown, Check } from 'lucide-react';
 
@@ -10,8 +11,14 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
 const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
   ({ className, children, value, defaultValue, onChange, onBlur, name, disabled, ...props }, ref) => {
     const [open, setOpen] = React.useState(false);
+    const [mounted, setMounted] = React.useState(false);
+    const [pos, setPos] = React.useState<{ top: number; left: number; width: number } | null>(null);
     const containerRef = React.useRef<HTMLDivElement>(null);
+    const triggerRef = React.useRef<HTMLButtonElement>(null);
+    const dropdownRef = React.useRef<HTMLDivElement>(null);
     const nativeRef = React.useRef<HTMLSelectElement | null>(null);
+
+    React.useEffect(() => { setMounted(true); }, []);
 
     // Merge refs
     const setRefs = React.useCallback((el: HTMLSelectElement | null) => {
@@ -53,13 +60,35 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     const displayLabel = selectedOption?.label || options[0]?.label || 'Select…';
     const isPlaceholder = !selectedOption || selectedOption.value === '';
 
+    const updatePos = React.useCallback(() => {
+      const el = triggerRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setPos({ top: r.bottom + 4, left: r.left, width: r.width });
+    }, []);
+
+    // Position dropdown when opened + track scroll/resize
+    React.useEffect(() => {
+      if (!open) return;
+      updatePos();
+      const onScroll = () => updatePos();
+      const onResize = () => updatePos();
+      window.addEventListener('scroll', onScroll, true);
+      window.addEventListener('resize', onResize);
+      return () => {
+        window.removeEventListener('scroll', onScroll, true);
+        window.removeEventListener('resize', onResize);
+      };
+    }, [open, updatePos]);
+
     // Close on outside click
     React.useEffect(() => {
       if (!open) return;
       const handler = (e: MouseEvent) => {
-        if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-          setOpen(false);
-        }
+        const target = e.target as Node;
+        if (containerRef.current?.contains(target)) return;
+        if (dropdownRef.current?.contains(target)) return;
+        setOpen(false);
       };
       document.addEventListener('mousedown', handler);
       return () => document.removeEventListener('mousedown', handler);
@@ -91,8 +120,42 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     // Force re-render when native value changes
     const [, forceRender] = React.useState(0);
 
+    const dropdown = open && pos && mounted ? createPortal(
+      <div
+        ref={dropdownRef}
+        style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width, zIndex: 1000 }}
+        className="rounded-md border bg-popover text-popover-foreground shadow-lg overflow-hidden animate-in fade-in-0 zoom-in-95 duration-150 origin-top"
+      >
+        <div className="max-h-60 overflow-y-auto py-1">
+          {options.map((opt) => {
+            const isSelected = opt.value === currentValue;
+            const isEmpty = opt.value === '';
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => selectOption(opt.value)}
+                className={cn(
+                  'flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors text-left',
+                  'hover:bg-accent hover:text-accent-foreground',
+                  isSelected && !isEmpty && 'bg-accent/50 font-medium',
+                  isEmpty && 'text-muted-foreground',
+                )}
+              >
+                <span className="flex-1 truncate">{opt.label}</span>
+                {isSelected && !isEmpty && (
+                  <Check className="h-4 w-4 shrink-0 text-primary" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>,
+      document.body,
+    ) : null;
+
     return (
-      <div ref={containerRef} className={cn('relative', open && 'z-[60]', className)}>
+      <div ref={containerRef} className={cn('relative', className)}>
         {/* Hidden native select — react-hook-form binds to this */}
         <select
           ref={setRefs}
@@ -115,6 +178,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
 
         {/* Custom trigger */}
         <button
+          ref={triggerRef}
           type="button"
           disabled={disabled}
           onClick={() => !disabled && setOpen(!open)}
@@ -134,41 +198,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           )} />
         </button>
 
-        {/* Dropdown list */}
-        <div
-          className={cn(
-            'absolute z-50 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-lg overflow-hidden',
-            'transition-[opacity,transform] duration-300 cubic-bezier(0.4,0,0.2,1) origin-top',
-            open
-              ? 'opacity-100 scale-y-100 translate-y-0 pointer-events-auto'
-              : 'opacity-0 scale-y-[0.97] -translate-y-0.5 pointer-events-none',
-          )}
-        >
-          <div className="max-h-60 overflow-y-auto py-1">
-            {options.map((opt) => {
-              const isSelected = opt.value === currentValue;
-              const isEmpty = opt.value === '';
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => selectOption(opt.value)}
-                  className={cn(
-                    'flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors text-left',
-                    'hover:bg-accent hover:text-accent-foreground',
-                    isSelected && !isEmpty && 'bg-accent/50 font-medium',
-                    isEmpty && 'text-muted-foreground',
-                  )}
-                >
-                  <span className="flex-1 truncate">{opt.label}</span>
-                  {isSelected && !isEmpty && (
-                    <Check className="h-4 w-4 shrink-0 text-primary" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        {dropdown}
       </div>
     );
   }
