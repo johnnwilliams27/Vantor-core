@@ -52,7 +52,7 @@ const MOCK_APYS: Record<YieldProtocolId, { supply: number; reward: number }> = {
   morpho_reservoir:  { supply: 0.0700, reward: 0.0000 },
   morpho_steakhouse: { supply: 0.1150, reward: 0.0200 },
   kamino:            { supply: 0.0710, reward: 0.0050 },
-  kamino_multiply:   { supply: 0.1480, reward: 0.0120 },
+  kamino_multiply:   { supply: 0, reward: 0 }, // no public APY feed; venue gated coming_soon
   ondo_usdy:         { supply: 0.0475, reward: 0 },
   sky:               { supply: 0.0625, reward: 0 },
   ethena:            { supply: 0.1720, reward: 0.0380 },
