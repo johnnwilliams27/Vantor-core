@@ -59,7 +59,7 @@ const PROTOCOL_RATE_SOURCE: Record<string, string> = {
   ethena: 'APY: ethena.fi · TVL: DefiLlama (yields.llama.fi)',
   ondo_usdy: 'Ondo Finance (fixed rate)',
   kamino: 'DefiLlama (yields.llama.fi) — kamino-lend pool',
-  kamino_multiply: 'DefiLlama (yields.llama.fi) — kamino-lend × 2.5 leverage',
+  kamino_multiply: 'No live APY feed — Kamino does not publish Multiply vault APY',
   // Tokenized MMFs — reference yield from rwa.xyz, not a live fetch
   buidl:     'rwa.xyz reference (refreshed quarterly)',
   ousg:      'rwa.xyz reference (refreshed quarterly)',

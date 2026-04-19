@@ -19,9 +19,13 @@ import { getLlamaPool, llamaApyToDecimal } from './llama';
 const KAMINO_USDC_LLAMA_POOL = 'd2141a59-c199-4be7-8d4b-c8223954836b';
 const KAMINO_USDT_LLAMA_POOL = '546b3c0c-138d-4190-b46b-efa1765f1dd3';
 
-// Leveraged multiplier for Kamino Multiply product. Shares the underlying
-// pool liquidity with Kamino Lend, so TVL is inherited.
-const MULTIPLY_LEVERAGE = 2.5;
+// Note: Kamino Multiply is intentionally NOT emitted here. Real leveraged
+// APY depends on the borrow-side rate of the specific Multiply vault and
+// looping fees — it cannot be derived from the lend APY by a constant
+// multiplier. DefiLlama does not aggregate a `kamino-multiply` project
+// (only `kamino-lend` and `kamino-liquidity`), and Kamino's own reserves
+// endpoint has been 404 for an extended period. Until a real source is
+// wired, the venue stays gated as coming_soon.
 
 async function fetchKaminoRow(
   poolId: string,
@@ -41,34 +45,9 @@ export const kaminoFetcher: RateFetcher = {
       fetchKaminoRow(KAMINO_USDT_LLAMA_POOL),
     ]);
 
-    const results: RateResult[] = [];
-
-    for (const [token, row] of [
-      ['USDC', usdc] as const,
-      ['USDT', usdt] as const,
-    ]) {
-      // Kamino Lend (base rate)
-      results.push({
-        protocol: 'kamino',
-        token,
-        chain: 'solana',
-        supplyAPY: row.supplyAPY,
-        rewardAPY: 0,
-        tvlUsd: row.tvlUsd,
-      });
-
-      // Kamino Multiply (leveraged) — same underlying pool, so TVL is
-      // shared. APY is approximated as base × leverage.
-      results.push({
-        protocol: 'kamino_multiply',
-        token,
-        chain: 'solana',
-        supplyAPY: row.supplyAPY * MULTIPLY_LEVERAGE,
-        rewardAPY: 0,
-        tvlUsd: row.tvlUsd,
-      });
-    }
-
-    return results;
+    return [
+      { protocol: 'kamino', token: 'USDC', chain: 'solana', supplyAPY: usdc.supplyAPY, rewardAPY: 0, tvlUsd: usdc.tvlUsd },
+      { protocol: 'kamino', token: 'USDT', chain: 'solana', supplyAPY: usdt.supplyAPY, rewardAPY: 0, tvlUsd: usdt.tvlUsd },
+    ];
   },
 };
