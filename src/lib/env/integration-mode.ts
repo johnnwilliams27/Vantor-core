@@ -4,10 +4,10 @@ export type IntegrationMode = 'mock' | 'sandbox' | 'live';
 
 /**
  * Determines the integration mode for the current request.
- * - Lite tier → mock (dummy data, no API calls)
+ * - FORCE_MOCK=true → mock (offline/CI escape hatch)
+ * - Lite tier → mock (dummy data, no API calls — even in test mode)
  * - Paid tier + test mode → sandbox (sandbox API calls)
  * - Paid tier + live mode → live (live API calls)
- * - FORCE_MOCK=true → mock (offline/CI escape hatch)
  */
 export function getIntegrationMode(subscriptionTier: string): IntegrationMode {
   if (process.env.FORCE_MOCK === 'true') return 'mock';

@@ -1,3 +1,4 @@
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
 export class TierGateError extends Error {
@@ -8,12 +9,14 @@ export class TierGateError extends Error {
 }
 
 /**
- * Throws TierGateError if the user is on the Lite (free) tier.
- * Call at the top of any POST route that executes an action.
+ * Throws TierGateError if the user is on the Lite (free) tier AND not
+ * in test mode. Lite users in test mode are allowed through so they
+ * can try the full flow against mock adapters.
  */
 export function requirePaidTier(subscriptionTier: string): void {
   if (subscriptionTier === 'lite') {
-    throw new TierGateError();
+    const isTestMode = cookies().get('vantor_test_mode')?.value === '1';
+    if (!isTestMode) throw new TierGateError();
   }
 }
 
