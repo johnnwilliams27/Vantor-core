@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Gavel, Plus, Trash2, ArrowLeft, CheckCircle2, ShieldAlert, Users, Zap, GitBranch, Gauge, Sparkles } from 'lucide-react';
+import { Gavel, Plus, Trash2, ArrowLeft, CheckCircle2, ShieldAlert, ShieldOff, Users, Zap, GitBranch, Gauge, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -77,6 +77,9 @@ export default function VersionEditorPage() {
   const [activateOpen, setActivateOpen] = useState(false);
   const [activateReason, setActivateReason] = useState('');
   const [activating, setActivating] = useState(false);
+  const [deactivateOpen, setDeactivateOpen] = useState(false);
+  const [deactivateReason, setDeactivateReason] = useState('');
+  const [deactivating, setDeactivating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{
     open: boolean;
@@ -183,6 +186,33 @@ export default function VersionEditorPage() {
     }
   }
 
+  async function deactivate() {
+    if (!deactivateReason.trim()) {
+      toast({ title: 'Reason required', variant: 'destructive' });
+      return;
+    }
+    setDeactivating(true);
+    try {
+      const res = await fetch(`/api/policy/versions/${versionId}/deactivate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: deactivateReason.trim() }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.user_action ?? body.human_readable ?? body.error ?? `Deactivate failed (${res.status})`);
+      }
+      toast({ title: 'Policy deactivated', description: 'No rules are being enforced.', variant: 'success' });
+      qc.invalidateQueries({ queryKey: ['policy'] });
+      setDeactivateOpen(false);
+      router.push('/policy/versions');
+    } catch (err) {
+      toast({ title: 'Deactivation failed', description: (err as Error).message, variant: 'destructive' });
+    } finally {
+      setDeactivating(false);
+    }
+  }
+
   if (version.isLoading) {
     return (
       <div className="p-4 sm:p-8 space-y-4">
@@ -272,6 +302,16 @@ export default function VersionEditorPage() {
                   Activate
                 </Button>
               </>
+            )}
+            {isActive && (
+              <Button
+                variant="destructive-outline"
+                size="sm"
+                onClick={() => setDeactivateOpen(true)}
+              >
+                <ShieldOff className="w-3.5 h-3.5 mr-1.5" />
+                Deactivate
+              </Button>
             )}
           </div>
         </div>
@@ -473,6 +513,43 @@ export default function VersionEditorPage() {
             <Button variant="outline" onClick={() => setActivateOpen(false)} disabled={activating}>Cancel</Button>
             <Button variant="default" onClick={activate} disabled={activating || !activateReason.trim()}>
               {activating ? 'Activating…' : 'Confirm activation'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Deactivate confirmation */}
+      <Dialog open={deactivateOpen} onOpenChange={setDeactivateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Deactivate this policy</DialogTitle>
+            <DialogDescription>
+              Deactivation stops all rule enforcement. Money movements will no longer be gated. The version and all its rules will be preserved as superseded.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-lg border border-red-500/20 bg-red-500/[0.04] p-3.5 text-xs">
+              <div className="font-semibold text-red-400 mb-1 flex items-center gap-1.5">
+                <ShieldOff className="w-3.5 h-3.5" />
+                All enforcement stops immediately
+              </div>
+              This version has <span className="font-mono tabular-nums">{rules.length}</span> {rules.length === 1 ? 'rule' : 'rules'},{' '}
+              <span className="font-mono tabular-nums">{chains.length}</span> chains and{' '}
+              <span className="font-mono tabular-nums">{hardLimits.length}</span> hard limits that will stop being enforced. You can re-activate by cloning this version into a new draft.
+            </div>
+            <Field label="Reason for deactivation" required helper="Shown in the audit log for future reference.">
+              <Input
+                value={deactivateReason}
+                onChange={(e) => setDeactivateReason(e.target.value)}
+                placeholder="e.g. Pausing enforcement while restructuring approval chains"
+                maxLength={500}
+              />
+            </Field>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeactivateOpen(false)} disabled={deactivating}>Cancel</Button>
+            <Button variant="destructive" onClick={deactivate} disabled={deactivating || !deactivateReason.trim()}>
+              {deactivating ? 'Deactivating\u2026' : 'Confirm deactivation'}
             </Button>
           </DialogFooter>
         </DialogContent>

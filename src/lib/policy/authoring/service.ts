@@ -1017,6 +1017,86 @@ export class PolicyAuthoringService {
     return activated;
   }
 
+  // ── Deactivate version ───────────────────────────────────────────────────
+
+  async deactivateVersion(
+    actor: AuthoringActor,
+    versionId: string,
+    req: { reason: string },
+  ): Promise<void> {
+    await requirePolicyAdmin(
+      this.supabase as Parameters<typeof requirePolicyAdmin>[0],
+      actor.user_id,
+    );
+
+    if (req.reason.trim().length < 20) {
+      throw new AuthoringError({
+        reason_code: REASON_CODES.activation_reason_too_short,
+        human_readable: 'Deactivation reason must be at least 20 characters.',
+        user_action: 'Provide a longer reason.',
+        details: { min_length: 20, received: req.reason.trim().length },
+      });
+    }
+
+    const rpcFn = (this.supabase as { rpc?: unknown }).rpc as
+      | ((fn: string, params: Record<string, unknown>) =>
+          Promise<{ data: unknown; error: { code?: string; message?: string } | null }>)
+      | undefined;
+    if (typeof rpcFn !== 'function') {
+      throw new AuthoringError({
+        reason_code: REASON_CODES.gate_internal_error,
+        human_readable: 'Deactivation RPC is not available in this context.',
+        user_action: 'Contact support.',
+        details: {},
+      });
+    }
+
+    const { error: rpcError } = await rpcFn.call(this.supabase, 'policy_deactivate_version', {
+      p_version_id: versionId,
+      p_enterprise_id: actor.enterprise_id,
+      p_deactivated_by: actor.user_id,
+      p_reason: req.reason,
+    });
+
+    if (rpcError) {
+      const rpcErr = rpcError as { code?: string; message?: string };
+      const code = rpcErr.code;
+      const msg = rpcErr.message ?? '';
+      console.error('[policy/deactivate] RPC error', { code, message: msg, versionId });
+
+      if (code === 'P0001') {
+        throw new AuthoringError({
+          reason_code: REASON_CODES.activation_reason_too_short,
+          human_readable: 'Deactivation reason rejected by the database: too short.',
+          user_action: 'Provide a longer deactivation reason.',
+          details: { rpc_error: rpcError },
+        });
+      }
+      if (code === 'P0002') {
+        throw new AuthoringError({
+          reason_code: REASON_CODES.version_not_draft,
+          human_readable: 'This version is not currently active and cannot be deactivated.',
+          user_action: 'Reload and try again.',
+          details: { rpc_error: rpcError },
+        });
+      }
+      if (code === '42883') {
+        throw new AuthoringError({
+          reason_code: REASON_CODES.gate_internal_error,
+          human_readable: 'Deactivation RPC function not found. A database migration may be missing.',
+          user_action: 'Contact support — a migration needs to be applied.',
+          details: { rpc_error: rpcError },
+        });
+      }
+      throw new AuthoringError({
+        reason_code: REASON_CODES.gate_internal_error,
+        human_readable: `Deactivation failed (${code ?? 'unknown'}): ${msg}`,
+        user_action: 'Try again or contact support.',
+        details: { rpc_error: rpcError },
+      });
+    }
+  }
+
   // ── Task 13: diffVersions wrapper ────────────────────────────────────────
 
   async diffVersions(
