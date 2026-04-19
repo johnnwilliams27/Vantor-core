@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { sweepUndeclaredRateRows } from './route';
+import { sweepUndeclaredRateRows } from './sweep';
 import type { RateKey } from '@/lib/yield/rates';
 
 type Row = { protocol: string; token: string; chain: string };
