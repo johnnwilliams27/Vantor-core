@@ -96,6 +96,15 @@ export class PolicyGateService {
     try {
       evaluation = await this.evaluateFn(movement, actor.enterprise_id);
     } catch (err) {
+      const causeMessage =
+        err instanceof Error ? err.message : String(err);
+      console.error('[PolicyGate] evaluateFn threw', {
+        movement_id: movement.id,
+        enterprise_id: actor.enterprise_id,
+        error: causeMessage,
+        stack: err instanceof Error ? err.stack : undefined,
+      });
+
       // Distinguish canonicalization-class failures from "engine is down".
       // Canonicalization errors are PolicyErrors thrown by the engine with
       // reason_code='canonicalization_failed'. Anything else is treated as
@@ -105,7 +114,7 @@ export class PolicyGateService {
           reason_code: REASON_CODES.canonicalization_failed,
           human_readable: 'Policy engine could not canonicalize the movement.',
           user_action: 'Check that the asset and rate feed are available.',
-          details: { movement_id: movement.id },
+          details: { movement_id: movement.id, cause: causeMessage },
           cause: err,
         });
       }
@@ -113,7 +122,7 @@ export class PolicyGateService {
         reason_code: REASON_CODES.policy_engine_unavailable,
         human_readable: 'Policy engine is temporarily unavailable.',
         user_action: 'Retry the transfer in a few seconds.',
-        details: { movement_id: movement.id },
+        details: { movement_id: movement.id, cause: causeMessage },
         cause: err,
       });
     }
