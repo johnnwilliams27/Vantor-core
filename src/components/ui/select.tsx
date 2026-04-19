@@ -92,7 +92,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     const [, forceRender] = React.useState(0);
 
     return (
-      <div ref={containerRef} className={cn('relative', className)}>
+      <div ref={containerRef} className={cn('relative', open && 'z-[60]', className)}>
         {/* Hidden native select — react-hook-form binds to this */}
         <select
           ref={setRefs}
