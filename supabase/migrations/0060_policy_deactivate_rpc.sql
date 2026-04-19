@@ -70,10 +70,10 @@ BEGIN
 
   -- 6. Record event for audit trail
   INSERT INTO policy_activation_events (
-    enterprise_id, version_id, previous_version_id,
+    enterprise_id, from_version_id, to_version_id,
     activated_by, reason
   ) VALUES (
-    p_enterprise_id, NULL, p_version_id,
+    p_enterprise_id, p_version_id, p_version_id,
     p_deactivated_by, p_reason
   );
 END;
