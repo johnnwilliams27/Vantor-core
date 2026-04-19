@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/nextauth.config';
+import { canManageBilling } from '@/lib/auth/roles';
 import { stripe } from '@/lib/billing/stripe';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.enterprise_id || session.user.role !== 'treasury_manager') {
+  if (!session?.user?.enterprise_id || !canManageBilling(session.user.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 

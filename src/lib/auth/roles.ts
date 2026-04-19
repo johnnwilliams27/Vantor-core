@@ -99,3 +99,13 @@ export function isApproverRole(role: UserRole): role is ApproverRole {
  */
 export const ENTERPRISE_ADMIN_CANNOT_APPROVE = 'enterprise_admin_cannot_approve' as const;
 export const AUDITOR_CANNOT_APPROVE = 'auditor_cannot_approve' as const;
+
+/**
+ * Whether a user with the given role can manage billing (view invoices,
+ * upgrade/downgrade tier, update payment method). Requires rank >=
+ * treasury_manager — auditors and accountants are excluded.
+ */
+export function canManageBilling(role: string): boolean {
+  const rank = ROLE_RANK[role as UserRole];
+  return rank != null && rank >= ROLE_RANK.treasury_manager;
+}

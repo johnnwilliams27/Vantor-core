@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/nextauth.config';
+import { canManageBilling } from '@/lib/auth/roles';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { stripe } from '@/lib/billing/stripe';
 import { TIERS, TierSlug, isUpgrade, isDowngrade, isPaidTier } from '@/lib/billing/tiers';
@@ -84,7 +85,7 @@ export async function GET() {
 // POST — upgrade subscription
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.enterprise_id || session.user.role !== 'treasury_manager') {
+  if (!session?.user?.enterprise_id || !canManageBilling(session.user.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
@@ -177,7 +178,7 @@ export async function POST(req: NextRequest) {
 // PATCH — downgrade subscription
 export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.enterprise_id || session.user.role !== 'treasury_manager') {
+  if (!session?.user?.enterprise_id || !canManageBilling(session.user.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
@@ -270,7 +271,7 @@ export async function PATCH(req: NextRequest) {
 // DELETE — cancel a pending downgrade
 export async function DELETE() {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.enterprise_id || session.user.role !== 'treasury_manager') {
+  if (!session?.user?.enterprise_id || !canManageBilling(session.user.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
