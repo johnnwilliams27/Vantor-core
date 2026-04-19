@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { HeroBackdrop } from './HeroBackdrop';
 
@@ -30,13 +29,13 @@ export function Hero() {
         </p>
 
         <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 landing-fade-in landing-delay-3">
-          <Link
-            href="/register"
+          <a
+            href="#contact"
             className="group w-full sm:w-auto min-h-[52px] px-10 py-4 text-base btn-gradient flex items-center justify-center"
           >
             Get Started Free
             <ArrowRight size={16} aria-hidden="true" className="inline ml-2 group-hover:translate-x-0.5 transition-transform duration-200" />
-          </Link>
+          </a>
           <a
             href="#platform"
             className="w-full sm:w-auto min-h-[48px] px-8 py-3.5 rounded-full text-sm font-medium text-[var(--text-200)] border border-white/[0.16] hover:border-white/30 hover:bg-white/[0.04] transition-[border-color,background] duration-200 flex items-center justify-center"

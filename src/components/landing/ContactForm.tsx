@@ -53,7 +53,7 @@ export function ContactForm() {
           className="text-center text-[15px] text-[var(--text-300)] max-w-[480px] mx-auto mb-10 leading-relaxed"
           style={{ letterSpacing: '-0.005em' }}
         >
-          Talk to our team or start your free trial.
+          Talk to your team to start your free trial.
         </p>
 
         <form

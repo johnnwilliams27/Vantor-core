@@ -249,7 +249,7 @@ export function Navbar() {
                   </Button>
                   <p className="text-center text-xs text-gray-500 mt-3">
                     Don&apos;t have an account?{' '}
-                    <Link href="/register" className="text-teal-400 hover:text-teal-300 font-medium">Sign up free</Link>
+                    <Link href="/#contact" className="text-teal-400 hover:text-teal-300 font-medium">Contact us</Link>
                   </p>
                 </form>
               </div>
@@ -347,7 +347,7 @@ export function Navbar() {
               </Button>
               <p className="text-center text-xs text-gray-500 mt-3">
                 Don&apos;t have an account?{' '}
-                <Link href="/register" onClick={() => setMobileOpen(false)} className="text-teal-400 hover:text-teal-300 font-medium">Sign up free</Link>
+                <Link href="/#contact" onClick={() => setMobileOpen(false)} className="text-teal-400 hover:text-teal-300 font-medium">Contact us</Link>
               </p>
             </form>
           </div>

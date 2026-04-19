@@ -15,7 +15,7 @@ const schema = z.object({
     .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
   fullName: z.string().min(2).max(100),
   companyName: z.string().min(1).max(200),
-  inviteToken: z.string().optional(),
+  inviteToken: z.string().min(1, 'Invitation required'),
 });
 
 export async function POST(req: NextRequest) {
@@ -34,21 +34,19 @@ export async function POST(req: NextRequest) {
     const { email, password, fullName, companyName, inviteToken } = parsed.data;
     const supabase = createAdminClient();
 
-    // Validate invite token if provided
-    if (inviteToken) {
-      const { data: invitation } = await supabase
-        .from('invitations')
-        .select('*')
-        .eq('token', inviteToken)
-        .eq('status', 'pending')
-        .single();
+    // Invitation is required — admin-only signup.
+    const { data: invitation } = await supabase
+      .from('invitations')
+      .select('*')
+      .eq('token', inviteToken)
+      .eq('status', 'pending')
+      .single();
 
-      if (!invitation || new Date(invitation.expires_at) < new Date()) {
-        return NextResponse.json({ error: 'Invalid or expired invitation' }, { status: 400 });
-      }
-
-      await supabase.from('invitations').update({ status: 'accepted' }).eq('id', invitation.id);
+    if (!invitation || new Date(invitation.expires_at) < new Date()) {
+      return NextResponse.json({ error: 'Invalid or expired invitation' }, { status: 403 });
     }
+
+    await supabase.from('invitations').update({ status: 'accepted' }).eq('id', invitation.id);
 
     // Create auth user
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -146,7 +144,7 @@ export async function POST(req: NextRequest) {
         email,
         companyName,
         enterpriseId: enterprise.id,
-        viaInvite: !!inviteToken,
+        viaInvite: true,
       }),
     }).catch((err) => {
       process.stdout.write('[register] signup alert failed: ' + (err?.message ?? String(err)) + '\n');

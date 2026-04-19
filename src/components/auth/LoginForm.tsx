@@ -198,8 +198,8 @@ export function LoginForm() {
         <div className="mt-6 space-y-2 text-center text-sm">
           <p className="text-[var(--text-300)]">
             Don&apos;t have an account?{' '}
-            <Link href="/register" className="text-[var(--teal-400)] hover:text-[var(--cyan-300)] font-medium transition-colors">
-              Sign up free
+            <Link href="/#contact" className="text-[var(--teal-400)] hover:text-[var(--cyan-300)] font-medium transition-colors">
+              Contact us
             </Link>
           </p>
           <p>

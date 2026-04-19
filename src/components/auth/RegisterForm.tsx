@@ -86,6 +86,40 @@ export function RegisterForm() {
     );
   }
 
+  if (!inviteToken) {
+    return (
+      <div className="w-full max-w-md landing-card p-0 overflow-hidden">
+        <div className="px-8 pt-8 pb-6 flex flex-col items-center border-b border-white/[0.06]">
+          <Image
+            src="/logo-dark.png"
+            alt="Vantor"
+            width={160}
+            height={52}
+            className="object-contain"
+            priority
+            unoptimized
+          />
+        </div>
+        <div className="px-8 py-8 text-center">
+          <p className="text-white font-semibold mb-2">Vantor is invite-only</p>
+          <p className="text-[var(--text-300)] text-sm mb-6">
+            Sign-up is by invitation. Contact our team to get started.
+          </p>
+          <a
+            href="/#contact"
+            className="inline-flex items-center justify-center min-h-[48px] px-8 py-3 text-sm btn-gradient"
+          >
+            Contact us
+          </a>
+          <p className="mt-6 text-xs text-[var(--text-400)]">
+            Already have an account?{' '}
+            <a href="/login" className="text-[var(--teal-400)] hover:text-[var(--cyan-300)] font-medium transition-colors">Sign in</a>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-w-md landing-card p-0 overflow-hidden">
       {/* Header */}
