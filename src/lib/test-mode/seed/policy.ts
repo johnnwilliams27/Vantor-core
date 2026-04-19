@@ -94,16 +94,19 @@ export async function seedPolicy(ctx: SeedContext): Promise<PolicyIds> {
       version_id: v1, rule_type: 'approval_threshold', name: '>$50K requires 1 approver',
       rationale: 'Baseline Lite default', priority: 0, verdict: 'require_approval',
       verdict_chain_id: chainByVersion[v1], created_by: userId,
-      condition: { op: 'gte', lhs: { kind: 'movement_amount_usd' }, rhs: { kind: 'literal', value: 50000 } },
+      condition: {
+        kind: 'amount_compare', attr: 'transfer.amount', op: '>=',
+        value: { currency: 'USD', amount: '50000' },
+      },
     },
     {
       version_id: v2, rule_type: 'approval_threshold', name: '>$250K cross-chain requires exec',
       rationale: 'Protect cross-chain moves', priority: 0, verdict: 'require_approval',
       verdict_chain_id: chainByVersion[v2], created_by: userId,
       condition: {
-        op: 'and', terms: [
-          { op: 'gte', lhs: { kind: 'movement_amount_usd' }, rhs: { kind: 'literal', value: 250000 } },
-          { op: 'eq', lhs: { kind: 'movement_kind' }, rhs: { kind: 'literal', value: 'bridge' } },
+        kind: 'and', children: [
+          { kind: 'amount_compare', attr: 'transfer.amount', op: '>=', value: { currency: 'USD', amount: '250000' } },
+          { kind: 'string_compare', attr: 'transfer.rail', op: '==', value: 'bridge' },
         ],
       },
     },
@@ -112,9 +115,9 @@ export async function seedPolicy(ctx: SeedContext): Promise<PolicyIds> {
       rationale: 'Separation of duties on large DeFi deposits', priority: 0, verdict: 'require_approval',
       verdict_chain_id: chainByVersion[v3], created_by: userId,
       condition: {
-        op: 'and', terms: [
-          { op: 'gte', lhs: { kind: 'movement_amount_usd' }, rhs: { kind: 'literal', value: 500000 } },
-          { op: 'eq', lhs: { kind: 'movement_kind' }, rhs: { kind: 'literal', value: 'yield_deposit' } },
+        kind: 'and', children: [
+          { kind: 'amount_compare', attr: 'transfer.amount', op: '>=', value: { currency: 'USD', amount: '500000' } },
+          { kind: 'string_compare', attr: 'transfer.rail', op: '==', value: 'yield_deposit' },
         ],
       },
     },
