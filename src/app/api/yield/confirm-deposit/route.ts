@@ -9,6 +9,7 @@ import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 import { requirePaidTier, tierGateResponse, TierGateError } from '@/lib/auth/tier-gate';
 import { fireInlineInsights } from '@/lib/insights/inline';
 import { confirmDepositInputSchema } from './schema';
+import { decideExistingTxAction } from './promote';
 import { getYieldTokenSymbol } from '@/lib/yield/yield-tokens';
 import type { YieldProtocolId } from '@/lib/yield/interface';
 
@@ -64,14 +65,17 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Check for duplicate txHash
+  // If record-pending-deposit already wrote a pending row for this tx_hash,
+  // we promote it to completed instead of rejecting. Only status='completed'
+  // / 'failed' etc. produce a 409.
   const { data: existingTx } = await supabase
     .from('yield_transactions')
-    .select('id')
+    .select('id, status')
     .eq('tx_hash', txHash)
     .maybeSingle();
 
-  if (existingTx) {
+  const action = decideExistingTxAction(existingTx);
+  if (action.kind === 'conflict') {
     return NextResponse.json({ error: 'Transaction already recorded' }, { status: 409 });
   }
 
@@ -139,30 +143,43 @@ export async function POST(req: NextRequest) {
     positionId = newPos.id;
   }
 
-  // Insert yield_transaction with status 'completed'
-  const { error: txErr } = await supabase
-    .from('yield_transactions')
-    .insert({
-      user_id: session.user.id,
-      enterprise_id: enterpriseId,
-      position_id: positionId,
-      protocol,
-      chain,
-      tx_type: 'deposit',
-      underlying_token: token,
-      amount: parseFloat(amount),
-      amount_usd: parseFloat(amount),
-      tx_hash: txHash,
-      status: 'completed',
-      executed_at: new Date().toISOString(),
-      metadata: {
-        yieldToken,
-        tokensReceived,
-        onChain: true,
-      },
-    });
-
-  if (txErr) return NextResponse.json({ error: txErr.message }, { status: 500 });
+  // Either promote the existing pending row (record-pending-deposit wrote it
+  // when the wallet signed) or insert fresh for callers that skip pending.
+  if (action.kind === 'promote') {
+    const { error: updErr } = await supabase
+      .from('yield_transactions')
+      .update({
+        position_id: positionId,
+        status: 'completed',
+        executed_at: new Date().toISOString(),
+        metadata: { yieldToken, tokensReceived, onChain: true, promotedFromPending: true },
+      })
+      .eq('id', action.txId);
+    if (updErr) return NextResponse.json({ error: updErr.message }, { status: 500 });
+  } else {
+    const { error: txErr } = await supabase
+      .from('yield_transactions')
+      .insert({
+        user_id: session.user.id,
+        enterprise_id: enterpriseId,
+        position_id: positionId,
+        protocol,
+        chain,
+        tx_type: 'deposit',
+        underlying_token: token,
+        amount: parseFloat(amount),
+        amount_usd: parseFloat(amount),
+        tx_hash: txHash,
+        status: 'completed',
+        executed_at: new Date().toISOString(),
+        metadata: {
+          yieldToken,
+          tokensReceived,
+          onChain: true,
+        },
+      });
+    if (txErr) return NextResponse.json({ error: txErr.message }, { status: 500 });
+  }
 
   await writeAuditLog({
     userId: session.user.id,

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { confirmDepositInputSchema } from './schema';
+import { decideExistingTxAction } from './promote';
 
 describe('confirmDepositInputSchema', () => {
   const base = {
@@ -33,5 +34,30 @@ describe('confirmDepositInputSchema', () => {
   it('rejects non-positive amount', () => {
     const res = confirmDepositInputSchema.safeParse({ ...base, amount: '0' });
     expect(res.success).toBe(false);
+  });
+});
+
+describe('decideExistingTxAction', () => {
+  it('promotes when status is pending', () => {
+    expect(decideExistingTxAction({ id: 't1', status: 'pending' })).toEqual({
+      kind: 'promote',
+      txId: 't1',
+    });
+  });
+
+  it('409s when status is completed', () => {
+    expect(decideExistingTxAction({ id: 't1', status: 'completed' })).toEqual({
+      kind: 'conflict',
+    });
+  });
+
+  it('409s when status is failed', () => {
+    expect(decideExistingTxAction({ id: 't1', status: 'failed' })).toEqual({
+      kind: 'conflict',
+    });
+  });
+
+  it('treats no existing row as insert', () => {
+    expect(decideExistingTxAction(null)).toEqual({ kind: 'insert' });
   });
 });
