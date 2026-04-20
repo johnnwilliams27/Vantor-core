@@ -10,6 +10,11 @@ const config = getDefaultConfig({
   projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ?? 'demo',
   chains: [mainnet],
   ssr: true,
+  transports: {
+    [mainnet.id]: http(
+      process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL || undefined,
+    ),
+  },
 });
 
 export function WagmiConfig({ children }: { children: React.ReactNode }) {

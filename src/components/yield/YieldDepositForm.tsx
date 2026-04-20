@@ -35,6 +35,7 @@ export function YieldDepositForm({ protocolId, onBack }: Props) {
   const selectedRate = protocol.rates.find((r) => r.token === token);
   const balance = useWalletTokenBalance(walletId || undefined, token || undefined);
   const exceeds = balance !== null && amount ? parseFloat(amount) > balance : false;
+  const noBalanceData = walletId && balance === null;
 
   function walletTokenBal(wId: string): number | null {
     if (!allBalances) return null;
@@ -100,9 +101,11 @@ export function YieldDepositForm({ protocolId, onBack }: Props) {
                 No {protocol.chain} wallets connected. Connect one in Wallets first.
               </p>
             )}
-            {selectedWallet && balance === 0 && (
+            {selectedWallet && (balance === 0 || balance === null) && (
               <p className="text-xs text-amber-400 mt-1">
-                This wallet has no {token} on {protocol.chain === 'solana' ? 'Solana' : 'Ethereum'}. Check that the token is on the correct chain.
+                {balance === null
+                  ? `No ${token} balance data for this wallet. Refresh balances in Wallets to verify funds.`
+                  : `This wallet has no ${token} on ${protocol.chain === 'solana' ? 'Solana' : 'Ethereum'}. Check that the token is on the correct chain.`}
               </p>
             )}
           </div>
@@ -163,7 +166,7 @@ export function YieldDepositForm({ protocolId, onBack }: Props) {
           <Button
             type="submit"
             className="w-full"
-            disabled={deposit.isPending || !amount || !walletId || exceeds}
+            disabled={deposit.isPending || !amount || !walletId || exceeds || !!noBalanceData}
           >
             {deposit.isPending ? (
               <>

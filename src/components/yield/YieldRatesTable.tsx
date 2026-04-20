@@ -318,6 +318,7 @@ function InlineDepositForm({
     return match ? parseFloat(match.balance) : 0;
   }
   const exceeds = balance !== null && amount ? parseFloat(amount) > balance : false;
+  const noBalanceData = walletId && balance === null;
   const isOnChainProtocol = !!PROTOCOL_ADDRESSES[protocol.id as keyof typeof PROTOCOL_ADDRESSES];
 
   const stepLabels: Record<DepositStep, string> = {
@@ -492,9 +493,11 @@ function InlineDepositForm({
                 No {protocol.chain} wallets connected. Add one in Wallets first.
               </p>
             )}
-            {selectedWallet && balance === 0 && (
+            {selectedWallet && (balance === 0 || balance === null) && (
               <p className="text-2xs text-amber-400 mt-1">
-                This wallet has no {token} on {protocol.chain === 'solana' ? 'Solana' : 'Ethereum'}. Check that the token is on the correct chain.
+                {balance === null
+                  ? `No ${token} balance data for this wallet. Refresh balances in Wallets to verify funds.`
+                  : `This wallet has no ${token} on ${protocol.chain === 'solana' ? 'Solana' : 'Ethereum'}. Check that the token is on the correct chain.`}
               </p>
             )}
           </div>
@@ -577,7 +580,7 @@ function InlineDepositForm({
               type="submit"
               className="w-full"
               size="sm"
-              disabled={isProcessing || isSolanaProcessing || deposit.isPending || slippageCheck.isPending || !amount || !walletId || exceeds}
+              disabled={isProcessing || isSolanaProcessing || deposit.isPending || slippageCheck.isPending || !amount || !walletId || exceeds || !!noBalanceData}
             >
               {slippageCheck.isPending ? (
                 <>
