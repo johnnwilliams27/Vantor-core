@@ -17,7 +17,7 @@ import { PROTOCOL_ADDRESSES } from '@/lib/yield/contracts/addresses';
 import { SlippageWarning } from './SlippageWarning';
 import type { SlippageEstimate } from '@/lib/yield/slippage';
 import { useWallets } from '@/hooks/useWallets';
-import { useWalletTokenBalance } from '@/hooks/useBalances';
+import { useWalletTokenBalance, useBalances } from '@/hooks/useBalances';
 import { BalanceHint } from '@/components/ui/balance-hint';
 import { useToast } from '@/components/ui/toast';
 import { RISK_FACTOR_LABELS, RISK_SCORE_LABELS } from '@/lib/yield/interface';
@@ -305,10 +305,18 @@ function InlineDepositForm({
   const [success, setSuccess] = useState<{ amount: string; token: string; apy: string } | null>(null);
   const [slippageEstimate, setSlippageEstimate] = useState<SlippageEstimate | null>(null);
 
+  const { data: allBalances } = useBalances();
   const chainWallets = wallets?.filter((w) => w.chain === protocol.chain) ?? [];
   const selectedWallet = chainWallets.find((w) => w.id === walletId);
   const selectedRate = protocol.rates.find((r) => r.token === token);
   const balance = useWalletTokenBalance(walletId || undefined, token || undefined);
+
+  /** Look up a wallet's balance for the currently selected token. */
+  function walletTokenBal(wId: string): number | null {
+    if (!allBalances) return null;
+    const match = allBalances.find((b) => b.walletId === wId && b.token === token);
+    return match ? parseFloat(match.balance) : 0;
+  }
   const exceeds = balance !== null && amount ? parseFloat(amount) > balance : false;
   const isOnChainProtocol = !!PROTOCOL_ADDRESSES[protocol.id as keyof typeof PROTOCOL_ADDRESSES];
 
@@ -464,11 +472,17 @@ function InlineDepositForm({
             </label>
             <Select value={walletId} onChange={(e) => setWalletId(e.target.value)}>
               <option value="">Select wallet…</option>
-              {chainWallets.map((w) => (
-                <option key={w.id} value={w.id}>
-                  {`${w.label ? `${w.label} · ` : ''}${w.address.slice(0, 6)}…${w.address.slice(-4)}`}
-                </option>
-              ))}
+              {chainWallets.map((w) => {
+                const bal = walletTokenBal(w.id);
+                const balLabel = bal !== null
+                  ? ` · ${bal.toLocaleString('en-US', { maximumFractionDigits: 2 })} ${token}`
+                  : '';
+                return (
+                  <option key={w.id} value={w.id}>
+                    {`${w.label ? `${w.label} · ` : ''}${w.address.slice(0, 6)}…${w.address.slice(-4)}${balLabel}`}
+                  </option>
+                );
+              })}
             </Select>
             {walletsLoading && (
               <p className="text-2xs text-muted-foreground mt-1">Loading wallets…</p>
@@ -476,6 +490,11 @@ function InlineDepositForm({
             {!walletsLoading && chainWallets.length === 0 && (
               <p className="text-2xs text-muted-foreground mt-1">
                 No {protocol.chain} wallets connected. Add one in Wallets first.
+              </p>
+            )}
+            {selectedWallet && balance === 0 && (
+              <p className="text-2xs text-amber-400 mt-1">
+                This wallet has no {token} on {protocol.chain === 'solana' ? 'Solana' : 'Ethereum'}. Check that the token is on the correct chain.
               </p>
             )}
           </div>

@@ -7,6 +7,8 @@ import { Select } from '@/components/ui/select';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useYieldProtocols, useYieldDeposit } from '@/hooks/useYield';
 import { useWallets } from '@/hooks/useWallets';
+import { useWalletTokenBalance, useBalances } from '@/hooks/useBalances';
+import { BalanceHint } from '@/components/ui/balance-hint';
 import { useToast } from '@/components/ui/toast';
 
 interface Props {
@@ -27,9 +29,18 @@ export function YieldDepositForm({ protocolId, onBack }: Props) {
   if (!protocol) return null;
 
   // Filter wallets by protocol chain
+  const { data: allBalances } = useBalances();
   const chainWallets = wallets?.filter((w) => w.chain === protocol.chain) ?? [];
   const selectedWallet = chainWallets.find((w) => w.id === walletId);
   const selectedRate = protocol.rates.find((r) => r.token === token);
+  const balance = useWalletTokenBalance(walletId || undefined, token || undefined);
+  const exceeds = balance !== null && amount ? parseFloat(amount) > balance : false;
+
+  function walletTokenBal(wId: string): number | null {
+    if (!allBalances) return null;
+    const match = allBalances.find((b) => b.walletId === wId && b.token === token);
+    return match ? parseFloat(match.balance) : 0;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,10 +84,13 @@ export function YieldDepositForm({ protocolId, onBack }: Props) {
             <Select value={walletId} onChange={(e) => setWalletId(e.target.value)}>
               <option value="">Select wallet…</option>
               {chainWallets.map((w) => {
-                const chain = w.chain.charAt(0).toUpperCase() + w.chain.slice(1);
+                const bal = walletTokenBal(w.id);
+                const balLabel = bal !== null
+                  ? ` · ${bal.toLocaleString('en-US', { maximumFractionDigits: 2 })} ${token}`
+                  : '';
                 return (
                   <option key={w.id} value={w.id}>
-                    {w.label ? `${w.label} · ${chain} (${w.address.slice(0, 6)}…${w.address.slice(-4)})` : `${chain} · ${w.address.slice(0, 6)}…${w.address.slice(-4)}`}
+                    {`${w.label ? `${w.label} · ` : ''}${w.address.slice(0, 6)}…${w.address.slice(-4)}${balLabel}`}
                   </option>
                 );
               })}
@@ -84,6 +98,11 @@ export function YieldDepositForm({ protocolId, onBack }: Props) {
             {chainWallets.length === 0 && (
               <p className="text-xs text-muted-foreground mt-1">
                 No {protocol.chain} wallets connected. Connect one in Wallets first.
+              </p>
+            )}
+            {selectedWallet && balance === 0 && (
+              <p className="text-xs text-amber-400 mt-1">
+                This wallet has no {token} on {protocol.chain === 'solana' ? 'Solana' : 'Ethereum'}. Check that the token is on the correct chain.
               </p>
             )}
           </div>
@@ -107,6 +126,12 @@ export function YieldDepositForm({ protocolId, onBack }: Props) {
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               required
+            />
+            <BalanceHint
+              balance={balance}
+              token={token}
+              currentAmount={amount}
+              onMax={(max) => setAmount(max)}
             />
           </div>
 
@@ -138,7 +163,7 @@ export function YieldDepositForm({ protocolId, onBack }: Props) {
           <Button
             type="submit"
             className="w-full"
-            disabled={deposit.isPending || !amount || !walletId}
+            disabled={deposit.isPending || !amount || !walletId || exceeds}
           >
             {deposit.isPending ? (
               <>
