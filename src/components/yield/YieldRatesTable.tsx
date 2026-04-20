@@ -357,14 +357,14 @@ function InlineDepositForm({
     if (!amount || !selectedWallet) return;
 
     if (isSolanaProtocol) {
-      await solanaDeposit.execute({
+      const result = await solanaDeposit.execute({
         protocol: protocol.id as any,
         token,
         amount,
         walletAddress: selectedWallet.address,
         chain: 'solana',
       });
-      if (solanaDeposit.step === 'done') {
+      if (result?.ok) {
         setSlippageEstimate(null);
         setSuccess({ amount, token, apy: selectedRate ? formatAPY(selectedRate.totalAPY) : '—' });
       }
@@ -372,14 +372,14 @@ function InlineDepositForm({
     }
 
     if (isOnChainProtocol && protocol.chain === 'ethereum') {
-      await onChainDeposit.execute({
+      const result = await onChainDeposit.execute({
         protocol: protocol.id as Parameters<typeof onChainDeposit.execute>[0]['protocol'],
         token,
         amount,
         walletAddress: selectedWallet.address as `0x${string}`,
         chain: protocol.chain,
       });
-      if (onChainDeposit.step === 'done') {
+      if (result?.ok) {
         setSlippageEstimate(null);
         setSuccess({
           amount,
