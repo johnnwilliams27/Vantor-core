@@ -68,6 +68,27 @@ export function useSolanaDeposit() {
         const signature = await sendTransaction(tx, connection);
         setTxHash(signature);
 
+        // Record a pending row server-side immediately. If the browser crashes
+        // during confirmTransaction, or confirm-deposit fails later, this row
+        // plus the signature is enough for a reconcile job (or a human) to
+        // resolve the position. Non-fatal — user already signed.
+        try {
+          await fetch('/api/yield/record-pending-deposit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              protocol,
+              token,
+              amount,
+              walletAddress,
+              chain,
+              txHash: signature,
+            }),
+          });
+        } catch (e) {
+          console.warn('[yield-deposit] pending-record call failed (non-fatal)', e);
+        }
+
         // Step 3: Confirm transaction
         setStep('confirming');
         await connection.confirmTransaction(signature, 'confirmed');
