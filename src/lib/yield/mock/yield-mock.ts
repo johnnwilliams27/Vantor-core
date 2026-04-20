@@ -13,6 +13,7 @@ import type {
 import type { TokenSymbol, ChainType } from '@/types/database';
 import { randomUUID } from 'crypto';
 import { VENUES } from '@/lib/yield/venues';
+import { YIELD_TOKENS } from '../yield-tokens';
 
 // Venue metadata is owned by the discriminated-union registry at
 // src/lib/yield/venues. PROTOCOL_META used to live here as a duplicated
@@ -63,26 +64,6 @@ const MOCK_APYS: Record<YieldProtocolId, { supply: number; reward: number }> = {
   benji:             { supply: mmfReferenceYield('benji'),     reward: 0 },
   usyc:              { supply: mmfReferenceYield('usyc'),      reward: 0 },
   spiko_usd:         { supply: mmfReferenceYield('spiko_usd'), reward: 0 },
-};
-
-/** Receipt-token symbols by protocol. Used for deposit/withdraw flows. */
-const YIELD_TOKENS: Record<YieldProtocolId, string> = {
-  aave_v3:           'aUSDC',
-  compound_v3:       'cUSDCv3',
-  morpho_reservoir:  'bbqUSDCreservoir',
-  morpho_steakhouse: 'mshUSDC',
-  kamino:            'kUSDC',
-  kamino_multiply:   'kmUSDC',
-  ondo_usdy:         'USDY',
-  sky:               'sUSDS',
-  ethena:            'sUSDe',
-  // Tokenized MMF receipt tokens
-  buidl:             'BUIDL',
-  ousg:              'OUSG',
-  ustb:              'USTB',
-  benji:             'BENJI',
-  usyc:              'USYC',
-  spiko_usd:         'USTBL',
 };
 
 // In-memory mock positions

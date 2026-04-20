@@ -80,6 +80,27 @@ export function useOnChainDeposit() {
         const depositTxHash = await writeContractAsync(depositArgs);
         setTxHash(depositTxHash);
 
+        // Record a pending row server-side immediately. If the browser crashes
+        // during waitForTransactionReceipt, or confirm-deposit fails later,
+        // this row plus the tx hash is enough for a reconcile job (or a human)
+        // to resolve the position. Non-fatal if it fails — user already signed.
+        try {
+          await fetch('/api/yield/record-pending-deposit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              protocol,
+              token,
+              amount,
+              walletAddress,
+              chain,
+              txHash: depositTxHash,
+            }),
+          });
+        } catch (e) {
+          console.warn('[yield-deposit] pending-record call failed (non-fatal)', e);
+        }
+
         // Step 4: Wait for confirmation
         setStep('confirming');
         const receipt = await publicClient.waitForTransactionReceipt({ hash: depositTxHash });
