@@ -42,16 +42,18 @@ export function useOnChainDeposit() {
   const execute = useCallback(
     async ({ protocol, token, amount, walletAddress, chain }: OnChainDepositParams) => {
       if (!publicClient) {
-        setError('No public client available');
+        const message = 'No public client available';
+        setError(message);
         setStep('error');
-        return;
+        return { ok: false as const, error: message };
       }
 
       const config = PROTOCOL_ADDRESSES[protocol];
       if (!config) {
-        setError(`No contract addresses configured for protocol: ${protocol}`);
+        const message = `No contract addresses configured for protocol: ${protocol}`;
+        setError(message);
         setStep('error');
-        return;
+        return { ok: false as const, error: message };
       }
 
       try {
@@ -135,12 +137,14 @@ export function useOnChainDeposit() {
         // Step 7: Done
         setStep('done');
         toast({ title: 'Deposit confirmed', description: `${amount} ${token} deposited successfully.` });
+        return { ok: true as const };
       } catch (err: unknown) {
         const errObj = err as { shortMessage?: string; message?: string };
         const message = errObj?.shortMessage ?? errObj?.message ?? 'Unknown error';
         setError(message);
         setStep('error');
         toast({ title: 'Deposit failed', description: message, variant: 'destructive' });
+        return { ok: false as const, error: message };
       }
     },
     [publicClient, writeContractAsync, queryClient, session?.user?.id, toast]

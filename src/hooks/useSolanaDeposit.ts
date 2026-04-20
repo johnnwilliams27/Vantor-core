@@ -42,9 +42,10 @@ export function useSolanaDeposit() {
   const execute = useCallback(
     async ({ protocol, token, amount, walletAddress, chain }: SolanaDepositParams) => {
       if (!publicKey) {
-        setError('Wallet not connected');
+        const message = 'Wallet not connected';
+        setError(message);
         setStep('error');
-        return;
+        return { ok: false as const, error: message };
       }
 
       try {
@@ -120,12 +121,14 @@ export function useSolanaDeposit() {
         // Step 6: Done
         setStep('done');
         toast({ title: 'Deposit confirmed', description: `${amount} ${token} deposited successfully.` });
+        return { ok: true as const };
       } catch (err: unknown) {
         const errObj = err as { shortMessage?: string; message?: string };
         const message = errObj?.shortMessage ?? errObj?.message ?? 'Unknown error';
         setError(message);
         setStep('error');
         toast({ title: 'Deposit failed', description: message, variant: 'destructive' });
+        return { ok: false as const, error: message };
       }
     },
     [connection, publicKey, sendTransaction, queryClient, session?.user?.id, toast, cluster]
