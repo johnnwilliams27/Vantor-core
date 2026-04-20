@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { ArrowUpRight, ArrowLeft, Shield, Lock, Loader2, CheckCircle2, X, Info, Landmark, Clock } from 'lucide-react';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
+import { useAccount } from 'wagmi';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useYieldProtocols, useYieldDeposit, useSlippageCheck } from '@/hooks/useYield';
 import { useOnChainDeposit, type DepositStep } from '@/hooks/useOnChainDeposit';
 import { useSolanaDeposit, type SolanaDepositStep } from '@/hooks/useSolanaDeposit';
@@ -321,6 +323,19 @@ function InlineDepositForm({
   const noBalanceData = walletId && balance === null;
   const isOnChainProtocol = !!PROTOCOL_ADDRESSES[protocol.id as keyof typeof PROTOCOL_ADDRESSES];
 
+  // Ethereum deposits require an active RainbowKit/wagmi connector whose
+  // address matches the wallet the user selected in the dropdown. If either
+  // is missing, `writeContractAsync` throws "Connector not connected" which
+  // tells the user nothing. Detect both cases and surface actionable UI.
+  const { address: connectedAddress, isConnected } = useAccount();
+  const needsEthConnection =
+    isOnChainProtocol &&
+    protocol.chain === 'ethereum' &&
+    !!selectedWallet &&
+    (!isConnected ||
+      !connectedAddress ||
+      connectedAddress.toLowerCase() !== selectedWallet.address.toLowerCase());
+
   const stepLabels: Record<DepositStep, string> = {
     idle: 'Deposit',
     checking: 'Checking allowance...',
@@ -575,12 +590,27 @@ function InlineDepositForm({
             <p className="text-xs text-red-500 text-center">{solanaDeposit.error}</p>
           )}
 
+          {needsEthConnection && (
+            <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 space-y-2">
+              <p className="text-xs text-amber-400">
+                {!isConnected || !connectedAddress
+                  ? 'Connect your wallet to sign the deposit.'
+                  : `Your wallet is connected as ${connectedAddress.slice(0, 6)}…${connectedAddress.slice(-4)}, but this deposit is from ${selectedWallet?.address.slice(0, 6)}…${selectedWallet?.address.slice(-4)}. Switch accounts in your wallet.`}
+              </p>
+              {(!isConnected || !connectedAddress) && (
+                <div className="flex justify-center">
+                  <ConnectButton showBalance={false} chainStatus="none" accountStatus="address" />
+                </div>
+              )}
+            </div>
+          )}
+
           {!slippageEstimate && (
             <Button
               type="submit"
               className="w-full"
               size="sm"
-              disabled={isProcessing || isSolanaProcessing || deposit.isPending || slippageCheck.isPending || !amount || !walletId || exceeds || !!noBalanceData}
+              disabled={isProcessing || isSolanaProcessing || deposit.isPending || slippageCheck.isPending || !amount || !walletId || exceeds || !!noBalanceData || needsEthConnection}
             >
               {slippageCheck.isPending ? (
                 <>
