@@ -5,21 +5,12 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRole } from '@/lib/auth/rbac';
 import { writeAuditLog } from '@/lib/audit/logger';
 import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
-import { z } from 'zod';
 import { getEffectiveEnterpriseId } from '@/lib/test-mode/enterprise';
 import { requirePaidTier, tierGateResponse, TierGateError } from '@/lib/auth/tier-gate';
 import { fireInlineInsights } from '@/lib/insights/inline';
-
-const confirmDepositSchema = z.object({
-  protocol: z.string().min(1),
-  token: z.enum(['USDC', 'USDT']),
-  amount: z.string().min(1).refine((v) => parseFloat(v) > 0, 'Amount must be positive'),
-  walletAddress: z.string().min(1).max(100),
-  chain: z.enum(['ethereum', 'solana']),
-  txHash: z.string().min(1),
-  yieldToken: z.string().min(1),
-  tokensReceived: z.number().positive(),
-});
+import { confirmDepositInputSchema } from './schema';
+import { getYieldTokenSymbol } from '@/lib/yield/yield-tokens';
+import type { YieldProtocolId } from '@/lib/yield/interface';
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -36,12 +27,17 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const parsed = confirmDepositSchema.safeParse(body);
+  const parsed = confirmDepositInputSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid request', details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { protocol, token, amount, walletAddress, chain, txHash, yieldToken, tokensReceived } = parsed.data;
+  const { protocol, token, amount, walletAddress, chain, txHash } = parsed.data;
+  // Client hooks (useOnChainDeposit, useSolanaDeposit) don't know the receipt-
+  // token symbol — they just call the ERC-20 supply() directly. Derive from the
+  // canonical map so we don't 400 on payloads that are otherwise valid.
+  const yieldToken = parsed.data.yieldToken ?? getYieldTokenSymbol(protocol as YieldProtocolId);
+  const tokensReceived = parsed.data.tokensReceived ?? parseFloat(amount);
 
   const COMING_SOON_PROTOCOLS = ['sky', 'ethena', 'ondo_usdy'];
   if (COMING_SOON_PROTOCOLS.includes(protocol)) {
