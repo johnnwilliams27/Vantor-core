@@ -1,10 +1,15 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CardSkeleton } from '@/components/ui/spinner';
+import { Button } from '@/components/ui/button';
 import { useInsights, useMarkAllInsightsViewed } from '@/hooks/useInsights';
+import { useTestMode } from '@/hooks/useTestMode';
+import { useToast } from '@/components/ui/toast';
 import { InsightCard } from './InsightCard';
-import { Lightbulb } from 'lucide-react';
+import { Lightbulb, RefreshCw } from 'lucide-react';
 
 /**
  * InsightFeed — the Treasury Insights Engine UI surface.
@@ -20,6 +25,36 @@ import { Lightbulb } from 'lucide-react';
 export function InsightFeed() {
   const { data: insights, isLoading, isError, error } = useInsights();
   const markAllViewed = useMarkAllInsightsViewed();
+  const { testMode } = useTestMode();
+  const { data: session } = useSession();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const res = await fetch('/api/insights/refresh-test', { method: 'POST' });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? 'Refresh failed');
+      const { insightsCreated, insightsSuppressed, detectorsFailed } = json.data ?? {};
+      queryClient.invalidateQueries({ queryKey: ['insights', session?.user?.id] });
+      toast({
+        title: 'Insights refreshed',
+        description: `${insightsCreated ?? 0} new, ${insightsSuppressed ?? 0} deduped${
+          detectorsFailed ? `, ${detectorsFailed} detector(s) failed` : ''
+        }.`,
+      });
+    } catch (err) {
+      toast({
+        title: 'Refresh failed',
+        description: (err as Error).message,
+        variant: 'destructive',
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   // Ensures the mark-all-viewed sweep fires at most once per mount,
   // even if refetches return fresh `new`-state insights later. The
@@ -47,6 +82,18 @@ export function InsightFeed() {
           <Lightbulb className="h-4 w-4" />
           Insights
         </CardTitle>
+        {testMode && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="h-8 gap-1.5 text-xs"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Running detectors…' : 'Refresh'}
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         {isLoading ? (
