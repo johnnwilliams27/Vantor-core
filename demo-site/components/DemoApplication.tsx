@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   ArrowLeftRight, ArrowRight, ArrowUpRight,
-  BarChart3, Bell, BrainCircuit, Check, CheckCircle2, ChevronDown,
+  BarChart3, Bell, BrainCircuit, Check, CheckCircle2, ChevronDown, ChevronLeft,
   ChevronRight, Clock3, Download, Globe2, LockKeyhole, Menu,
   Plus, RefreshCw, Search, Send, ShieldCheck, Sparkles,
   TrendingUp, Wallet, X,
@@ -166,6 +166,7 @@ export function DemoApplication() {
   const activeSlug = DEMO_SURFACES[slug] ? slug : 'dashboard';
   const surface = DEMO_SURFACES[activeSlug];
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All statuses');
   const [period, setPeriod] = useState('90D');
@@ -180,6 +181,18 @@ export function DemoApplication() {
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [assistantQuery, setAssistantQuery] = useState('');
   const [assistantAnswer, setAssistantAnswer] = useState('');
+
+  useEffect(() => {
+    try {
+      setSidebarExpanded(localStorage.getItem('vantor-demo-sidebar-expanded') !== 'false');
+    } catch { /* Collapsing still works without local storage. */ }
+  }, []);
+
+  function toggleSidebar() {
+    const next = !sidebarExpanded;
+    setSidebarExpanded(next);
+    try { localStorage.setItem('vantor-demo-sidebar-expanded', String(next)); } catch { /* optional persistence */ }
+  }
 
   useEffect(() => {
     try { const saved = sessionStorage.getItem(storageKey); if (saved) {
@@ -270,40 +283,66 @@ export function DemoApplication() {
   const rowsTitle = isDashboard ? 'Connected treasury assets' : isTreasury ? 'Intelligence & recommendations' : isAnalytics ? 'Saved analytics views' : 'Recent ' + surface.title.toLowerCase();
   const displayAction = surface.action || 'Explore records';
 
-  return <div className="min-h-screen bg-[#071222] text-slate-100" data-demo="true">
-    <div className="flex min-h-screen">
+  return <div className="h-screen overflow-hidden bg-[#071222] text-slate-100" data-demo="true">
+    <div className="flex h-full overflow-hidden">
       {menuOpen && <button aria-label="Close navigation" className="fixed inset-0 z-30 bg-black/70 lg:hidden" onClick={()=>setMenuOpen(false)} />}
-      <aside className={'fixed inset-y-0 left-0 z-40 flex w-[244px] flex-col border-r border-white/[0.07] bg-[#091728] transition-transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ' + (menuOpen ? 'translate-x-0' : '-translate-x-full')}>
-        <div className="flex h-[76px] items-center gap-3 border-b border-white/[0.07] px-6">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-teal-300 to-teal-700 font-black text-[#061d25] shadow-[0_0_22px_#2dd4bf25]">V</div>
-          <div><div className="text-[19px] font-bold tracking-[.08em] text-white">VANTOR</div><div className="mt-[-1px] text-[10px] tracking-[.13em] text-teal-300">INTERACTIVE DEMO</div></div>
-          <button onClick={()=>setMenuOpen(false)} className="ml-auto text-slate-400 lg:hidden" aria-label="Close menu"><X className="h-5 w-5"/></button>
+      <aside aria-label="Vantor sidebar" className={
+        'fixed inset-y-0 left-0 z-40 flex w-[244px] shrink-0 flex-col overflow-hidden border-r border-white/[0.07] bg-[#091728] text-white transition-[width,transform] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] lg:relative lg:inset-auto lg:h-full lg:translate-x-0 ' +
+        (menuOpen ? 'translate-x-0 shadow-[0_0_40px_rgba(0,0,0,0.5)]' : '-translate-x-full') +
+        (sidebarExpanded ? ' lg:w-56' : ' lg:w-16')
+      }>
+        <div className={'flex h-16 shrink-0 items-center gap-3 border-b border-white/10 px-3 ' + (sidebarExpanded ? '' : 'lg:justify-center lg:gap-0')}>
+          <div aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-teal-300 to-teal-700 font-black text-[#061d25] shadow-[0_0_22px_#2dd4bf25]">V</div>
+          <div className={'min-w-0 ' + (sidebarExpanded ? '' : 'lg:hidden')}>
+            <div className="text-[19px] font-bold tracking-[.08em] text-white">VANTOR</div>
+            <div className="mt-[-1px] text-[10px] tracking-[.13em] text-teal-300">INTERACTIVE DEMO</div>
+          </div>
+          <button onClick={()=>setMenuOpen(false)} className="ml-auto rounded-md p-1 text-slate-400 hover:text-white lg:hidden" aria-label="Close menu"><X className="h-5 w-5"/></button>
         </div>
-        <div className="mx-3 mt-4 flex items-center gap-2 rounded-xl border border-teal-400/15 bg-teal-400/[0.045] px-3 py-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#255263] text-sm font-semibold text-teal-100">N</div>
-          <div className="min-w-0"><div className="truncate text-xs font-semibold text-white">Northstar Holdings</div><div className="mt-1 text-[11px] text-teal-300">Enterprise · Test account</div></div>
-          <ChevronDown className="ml-auto h-4 w-4 text-slate-400"/>
+        <div className={'mx-3 mt-3 flex shrink-0 items-center gap-2 rounded-xl border border-teal-400/15 bg-teal-400/[0.045] px-2 py-2.5 ' + (sidebarExpanded ? '' : 'lg:mx-2 lg:justify-center lg:gap-0 lg:px-1')}>
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#255263] text-sm font-semibold text-teal-100">N</div>
+          <div className={'min-w-0 flex-1 ' + (sidebarExpanded ? '' : 'lg:hidden')}>
+            <div className="truncate text-xs font-semibold text-white">Northstar Holdings</div>
+            <div className="mt-1 truncate text-[11px] text-teal-300">Enterprise · Test account</div>
+          </div>
+          <ChevronDown className={'h-4 w-4 shrink-0 text-slate-400 ' + (sidebarExpanded ? '' : 'lg:hidden')}/>
         </div>
-        <nav aria-label="Demo navigation" className="mt-4 flex-1 space-y-5 overflow-y-auto px-3 pb-6">
+        <nav aria-label="Demo navigation" className={'demo-sidebar-scroll mt-3 min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-2 py-1 pb-5 ' + (sidebarExpanded ? 'space-y-4' : 'space-y-2')}>
           {DEMO_GROUPS.map(group=><div key={group.name}>
-            <div className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[.16em] text-slate-500">{group.name}</div>
-            <div className="space-y-0.5">
-              {group.items.map(item=><Link key={item.slug} href={'/demo/'+item.slug} onClick={()=>setMenuOpen(false)} aria-current={item.slug===activeSlug?'page':undefined}
-                className={'group flex items-center gap-3 rounded-lg px-3 py-[9px] text-[13px] transition ' +
-                (item.slug===activeSlug?'bg-teal-400/10 font-semibold text-teal-300':'text-slate-400 hover:bg-white/[0.045] hover:text-white')}>
-                <item.icon className="h-[17px] w-[17px] shrink-0"/><span className="flex-1">{item.title}</span>
-                {item.slug===activeSlug&&<span className="h-1.5 w-1.5 rounded-full bg-teal-400" />}
+            <div className={'mb-1 px-3 text-[10px] font-semibold uppercase tracking-[.16em] text-slate-500 ' + (sidebarExpanded ? '' : 'lg:hidden')}>{group.name}</div>
+            <div className="space-y-1">
+              {group.items.map(item=><Link key={item.slug} href={'/demo/'+item.slug} onClick={()=>setMenuOpen(false)}
+                aria-current={item.slug===activeSlug?'page':undefined}
+                aria-label={item.title}
+                title={!sidebarExpanded ? item.title : undefined}
+                className={'group flex min-h-10 items-center gap-3 rounded-lg border-l-2 px-3 py-2 text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50 ' +
+                  (sidebarExpanded ? '' : 'lg:justify-center lg:gap-0 lg:px-1') + ' ' +
+                  (item.slug===activeSlug ? 'border-teal-400 bg-white/[0.12] font-semibold text-white' : 'border-transparent text-white/60 hover:bg-white/[0.08] hover:text-white/90')}>
+                <item.icon className="h-[19px] w-[19px] shrink-0"/>
+                <span className={'min-w-0 flex-1 whitespace-nowrap ' + (sidebarExpanded ? '' : 'lg:hidden')}>{item.title}</span>
               </Link>)}
             </div>
           </div>)}
         </nav>
-        <div className="border-t border-white/[0.07] p-4">
-          <div className="flex items-center gap-2 text-[11px] text-slate-400"><ShieldCheck className="h-4 w-4 text-teal-300"/>Safe simulated environment</div>
-          <button onClick={clearSimulation} className="mt-3 flex items-center gap-2 text-[11px] font-medium text-slate-400 hover:text-white"><RefreshCw className="h-3.5 w-3.5"/>Reset demo session</button>
+        <div className="shrink-0 border-t border-white/10">
+          <div className={'px-3 pt-3 ' + (sidebarExpanded ? '' : 'lg:hidden')}>
+            <div className="flex items-center gap-2 text-[11px] text-white/55"><ShieldCheck className="h-4 w-4 shrink-0 text-teal-300"/>Safe simulated environment</div>
+          </div>
+          <button onClick={clearSimulation} title={!sidebarExpanded?'Reset demo session':undefined} aria-label="Reset demo session"
+            className={'flex w-full items-center gap-2 px-4 py-3 text-left text-[11px] font-medium text-white/55 hover:bg-white/[0.08] hover:text-white/90 ' + (sidebarExpanded ? '' : 'lg:justify-center lg:px-2')}>
+            <RefreshCw className="h-4 w-4 shrink-0"/><span className={sidebarExpanded ? '' : 'lg:hidden'}>Reset demo session</span>
+          </button>
+          <button type="button" aria-label={menuOpen?'Close sidebar':sidebarExpanded?'Collapse sidebar':'Expand sidebar'}
+            title={menuOpen?'Close sidebar':sidebarExpanded?'Collapse sidebar':'Expand sidebar'}
+            aria-expanded={sidebarExpanded}
+            onClick={()=>{if(menuOpen)setMenuOpen(false);else toggleSidebar();}}
+            className="group flex h-10 w-full shrink-0 items-center justify-center border-t border-white/10 text-white/45 transition-colors hover:bg-white/[0.08] hover:text-white/80">
+            <ChevronLeft className={'h-4 w-4 transition-transform duration-300 ' + (sidebarExpanded ? '' : 'lg:rotate-180')}/>
+          </button>
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain">
         <div className="flex flex-wrap items-center justify-center gap-2 border-b border-teal-400/15 bg-[#112c35] px-4 py-2 text-center text-[11px] font-medium text-teal-200">
           <ShieldCheck className="h-3.5 w-3.5"/><span>DEMO MODE</span>
           <span className="text-teal-200/65">· All balances and records are fictional · Actions never move funds</span>
