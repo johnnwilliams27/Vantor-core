@@ -4,3 +4,17 @@
 html { color-scheme: dark; }
 body { margin: 0; background: #071222; color: #e2e8f0; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
 * { box-sizing: border-box; }
+
+/* Keep the full product navigation independently scrollable, with a subtle Vantor scrollbar. */
+.demo-sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.28) transparent;
+  scrollbar-gutter: stable;
+}
+.demo-sidebar-scroll::-webkit-scrollbar { width: 5px; }
+.demo-sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+.demo-sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.28);
+  border-radius: 999px;
+}
+.demo-sidebar-scroll::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.5); }
