@@ -4,11 +4,10 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  ArrowDownLeft, ArrowDownToLine, ArrowLeftRight, ArrowRight, ArrowUpRight,
+  ArrowLeftRight, ArrowRight, ArrowUpRight,
   BarChart3, Bell, BrainCircuit, Check, CheckCircle2, ChevronDown,
-  ChevronRight, CircleHelp, Clock3, Download, ExternalLink, Eye,
-  FileText, Filter, Globe2, LayoutDashboard, LockKeyhole, Menu,
-  MoreHorizontal, Plus, RefreshCw, Search, Send, ShieldCheck, Sparkles,
+  ChevronRight, Clock3, Download, Globe2, LockKeyhole, Menu,
+  Plus, RefreshCw, Search, Send, ShieldCheck, Sparkles,
   TrendingUp, Wallet, X,
 } from 'lucide-react';
 import {
