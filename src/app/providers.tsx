@@ -1,5 +1,6 @@
 'use client';
 import { ThemeProvider } from 'next-themes';
+import { usePathname } from 'next/navigation';
 import { SessionProvider } from 'next-auth/react';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
@@ -56,6 +57,7 @@ function SolanaProviders({ children }: { children: React.ReactNode }) {
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -70,6 +72,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
         },
       })
   );
+
+  // Public demo is a self-contained showcase. Never mount authenticated session,
+  // wallet auto-connect, Web3 providers, or test-mode API polling for demo visitors.
+  if (pathname?.startsWith('/demo')) {
+    return <ThemeProvider attribute="class" defaultTheme="dark" enableSystem storageKey="vantor-theme">{children}</ThemeProvider>;
+  }
 
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem storageKey="vantor-theme">
