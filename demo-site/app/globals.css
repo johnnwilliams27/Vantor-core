@@ -18,3 +18,25 @@ body { margin: 0; background: #071222; color: #e2e8f0; font-family: system-ui, -
   border-radius: 999px;
 }
 .demo-sidebar-scroll::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.5); }
+
+/* Match the production AppShell's subtle, dark, six-pixel content scrollbar. */
+.demo-main-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+}
+.demo-main-scroll:hover {
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+.demo-main-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.demo-main-scroll::-webkit-scrollbar-track { background: transparent; }
+.demo-main-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+}
+.demo-main-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+.demo-main-scroll::-webkit-scrollbar-corner { background: transparent; }
