@@ -342,12 +342,12 @@ export function DemoApplication() {
         </div>
       </aside>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain">
-        <div className="flex flex-wrap items-center justify-center gap-2 border-b border-teal-400/15 bg-[#112c35] px-4 py-2 text-center text-[11px] font-medium text-teal-200">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="flex shrink-0 flex-wrap items-center justify-center gap-2 border-b border-teal-400/15 bg-[#112c35] px-4 py-2 text-center text-[11px] font-medium text-teal-200">
           <ShieldCheck className="h-3.5 w-3.5"/><span>DEMO MODE</span>
           <span className="text-teal-200/65">· All balances and records are fictional · Actions never move funds</span>
         </div>
-        <header className="sticky top-0 z-20 flex h-[68px] items-center justify-between gap-3 border-b border-white/[0.07] bg-[#091728]/95 px-4 backdrop-blur-xl sm:px-7">
+        <header className="relative z-20 flex h-[68px] shrink-0 items-center justify-between gap-3 border-b border-white/[0.07] bg-[#091728]/95 px-4 backdrop-blur-xl sm:px-7">
           <div className="flex min-w-0 items-center gap-3">
             <button onClick={()=>setMenuOpen(true)} aria-label="Open navigation" className="rounded-lg p-2 text-slate-400 hover:bg-white/10 lg:hidden"><Menu className="h-5 w-5"/></button>
             <span className="hidden text-sm text-slate-500 sm:inline">Workspace</span>
@@ -362,7 +362,8 @@ export function DemoApplication() {
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-[1440px] flex-1 space-y-6 p-4 pb-20 sm:p-7 lg:p-9">
+        <main id="main-content" className="demo-main-scroll min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain p-4 sm:p-8">
+          <div className="mx-auto w-full max-w-[1440px] space-y-6 pb-12">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[.14em] text-teal-300"><span className="h-1.5 w-1.5 rounded-full bg-teal-300"/>Northstar Holdings · Enterprise workspace</div>
@@ -454,6 +455,7 @@ export function DemoApplication() {
               <button onClick={()=>navigate(activeSlug==='treasury'?'policy':'treasury')} className="mt-4 inline-flex items-center gap-2 self-start text-xs font-semibold text-teal-300 hover:text-teal-200">Explore {activeSlug==='treasury'?'policy controls':'Treasury AI'}<ArrowRight className="h-4 w-4"/></button>
             </div>
           </section>
+          </div>
         </main>
       </div>
     </div>
