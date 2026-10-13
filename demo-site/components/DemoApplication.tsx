@@ -322,13 +322,6 @@ export function DemoApplication() {
           </div>)}
         </nav>
         <div className="latitude-nav-bottom shrink-0 border-t border-[#dce7f5]">
-          <div className={'px-3 pt-3 ' + (sidebarExpanded ? '' : 'lg:hidden')}>
-            <div className="flex items-center gap-2 text-[11px] text-[#7185a2]"><ShieldCheck className="h-4 w-4 shrink-0 text-blue-500"/>Safe simulated environment</div>
-          </div>
-          <button onClick={clearSimulation} title={!sidebarExpanded?'Reset demo session':undefined} aria-label="Reset demo session"
-            className={'flex w-full items-center gap-2 px-4 py-3 text-left text-[11px] font-medium text-[#7185a2] hover:bg-[#f1f6ff] hover:text-[#203a60] ' + (sidebarExpanded ? '' : 'lg:justify-center lg:px-2')}>
-            <RefreshCw className="h-4 w-4 shrink-0"/><span className={sidebarExpanded ? '' : 'lg:hidden'}>Reset demo session</span>
-          </button>
           <button type="button" aria-label={menuOpen?'Close sidebar':sidebarExpanded?'Collapse sidebar':'Expand sidebar'}
             title={menuOpen?'Close sidebar':sidebarExpanded?'Collapse sidebar':'Expand sidebar'}
             aria-expanded={sidebarExpanded}
@@ -340,9 +333,18 @@ export function DemoApplication() {
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="flex shrink-0 flex-wrap items-center justify-center gap-2 border-b border-blue-500/15 bg-[#ebf2ff] px-4 py-2 text-center text-[11px] font-medium text-blue-700">
-          <ShieldCheck className="h-3.5 w-3.5"/><span>UNOFFICIAL LATITUDE CONCEPT</span>
-          <span className="text-blue-700/65">· Exploratory prototype, not an official Latitude product · No real funds or accounts</span>
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-5 gap-y-2 border-b border-blue-500/15 bg-[#ebf2ff] px-4 py-2 text-[11px] font-medium text-blue-700 sm:px-6">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="whitespace-nowrap font-bold tracking-[.04em]">UNOFFICIAL LATITUDE CONCEPT</span>
+            <span className="text-blue-700/65">· Exploratory prototype, not an official Latitude product · No real funds or accounts</span>
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2">
+            <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-blue-800"><ShieldCheck className="h-3.5 w-3.5"/>Safe simulated environment</span>
+            <button type="button" onClick={clearSimulation} aria-label="Reset demo session"
+              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-blue-500/20 bg-white/60 px-2.5 py-1.5 font-semibold text-blue-800 transition hover:border-blue-500/40 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50">
+              <RefreshCw className="h-3.5 w-3.5"/>Reset demo session
+            </button>
+          </div>
         </div>
         <header className="latitude-header relative z-20 flex h-[68px] shrink-0 items-center justify-between gap-3 border-b border-[#dce7f5] bg-[#ffffff]/95 px-4 backdrop-blur-xl sm:px-7">
           <div className="flex min-w-0 items-center gap-3">
