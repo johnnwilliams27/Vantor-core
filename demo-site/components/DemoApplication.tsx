@@ -283,24 +283,21 @@ export function DemoApplication() {
   const rowsTitle = isDashboard ? 'Connected treasury assets' : isTreasury ? 'Intelligence & recommendations' : isAnalytics ? 'Saved analytics views' : 'Recent ' + surface.title.toLowerCase();
   const displayAction = surface.action || 'Explore records';
 
-  return <div className="h-screen overflow-hidden bg-[#f6f9ff] text-[#183153]" data-demo="true">
+  return <div className="latitude-blue h-screen overflow-hidden bg-[#f3f7fd] text-[#183153]" data-demo="true">
     <div className="flex h-full overflow-hidden">
       {menuOpen && <button aria-label="Close navigation" className="fixed inset-0 z-30 bg-black/70 lg:hidden" onClick={()=>setMenuOpen(false)} />}
       <aside aria-label="Latitude sidebar" className={
-        'fixed inset-y-0 left-0 z-40 flex w-[244px] shrink-0 flex-col overflow-hidden border-r border-[#dce7f5] bg-[#ffffff] text-[#112b50] transition-[width,transform] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] lg:relative lg:inset-auto lg:h-full lg:translate-x-0 ' +
+        'latitude-nav fixed inset-y-0 left-0 z-40 flex w-[244px] shrink-0 flex-col overflow-hidden border-r border-[#dce7f5] bg-[#ffffff] text-[#112b50] transition-[width,transform] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] lg:relative lg:inset-auto lg:h-full lg:translate-x-0 ' +
         (menuOpen ? 'translate-x-0 shadow-[0_0_40px_rgba(0,0,0,0.5)]' : '-translate-x-full') +
         (sidebarExpanded ? ' lg:w-56' : ' lg:w-16')
       }>
-        <div className={'flex h-16 shrink-0 items-center gap-3 border-b border-[#dce7f5] px-3 ' + (sidebarExpanded ? '' : 'lg:justify-center lg:gap-0')}>
-          <div aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-400 to-blue-700 font-black text-white shadow-[0_0_22px_#3775f025]">L</div>
-          <div className={'min-w-0 ' + (sidebarExpanded ? '' : 'lg:hidden')}>
-            <div className="text-[19px] font-bold tracking-[.08em] text-[#112b50]">LATITUDE</div>
-            <div className="mt-[-1px] text-[10px] tracking-[.13em] text-blue-500">PRODUCT CONCEPT</div>
-          </div>
+        <div className={'latitude-nav-head flex h-16 shrink-0 items-center gap-3 border-b border-[#dce7f5] px-3 ' + (sidebarExpanded ? '' : 'lg:justify-center lg:gap-0')}>
+          <img alt="Latitude" src="/latitude-wordmark-white.svg" className={'h-9 w-[165px] shrink-0 object-contain object-left '+(sidebarExpanded?'':'lg:hidden')}/>
+          <img alt="Latitude" src="/latitude-mark-white.svg" className={'hidden h-9 w-9 shrink-0 object-contain '+(sidebarExpanded?'':'lg:block')}/>
           <button onClick={()=>setMenuOpen(false)} className="ml-auto rounded-md p-1 text-[#6c7f9a] hover:text-[#112b50] lg:hidden" aria-label="Close menu"><X className="h-5 w-5"/></button>
         </div>
-        <div className={'mx-3 mt-3 flex shrink-0 items-center gap-2 rounded-xl border border-blue-500/15 bg-blue-500/[0.045] px-2 py-2.5 ' + (sidebarExpanded ? '' : 'lg:mx-2 lg:justify-center lg:gap-0 lg:px-1')}>
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#dfeaff] text-sm font-semibold text-blue-800">N</div>
+        <div className={'latitude-workspace-switcher mx-3 mt-3 flex shrink-0 items-center gap-2 rounded-xl border border-blue-500/15 bg-blue-500/[0.045] px-2 py-2.5 ' + (sidebarExpanded ? '' : 'lg:mx-2 lg:justify-center lg:gap-0 lg:px-1')}>
+          <div className="latitude-workspace-avatar flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#dfeaff] text-sm font-semibold text-blue-800">N</div>
           <div className={'min-w-0 flex-1 ' + (sidebarExpanded ? '' : 'lg:hidden')}>
             <div className="truncate text-xs font-semibold text-[#112b50]">Northstar Holdings</div>
             <div className="mt-1 truncate text-[11px] text-blue-500">Enterprise · Test account</div>
@@ -309,7 +306,7 @@ export function DemoApplication() {
         </div>
         <nav aria-label="Demo navigation" className={'demo-sidebar-scroll mt-3 min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-2 py-1 pb-5 ' + (sidebarExpanded ? 'space-y-4' : 'space-y-2')}>
           {DEMO_GROUPS.map(group=><div key={group.name}>
-            <div className={'mb-1 px-3 text-[10px] font-semibold uppercase tracking-[.16em] text-[#7d8fa8] ' + (sidebarExpanded ? '' : 'lg:hidden')}>{group.name}</div>
+            <div className={'latitude-group-label mb-1 px-3 text-[10px] font-semibold uppercase tracking-[.16em] text-[#7d8fa8] ' + (sidebarExpanded ? '' : 'lg:hidden')}>{group.name}</div>
             <div className="space-y-1">
               {group.items.map(item=><Link key={item.slug} href={'/demo/'+item.slug} onClick={()=>setMenuOpen(false)}
                 aria-current={item.slug===activeSlug?'page':undefined}
@@ -324,7 +321,7 @@ export function DemoApplication() {
             </div>
           </div>)}
         </nav>
-        <div className="shrink-0 border-t border-[#dce7f5]">
+        <div className="latitude-nav-bottom shrink-0 border-t border-[#dce7f5]">
           <div className={'px-3 pt-3 ' + (sidebarExpanded ? '' : 'lg:hidden')}>
             <div className="flex items-center gap-2 text-[11px] text-[#7185a2]"><ShieldCheck className="h-4 w-4 shrink-0 text-blue-500"/>Safe simulated environment</div>
           </div>
@@ -347,22 +344,22 @@ export function DemoApplication() {
           <ShieldCheck className="h-3.5 w-3.5"/><span>UNOFFICIAL LATITUDE CONCEPT</span>
           <span className="text-blue-700/65">· Exploratory prototype, not an official Latitude product · No real funds or accounts</span>
         </div>
-        <header className="relative z-20 flex h-[68px] shrink-0 items-center justify-between gap-3 border-b border-[#dce7f5] bg-[#ffffff]/95 px-4 backdrop-blur-xl sm:px-7">
+        <header className="latitude-header relative z-20 flex h-[68px] shrink-0 items-center justify-between gap-3 border-b border-[#dce7f5] bg-[#ffffff]/95 px-4 backdrop-blur-xl sm:px-7">
           <div className="flex min-w-0 items-center gap-3">
             <button onClick={()=>setMenuOpen(true)} aria-label="Open navigation" className="rounded-lg p-2 text-[#6c7f9a] hover:bg-[#f1f6ff] lg:hidden"><Menu className="h-5 w-5"/></button>
-            <span className="hidden text-sm text-[#7d8fa8] sm:inline">Workspace</span>
-            <ChevronRight className="hidden h-4 w-4 text-[#8e9fb4] sm:inline"/>
-            <span className="truncate text-sm font-semibold text-[#112b50]">{surface.title}</span>
+            <span className="latitude-crumb hidden text-sm text-[#7d8fa8] sm:inline">Workspace</span>
+            <ChevronRight className="latitude-crumb hidden h-4 w-4 text-[#8e9fb4] sm:inline"/>
+            <span className="latitude-header-title truncate text-sm font-semibold text-[#112b50]">{surface.title}</span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="hidden items-center gap-1.5 rounded-full border border-blue-500/20 bg-blue-500/[0.055] px-3 py-1.5 text-xs text-blue-500 sm:inline-flex"><span className="h-1.5 w-1.5 rounded-full bg-blue-500"/>Test mode active</span>
+            <span className="latitude-status hidden items-center gap-1.5 rounded-full border border-blue-500/20 bg-blue-500/[0.055] px-3 py-1.5 text-xs text-blue-500 sm:inline-flex"><span className="h-1.5 w-1.5 rounded-full bg-blue-500"/>Test mode active</span>
             <button onClick={()=>navigate('notifications')} aria-label="View notifications" className="relative rounded-lg p-2 text-[#6c7f9a] hover:bg-[#f1f6ff] hover:text-[#112b50]"><Bell className="h-5 w-5"/><span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-blue-500"/></button>
             <button onClick={()=>setAssistantOpen(true)} aria-label="Open demo assistant" className="rounded-lg p-2 text-[#6c7f9a] hover:bg-[#f1f6ff] hover:text-[#112b50]"><BrainCircuit className="h-5 w-5"/></button>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full border border-blue-500/30 bg-[#dfeaff] text-xs font-semibold text-[#112b50]">NL</div>
+            <div className="latitude-header-avatar flex h-8 w-8 items-center justify-center rounded-full border border-blue-500/30 bg-[#dfeaff] text-xs font-semibold text-[#112b50]">NL</div>
           </div>
         </header>
 
-        <main id="main-content" className="demo-main-scroll min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain p-4 sm:p-8">
+        <main id="main-content" className="latitude-main demo-main-scroll min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain p-4 sm:p-8">
           <div className="mx-auto w-full max-w-[1440px] space-y-6 pb-12">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>

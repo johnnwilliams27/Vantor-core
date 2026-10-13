@@ -40,3 +40,71 @@ body { margin: 0; background: #f6f9ff; color: #173357; font-family: system-ui, -
   background: rgba(76, 119, 182, 0.32);
 }
 .demo-main-scroll::-webkit-scrollbar-corner { background: transparent; }
+
+/* Blue-first Latitude concept variant; independent from the white build. */
+.latitude-blue .latitude-nav {
+  background: linear-gradient(175deg, #2768f5 0%, #215cdb 46%, #194ab8 100%);
+  color: #ffffff;
+  border-right: 1px solid rgba(255,255,255,.14);
+  box-shadow: 4px 0 22px rgba(17,62,154,.10);
+}
+.latitude-blue .latitude-nav-head, .latitude-blue .latitude-nav-bottom {
+  border-color: rgba(255,255,255,.18);
+}
+.latitude-blue .latitude-nav-head button, .latitude-blue .latitude-nav-bottom button {
+  color: #d9e6ff;
+}
+.latitude-blue .latitude-nav-head button:hover, .latitude-blue .latitude-nav-bottom button:hover {
+  color: #ffffff;
+  background: rgba(255,255,255,.10);
+}
+.latitude-blue .latitude-workspace-switcher {
+  background: rgba(6,33,116,.20);
+  border: 1px solid rgba(255,255,255,.18);
+}
+.latitude-blue .latitude-workspace-switcher div, .latitude-blue .latitude-workspace-switcher svg {
+  color: #edf4ff;
+}
+.latitude-blue .latitude-workspace-switcher .latitude-workspace-avatar {
+  color: #ffffff;
+  background: rgba(255,255,255,.22);
+}
+.latitude-blue .latitude-workspace-switcher .text-blue-500 {color: #c6dbff;}
+.latitude-blue .latitude-group-label {color: #bad1ff;}
+.latitude-blue .latitude-nav nav a:not([aria-current=page]) {color: #e3eeff;}
+.latitude-blue .latitude-nav nav a:not([aria-current=page]):hover {
+  background: rgba(255,255,255,.10);
+  color: #ffffff;
+}
+.latitude-blue .latitude-nav nav a[aria-current=page] {
+  background: rgba(255,255,255,.19);
+  border-left-color: #ffffff;
+  color: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+}
+.latitude-blue .latitude-nav-bottom .text-\\[\\#7185a2\\] {color: #caddff;}
+.latitude-blue .latitude-nav-bottom .text-blue-500 {color: #daebff;}
+.latitude-blue .demo-sidebar-scroll {scrollbar-color: rgba(255,255,255,.28) transparent;}
+.latitude-blue .demo-sidebar-scroll::-webkit-scrollbar-thumb {background: rgba(255,255,255,.26);}
+.latitude-blue .demo-sidebar-scroll::-webkit-scrollbar-thumb:hover {background: rgba(255,255,255,.42);}
+.latitude-blue .latitude-header {
+  background: #194fc7;
+  border-bottom: 1px solid rgba(255,255,255,.13);
+  color: #ffffff;
+}
+.latitude-blue .latitude-header .latitude-crumb {color: #bed4ff;}
+.latitude-blue .latitude-header .latitude-header-title {color: #ffffff;}
+.latitude-blue .latitude-header button {color: #eef4ff;}
+.latitude-blue .latitude-header button:hover {color: #ffffff; background: rgba(255,255,255,.12);}
+.latitude-blue .latitude-header .latitude-status {
+  color: #eff6ff;
+  border-color: rgba(255,255,255,.25);
+  background: rgba(255,255,255,.10);
+}
+.latitude-blue .latitude-header .latitude-status span {background: #a7f3d0;}
+.latitude-blue .latitude-header .latitude-header-avatar {
+  color: #ffffff;
+  background: rgba(255,255,255,.15);
+  border-color: rgba(255,255,255,.25);
+}
+.latitude-blue .latitude-main {background: #f3f7fd;}
