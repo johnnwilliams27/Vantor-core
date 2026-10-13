@@ -1,31 +1,31 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-html { color-scheme: dark; }
-body { margin: 0; background: #071222; color: #e2e8f0; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+html { color-scheme: light; }
+body { margin: 0; background: #f6f9ff; color: #173357; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
 * { box-sizing: border-box; }
 
-/* Keep the full product navigation independently scrollable, with a subtle Vantor scrollbar. */
+/* Keep the full product navigation independently scrollable, with a subtle Latitude scrollbar. */
 .demo-sidebar-scroll {
   scrollbar-width: thin;
-  scrollbar-color: rgba(148, 163, 184, 0.28) transparent;
+  scrollbar-color: rgba(73, 115, 183, 0.22) transparent;
   scrollbar-gutter: stable;
 }
 .demo-sidebar-scroll::-webkit-scrollbar { width: 5px; }
 .demo-sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
 .demo-sidebar-scroll::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.28);
+  background: rgba(73, 115, 183, 0.22);
   border-radius: 999px;
 }
-.demo-sidebar-scroll::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.5); }
+.demo-sidebar-scroll::-webkit-scrollbar-thumb:hover { background: rgba(73, 115, 183, 0.43); }
 
 /* Match the production AppShell's subtle, dark, six-pixel content scrollbar. */
 .demo-main-scroll {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+  scrollbar-color: rgba(76, 119, 182, 0.20) transparent;
 }
 .demo-main-scroll:hover {
-  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  scrollbar-color: rgba(76, 119, 182, 0.3) transparent;
 }
 .demo-main-scroll::-webkit-scrollbar {
   width: 6px;
@@ -33,10 +33,10 @@ body { margin: 0; background: #071222; color: #e2e8f0; font-family: system-ui, -
 }
 .demo-main-scroll::-webkit-scrollbar-track { background: transparent; }
 .demo-main-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(76, 119, 182, 0.20);
   border-radius: 999px;
 }
 .demo-main-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(76, 119, 182, 0.32);
 }
 .demo-main-scroll::-webkit-scrollbar-corner { background: transparent; }

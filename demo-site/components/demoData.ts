@@ -22,7 +22,7 @@ export const DEMO_GROUPS: { name: string; items: DemoNav[] }[] = [
     { slug: 'policy', title: 'Policy', icon: Gavel },
     { slug: 'approvals', title: 'Approvals', icon: CheckSquare },
     { slug: 'payments', title: 'Payments', icon: CreditCard },
-    { slug: 'transfers', title: 'Transfers', icon: Send },
+    { slug: 'transfers', title: 'Global Payouts', icon: Send },
     { slug: 'swaps', title: 'Swaps', icon: ArrowLeftRight },
     { slug: 'bridges', title: 'Bridges', icon: GitBranchPlus },
     { slug: 'ramps', title: 'On/Off Ramps', icon: Banknote },
@@ -88,7 +88,7 @@ export const DEMO_SURFACES: Record<string, DemoSurface> = {
   'bank-accounts': { title: 'Bank Accounts', description: 'Consolidate multi-currency banking positions in your treasury workspace.', headline: '$2,068,350', headlineLabel: 'Illustrative fiat balances · USD equivalent', supporting: '9', supportingLabel: 'Demo bank accounts', action: 'Inspect account', rows: [
     row('ba-1','JPMorgan Chase','Primary Operating · ••4521','$450,000','Connected','Today','USD'), row('ba-2','Silicon Valley Bank','Reserves · ••7832','$1,200,000','Connected','Today','USD'), row('ba-3','Mercury','Startup Ops · ••1290','$85,000','Connected','Today','USD'), row('ba-4','Barclays','EUR Operations · ••6614','€320,000','Connected','Today','EUR'), row('ba-5','HSBC','GBP Account · ••5507','£175,000','Connected','Today','GBP'), row('ba-6','Deutsche Bank','EU Reserves · ••3341','€500,000','Connected','Today','EUR'),
   ] },
-  erp: { title: 'ERP Systems', description: 'See how payables, vendor records and general ledgers flow into Vantor.', headline: '2', headlineLabel: 'Connected simulated ERP systems', supporting: '18', supportingLabel: 'Synced vendor invoices', action: 'Preview sync', rows: [
+  erp: { title: 'ERP Systems', description: 'See how payables, vendor records and general ledgers flow into Latitude.', headline: '2', headlineLabel: 'Connected simulated ERP systems', supporting: '18', supportingLabel: 'Synced vendor invoices', action: 'Preview sync', rows: [
     row('erp-1','NetSuite','Accounts payable + general ledger','18 invoices','Connected','Today','ERP'), row('erp-2','Xero','Invoice and vendor synchronization','12 vendors','Connected','Today','ERP'), row('erp-3','SAP S/4HANA','Available connector','—','Available','—','ERP'), row('erp-4','Oracle ERP','Available connector','—','Available','—','ERP'),
   ] },
   integrations: { title: 'External Integrations', description: 'Explore banking, compliance and operational integrations.', headline: '4', headlineLabel: 'Configured demo integrations', supporting: '7', supportingLabel: 'Available integration categories', action: 'Preview integration', rows: [
@@ -130,9 +130,9 @@ export const LIQUIDITY_POINTS = [
   { day: 'Oct 7', total: 4.22, cash: 2.07 },
 ];
 export const ASSET_MIX = [
-  { name: 'USDC', value: 1725000, color: '#2dd4bf' },
-  { name: 'USDT', value: 425000, color: '#22a6bf' },
-  { name: 'USD', value: 1735000, color: '#7078f3' },
+  { name: 'USDC', value: 1725000, color: '#3775f0' },
+  { name: 'USDT', value: 425000, color: '#5e98fa' },
+  { name: 'USD', value: 1735000, color: '#9bb4ea' },
   { name: 'EUR / GBP', value: 333350, color: '#a88ee8' },
 ];
 export const CASH_FLOW = [
