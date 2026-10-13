@@ -327,7 +327,7 @@ export function DemoApplication() {
         (sidebarExpanded ? ' lg:w-56' : ' lg:w-16')
       }>
         <div className="latitude-nav-head relative flex h-16 shrink-0 items-center justify-center border-b border-[#dce7f5] px-3">
-          <img alt="Latitude" src="/latitude-wordmark-white.svg" className={'h-9 w-[165px] shrink-0 object-contain object-center '+(sidebarExpanded?'':'lg:hidden')}/>
+          <img alt="Latitude" src="/latitude-wordmark-white.svg" className={'relative -left-[3px] h-9 w-[165px] shrink-0 object-contain object-center '+(sidebarExpanded?'':'lg:hidden')}/>
           <img alt="Latitude" src="/latitude-mark-white.svg" className={'hidden h-9 w-9 shrink-0 object-contain '+(sidebarExpanded?'':'lg:block')}/>
           <button onClick={()=>setMenuOpen(false)} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-white/80 hover:text-white lg:hidden" aria-label="Close menu"><X className="h-5 w-5"/></button>
         </div>
