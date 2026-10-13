@@ -340,7 +340,7 @@ export function DemoApplication() {
     <div className="flex h-full overflow-hidden">
       {menuOpen && <button aria-label="Close navigation" className="fixed inset-0 z-30 bg-black/70 lg:hidden" onClick={()=>setMenuOpen(false)} />}
       <aside aria-label="Latitude sidebar" className={
-        'latitude-nav fixed inset-y-0 left-0 z-40 flex w-[244px] shrink-0 flex-col overflow-hidden border-r border-[#dce7f5] bg-[#ffffff] text-[#112b50] transition-[width,transform] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] lg:relative lg:inset-auto lg:h-full lg:translate-x-0 ' +
+        'latitude-nav fixed inset-y-0 left-0 z-40 flex w-[244px] shrink-0 flex-col overflow-hidden border-r border-[#dce7f5] bg-[#ffffff] text-[#112b50] transition-[width,transform] duration-[550ms] ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none lg:relative lg:inset-auto lg:h-full lg:translate-x-0 ' +
         (menuOpen ? 'translate-x-0 shadow-[0_0_40px_rgba(0,0,0,0.5)]' : '-translate-x-full') +
         (sidebarExpanded ? ' lg:w-56' : ' lg:w-16')
       }>
@@ -380,7 +380,7 @@ export function DemoApplication() {
             aria-expanded={sidebarExpanded}
             onClick={()=>{if(menuOpen)setMenuOpen(false);else toggleSidebar();}}
             className="group flex h-10 w-full shrink-0 items-center justify-center border-t border-[#dce7f5] text-[#8295ad] transition-colors hover:bg-[#f1f6ff] hover:text-[#405a7a]">
-            <ChevronLeft className={'h-4 w-4 transition-transform duration-300 ' + (sidebarExpanded ? '' : 'lg:rotate-180')}/>
+            <ChevronLeft className={'h-4 w-4 transition-transform duration-[550ms] ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none ' + (sidebarExpanded ? '' : 'lg:rotate-180')}/>
           </button>
         </div>
       </aside>
