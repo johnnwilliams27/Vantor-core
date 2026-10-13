@@ -182,6 +182,7 @@ export function DemoApplication() {
   const assistantPanelRef = useRef<HTMLDivElement>(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const notificationsRef = useRef<HTMLDivElement>(null);
+  const notificationPanelRef = useRef<HTMLDivElement>(null);
   const [assistantQuery, setAssistantQuery] = useState('');
   const [assistantAnswer, setAssistantAnswer] = useState('');
 
@@ -222,6 +223,11 @@ export function DemoApplication() {
   useEffect(() => {
     setMenuOpen(false); setSearch(''); setFilter('All statuses'); setFeedback(''); setSelected(null); setActionOpen(false); setNotificationsOpen(false);
   }, [activeSlug]);
+
+  useEffect(() => {
+    // Keep the dropdown mounted to support exit animation without exposing hidden controls.
+    if (notificationPanelRef.current) notificationPanelRef.current.inert = !notificationsOpen;
+  }, [notificationsOpen]);
 
   useEffect(() => {
     if (!notificationsOpen) return;
@@ -410,8 +416,10 @@ export function DemoApplication() {
                 {unreadNotifications > 0 && <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-blue-300" aria-hidden="true"/>}
                 {unreadNotifications > 0 && <span className="sr-only">{unreadNotifications} unread notifications</span>}
               </button>
-              {notificationsOpen && <div id="latitude-notifications-dropdown" role="dialog" aria-label="Recent notifications"
-                className="latitude-notifications-menu absolute right-0 top-[calc(100%+12px)] z-50 w-[min(90vw,380px)] overflow-hidden rounded-2xl border border-[#dce7f5] bg-white text-[#183153] shadow-[0_16px_48px_rgba(13,44,95,.22)]">
+              <div ref={notificationPanelRef} id="latitude-notifications-dropdown" role="dialog" aria-label="Recent notifications"
+                aria-hidden={!notificationsOpen}
+                className={'latitude-notifications-menu absolute right-0 top-[calc(100%+12px)] z-50 w-[min(90vw,380px)] origin-top-right overflow-hidden rounded-2xl border border-[#dce7f5] bg-white text-[#183153] shadow-[0_16px_48px_rgba(13,44,95,.22)] transition-[opacity,transform] duration-[480ms] ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none ' +
+                  (notificationsOpen ? 'pointer-events-auto translate-y-0 scale-100 opacity-100' : 'pointer-events-none -translate-y-2 scale-[0.97] opacity-0')}>
                 <div className="flex items-center justify-between gap-3 border-b border-[#e1eaf6] px-4 py-3">
                   <div>
                     <h2 className="text-sm font-semibold text-[#112b50]">Notifications</h2>
@@ -439,7 +447,7 @@ export function DemoApplication() {
                   className="flex items-center justify-center gap-2 bg-[#f3f7fd] px-4 py-3 text-xs font-semibold text-blue-700 transition hover:bg-[#e8f1ff]">
                   View all notifications <ArrowRight className="h-3.5 w-3.5"/>
                 </Link>
-              </div>}
+              </div>
             </div>
             <button onClick={()=>setAssistantOpen(true)} aria-label="Open demo assistant" className="rounded-lg p-2 text-[#6c7f9a] hover:bg-[#f1f6ff] hover:text-[#112b50]"><BrainCircuit className="h-5 w-5"/></button>
             <div className="latitude-header-avatar flex h-8 w-8 items-center justify-center rounded-full border border-blue-500/30 bg-[#dfeaff] text-xs font-semibold text-[#112b50]">NL</div>
@@ -450,7 +458,6 @@ export function DemoApplication() {
           <div className="mx-auto w-full max-w-[1440px] space-y-6 pb-12">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[.14em] text-blue-500"><span className="h-1.5 w-1.5 rounded-full bg-blue-500"/>Global finance workspace</div>
               <h1 className="text-2xl font-semibold tracking-tight text-[#112b50] sm:text-[30px]">{surface.title}</h1>
               <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#6c7f9a]">{surface.description}</p>
             </div>
@@ -588,12 +595,12 @@ export function DemoApplication() {
       </div>
     </div>}
 
-    <div className={'fixed inset-0 z-50 flex items-stretch justify-end bg-black/60 transition-opacity duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none ' +
+    <div className={'fixed inset-0 z-50 flex items-stretch justify-end bg-black/60 transition-opacity duration-[550ms] ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none ' +
       (assistantOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0')}
       aria-hidden={!assistantOpen}
       onMouseDown={e=>{if(e.target===e.currentTarget)setAssistantOpen(false);}}>
       <div ref={assistantPanelRef} role="dialog" aria-modal={assistantOpen} aria-label="Demo treasury assistant"
-        className={'flex h-full w-full flex-col border-l border-[#dce7f5] bg-[#ffffff] shadow-2xl transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none sm:max-w-[420px] ' +
+        className={'flex h-full w-full flex-col border-l border-[#dce7f5] bg-[#ffffff] shadow-2xl transition-transform duration-[550ms] ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none sm:max-w-[420px] ' +
           (assistantOpen ? 'translate-x-0' : 'translate-x-full')}>
         <div className="flex items-center gap-3 border-b border-[#dce7f5] p-5"><div className="rounded-xl bg-blue-500/10 p-2 text-blue-500"><BrainCircuit className="h-5 w-5"/></div><div className="flex-1"><div className="text-sm font-semibold text-[#112b50]">Latitude AI · Demo</div><div className="text-xs text-[#6c7f9a]">Guided sample questions · not a live AI agent</div></div><button onClick={()=>setAssistantOpen(false)} aria-label="Close assistant"><X className="h-5 w-5 text-[#6c7f9a]"/></button></div>
         <div className="flex-1 space-y-5 overflow-y-auto p-5"><div className="rounded-xl bg-[#f1f6ff] p-4 text-sm leading-relaxed text-[#294468]">Welcome to this Latitude product concept. I can guide you through this simulated treasury workspace. Try one of the prompts below.</div>
