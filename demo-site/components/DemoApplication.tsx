@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -179,6 +179,8 @@ export function DemoApplication() {
   const [demoData, setDemoData] = useState<DemoPersisted>(initialState);
   const [hydrated, setHydrated] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const notificationsRef = useRef<HTMLDivElement>(null);
   const [assistantQuery, setAssistantQuery] = useState('');
   const [assistantAnswer, setAssistantAnswer] = useState('');
 
@@ -206,8 +208,45 @@ export function DemoApplication() {
     try { sessionStorage.setItem(storageKey, JSON.stringify(demoData)); } catch { /* ephemeral demo */ }
   }, [demoData, hydrated]);
   useEffect(() => {
-    setMenuOpen(false); setSearch(''); setFilter('All statuses'); setFeedback(''); setSelected(null); setActionOpen(false);
+    setMenuOpen(false); setSearch(''); setFilter('All statuses'); setFeedback(''); setSelected(null); setActionOpen(false); setNotificationsOpen(false);
   }, [activeSlug]);
+
+  useEffect(() => {
+    if (!notificationsOpen) return;
+    const dismissOutside = (event: PointerEvent) => {
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setNotificationsOpen(false);
+      }
+    };
+    const dismissEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setNotificationsOpen(false);
+    };
+    document.addEventListener('pointerdown', dismissOutside);
+    document.addEventListener('keydown', dismissEscape);
+    return () => {
+      document.removeEventListener('pointerdown', dismissOutside);
+      document.removeEventListener('keydown', dismissEscape);
+    };
+  }, [notificationsOpen]);
+
+  const notificationRows = useMemo(() => {
+    const source = DEMO_SURFACES.notifications.rows;
+    return [...(demoData.added.notifications || []), ...source].map(item => ({
+      ...item,
+      status: demoData.statuses[item.id] || item.status,
+    }));
+  }, [demoData]);
+  const unreadNotifications = notificationRows.filter(item => item.status === 'Unread').length;
+
+  function markAllNotificationsRead() {
+    setDemoData(prev => ({
+      ...prev,
+      statuses: {
+        ...prev.statuses,
+        ...Object.fromEntries(notificationRows.map(item => [item.id, 'Read'])),
+      },
+    }));
+  }
 
   const rows = useMemo(() => {
     const combined = [...(demoData.added[activeSlug] || []), ...surface.rows];
@@ -248,11 +287,7 @@ export function DemoApplication() {
   function runAction() {
     if (surface.action==='Export CSV') return downloadCsv();
     if (surface.action==='Mark all as read') {
-      setDemoData(prev => ({
-        ...prev, statuses: {
-          ...prev.statuses, ...Object.fromEntries(rows.map(r=>[r.id,'Read'])),
-        },
-      }));
+      markAllNotificationsRead();
       setFeedback('Demo notifications marked as read.'); return;
     }
     setFeedback(''); setActionOpen(true);
@@ -355,7 +390,45 @@ export function DemoApplication() {
           </div>
           <div className="flex items-center gap-3">
             <span className="latitude-status hidden items-center gap-1.5 rounded-full border border-blue-500/20 bg-blue-500/[0.055] px-3 py-1.5 text-xs text-blue-500 sm:inline-flex"><span className="h-1.5 w-1.5 rounded-full bg-blue-500"/>Test mode active</span>
-            <button onClick={()=>navigate('notifications')} aria-label="View notifications" className="relative rounded-lg p-2 text-[#6c7f9a] hover:bg-[#f1f6ff] hover:text-[#112b50]"><Bell className="h-5 w-5"/><span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-blue-500"/></button>
+            <div className="relative" ref={notificationsRef}>
+              <button type="button" onClick={() => setNotificationsOpen(open => !open)} aria-label="Notifications"
+                aria-haspopup="dialog" aria-controls="latitude-notifications-dropdown" aria-expanded={notificationsOpen}
+                className="relative rounded-lg p-2 text-[#6c7f9a] hover:bg-[#f1f6ff] hover:text-[#112b50]">
+                <Bell className="h-5 w-5"/>
+                {unreadNotifications > 0 && <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-blue-300" aria-hidden="true"/>}
+                {unreadNotifications > 0 && <span className="sr-only">{unreadNotifications} unread notifications</span>}
+              </button>
+              {notificationsOpen && <div id="latitude-notifications-dropdown" role="dialog" aria-label="Recent notifications"
+                className="latitude-notifications-menu absolute right-0 top-[calc(100%+12px)] z-50 w-[min(90vw,380px)] overflow-hidden rounded-2xl border border-[#dce7f5] bg-white text-[#183153] shadow-[0_16px_48px_rgba(13,44,95,.22)]">
+                <div className="flex items-center justify-between gap-3 border-b border-[#e1eaf6] px-4 py-3">
+                  <div>
+                    <h2 className="text-sm font-semibold text-[#112b50]">Notifications</h2>
+                    <p className="mt-1 text-[11px] text-[#6c7f9a]">{unreadNotifications ? unreadNotifications + ' unread' : 'All caught up'} · Simulated alerts</p>
+                  </div>
+                  <button type="button" disabled={unreadNotifications === 0} onClick={markAllNotificationsRead}
+                    className="rounded-md px-2 py-1.5 text-xs font-semibold text-blue-700 hover:bg-[#edf4ff] disabled:cursor-default disabled:opacity-40">
+                    Mark all read
+                  </button>
+                </div>
+                <div className="max-h-[340px] overflow-y-auto">
+                  {notificationRows.slice(0, 4).map(item => <button key={item.id} type="button"
+                    onClick={() => setDemoData(prev => ({ ...prev, statuses: { ...prev.statuses, [item.id]: 'Read' } }))}
+                    className={'flex w-full items-start gap-3 border-b border-[#eef2fa] px-4 py-3 text-left transition hover:bg-[#f2f7ff] ' + (item.status === 'Unread' ? 'bg-[#f7faff]' : 'bg-white')}>
+                    <span className={'mt-1.5 h-2 w-2 shrink-0 rounded-full ' + (item.status === 'Unread' ? 'bg-blue-500' : 'bg-transparent')}/>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13px] font-semibold text-[#17365e]">{item.name}</span>
+                      <span className="mt-1 block text-xs leading-relaxed text-[#657b99]">{item.detail}</span>
+                      <span className="mt-1.5 block text-[11px] text-[#8a9bb0]">{item.date} · {item.status}</span>
+                    </span>
+                  </button>)}
+                  {notificationRows.length === 0 && <p className="px-4 py-6 text-center text-xs text-[#6c7f9a]">No notifications in this demo.</p>}
+                </div>
+                <Link href="/demo/notifications" onClick={() => setNotificationsOpen(false)}
+                  className="flex items-center justify-center gap-2 bg-[#f3f7fd] px-4 py-3 text-xs font-semibold text-blue-700 transition hover:bg-[#e8f1ff]">
+                  View all notifications <ArrowRight className="h-3.5 w-3.5"/>
+                </Link>
+              </div>}
+            </div>
             <button onClick={()=>setAssistantOpen(true)} aria-label="Open demo assistant" className="rounded-lg p-2 text-[#6c7f9a] hover:bg-[#f1f6ff] hover:text-[#112b50]"><BrainCircuit className="h-5 w-5"/></button>
             <div className="latitude-header-avatar flex h-8 w-8 items-center justify-center rounded-full border border-blue-500/30 bg-[#dfeaff] text-xs font-semibold text-[#112b50]">NL</div>
           </div>

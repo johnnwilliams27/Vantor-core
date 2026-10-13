@@ -108,3 +108,15 @@ body { margin: 0; background: #f6f9ff; color: #173357; font-family: system-ui, -
   border-color: rgba(255,255,255,.25);
 }
 .latitude-blue .latitude-main {background: #f3f7fd;}
+
+/* Keep interactive notification popover readable inside the blue header. */
+.latitude-blue .latitude-header .latitude-notifications-menu button {
+  color: #17365e;
+}
+.latitude-blue .latitude-header .latitude-notifications-menu button:hover {
+  color: #17365e;
+  background: #f2f7ff;
+}
+.latitude-blue .latitude-header .latitude-notifications-menu button:disabled:hover {
+  background: transparent;
+}
