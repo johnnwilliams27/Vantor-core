@@ -291,10 +291,10 @@ export function DemoApplication() {
         (menuOpen ? 'translate-x-0 shadow-[0_0_40px_rgba(0,0,0,0.5)]' : '-translate-x-full') +
         (sidebarExpanded ? ' lg:w-56' : ' lg:w-16')
       }>
-        <div className={'latitude-nav-head flex h-16 shrink-0 items-center gap-3 border-b border-[#dce7f5] px-3 ' + (sidebarExpanded ? '' : 'lg:justify-center lg:gap-0')}>
-          <img alt="Latitude" src="/latitude-wordmark-white.svg" className={'h-9 w-[165px] shrink-0 object-contain object-left '+(sidebarExpanded?'':'lg:hidden')}/>
+        <div className="latitude-nav-head relative flex h-16 shrink-0 items-center justify-center border-b border-[#dce7f5] px-3">
+          <img alt="Latitude" src="/latitude-wordmark-white.svg" className={'h-9 w-[165px] shrink-0 object-contain object-center '+(sidebarExpanded?'':'lg:hidden')}/>
           <img alt="Latitude" src="/latitude-mark-white.svg" className={'hidden h-9 w-9 shrink-0 object-contain '+(sidebarExpanded?'':'lg:block')}/>
-          <button onClick={()=>setMenuOpen(false)} className="ml-auto rounded-md p-1 text-[#6c7f9a] hover:text-[#112b50] lg:hidden" aria-label="Close menu"><X className="h-5 w-5"/></button>
+          <button onClick={()=>setMenuOpen(false)} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-white/80 hover:text-white lg:hidden" aria-label="Close menu"><X className="h-5 w-5"/></button>
         </div>
         <div className={'latitude-workspace-switcher mx-3 mt-3 flex shrink-0 items-center gap-2 rounded-xl border border-blue-500/15 bg-blue-500/[0.045] px-2 py-2.5 ' + (sidebarExpanded ? '' : 'lg:mx-2 lg:justify-center lg:gap-0 lg:px-1')}>
           <div className="latitude-workspace-avatar flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#dfeaff] text-sm font-semibold text-blue-800">N</div>
