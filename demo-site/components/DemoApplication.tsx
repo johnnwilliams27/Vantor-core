@@ -179,6 +179,7 @@ export function DemoApplication() {
   const [demoData, setDemoData] = useState<DemoPersisted>(initialState);
   const [hydrated, setHydrated] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const assistantPanelRef = useRef<HTMLDivElement>(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const notificationsRef = useRef<HTMLDivElement>(null);
   const [assistantQuery, setAssistantQuery] = useState('');
@@ -189,6 +190,17 @@ export function DemoApplication() {
       setSidebarExpanded(localStorage.getItem('latitude-concept-sidebar-expanded') !== 'false');
     } catch { /* Collapsing still works without local storage. */ }
   }, []);
+
+  useEffect(() => {
+    // Keep the closed panel mounted for slide-out animation, but remove it from keyboard navigation.
+    if (assistantPanelRef.current) assistantPanelRef.current.inert = !assistantOpen;
+    if (!assistantOpen) return;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setAssistantOpen(false);
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [assistantOpen]);
 
   function toggleSidebar() {
     const next = !sidebarExpanded;
@@ -576,8 +588,13 @@ export function DemoApplication() {
       </div>
     </div>}
 
-    {assistantOpen && <div className="fixed inset-0 z-50 flex items-end justify-end bg-black/60 sm:items-stretch" onMouseDown={e=>{if(e.target===e.currentTarget)setAssistantOpen(false);}}>
-      <div role="dialog" aria-modal="true" aria-label="Demo treasury assistant" className="flex h-[75vh] w-full flex-col rounded-t-2xl border border-[#dce7f5] bg-[#ffffff] shadow-2xl sm:h-full sm:max-w-[420px] sm:rounded-none">
+    <div className={'fixed inset-0 z-50 flex items-stretch justify-end bg-black/60 transition-opacity duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none ' +
+      (assistantOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0')}
+      aria-hidden={!assistantOpen}
+      onMouseDown={e=>{if(e.target===e.currentTarget)setAssistantOpen(false);}}>
+      <div ref={assistantPanelRef} role="dialog" aria-modal={assistantOpen} aria-label="Demo treasury assistant"
+        className={'flex h-full w-full flex-col border-l border-[#dce7f5] bg-[#ffffff] shadow-2xl transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none sm:max-w-[420px] ' +
+          (assistantOpen ? 'translate-x-0' : 'translate-x-full')}>
         <div className="flex items-center gap-3 border-b border-[#dce7f5] p-5"><div className="rounded-xl bg-blue-500/10 p-2 text-blue-500"><BrainCircuit className="h-5 w-5"/></div><div className="flex-1"><div className="text-sm font-semibold text-[#112b50]">Latitude AI · Demo</div><div className="text-xs text-[#6c7f9a]">Guided sample questions · not a live AI agent</div></div><button onClick={()=>setAssistantOpen(false)} aria-label="Close assistant"><X className="h-5 w-5 text-[#6c7f9a]"/></button></div>
         <div className="flex-1 space-y-5 overflow-y-auto p-5"><div className="rounded-xl bg-[#f1f6ff] p-4 text-sm leading-relaxed text-[#294468]">Welcome to this Latitude product concept. I can guide you through this simulated treasury workspace. Try one of the prompts below.</div>
           <div className="flex flex-wrap gap-2">{['What is our total liquidity?','Show yield opportunities','Any pending approvals?','How do transfers work?'].map(q=><button key={q} onClick={()=>askAssistant(q)} className="rounded-lg border border-[#dce7f5] px-3 py-2 text-left text-xs text-blue-700 transition hover:bg-blue-500/10">{q}</button>)}</div>
@@ -585,6 +602,6 @@ export function DemoApplication() {
         </div>
         <div className="border-t border-[#dce7f5] p-5"><form onSubmit={e=>{e.preventDefault();if(assistantQuery.trim())askAssistant(assistantQuery);}} className="flex gap-2"><input value={assistantQuery} onChange={e=>setAssistantQuery(e.target.value)} placeholder="Ask about this demo…" aria-label="Ask the demo assistant" className="min-w-0 flex-1 rounded-lg border border-[#dce7f5] bg-[#ffffff] px-3 py-3 text-sm text-[#112b50] outline-none focus:border-blue-500/50"/><button type="submit" aria-label="Submit question" className="rounded-lg bg-blue-600 px-3 text-[#ffffff]"><Send className="h-4 w-4"/></button></form><p className="mt-2 text-[11px] text-[#7d8fa8]">Answers are scripted examples using fictional data.</p></div>
       </div>
-    </div>}
+    </div>
   </div>;
 }
