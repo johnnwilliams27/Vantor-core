@@ -365,7 +365,7 @@ export function DemoApplication() {
           <div className="mx-auto w-full max-w-[1440px] space-y-6 pb-12">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[.14em] text-blue-500"><span className="h-1.5 w-1.5 rounded-full bg-blue-500"/>Northstar Holdings · Global finance workspace</div>
+              <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[.14em] text-blue-500"><span className="h-1.5 w-1.5 rounded-full bg-blue-500"/>Global finance workspace</div>
               <h1 className="text-2xl font-semibold tracking-tight text-[#112b50] sm:text-[30px]">{surface.title}</h1>
               <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#6c7f9a]">{surface.description}</p>
             </div>
